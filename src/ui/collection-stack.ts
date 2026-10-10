@@ -177,17 +177,22 @@ export function stackedCardsOf(
   };
 }
 
-/** One stack, its parts named from `name`, its reading under its cards. */
+/**
+ * One stack, its parts named from `name`, its reading under its cards, its faces drawn under the city
+ * section of the civilization it stands in, where it stands in one.
+ */
 export function stackOf(
   { scene, catalogue, inspecting }: Laying,
   {
     stack,
+    city,
     left,
     top,
     name,
     reading,
   }: {
     readonly stack: CollectionStack;
+    readonly city: string | undefined;
     readonly left: number;
     readonly top: number;
     readonly name: string;
@@ -196,7 +201,7 @@ export function stackOf(
 ): LaidStack {
   const { id } = stack;
   const { unders, card, shown, face, foot } = stackedCardsOf(scene, {
-    shown: cardFaceAtStart(catalogue, id),
+    shown: cardFaceAtStart(catalogue, id, city),
     copies: stack.copies,
     left,
     top,

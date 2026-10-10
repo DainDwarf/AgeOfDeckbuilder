@@ -671,6 +671,9 @@ export function rewardOf(technology: string): string[] {
       ? []
       : [text('plate.region', { region: regionName(unlocks.region) })]),
     ...(unlocks.age === undefined ? [] : [text('plate.age', { age: ageName(unlocks.age) })]),
+    ...(unlocks.city === undefined
+      ? []
+      : [text('plate.building', { building: unlocks.city.building })]),
     ...(influence > 0 ? [String(influence)] : []),
   ];
 }
@@ -1410,9 +1413,9 @@ export function beforeTheFall(): Chronicle {
 export const SHELTER = 'shelter';
 
 /**
- * The first seed's capstone landing turn, the shelter in the hand, with a tile beside the city
- * claimed, the shelter's cost gained and a worker entered on that tile; where the shelter lies, the
- * tile, which its aim admits, and the chronicle the shelter played there wins.
+ * The first seed's capstone landing turn, the shelter in the hand, with a claim's culture gained, a
+ * tile beside the city claimed, the shelter's cost gained and a worker entered on that tile; where
+ * the shelter lies, the tile, which its aim admits, and the chronicle the shelter played there wins.
  */
 export function landed(): {
   chronicle: Chronicle;
@@ -1431,8 +1434,8 @@ export function landed(): {
     if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
 
     for (const tile of neighbours(cityTileOf(turned))) {
-      const claimed = outcome(apply(CATALOGUE, turned, { type: 'claim', tile }));
-      if (claimed === turned) continue;
+      const claimed = claimedAt(turned, tile);
+      if (claimed === undefined) continue;
       const paid = gained(claimed, card.cost).chronicle;
       const worked = entered(CATALOGUE, paid, { type: WORKER, faction: 'player', tile }).chronicle;
       const chronicle = charted(CATALOGUE, worked);

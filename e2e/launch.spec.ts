@@ -76,7 +76,7 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   await page.mouse.move(label.x, label.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-launch')).toBe(true);
   expect(await tooltipText(page, 'tooltip-launch')).toBe(
-    kindTooltip(cardFaceAtStart(CATALOGUE, OWNED.city.card.id).kind),
+    kindTooltip(cardFaceAtStart(CATALOGUE, OWNED.city.card.id, OWNED.city.building).kind),
   );
 
   const card = await onScreen(page, CITY_CARD);

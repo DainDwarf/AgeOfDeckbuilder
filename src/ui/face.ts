@@ -2,6 +2,7 @@ import type { CardKind } from '../rules/cards';
 import {
   type Aim,
   actionGoesTo,
+  ageOf,
   type Card,
   type Catalogue,
   cardMade,
@@ -76,21 +77,28 @@ export type Face = {
   readonly reading: AnswerReading;
 };
 
-/** The face a card in a chronicle is drawn as, its rules entry reading the counters it carries. */
-export function cardFace(catalogue: Catalogue, card: ChronicleCard): Face {
+/**
+ * The face a card in a chronicle is drawn as, its rules entry reading the counters it carries and
+ * `city`, the building of the city section it is drawn under: a chronicle's, or a civilization's.
+ */
+export function cardFace(
+  catalogue: Catalogue,
+  card: ChronicleCard,
+  city: string | undefined,
+): Face {
   return {
     id: card.id,
     name: cardName(card.id),
     kind: labelledKind(cardOf(catalogue, card.id)),
-    rules: cardRules(card),
+    rules: cardRules(card, city),
     costs: costOf(catalogue, card.id),
     reading: {},
   };
 }
 
 /** The face a card is drawn as when its content makes it, at the counters it starts with. */
-export function cardFaceAtStart(catalogue: Catalogue, id: CardId): Face {
-  return cardFace(catalogue, cardMade(catalogue, id));
+export function cardFaceAtStart(catalogue: Catalogue, id: CardId, city: string | undefined): Face {
+  return cardFace(catalogue, cardMade(catalogue, id), city);
 }
 
 /**
@@ -109,9 +117,12 @@ export function namedCardMade(
   return cardMade(catalogue, id, set);
 }
 
-/** The face a card named on a face is drawn as: the card `namedCardMade` makes of that face's reading. */
+/**
+ * The face a card named on a face is drawn as: the card `namedCardMade` makes of that face's reading,
+ * under no city section.
+ */
 export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerReading): Face {
-  return cardFace(catalogue, namedCardMade(catalogue, id, reading));
+  return cardFace(catalogue, namedCardMade(catalogue, id, reading), undefined);
 }
 
 /** The face a capstone is drawn as: it costs nothing, and its rules entry reads no numbers. */
@@ -128,8 +139,8 @@ export function capstoneFace(id: string): Face {
 
 /**
  * The face an answer of an event is drawn as: its rules entry, and the cards it names, read on the
- * chronicle it was dealt on. What the answer costs reads in that entry, so the face wears no chip
- * for it.
+ * chronicle it was dealt on, the entry naming that chronicle's city's building and its age's camp's.
+ * What the answer costs reads in that entry, so the face wears no chip for it.
  */
 export function answerFace(
   catalogue: Catalogue,
@@ -138,11 +149,13 @@ export function answerFace(
   id: string,
 ): Face {
   const reading = answerOf(catalogue, event, id).reads(catalogue, chronicle);
+  const building = chronicle.citySection.building;
+  const camp = ageOf(catalogue, chronicle.age).camp.building;
   return {
     id,
     name: answerName(id),
     kind: 'event',
-    rules: answerRules(id, reading),
+    rules: answerRules(id, { ...reading, building, camp }),
     costs: [],
     reading,
   };

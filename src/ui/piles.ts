@@ -91,9 +91,11 @@ export function createPiles(
   let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
   let carrier: Phaser.GameObjects.Container | undefined;
 
-  const topOf = (card: ChronicleCard | undefined): Top => {
+  const topOf = (card: ChronicleCard | undefined, city: string): Top => {
     if (card === undefined) return { card: createEmptySlot(scene) };
-    const face = createCardFace(scene, cardFace(catalogue, card), NO_REFUSAL, { tone: worn });
+    const face = createCardFace(scene, cardFace(catalogue, card, city), NO_REFUSAL, {
+      tone: worn,
+    });
     return { card: face.root.setData('card', card.id), face };
   };
 
@@ -112,7 +114,10 @@ export function createPiles(
       chronicle.drawPile.length,
     );
     discarded.show(
-      topOf(chronicle.discardPile[chronicle.discardPile.length - 1]),
+      topOf(
+        chronicle.discardPile[chronicle.discardPile.length - 1],
+        chronicle.citySection.building,
+      ),
       chronicle.discardPile.length,
     );
     exhausted.show(chronicle.exhaustPile.length);

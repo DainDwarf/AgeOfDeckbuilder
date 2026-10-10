@@ -151,6 +151,7 @@ function collectionOf(
         const { id } = stack;
         const laid = stackOf(laying, {
           stack,
+          city: undefined,
           left,
           top,
           name: 'collection',
@@ -174,7 +175,7 @@ function collectionOf(
                 press: moves.pressOf(stack),
                 carry: {
                   copy: () =>
-                    createCardFace(scene, cardFaceAtStart(catalogue, id), NO_REFUSAL, {
+                    createCardFace(scene, cardFaceAtStart(catalogue, id, undefined), NO_REFUSAL, {
                       width: COLLECTION_CARD_WIDTH,
                     })
                       .root.setPosition(box.x + box.width / 2, box.y + box.height)
@@ -447,7 +448,7 @@ function deckEditingModeOf(
           ...deckPanelOf(
             screen,
             {
-              city: owned.city.card.id,
+              city: owned.city,
               deck,
               counts: countsOf(owned),
               remove,
@@ -505,7 +506,7 @@ function civilizationModeOf(
           ...civilizationPanelOf(
             screen,
             {
-              city: owned.city.card.id,
+              city: owned.city,
               deck: standingIn(stood, deckRowsOf(catalogue, campaign, civilization, cardName)),
               counts: countsOf(owned),
               campaign,

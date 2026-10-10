@@ -1,9 +1,9 @@
 import type { ChronicleCard } from '../rules/state';
 import type { Reference } from './text-run';
 
-// A `rules.`, `answer-rules.`, `capstone-rules.` or `goal.` entry, and `plate.cards`, may mark a glyph
-// `[<resource>]` and a name `[<kind>:<id>]`, a kind `REFERENCE_KINDS` lists, which only a card face
-// and a plate draw: elsewhere the mark shows.
+// A `rules.`, `answer-rules.`, `capstone-rules.` or `goal.` entry, `plate.cards` and `plate.building`
+// may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind `REFERENCE_KINDS` lists, which
+// only a card face and a plate draw: elsewhere the mark shows.
 /** Every player-facing sentence but the lore (`lore.ts`), one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
@@ -55,8 +55,10 @@ const TEXT = {
   'improvement.irrigation': 'Irrigation',
   'improvement.pasture': 'Pasture',
   'improvement.clay-pit': 'Clay pit',
-  'building.city': 'City',
+  'building.hearth': 'Hearth',
+  'building.village': 'Village',
   'building.camp': 'Camp',
+  'building.stone-camp': 'Camp',
   'building.shelter': 'Shelter',
   'building.painted-cave': 'Painted cave',
   'building.stone-painted-cave': 'Painted cave',
@@ -102,7 +104,7 @@ const TEXT = {
   'unit-state.capturing': 'Capturing',
   'unit-state.joined': '{one} · {other}',
   'card.settle': 'Settlement', // glossary exception: settlement
-  'rules.settle': 'Place the [building:city]',
+  'rules.settle': 'Place the [building:{building}]',
   'card.first-worker': 'Worker',
   'rules.first-worker': 'Place a [player:worker]',
   'card.first-scout': 'Scout',
@@ -185,13 +187,13 @@ const TEXT = {
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
   'answer.ration': 'Keep to yourself',
-  'answer-rules.ration': 'Your [building:city] is attacked by {warriors} [enemy:warrior]',
+  'answer-rules.ration': 'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
   'event.rival-band': 'A rival band',
   'answer.fight': 'Fight them', // glossary exception: fight
-  'answer-rules.fight': 'Your [building:city] is attacked by {warriors} [enemy:warrior]', // glossary exception: fight
+  'answer-rules.fight': 'Your [building:{building}] is attacked by {warriors} [enemy:warrior]', // glossary exception: fight
   'answer.make-room': 'Make room',
   'answer-rules.make-room':
-    'A [building:camp] with {warriors} [enemy:warrior] is placed near your [building:city]',
+    'A [building:{camp}] with {warriors} [enemy:warrior] is placed near your [building:{building}]',
   'event.wildfire': 'Wildfire',
   'answer.let-it-burn': 'Let it burn',
   'answer-rules.let-it-burn':
@@ -340,7 +342,7 @@ const TEXT = {
   'goal.bread': 'Have {need} population',
   'goal.tanning': 'Place {need} [improvement:pasture] or [improvement:trapping] inside your border',
   'goal.raft': 'Chart {need} [terrain:coast]',
-  'goal.megalith': 'Claim a tile {need} tiles from your [building:city]',
+  'goal.megalith': 'Claim a tile {need} tiles from your city',
   'goal.bartering': 'Have {need}[money]',
   'goal.fishing': 'Gain {need}[food] from [terrain:coast]',
   'achievement.reached': '✓ {achievement}',
@@ -351,6 +353,7 @@ const TEXT = {
   'plate.cards': '{copies} [card:{card}]',
   'plate.region': '{region} region',
   'plate.age': 'The {age}',
+  'plate.building': '[building:{building}]',
   'plate.unknown': '???',
   'region.temperate': 'Temperate',
   'region.archipelago': 'Archipelago',
@@ -467,11 +470,13 @@ export function referenceName(reference: Reference): string {
 }
 
 /**
- * What a card's rules entry reads on the screen, filled with the counters the card carries; a card
- * no entry names is refused.
+ * What a card's rules entry reads on the screen, filled with the counters the card carries and the
+ * building of the city section it is drawn under, where it is drawn under one; a card no entry names
+ * is refused, and so is an entry reading a city's building where none is handed.
  */
-export function cardRules(card: ChronicleCard): string {
-  return named('rules', card.id, 'the card', card.counters);
+export function cardRules(card: ChronicleCard, city: string | undefined): string {
+  const values = city === undefined ? card.counters : { ...card.counters, building: city };
+  return named('rules', card.id, 'the card', values);
 }
 
 /** What an event is named on the screen; an event no entry names is refused. */

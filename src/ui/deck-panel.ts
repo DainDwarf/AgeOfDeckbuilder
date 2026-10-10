@@ -1,5 +1,10 @@
 import type Phaser from 'phaser';
-import { type Campaign, priceOf, unaffordableIn } from '../rules/campaign';
+import {
+  type Campaign,
+  type CampaignCivilization,
+  priceOf,
+  unaffordableIn,
+} from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { createCardFace, dashAlong, heightOf } from './card-face';
 import { type CollectionStack, copiesIn, type DeckRows, stacksOf } from './collection-layout';
@@ -215,7 +220,7 @@ export function deckPanelOf(
     remove,
     lands,
   }: {
-    readonly city: CardId;
+    readonly city: CampaignCivilization['city'];
     readonly deck: DeckRows;
     readonly counts: { readonly cards: number; readonly settle: number };
     readonly remove: (card: CardId) => void;
@@ -265,7 +270,7 @@ export function deckPanelOf(
     for (const [at, { id, copies }] of stacks.entries()) {
       if (at > 0) y += ROWS_APART;
       row(
-        cardFaceAtStart(catalogue, id),
+        cardFaceAtStart(catalogue, id, city.building),
         copies,
         { x: left, y, width, height: ROW_HEIGHT },
         `deck-row-${id}`,
@@ -285,7 +290,7 @@ export function deckPanelOf(
     height: ROW_HEIGHT,
   };
   parts.push(cityEdgeOf(scene, cityBox, radius));
-  row(cardFaceAtStart(catalogue, city), undefined, cityBox, 'deck-city');
+  row(cardFaceAtStart(catalogue, city.card.id, city.building), undefined, cityBox, 'deck-city');
   y = cityTop + ROW_HEIGHT + CITY_MARGIN;
   if (deck.settle.length > 0) y = rows(deck.settle, y + ROWS_APART);
 
@@ -313,10 +318,12 @@ function civilizationStackOf(
   laying: Laying,
   {
     owned,
+    city,
     campaign,
     moves,
   }: {
     readonly owned: readonly CollectionStack[];
+    readonly city: string;
     readonly campaign: Campaign;
     readonly moves: CopyMoves;
   },
@@ -329,6 +336,7 @@ function civilizationStackOf(
     const name = `civilization-card-${id}`;
     const laid = stackOf(laying, {
       stack: row,
+      city,
       left,
       top,
       name: 'civilization',
@@ -359,15 +367,19 @@ function civilizationStackOf(
 }
 
 /** The city section's card as a face alone in its pale edge, at the roundness handed. */
-function cityCellOf({ scene, catalogue, inspecting }: Laying, city: CardId, radius: number): Cell {
+function cityCellOf(
+  { scene, catalogue, inspecting }: Laying,
+  city: CampaignCivilization['city'],
+  radius: number,
+): Cell {
   return ({ left: x, top: y }) => {
-    const shown = cardFaceAtStart(catalogue, city);
+    const shown = cardFaceAtStart(catalogue, city.card.id, city.building);
     const card = createCardFace(scene, shown, NO_REFUSAL, { width: COLLECTION_CARD_WIDTH });
     const box = { x, y, width: COLLECTION_CARD_WIDTH, height: heightOf(COLLECTION_CARD_WIDTH) };
     card.root
       .setPosition(x + COLLECTION_CARD_WIDTH / 2, y + box.height)
       .setName('civilization-city')
-      .setData('card', city);
+      .setData('card', city.card.id);
     return {
       parts: [cityEdgeOf(scene, box, radius), card.root],
       held: [{ box, answers: answersOf(card, shown, inspecting) }],
@@ -390,7 +402,7 @@ export function civilizationPanelOf(
     campaign,
     moves,
   }: {
-    readonly city: CardId;
+    readonly city: CampaignCivilization['city'];
     readonly deck: DeckRows;
     readonly counts: { readonly cards: number; readonly settle: number };
     readonly campaign: Campaign;
@@ -423,7 +435,7 @@ export function civilizationPanelOf(
 
   const owned = stacksOf(catalogue, campaign.collection, cardName);
   const stack = (row: CollectionStack): Cell =>
-    civilizationStackOf(laying, { owned, campaign, moves }, row);
+    civilizationStackOf(laying, { owned, city: city.building, campaign, moves }, row);
 
   const lines = (cells: readonly Cell[], from: number): number => {
     const laid = linesOf(cells, { left, top: from, across });

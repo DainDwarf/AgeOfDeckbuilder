@@ -8,7 +8,7 @@ The Nomadic Age is where humanity stops wandering, and it is the first chronicle
 
 ## The settle ✅
 
-The civilization's city section holds the city and its card, and its deck's settle section two settle cards, a worker and a scout, every one costing nothing and the two units taking no population — the band arrives with them. The settle phase is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The ground around the disc's centre is a biome of its own, plain, forest and hills and nothing else, rolled compact, so the settle chooses among tiles that feed and build and the water and the mountain lie beyond the first steps. The city keeps the terrain it lands on, and its building gives **military and culture** on top of that terrain and nothing else. Nothing on the map yields military, so the city is where warriors come from, and the tile is a choice a new player reads off the map: a plain feeds growth, and hills and forest give production. A city building that also fed a poor tile was rejected: it is the safety net the dogmas forbid.
+The civilization's city section holds the city and its card, and its deck's settle section two settle cards, a worker and a scout, every one costing nothing and the two units taking no population — the band arrives with them. The settle phase is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The ground around the disc's centre is a biome of its own, plain, forest and hills and nothing else, rolled compact, so the settle chooses among tiles that feed and build and the water and the mountain lie beyond the first steps. The city keeps the terrain it lands on, and its building, the **hearth**, gives **military** on top of that terrain and nothing else. Nothing on the map yields military, so the city is where warriors come from, and the culture the border grows by is the sites' alone, so the border stays a few tiles. The tile is a choice a new player reads off the map: a plain feeds growth, and hills and forest give production. A city building that also fed a poor tile was rejected: it is the safety net the dogmas forbid.
 
 ## The land ✅
 
@@ -70,7 +70,7 @@ Lean season is food against a raid, a rival band is a raid now against a camp la
 
 ## The achievement ✅
 
-The age's one achievement is its victory. Its technology is **Settlement**, which unlocks the Stone Age, and it pays influence.
+The age's one achievement is its victory. Its technology is **Settlement**, which unlocks the Stone Age and the **village**, the city's building in place of the hearth, and it pays influence.
 
 ## The camps ✅
 

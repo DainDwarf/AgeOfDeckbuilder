@@ -55,7 +55,7 @@ export function createPile(
     return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
   });
   const lift = selected ? PILE_LIFT : 0;
-  const shown = cardFaceAtStart(catalogue, owned.city.card.id);
+  const shown = cardFaceAtStart(catalogue, owned.city.card.id, owned.city.building);
   const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
   card.select(selected);
   const face = card.root

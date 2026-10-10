@@ -23,6 +23,7 @@ import { writeSave } from '../rules/save';
 import { answerCost, timelineOf } from '../rules/schedule';
 import type { Landed } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
+import { answerFace } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -39,7 +40,6 @@ import {
   achievementGoal,
   ageName,
   answerName,
-  answerRules,
   buildingName,
   capstoneName,
   capstoneRules,
@@ -134,16 +134,36 @@ test('every improvement of the catalogue has a name and a mark on the screen', (
   }
 });
 
-test('every card of the catalogue has a name, and a rules entry read at the counters it starts with, on the screen', () => {
+/** Every city's building a card is drawn under: each civilization's, and each a technology unlocks. */
+const CITIES = [
+  ...Object.values(CATALOGUE.civilizations).map(({ city }) => city.building),
+  ...Object.values(CATALOGUE.technologies).flatMap(({ unlocks }) =>
+    unlocks.city === undefined ? [] : [unlocks.city.building],
+  ),
+];
+
+/** The cards a civilization's city section holds, which a screen draws under a city section alone. */
+const CITY_CARDS = new Set(Object.values(CATALOGUE.civilizations).map(({ city }) => city.card));
+
+/**
+ * A card's rules entry read at the counters it starts with, under each city's building, and under no
+ * city section for a card no city section holds.
+ */
+function rulesAsDrawn(id: string): string[] {
+  const cities = CITY_CARDS.has(id) ? CITIES : [...CITIES, undefined];
+  return cities.map((city) => cardRules(cardMade(CATALOGUE, id), city));
+}
+
+test('every card of the catalogue has a name, and a rules entry read at the counters it starts with under each city’s building, and under no city section for a card no city section holds, on the screen', () => {
   for (const id of Object.keys(CATALOGUE.cards)) {
     expect(() => cardName(id)).not.toThrow();
-    expect(() => cardRules(cardMade(CATALOGUE, id))).not.toThrow();
+    expect(() => rulesAsDrawn(id)).not.toThrow();
   }
 });
 
 test('every rules entry and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
   const entries = [
-    ...Object.keys(CATALOGUE.cards).map((id) => cardRules(cardMade(CATALOGUE, id))),
+    ...Object.keys(CATALOGUE.cards).flatMap(rulesAsDrawn),
     ...Object.keys(CATALOGUE.capstones).map((id) => capstoneRules(id)),
   ];
   for (const age of AGES) {
@@ -154,8 +174,8 @@ test('every rules entry and every goal of the catalogue lays out, and every name
     );
     const chronicle = settledIn(age);
     for (const event of Object.keys(ageOf(CATALOGUE, age).schedule.entries)) {
-      for (const [name, answer] of Object.entries(eventOf(CATALOGUE, event).answers)) {
-        entries.push(answerRules(name, answer.reads(CATALOGUE, chronicle)));
+      for (const name of Object.keys(eventOf(CATALOGUE, event).answers)) {
+        entries.push(answerFace(CATALOGUE, chronicle, event, name).rules);
       }
     }
   }
@@ -292,12 +312,12 @@ test('every age’s camp and site has a lore on the screen, keyed on its buildin
   }
 });
 
-test('every reward of every age’s camp and site has a name, and a rules entry read at the counters it starts with, on the screen', () => {
+test('every reward of every age’s camp and site has a name, and a rules entry read at the counters it starts with under each city’s building, and under no city section for a card no city section holds, on the screen', () => {
   for (const age of AGES) {
     for (const { rewards } of capturedIn(age)) {
       for (const id of rewards) {
         expect(() => cardName(id)).not.toThrow();
-        expect(() => cardRules(cardMade(CATALOGUE, id))).not.toThrow();
+        expect(() => rulesAsDrawn(id)).not.toThrow();
       }
     }
   }
@@ -341,7 +361,7 @@ test('every answer of every event of an age’s schedule costs, lands and reads 
       for (const [name, answer] of Object.entries(eventOf(CATALOGUE, id).answers)) {
         expect(() => answerCost(CATALOGUE, chronicle, answer)).not.toThrow();
         expect(() => answer.reads(CATALOGUE, chronicle)).not.toThrow();
-        expect(() => answerRules(name, answer.reads(CATALOGUE, chronicle))).not.toThrow();
+        expect(() => answerFace(CATALOGUE, chronicle, id, name)).not.toThrow();
         expect(() => answer.lands(CATALOGUE, chronicle)).not.toThrow();
       }
     }

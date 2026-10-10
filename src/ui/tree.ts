@@ -95,6 +95,14 @@ function readingsOf(catalogue: Catalogue): Map<string, Reading> {
       ...(unlocks.age === undefined
         ? []
         : [{ kind: 'run', entry: text('plate.age', { age: ageName(unlocks.age) }) } as const]),
+      ...(unlocks.city === undefined
+        ? []
+        : [
+            {
+              kind: 'run',
+              entry: text('plate.building', { building: unlocks.city.building }),
+            } as const,
+          ]),
       ...(earned.achievement.influence > 0
         ? [{ kind: 'influence', amount: earned.achievement.influence } as const]
         : []),

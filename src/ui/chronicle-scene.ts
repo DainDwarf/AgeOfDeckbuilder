@@ -559,7 +559,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           closed,
         );
       },
-      inspect: (card) => overlay.inspect(card),
+      inspect: (card) => overlay.inspect(this.current, card),
       inspectNamed: (name) => overlay.inspectNamed(name),
     });
 
@@ -745,7 +745,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       }
       if (boundTo(press, 'inspect')) {
         const selected = hand.selection();
-        if (selected !== undefined) overlay.inspect(selected);
+        if (selected !== undefined) overlay.inspect(this.current, selected);
         else if (selection !== undefined) inspect(selection);
         return;
       }

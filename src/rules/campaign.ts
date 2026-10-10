@@ -9,6 +9,7 @@ import {
   civilizationOf,
   earningOf,
   firstAge,
+  type Technology,
   technologyOf,
 } from './catalogue';
 import { refuse } from './map-kinds';
@@ -317,9 +318,10 @@ export function removedFrom(
 }
 
 /**
- * The campaign with the technology learned: the cards it unlocks dealt in no section, its achievement's
- * influence added, its pin taken off, and every technology it makes available pinned in the
- * catalogue's order. A technology that is not available is refused.
+ * The campaign with the technology learned: the cards it unlocks dealt in no section, the city's
+ * building it unlocks standing in the city section of every civilization whose city held the one it
+ * replaces, its achievement's influence added, its pin taken off, and every technology it makes
+ * available pinned in the catalogue's order. A technology that is not available is refused.
  */
 export function learnedInto(
   catalogue: Catalogue,
@@ -328,8 +330,9 @@ export function learnedInto(
 ): Campaign {
   const misfit = unavailable(catalogue, technology, campaign.technologies);
   if (misfit !== undefined) refuse(catalogue, `the campaign learns ${misfit}`);
-  const ids = Object.entries(technologyOf(catalogue, technology).unlocks.cards).flatMap(
-    ([card, copies]) => Array.from({ length: copies }, () => card),
+  const { unlocks } = technologyOf(catalogue, technology);
+  const ids = Object.entries(unlocks.cards).flatMap(([card, copies]) =>
+    Array.from({ length: copies }, () => card),
   );
   const cards = dealt(campaign.nextCard, ids);
   const technologies = [...campaign.technologies, technology];
@@ -343,8 +346,25 @@ export function learnedInto(
     influence: campaign.influence + earningOf(catalogue, technology).achievement.influence,
     nextCard: cards.nextCard,
     collection: [...campaign.collection, ...cards.cards],
+    civilizations:
+      unlocks.city === undefined
+        ? campaign.civilizations
+        : rebuilt(campaign.civilizations, unlocks.city),
     pins: [...unpinned(campaign, technology).pins, ...opened],
   };
+}
+
+/** The civilizations, each whose city holds the building replaced holding the one unlocked instead. */
+function rebuilt(
+  civilizations: Campaign['civilizations'],
+  { building, replaces }: NonNullable<Technology['unlocks']['city']>,
+): Campaign['civilizations'] {
+  return Object.fromEntries(
+    Object.entries(civilizations).map(([name, held]) => [
+      name,
+      held.city.building === replaces ? { ...held, city: { ...held.city, building } } : held,
+    ]),
+  );
 }
 
 /** What an ended chronicle paid into the campaign, and the campaign it left. */

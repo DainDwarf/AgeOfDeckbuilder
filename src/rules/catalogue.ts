@@ -332,7 +332,8 @@ export type Achievement = {
 
 /**
  * A technology: the technologies it needs, and what it unlocks — cards, each with the copies added
- * to the collection, at most one region, by its name in every age, and at most one age.
+ * to the collection, at most one region, by its name in every age, at most one age, and at most one
+ * city's building, in place of the one it names.
  */
 export type Technology = {
   readonly needs: readonly string[];
@@ -340,6 +341,7 @@ export type Technology = {
     readonly cards: Readonly<Record<string, number>>;
     readonly region?: string;
     readonly age?: string;
+    readonly city?: { readonly building: string; readonly replaces: string };
   };
 };
 
@@ -753,9 +755,10 @@ function treeHeld(content: Catalogue): void {
 
   const ageUnlockedBy = new Map<string, string>();
   const regionUnlockedBy = new Map<string, string>();
+  const cityUnlockedBy = new Map<string, string>();
   const unlockedOnce = (
     unlockers: Map<string, string>,
-    noun: 'age' | 'region',
+    noun: 'age' | 'region' | "city's building",
     unlocked: string,
     technology: string,
   ): void => {
@@ -784,6 +787,18 @@ function treeHeld(content: Catalogue): void {
         );
       }
       unlockedOnce(regionUnlockedBy, 'region', unlocks.region, id);
+    }
+    if (unlocks.city !== undefined) {
+      const { building, replaces } = unlocks.city;
+      buildingKind(content, replaces);
+      const cityNames = groundNamed(buildingKind(content, building));
+      if (cityNames !== undefined) {
+        refuse(
+          content,
+          `the technology ${id} unlocks the city's building ${building}, which names ${cityNames}`,
+        );
+      }
+      unlockedOnce(cityUnlockedBy, "city's building", building, id);
     }
     if (unlocks.age === undefined) continue;
     ageOf(content, unlocks.age);

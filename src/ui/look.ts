@@ -182,8 +182,10 @@ export const LOOK: Look = {
     oasis: 0x2f8f83,
   },
   building: {
-    city: 'civilization',
+    hearth: 'civilization',
+    village: 'civilization',
     camp: 'enemy',
+    'stone-camp': 'enemy',
     shelter: 'built',
     farm: 'built',
     tannery: 'built',

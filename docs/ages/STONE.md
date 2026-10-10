@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land, its neutral, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
+> What the Stone Age is made of: its land, its city, its neutral, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
 
 ## The land ✅
 
@@ -19,6 +19,10 @@ The archipelago is the age's second region, the one Raft unlocks: a disc as big 
 ## The sites 🔧
 
 The sites are the Nomadic Age's, and in this age each deals two rewards of the age's own, so a site found is a choice. The **painted cave** deals **Cave paintings**, culture once and banished, more than the Nomadic card gives, and **Old stories**, culture each time it is played, cycling with the deck for the rest of the chronicle: the find kept against the find spent. The **old cairn** deals **Honour the dead**, culture once and banished, more than the Nomadic card gives, and **Dig the graves**, money once and banished, worth something to a deck that trades and nothing to one that does not: the dead honoured against the dead robbed. The **bones of a great beast** deal **Bone carvings**, culture once and banished, more than the Nomadic card gives, and **Bone tools**, production each time it is played, cycling with the deck for the rest of the chronicle: the beast remembered against the beast used up.
+
+## The city 🔧
+
+The **village** is the city's building Settlement unlocks in place of the hearth, so every chronicle after the Nomadic Age's victory is played on it, a Nomadic one replayed among them. It gives **military and culture** on top of its terrain and nothing else, and stands on desert as on plain, forest and hills.
 
 ## The neutral 🔧
 

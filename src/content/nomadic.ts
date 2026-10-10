@@ -185,7 +185,7 @@ const TABLES: Tables = {
         ...Array<string>(2).fill('march'),
       ],
       settle: ['first-worker', 'first-scout'],
-      city: { building: 'city', sight: 2, idle: 0, card: 'settle' },
+      city: { building: 'hearth', sight: 2, idle: 0, card: 'settle' },
     },
   },
   events: {
@@ -303,7 +303,10 @@ const TABLES: Tables = {
     },
   },
   technologies: {
-    settlement: { needs: [], unlocks: { cards: {}, age: 'stone' } },
+    settlement: {
+      needs: [],
+      unlocks: { cards: {}, age: 'stone', city: { building: 'village', replaces: 'hearth' } },
+    },
   },
   terrains: {
     plain: { yields: { food: 1 }, movementCost: MOVE_POINT, water: false, elevation: 0 },
@@ -361,11 +364,8 @@ const TABLES: Tables = {
     },
   },
   buildings: {
-    city: {
-      terrains: ['plain', 'forest', 'hills', 'desert'],
-      yields: { military: 1, culture: 1 },
-    },
-    camp: { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
+    hearth: { terrains: ['plain', 'forest', 'hills'], yields: { military: 1 } },
+    camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     'painted-cave': { terrains: ['hills'], yields: {} },
     'old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },

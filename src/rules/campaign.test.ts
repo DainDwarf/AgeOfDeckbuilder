@@ -17,7 +17,14 @@ import {
   removedFrom,
   unpinned,
 } from './campaign';
-import { achievementOf, ageOf, type Civilization, cardAge, technologyOf } from './catalogue';
+import {
+  achievementOf,
+  ageOf,
+  type Civilization,
+  cardAge,
+  catalogued,
+  technologyOf,
+} from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
   AGE,
@@ -26,6 +33,7 @@ import {
   CIVILIZATION,
   CIVILIZATION_ID,
   CLEARING,
+  changed,
   cityOf,
   field,
   GRANARY,
@@ -314,6 +322,41 @@ test('a technology learned into a campaign pays the influence of the achievement
   expect(() => learnedInto(CATALOGUE, opened, CENSUS)).toThrow(
     `fixture: the campaign learns the unknown technology ${CENSUS}`,
   );
+});
+
+test('a technology learned that unlocks a city’s building puts it in place of the one it replaces in the city section of every civilization holding that one, and leaves a civilization holding another as it stands', () => {
+  const town = 'PH_Town';
+  const granary = technologyOf(CATALOGUE, GRANARY);
+  const catalogue = catalogued(
+    changed({
+      buildings: { ...CATALOGUE.buildings, [town]: { terrains: ['urban'], yields: {} } },
+      technologies: {
+        ...CATALOGUE.technologies,
+        [GRANARY]: {
+          ...granary,
+          unlocks: {
+            ...granary.unlocks,
+            city: { building: town, replaces: CIVILIZATION.city.building },
+          },
+        },
+      },
+    }),
+  );
+  const paired = withSecond();
+  const { city } = paired.civilizations[SECOND];
+  const other = { ...paired.civilizations[SECOND], city: { ...city, building: 'PH_Camp' } };
+  const opened: Campaign = {
+    ...paired,
+    civilizations: { ...paired.civilizations, [SECOND]: other },
+  };
+  const first = opened.civilizations[CIVILIZATION_ID];
+
+  const campaign = learnedInto(catalogue, opened, GRANARY);
+
+  expect(campaign.civilizations).toEqual({
+    [CIVILIZATION_ID]: { ...first, city: { ...first.city, building: town } },
+    [SECOND]: other,
+  });
 });
 
 test('a card’s price is the base price of its age owning one copy, doubled for every copy owned past the first, a copy a chronicle paid in counted as any other; a card the collection owns no copy of has none', () => {

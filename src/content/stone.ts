@@ -115,6 +115,7 @@ export const STONE: Slice = {
     },
     camp: {
       ...camp,
+      building: 'stone-camp',
       opening: [{ kind: 'warrior', script: 'guard', weight: 1 }],
       roll: [
         { kind: 'archer', script: 'guard', weight: 2 },
@@ -393,6 +394,11 @@ export const STONE: Slice = {
       oasis: { terrain: 'desert', yields: { food: 1 } },
     },
     buildings: {
+      village: {
+        terrains: ['plain', 'forest', 'hills', 'desert'],
+        yields: { military: 1, culture: 1 },
+      },
+      'stone-camp': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
       farm: { terrains: ['plain'], yields: { food: 2 } },
       tannery: {
         terrains: ['forest', 'plain'],

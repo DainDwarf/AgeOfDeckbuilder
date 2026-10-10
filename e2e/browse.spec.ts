@@ -368,10 +368,13 @@ test('on the discard pile’s top card a rest on a name raises the named thing s
   const opened = firstSeed('ends its first turn on a card naming a thing', (seed) => {
     const ended = endedTurn(settledOn(seed));
     const top = ended.discardPile.at(-1);
-    return top !== undefined && namedIn(cardRules(top)).length > 0 ? ended : undefined;
+    return top !== undefined && namedIn(cardRules(top, ended.citySection.building)).length > 0
+      ? ended
+      : undefined;
   });
   const top = opened.discardPile[opened.discardPile.length - 1];
-  const [named] = namedIn(cardRules(top));
+  const city = opened.citySection.building;
+  const [named] = namedIn(cardRules(top, city));
   await openSaved(page, opened);
 
   const face = 'discard-pile-top';
@@ -389,7 +392,9 @@ test('on the discard pile’s top card a rest on a name raises the named thing s
   const label = await kindLabelOnScreen(page, face);
   expect(await cursorAt(page, label)).toBe(HAND);
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-ui')).toBe(kindTooltip(cardFace(CATALOGUE, top).kind));
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(
+    kindTooltip(cardFace(CATALOGUE, top, city).kind),
+  );
 
   for (const pile of PILES) expect(await cursorAt(page, await pileTop(page, pile))).toBe('');
 

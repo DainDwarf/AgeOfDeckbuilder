@@ -218,6 +218,34 @@ test('a catalogue whose technology unlocks a region no age holds, whose region i
   expect(() => regionsUnlocked({ [GRANARY]: REGION })).not.toThrow();
 });
 
+test('a catalogue whose technology unlocks a city’s building it does not hold, or in place of one it does not hold, or one naming the features, or whose city’s building is unlocked by two technologies, is refused', () => {
+  const { building } = CIVILIZATION.city;
+  const unlocking = (
+    technology: string,
+    city: NonNullable<Technology['unlocks']['city']>,
+  ): Catalogue['technologies'] => {
+    const declared = technologyOf(CATALOGUE, technology);
+    return { [technology]: { ...declared, unlocks: { ...declared.unlocks, city } } };
+  };
+  const camp = { building: 'PH_Camp', replaces: building };
+
+  expect(() =>
+    catalogued(withTechnologies(unlocking(GRANARY, { building: 'PH_Fort', replaces: building }))),
+  ).toThrow('fixture: no building is named PH_Fort');
+  expect(() =>
+    catalogued(withTechnologies(unlocking(GRANARY, { ...camp, replaces: 'PH_Fort' }))),
+  ).toThrow('fixture: no building is named PH_Fort');
+  expect(() =>
+    catalogued(withTechnologies(unlocking(GRANARY, { building: 'PH_Lodge', replaces: building }))),
+  ).toThrow(
+    `fixture: the technology ${GRANARY} unlocks the city's building PH_Lodge, which names the features PH_Game`,
+  );
+  expect(() =>
+    catalogued(withTechnologies({ ...unlocking(GRANARY, camp), ...unlocking(CENSUS, camp) })),
+  ).toThrow(`fixture: the city's building PH_Camp is unlocked by both ${GRANARY} and ${CENSUS}`);
+  expect(() => catalogued(withTechnologies(unlocking(GRANARY, camp)))).not.toThrow();
+});
+
 test('a catalogue whose technology needs one earned in a later age is refused, and one needing a technology of an earlier age is not', () => {
   const { technology: later } = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET));
   const past = technologyOf(CATALOGUE, later);

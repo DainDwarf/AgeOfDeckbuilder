@@ -54,7 +54,7 @@ export type Overlay = {
     chosen: (at: number) => void,
     closed: () => void,
   ): () => void;
-  inspect(card: ChronicleCard): void;
+  inspect(chronicle: Chronicle, card: ChronicleCard): void;
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(name: Name): void;
   /**
@@ -309,7 +309,7 @@ export function createOverlay({
       name: 'browse',
       heading: text(`browse.${pile}`, { count: cards.length }),
       stacks: pileStacksOf(catalogue, cards, cardName).map(({ card, copies }) => ({
-        shown: cardFace(catalogue, card),
+        shown: cardFace(catalogue, card, chronicle.citySection.building),
         copies,
         edged: false,
       })),
@@ -487,15 +487,17 @@ export function createOverlay({
       showAim({
         aimed,
         cards: chronicle.discardPile
-          .map((card, at) => offeredCard(cardFace(catalogue, card), at))
+          .map((card, at) =>
+            offeredCard(cardFace(catalogue, card, chronicle.citySection.building), at),
+          )
           .reverse(),
         chosen,
         closed,
       });
       return closeAim;
     },
-    inspect(card: ChronicleCard): void {
-      inspecting.large.show(cardFace(catalogue, card));
+    inspect(chronicle: Chronicle, card: ChronicleCard): void {
+      inspecting.large.show(cardFace(catalogue, card, chronicle.citySection.building));
     },
     inspectNamed,
     render(chronicle: Chronicle): void {
@@ -552,7 +554,9 @@ function dealt(
       return {
         heading: buildingName(deal.building),
         lore: captureLore(deal.building),
-        entries: ids.map((id, at) => offeredCard(cardFaceAtStart(catalogue, id), at)),
+        entries: ids.map((id, at) =>
+          offeredCard(cardFaceAtStart(catalogue, id, chronicle.citySection.building), at),
+        ),
       };
   }
 }

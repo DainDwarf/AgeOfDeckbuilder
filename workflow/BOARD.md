@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The Nomadic city yields no culture** — the catalogue builds with the Hearth, the Nomadic city's building, giving military alone and Settlement unlocking the Village in its place, giving military and culture, the Stone Age's camp a building of its own and neither Nomadic building on desert; its coherence test and the fixture test of a technology unlocking a city's building pass, Settlement's plate reads the Village in its reward, and the pages say so. Doc-impact: `docs/META.md`, `docs/META-SCREENS.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/nomadic-city-culture.md](board/nomadic-city-culture.md)
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
 - **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.

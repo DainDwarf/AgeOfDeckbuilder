@@ -339,7 +339,7 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
 
   const held = opened.hand[0];
   if (held === undefined) throw new Error('the hand holds no card');
-  const { id, kind } = cardFace(CATALOGUE, held);
+  const { id, kind } = cardFace(CATALOGUE, held, opened.citySection.building);
   const card = await onScreen(page, 'hand-0');
   const lying = await kindLabelOnScreen(page, 'hand-0');
 

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Campaign } from '../rules/campaign';
+import { type Campaign, civilizationIn } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { type Bind, boundTo } from './bindings';
 import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
@@ -335,6 +335,7 @@ export function standBrowse(
     large: browser.large,
     open(campaign, civilization) {
       const { count, stacks } = browseOf(catalogue, campaign, civilization, cardName);
+      const { building } = civilizationIn(catalogue, campaign, civilization).city;
       browser.browse({
         name: CIVILIZATION_BROWSE,
         heading: text('browse.civilization', {
@@ -342,7 +343,7 @@ export function standBrowse(
           count,
         }),
         stacks: stacks.map(({ id, copies }, at) => ({
-          shown: cardFaceAtStart(catalogue, id),
+          shown: cardFaceAtStart(catalogue, id, building),
           copies,
           edged: at === 0,
         })),

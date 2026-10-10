@@ -26,8 +26,10 @@ const BONES: number[] = [-16, -10, 0, -2, 16, -10, 16, 10, 0, 2, -16, 10];
 
 /** Each wide enough to show under the unit standing on its tile. */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
-  city: WALL,
+  hearth: WALL,
+  village: WALL,
   camp: WALL,
+  'stone-camp': WALL,
   shelter: [-16, 10, 0, -13, 16, 10, 5, 10, 0, 2, -5, 10],
   farm: [-16, -6, 16, -6, 16, 6, -16, 6],
   tannery: [-16, 8, -6, -8, 16, -8, 6, 8],

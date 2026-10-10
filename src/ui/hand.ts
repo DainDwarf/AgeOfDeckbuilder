@@ -407,7 +407,11 @@ export function createHand(
     slots = chronicle.hand.map((card, index) => {
       const off = index - (held - 1) / 2;
       const refusal = refusalOf(catalogue, chronicle, card.id);
-      const face = createCardFace(scene, cardFace(catalogue, card), refusal);
+      const face = createCardFace(
+        scene,
+        cardFace(catalogue, card, chronicle.citySection.building),
+        refusal,
+      );
       const slot: Slot = {
         face,
         card,
@@ -525,7 +529,7 @@ export function createHand(
       fly(face, index);
       if (lies.id === slot.card.id) return { faces: [face], shown: face, turned: undefined };
       const into = fly(
-        createCardFace(scene, cardFace(catalogue, lies), NO_REFUSAL)
+        createCardFace(scene, cardFace(catalogue, lies, chronicle.citySection.building), NO_REFUSAL)
           .root.setPosition(face.x, face.y)
           .setRotation(face.rotation)
           .setVisible(false),
