@@ -13,6 +13,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **A chronicle begins answering its changes** — `beginChronicle` returns the stages it raised, the guards entered and the achievements reached among them, so a runtime-error raised while a chronicle begins reaches the screen's console error.
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
 - **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
