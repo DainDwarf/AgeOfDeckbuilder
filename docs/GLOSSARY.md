@@ -18,27 +18,27 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **civilization** | What a chronicle is played as, unlocked by the campaign: a city section and a deck. | people, nation, civ, board |
 | **deck** | A civilization's cards: its settle section and the cards the draw pile cycles. | loadout |
 | **settle section** | The part of the deck that holds its settle cards; with the city section's card, the hand of the settle phase. | opening hand, starting hand, sideboard, reserve |
-| **city section** | The part of a civilization that holds the city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
+| **city section** | The part of a civilization that holds the player's city — its building, its sight, its idle population — and the card that settles it. | city slot, capital card |
 | **technology** | One step of the campaign, learned for good by reaching its achievement; it unlocks new cards, better buildings, better units. | tech, advancement, upgrade, research |
 | **learned technology** | A technology whose achievement has paid. | unlocked technology, researched |
 | **available technology** | A technology not learned whose every needed technology is learned. | within reach, reachable |
 | **unknown technology** | A technology that needs one not learned; the player is told only that it is there. | mystery, locked, secret |
 | **pin** | To hold an available technology in view: while a chronicle reads its achievement, the chronicle screen shows it. | track (for an achievement), follow (for an achievement), watch (for an achievement), bookmark |
 | **achievement** | A goal a chronicle can reach; its technology is learned by reaching it. | mission, objective, quest, milestone |
-| **influence** | The meta-currency every chronicle pays, scaled by how the city fared. | gold, XP |
+| **influence** | The meta-currency every chronicle pays, scaled by how the player's city fared. | gold, XP |
 | **price** | The influence one more copy of a card is bought for. | fee, rate, value (for a card) |
 | **base price** | The price of a card owned once, which the card's age sets for all its cards. | base cost, starting price, flat price |
 | **buy** | To pay a card's price in influence and add one more copy of it to the collection. | purchase, acquire |
 | **save** | The chronicle in progress and the meta, kept on the player's machine. | savegame, save slot, checkpoint, autosave |
 | **chronicle** | One city's story through one age, from its opening to victory or defeat — what a roguelite calls a run. | run, playthrough, attempt, session |
-| **city** | A settlement on the map; the player owns exactly one — _the_ city, what a chronicle is about — and the neutral one of its own. | town, capital, base, settlement |
-| **settle** | To put the city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish |
+| **city** | A settlement on the map, with its border, its population and its stocks; the player's is what a chronicle is about, and the neutral has one of its own. | town, capital, base, settlement |
+| **settle** | To put the player's city on a tile, on the settle phase; also the kind of card played on the settle phase alone. | found, founding, establish |
 | **map** | The hexagonal grid a chronicle is played on. | board, world, grid |
 | **chronicle screen** | The surface a chronicle is played on — the map, the hand, the piles, the resource bar, the infopanel; what a window opens over and closes back to. | table, playfield, play area |
 | **campaign screen** | The home: the screen the game boots on and a chronicle's ending returns to, showing the campaign. | main menu, title screen, hub, lobby |
 | **launch screen** | The screen a chronicle is launched from, offering the launch's choices. | new game screen, setup screen, lobby |
 | **collection screen** | The screen the deck is edited on and influence spent, showing the collection. | deck builder, deck editor, shop, store |
-| **city mode** | The chronicle screen's second mode, in which the player acts on the city: assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
+| **city mode** | The chronicle screen's second mode, in which the player acts on the player's city: assigns, unassigns, claims. | build mode, manage mode, edit mode, planning mode |
 | **select** | To make one thing the selection: the one held, among those offered with it. | pick, highlight, focus, arm, target (for a tile or a card) |
 | **inspect** | To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a pile's browse. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
@@ -49,10 +49,10 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **place** | To put a thing onto a tile: a unit, a building, an improvement, a camp. | deploy, drop, spawn (for a thing on a tile), improve, lay, install |
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | The third faction: the other city on the map, with its border, its population and its units. | NPC, city-state, friendly, neighbour, AI |
-| **hostile** | What the neutral is once turned against the player: its units attack the player's and go for the city. | at war, aggressive, enemy (for the neutral) |
+| **hostile** | What the neutral is once turned against the player: its units attack the player's and go for the player's city. | at war, aggressive, enemy (for the neutral) |
 | **enemy** | A unit of the faction that enters from camps and in raids, and attacks. | barbarian, raider, invader, foe |
-| **killed** | What befalls a unit or a population: the unit leaves the map, the population the city. | destroyed, slain, dead, lost |
-| **event** | One entry of the age's schedule: a problem the chronicle throws at the city, dealt with its answers. | disaster, threat, crisis, encounter |
+| **killed** | What befalls a unit or a population: the unit leaves the map, the population its city. | destroyed, slain, dead, lost |
+| **event** | One entry of the age's schedule: a problem the chronicle throws at the player's city, dealt with its answers. | disaster, threat, crisis, encounter |
 | **answer** | One of the cards an event deals: a way out of its problem with a cost of its own, of which the player chooses one. | option, response, reply, solution |
 | **capstone** | The age's final trial; passing it is victory. | boss, finale, objective |
 | **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
@@ -60,20 +60,20 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **camp** | Where enemies enter the map from. | lair, nest, spawn point, spawner |
 | **site** | A place on the map that is nobody's and pays once, taken as a camp is captured. | ruin, landmark, point of interest, goody hut, location (for a site) |
 | **victory** | The end of a chronicle by passing the capstone; the age is won by it, and win is the verb. | success, triumph |
-| **defeat** | The end of a chronicle by the city's fall. | collapse, game over, loss, death |
-| **border** | The edge of the tiles the city holds; pushed out by culture. | frontier, territory |
+| **defeat** | The end of a chronicle by the player's city's fall. | collapse, game over, loss, death |
+| **border** | The edge of the tiles a city holds; pushed out by culture. | frontier, territory |
 | **turn** | One pass of the chronicle's cycle of phases. | round |
 | **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
-| **settle phase** | The chronicle's opening, before its first turn: the city stands nowhere, the hand is the city section's card and the settle section, and none of the cycle runs. | turn 0, turn zero, opening turn, setup, deployment |
+| **settle phase** | The chronicle's opening, before its first turn: the player's city stands nowhere, the hand is the city section's card and the settle section, and none of the cycle runs. | turn 0, turn zero, opening turn, setup, deployment |
 | **hand** | The cards drawn this turn. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
 | **aim** | What a card is played at, nothing included; for a selected unit, the tiles it lights and the units it glows. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **aim window** | The window offering the discard pile's cards to a card aimed there. | browse (for the aim window), picker, chooser, selector |
 | **being aimed** | The state of a selected card or unit while what its aim admits is offered, until it lands or is let go of. | armed, pending, targeting, in flight |
-| **stock** | The city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
-| **cost** | What the city pays out of its stocks to play something, for example a card. | fee, charge, toll |
-| **unaffordable** | What cannot be paid for: a card whose cost the city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
+| **stock** | A city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
+| **cost** | What the player's city pays out of its stocks to play something, for example a card. | fee, charge, toll |
+| **unaffordable** | What cannot be paid for: a card whose cost the player's city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
 | **add** | To put a new card on a pile or into the collection, or a card of the collection into a deck. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
@@ -88,7 +88,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase where standing things yield. | upkeep, production phase, resolution |
-| **sight** | A unit's stat and the city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
+| **sight** | A unit's stat and the player's city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |
 | **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
 | **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
@@ -97,11 +97,11 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
-| **population** | The city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
+| **population** | A city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | free up, release |
 | **idle** | One population assigned to no tile; what a unit card takes. | unemployed, spare, unassigned (as a noun) |
-| **grow** | What the city does at the growth phase: it gains one population, paid in food. | birth, breed, spawn (for population), expand |
+| **grow** | What a city does at the growth phase: it gains one population, paid in food. | birth, breed, spawn (for population), expand |
 | **growth threshold** | The food the next population costs. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads or deals as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
