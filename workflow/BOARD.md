@@ -13,8 +13,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
-- **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.
+- **The neutral's city** — every Stone Age region deals the neutral's city first, within its band of the centre, the camps and the sites keeping their distance from it; the chronicle opens with it standing, one population on its tile, yielding into stocks of its own at income and growing at the growth threshold, its tiles no claim of the player's; the map draws it in the neutral's colour and the panel names it. Doc-impact: `docs/CHRONICLE.md`, `docs/MAP.md`, `docs/ages/STONE.md`, `docs/CHRONICLE-SCREEN.md`. [board/neutral-city.md](board/neutral-city.md)
+- **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's; whether a tile it holds wears its ring, and how a held tile shows in fog, are this line's questions.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
 - **The neutral at the camps** — its warriors go for the camps and kill the guards, and one standing on a camp through the enemy phase captures it, the camp leaving the map dealing nothing; whether the neutral takes sites too is this line's question.
 - **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns is this line's question.

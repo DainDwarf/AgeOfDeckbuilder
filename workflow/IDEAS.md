@@ -50,4 +50,5 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **A reward kind** (with the Stone Age's ending pay): Pillage and Capture, instants today, as a kind of their own that is banished once played, and a reward card kept unplayed to the ending pays influence, so a reward bloats the deck or pays twice; whether it pays on any ending or on victory alone, and whose number it is, the card's or the age's, are its questions. Needs maturing.
 - **A camp's guards patrol its ground**: a guard walks the camp's radius instead of standing where it entered. Rests on a camp owning its units.
 - **A camp's guards respond to an attack**: an attack on one of a camp's units or on the camp itself draws its other guards to it. Rests on a camp owning its units.
+- **An enemy captures the neutral's city** (after the neutral's stance and fall lines): what an enemy prepares on the neutral's tile and what its capture does; today an enemy standing there only occupies it, and the pillager never walks there.
 - **Onboarding opens in the chronicle**: a new player's game starts in the Nomadic chronicle instead of on the meta screens, with tutorial popups.
