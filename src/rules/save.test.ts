@@ -284,8 +284,25 @@ test('a chronicle that is not a chronicle’s shape is dropped', () => {
     })),
   ).toEqual(["fixture: the save's chronicle.units[0].stats.health is not an integer"]);
   expect(
-    dropped((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'neutral' }, ...others] })),
-  ).toEqual(["fixture: the save's chronicle.units[0].faction names no faction neutral"]);
+    dropped((chronicle) => ({ ...chronicle, units: [{ ...unit, faction: 'rival' }, ...others] })),
+  ).toEqual(["fixture: the save's chronicle.units[0].faction names no faction rival"]);
+});
+
+test('a chronicle saved with a unit of the neutral’s reads back with its script, and one whose unit of the neutral’s names a script the catalogue does not hold is dropped', () => {
+  const city = cityOf(['urban'], { tiles: field(2), units: [standing('neutral', { q: 1, r: 0 })] });
+  const save = { chronicle: city, region: REGION, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(city.units[0]).toMatchObject({ faction: 'neutral' });
+  expect(read.chronicle).toEqual(save);
+  expect(
+    chronicleDropped(
+      tampered(save, (chronicle) =>
+        firstUnit(chronicle, (unit) => ({ ...unit, script: 'PH_Unheld' })),
+      ),
+    ),
+  ).toEqual(['fixture: no unit script is named PH_Unheld']);
 });
 
 /** The chronicle with its first unit changed. */

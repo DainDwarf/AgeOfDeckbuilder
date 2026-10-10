@@ -1,6 +1,14 @@
 import { expect, test } from 'vitest';
 import { aimOf, refuses } from './cards';
-import { type AimedCard, ageOf, type Civilization, cardOf, catalogued } from './catalogue';
+import {
+  type AimedCard,
+  ageOf,
+  type Civilization,
+  cardOf,
+  catalogued,
+  neutralOf,
+  unitKind,
+} from './catalogue';
 import { admitted, apply, type Command, launched, outcome } from './chronicle';
 import {
   assignWaiting,
@@ -17,6 +25,7 @@ import {
   AGE,
   aimedAt,
   assignTo,
+  attacksOf,
   besideTheNeutral,
   builtOn,
   CATALOGUE,
@@ -38,6 +47,7 @@ import {
   NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
+  neutralStanding,
   opening,
   plains,
   QUIET,
@@ -894,13 +904,136 @@ test('at the enemy phase, after the waves and before any enemy acts, the neutral
   expect(after.held).toEqual(before.held);
 });
 
-test('a neutral’s script choosing a tile it was not offered raises a runtime error at the enemy phase, its city claiming nothing more that phase, and the enemies act on', () => {
+/** What the neutral pays for a unit and takes nothing more: the stocks of the fixture's warrior card. */
+function military(amount: number): Resources {
+  return { ...culture(0), military: amount };
+}
+
+test('where the neutral acts, after the waves, its units act first in unit order, then its city claims, then it enters one unit, all before any enemy acts', () => {
+  const chronicle = withUnits(
+    neutralHolding({ population: 3, resources: { ...military(2), culture: 2 } }),
+    [neutralStanding({ q: 2, r: 0 }), standing('enemy', { q: 3, r: 0 }, { move: 0 })],
+  );
+
+  const phase = heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'enemy-phase');
+
+  expect(phase.map((stage) => stage.name)).toEqual([
+    'attack',
+    'claim',
+    'stock',
+    'population',
+    'enter',
+    'attack',
+  ]);
+  expect(phase[0]).toMatchObject({ attacker: { q: 2, r: 0 }, target: { q: 3, r: 0 } });
+});
+
+test('the neutral enters a unit as the player’s city plays a unit card: the card its script names, its cost paid out of the neutral’s stocks, one idle population taken, the unit of the neutral’s on its city’s tile under its guard’s script', () => {
+  const chronicle = neutralHolding({ population: 2, resources: military(2) });
+  const { cost } = cardOf(CATALOGUE, 'PH_Warrior');
+
+  const phase = heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'enemy-phase');
+  const after = phase.at(-1)?.chronicle;
+
+  expect(namesOf(phase)).toEqual(['stock', 'population', 'enter']);
+  expect(after?.neutral).toMatchObject({
+    population: 1,
+    resources: { military: 2 - (cost.military ?? 0) },
+  });
+  expect(after?.units).toEqual([
+    expect.objectContaining({
+      faction: 'neutral',
+      script: neutralOf(CATALOGUE, QUIET).scripts.guard,
+      tile: NEUTRAL_TILE,
+      stats: unitKind(CATALOGUE, 'PH_Warrior'),
+    }),
+  ]);
+});
+
+test('the neutral enters nothing where it would take its last population, where none is idle, where a unit stands on its city’s tile or where its stocks fall short, and raises no stage', () => {
+  const blocked = [
+    neutralHolding({ population: 1, resources: military(2) }),
+    neutralHolding({
+      population: 2,
+      held: [NEUTRAL_TILE, { q: 2, r: 0 }],
+      assigned: [NEUTRAL_TILE, { q: 2, r: 0 }],
+      resources: military(2),
+    }),
+    withUnits(neutralHolding({ population: 2, resources: military(2) }), [
+      neutralStanding(NEUTRAL_TILE),
+    ]),
+    neutralHolding({ population: 2, resources: military(1) }),
+  ];
+
+  for (const chronicle of blocked) {
+    expect(
+      namesOf(heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'enemy-phase')),
+    ).toEqual([]);
+  }
+});
+
+test('the neutral enters one unit where it acts, however many it could pay for, and its claim takes the idle population ahead of its entry', () => {
+  const plenty = neutralHolding({ population: 4, resources: military(10) });
+  const claiming = neutralHolding({ population: 2, resources: { ...military(2), culture: 2 } });
+
+  expect(namesOf(heldBy(apply(CATALOGUE, plenty, { type: 'end-turn' }), 'enemy-phase'))).toEqual([
+    'stock',
+    'population',
+    'enter',
+  ]);
+  expect(
+    heldBy(apply(CATALOGUE, claiming, { type: 'end-turn' }), 'enemy-phase').map(
+      (stage) => stage.name,
+    ),
+  ).toEqual(['claim']);
+});
+
+test('a unit the neutral enters waits for the next enemy phase to act, and acts at it', () => {
+  const chronicle = withUnits(neutralHolding({ population: 2, resources: military(2) }), [
+    standing('enemy', { q: 2, r: 0 }, { move: 0, damage: 0 }),
+  ]);
+
+  const entered = endedTurn(chronicle);
+
+  expect(attacksOf(chronicle)).toEqual([['2,0', '1,0']]);
+  expect(attacksOf(entered)).toEqual([
+    ['1,0', '2,0'],
+    ['2,0', '1,0'],
+  ]);
+});
+
+test('a neutral’s script naming a card its ratio does not name raises a runtime error at the enemy phase and enters nothing', () => {
   const quiet = ageOf(CATALOGUE, QUIET);
+  const neutral = neutralOf(CATALOGUE, QUIET);
   const straying = catalogued(
     changed({
       ages: {
         ...CATALOGUE.ages,
-        [QUIET]: { ...quiet, neutral: { building: NEUTRAL, script: { claims: () => CITY } } },
+        [QUIET]: {
+          ...quiet,
+          neutral: { ...neutral, script: { ...neutral.script, enters: () => 'PH_Worker' } },
+        },
+      },
+    }),
+  );
+  const chronicle = neutralHolding({ population: 2, resources: military(2) });
+
+  expect(namesOf(heldBy(apply(straying, chronicle, { type: 'end-turn' }), 'enemy-phase'))).toEqual([
+    'runtime-error',
+  ]);
+});
+
+test('a neutral’s script choosing a tile it was not offered raises a runtime error at the enemy phase, its city claiming nothing more that phase, and the enemies act on', () => {
+  const quiet = ageOf(CATALOGUE, QUIET);
+  const neutral = neutralOf(CATALOGUE, QUIET);
+  const straying = catalogued(
+    changed({
+      ages: {
+        ...CATALOGUE.ages,
+        [QUIET]: {
+          ...quiet,
+          neutral: { ...neutral, script: { ...neutral.script, claims: () => CITY } },
+        },
       },
     }),
   );

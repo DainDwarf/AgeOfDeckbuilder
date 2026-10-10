@@ -18,12 +18,12 @@ import {
   cardOf,
   checkContent,
   civilizationOf,
-  enemyScript,
   eventOf,
   firstCivilization,
   heldByNoDeck,
   misfitIn,
   unitKind,
+  unitScript,
 } from './catalogue';
 import { type Corner, type Tile, type TileCoords, tileAt, tileKey } from './map';
 import {
@@ -687,6 +687,7 @@ function factionOf(catalogue: Catalogue, slot: Slot): Faction {
   switch (faction) {
     case 'player':
     case 'enemy':
+    case 'neutral':
       return faction;
   }
   const unlisted: never = faction;
@@ -733,10 +734,12 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
       return {
         ...standing,
         faction,
-        script: id(catalogue, field('script'), enemyScript),
+        script: id(catalogue, field('script'), unitScript),
         prepared: flag(catalogue, field('prepared')),
         camp: optional(field('camp'), (item) => coordsIn(catalogue, record(catalogue, item))),
       };
+    case 'neutral':
+      return { ...standing, faction, script: id(catalogue, field('script'), unitScript) };
   }
 }
 

@@ -1,14 +1,15 @@
 import {
   ageOf,
   type Catalogue,
-  type EnemyAct,
   type Entering,
   entered,
   rewardsOf,
+  type ScriptAct,
   type UnitEntryRow,
   type UnitEntryTable,
   unitEntryTableHeld,
   unitKind,
+  type Wave,
 } from './catalogue';
 import {
   CENTRE,
@@ -25,7 +26,7 @@ import { nextRng, pickWeighted } from './rng';
 import { inOwnSight } from './sight';
 import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
-import { canAttack, standsOn, type Unit, type UnitStats, unitAt } from './units';
+import { canAttack, shutTo, standsOn, type Unit, type UnitStats, unitAt } from './units';
 
 /**
  * Of the units handed in, every one a unit can attack from the tile it stands on, action aside: one
@@ -45,7 +46,7 @@ export function targetsInOwnSight(
 }
 
 /**
- * What a unit an enemy script attacks: of the units handed in, the one it can attack from where it
+ * What a unit a script attacks: of the units handed in, the one it can attack from where it
  * stands holding the least health, the first of equals, and nothing when it can attack none.
  */
 export function leastHealth(
@@ -62,7 +63,7 @@ export function leastHealth(
 }
 
 /** An attack on the unit, and nothing where there is none to attack. */
-export function attackOrNone(target: Unit | undefined): EnemyAct {
+export function attackOrNone(target: Unit | undefined): ScriptAct {
   return target === undefined ? { act: 'none' } : { act: 'attack', target };
 }
 
@@ -101,88 +102,116 @@ export function campAshore(unit: Unit): TileCoords | undefined {
 }
 
 /**
- * The camps sending their waves, in tile order, each one `wave-sent` on its tile: where the camp's
- * own guards standing ashore are as many as its wave names, as many as it names leave as its
- * raiders, those off the camp's tile first in unit order and the one on it last.
+ * What sends a wave: the tile it is sent from, whether a unit is one of its guards, the script its
+ * wave leaves with, and the wave.
+ */
+type WaveOwner = {
+  readonly at: TileCoords;
+  readonly guards: (unit: Unit) => boolean;
+  readonly script: string;
+  readonly wave: Wave;
+};
+
+/**
+ * The waves sent, the camps' in tile order then the neutral's, one `wave-sent` on each owner's tile:
+ * where its guards ashore are as many as its wave gathers, as many as it sends take the wave's
+ * script, those off its tile first in unit order and the one on it last.
  */
 export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
-  const { camp } = ageOf(catalogue, chronicle.age);
+  const { camp, neutral } = ageOf(catalogue, chronicle.age);
+  const owners: WaveOwner[] = [];
   const { wave } = camp;
-  if (wave === undefined) return unchanged(chronicle);
-  const script = camp.scripts.raider;
-  let sending = unchanged(chronicle);
-  for (const { q, r, building } of chronicle.tiles) {
-    if (building !== camp.building) continue;
-    const at = { q, r };
-    sending = followed(sending, (left) => {
-      const counted = left.units.filter((unit) => {
-        if (unit.faction !== 'enemy' || unit.script !== camp.scripts.guard) return false;
-        const own = campAshore(unit);
-        return own !== undefined && tileKey(own) === tileKey(at);
+  if (wave !== undefined) {
+    for (const { q, r, building } of chronicle.tiles) {
+      if (building !== camp.building) continue;
+      const at = { q, r };
+      owners.push({
+        at,
+        guards: (unit) => {
+          if (unit.faction !== 'enemy' || unit.script !== camp.scripts.guard) return false;
+          return unit.camp !== undefined && tileKey(unit.camp) === tileKey(at);
+        },
+        script: camp.scripts.raider,
+        wave,
       });
-      if (counted.length < wave.gathered) return unchanged(left);
-      const onCamp = (unit: Unit): boolean => tileKey(unit.tile) === tileKey(at);
-      const leaving = new Set(
-        [...counted.filter((unit) => !onCamp(unit)), ...counted.filter(onCamp)]
-          .slice(0, wave.sent)
-          .map((unit) => unit.id),
-      );
-      return landedAs(
-        changeOn('wave-sent', at, {
-          ...left,
-          units: left.units.map((unit) => (leaving.has(unit.id) ? { ...unit, script } : unit)),
-        }),
-      );
+    }
+  }
+  if (neutral?.wave !== undefined && chronicle.neutral !== undefined) {
+    owners.push({
+      at: chronicle.neutral.city,
+      guards: (unit) => unit.faction === 'neutral' && unit.script === neutral.scripts.guard,
+      script: neutral.scripts.wave,
+      wave: neutral.wave,
     });
   }
+  let sending = unchanged(chronicle);
+  for (const owner of owners) sending = followed(sending, (left) => waveSent(left, owner));
   return sending;
 }
 
-/** An enemy entered or not yet: its stats, and whether it stands embarked. */
+function waveSent(chronicle: Chronicle, { at, guards, script, wave }: WaveOwner): Landed {
+  const counted = chronicle.units.filter((unit) => !unit.embarked && guards(unit));
+  if (counted.length < wave.gathered) return unchanged(chronicle);
+  const onTile = (unit: Unit): boolean => tileKey(unit.tile) === tileKey(at);
+  const leaving = new Set(
+    [...counted.filter((unit) => !onTile(unit)), ...counted.filter(onTile)]
+      .slice(0, wave.sent)
+      .map((unit) => unit.id),
+  );
+  return landedAs(
+    changeOn('wave-sent', at, {
+      ...chronicle,
+      units: chronicle.units.map((unit) => (leaving.has(unit.id) ? { ...unit, script } : unit)),
+    }),
+  );
+}
+
+/** A unit acting by its script, entered or not yet: its stats, and whether it stands embarked. */
 type Walking = Pick<Unit, 'stats' | 'embarked'>;
 
 /**
- * The move an enemy has once it embarks or disembarks: embarking, its age's camp's embarked move, and
- * none where the camp names none; disembarking, its kind's own.
+ * The move a unit acting by its script has once it embarks or disembarks: embarking, its age's
+ * camp's embarked move, and none where the camp names none; disembarking, its kind's own.
  */
 function steppedMove(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  enemy: Walking,
+  walker: Walking,
 ): number | undefined {
-  return enemy.embarked
-    ? unitKind(catalogue, enemy.stats.type).move
+  return walker.embarked
+    ? unitKind(catalogue, walker.stats.type).move
     : ageOf(catalogue, chronicle.age).camp.embarkedMove;
 }
 
 /**
- * The move an enemy embarks or disembarks onto the tile with, through no card, and nothing where it
- * cannot: the tile beside where the enemy stands, no other unit on it, one it stands on once stepped,
- * and the enemy holding action.
+ * The move a unit acting by its script embarks or disembarks onto the tile with, through no card,
+ * and nothing where it cannot: the tile beside it, no other unit on it, its faction not shut out of
+ * it, one it stands on once stepped, and the unit holding action.
  */
 export function stepMove(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  enemy: Unit,
+  unit: Unit,
   to: TileCoords,
 ): number | undefined {
-  const move = steppedMove(catalogue, chronicle, enemy);
-  if (move === undefined || enemy.action <= 0 || distance(enemy.tile, to) !== 1) return undefined;
+  const move = steppedMove(catalogue, chronicle, unit);
+  if (move === undefined || unit.action <= 0 || distance(unit.tile, to) !== 1) return undefined;
+  if (shutTo(chronicle, unit.faction)(to)) return undefined;
   const there = unitAt(chronicle.units, to);
-  if (there !== undefined && there.id !== enemy.id) return undefined;
+  if (there !== undefined && there.id !== unit.id) return undefined;
   const tile = tileAt(chronicle.tiles, to);
-  return standsOn(catalogue, { ...enemy.stats, move }, !enemy.embarked, tile) ? move : undefined;
+  return standsOn(catalogue, { ...unit.stats, move }, !unit.embarked, tile) ? move : undefined;
 }
 
 /**
- * The moves an enemy's walk over the whole map weighs its steps against: its own, embarked or
- * ashore as it stands, and the one an embark or a disembark would give it.
+ * The moves the walk over the whole map of a unit acting by its script weighs its steps against:
+ * its own, embarked or ashore as it stands, and the one an embark or a disembark would give it.
  */
-export function enemyMoves(catalogue: Catalogue, chronicle: Chronicle, enemy: Walking): Moves {
-  const stepped = steppedMove(catalogue, chronicle, enemy);
-  return enemy.embarked
-    ? { embarked: enemy.stats.move, ashore: stepped }
-    : { ashore: enemy.stats.move, embarked: stepped };
+export function walkMoves(catalogue: Catalogue, chronicle: Chronicle, walker: Walking): Moves {
+  const stepped = steppedMove(catalogue, chronicle, walker);
+  return walker.embarked
+    ? { embarked: walker.stats.move, ashore: stepped }
+    : { ashore: walker.stats.move, embarked: stepped };
 }
 
 /** An enemy of the kind entering on the tile with the script. */
@@ -199,7 +228,7 @@ type Entrant = { readonly stats: UnitStats; readonly moves: Moves };
 
 function entrantOf(catalogue: Catalogue, chronicle: Chronicle, kind: string): Entrant {
   const stats = unitKind(catalogue, kind);
-  return { stats, moves: enemyMoves(catalogue, chronicle, { stats, embarked: false }) };
+  return { stats, moves: walkMoves(catalogue, chronicle, { stats, embarked: false }) };
 }
 
 /** One row drawn among these by their weights from the chronicle's generator; one alone draws nothing. */

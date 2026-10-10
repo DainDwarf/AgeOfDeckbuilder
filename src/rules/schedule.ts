@@ -10,7 +10,7 @@ import {
   type Schedule,
   type Span,
 } from './catalogue';
-import { populationKilled } from './city';
+import { costPaid, populationKilled } from './city';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, entryOf, featureKind, refuse } from './map-kinds';
 import { nextRng, pickWeighted, type Rng } from './rng';
@@ -33,7 +33,6 @@ import {
   costsOf,
   type Deal,
   holds,
-  paid,
   type Refusal,
   type Timeline,
   turnShown,
@@ -201,9 +200,7 @@ export function answerRefusal(
  */
 export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Answer): Landed {
   const costs = answerCost(catalogue, chronicle, answer);
-  const paidOn =
-    costs.length === 0 ? unchanged(chronicle) : landedAs(change('stock', paid(chronicle, costs)));
-  return followed(paidOn, (left) => answer.lands(catalogue, left));
+  return followed(costPaid(chronicle, 'player', costs), (left) => answer.lands(catalogue, left));
 }
 
 /**

@@ -14,6 +14,8 @@ import {
   entered,
   FIRST_STEPS,
   merged,
+  type Neutral,
+  neutralOf,
   type Schedule,
   type Slice,
   type Technology,
@@ -280,7 +282,7 @@ test('a catalogue whose camp’s opening or roll holds no row, a row of a kind o
   const refusals = (owner: string): [UnitEntryTable, string][] => [
     [[], `${owner} holds no row`],
     [[row, { ...row, kind: 'PH_Scout' }], 'no unit kind is named PH_Scout'],
-    [[row, { ...row, script: 'retreat' }], 'no enemy script is named retreat'],
+    [[row, { ...row, script: 'retreat' }], 'no unit script is named retreat'],
     [[row, { ...row, weight: 0 }], `${owner} enters ${row.kind} as ${row.script} at a weight of 0`],
     [
       [row, { ...row, weight: -1 }],
@@ -655,9 +657,7 @@ test('a catalogue whose site is its camp’s building or another site’s is ref
 
 /** The fixture age's neutral, its city the building named. */
 function neutralOn(building: string): Pick<Age, 'neutral'> {
-  const { neutral } = ageOf(CATALOGUE, AGE);
-  if (neutral === undefined) throw new Error(`the age ${AGE} names no neutral`);
-  return { neutral: { ...neutral, building } };
+  return { neutral: { ...neutralOf(CATALOGUE, AGE), building } };
 }
 
 test('a catalogue whose neutral’s city is a building it does not hold, one naming a feature or the river, or its camp’s or a site’s building, is refused, and the same building naming neither is not', () => {
@@ -684,6 +684,49 @@ test('a catalogue whose neutral’s city is a building it does not hold, one nam
   expect(() => catalogued(aged(neutralOn(SITES[SITE].building)))).toThrow(
     `fixture: the age ${AGE}'s neutral's city and site ${SITE} are both the building ${SITES[SITE].building}`,
   );
+});
+
+/** The fixture's content, its first age's neutral naming these over its own. */
+function neutralWith(laid: Partial<Neutral>): Catalogue {
+  return aged({ neutral: { ...neutralOf(CATALOGUE, AGE), ...laid } });
+}
+
+test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, or a ratio naming a card no unit card, a kind it does not hold or a share not a whole number above nought, is refused, and one naming no wave is not', () => {
+  const { scripts, ratio } = neutralOf(CATALOGUE, AGE);
+  const [row] = ratio;
+  const refusals: [Catalogue, string][] = [
+    [neutralWith({ scripts: { ...scripts, guard: 'retreat' } }), 'no unit script is named retreat'],
+    [neutralWith({ scripts: { ...scripts, wave: 'retreat' } }), 'no unit script is named retreat'],
+    [
+      neutralWith({ wave: { gathered: 0, sent: 0 } }),
+      `the age ${AGE}'s neutral sends a wave once 0 have gathered`,
+    ],
+    [
+      neutralWith({ wave: { gathered: 3, sent: 0 } }),
+      `the age ${AGE}'s neutral sends 0 of 3 gathered`,
+    ],
+    [
+      neutralWith({ wave: { gathered: 3, sent: 4 } }),
+      `the age ${AGE}'s neutral sends 4 of 3 gathered`,
+    ],
+    [neutralWith({ ratio: [] }), `the age ${AGE}'s neutral's ratio holds no row`],
+    [neutralWith({ ratio: [{ ...row, card: 'PH_Farm' }] }), 'the card PH_Farm is no unit card'],
+    [neutralWith({ ratio: [{ ...row, card: 'PH_Loot' }] }), 'no card is named PH_Loot'],
+    [neutralWith({ ratio: [{ ...row, kind: 'PH_Giant' }] }), 'no unit kind is named PH_Giant'],
+    [
+      neutralWith({ ratio: [{ ...row, share: 0 }] }),
+      `the age ${AGE}'s neutral keeps ${row.kind} at a share of 0`,
+    ],
+    [
+      neutralWith({ ratio: [{ ...row, share: 1.5 }] }),
+      `the age ${AGE}'s neutral keeps ${row.kind} at a share of 1.5`,
+    ],
+  ];
+
+  for (const [content, refusal] of refusals) {
+    expect(() => catalogued(content)).toThrow(`fixture: ${refusal}`);
+  }
+  expect(catalogued(neutralWith({ wave: undefined })).version).toBe('fixture');
 });
 
 test('a catalogue whose region keeps the neutral’s city nearer the centre than the first steps’ edge, keeps it to less than it keeps it from, or deals it in an age naming no neutral, is refused, and one keeping it from that edge on is not', () => {

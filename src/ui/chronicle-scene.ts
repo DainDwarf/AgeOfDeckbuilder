@@ -2,13 +2,12 @@ import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import { civilizationIn, type Payment } from '../rules/campaign';
 import { entersOn, playedThrough, refuses, throughRefusal } from '../rules/cards';
-import { type Entering, entered } from '../rules/catalogue';
+import { costOf, type Entering, entered } from '../rules/catalogue';
 import {
   admitted,
   apply,
   type Command,
   chartedAndRead,
-  costOf,
   launched,
   outcome,
   refusalOf,

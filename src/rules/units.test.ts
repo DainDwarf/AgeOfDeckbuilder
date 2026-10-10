@@ -14,15 +14,17 @@ import {
   field,
   madeOf,
   namesOf,
+  neutralStanding,
   only,
   pointsOf,
   riverBetween,
+  type Standing,
   stagedBy,
   standing,
   unitNamed,
   worker,
 } from './fixtures';
-import { type ImprovementId, MOVE_POINT, type TileCoords } from './map';
+import { type ImprovementId, MOVE_POINT, type TileCoords, tileKey } from './map';
 import { charted } from './sight';
 import { walked } from './stages';
 import type { Chronicle } from './state';
@@ -679,6 +681,19 @@ test('the other faction stops a unit where it stands', () => {
 
   expect(outcome(apply(CATALOGUE, city, moveTo(1, { q: 1, r: 0 })))).toEqual(city);
   expect(outcome(apply(CATALOGUE, city, moveTo(1, { q: 2, r: 0 })))).toEqual(city);
+});
+
+test('a unit of the neutral’s neither lands on nor crosses a tile the player holds, where an enemy lands on it and crosses it', () => {
+  const line = [{ q: -2, r: 0 }, { q: -1, r: 0 }, CITY, { q: 1, r: 0 }, { q: 2, r: 0 }];
+  const from = { q: 2, r: 0 };
+  const stats = { move: 4 * MOVE_POINT };
+  const landed = (unit: Standing): string[] => {
+    const city = cityOf(['urban'], { tiles: only(2, line), units: [unit] });
+    return byHand(CATALOGUE, city, unitNamed(city, 1)).landings.map(({ tile }) => tileKey(tile));
+  };
+
+  expect(landed(neutralStanding(from, { stats }))).toEqual(['1,0']);
+  expect(landed(standing('enemy', from, stats))).toEqual(['-2,0', '-1,0', '0,0', '1,0']);
 });
 
 test('a move of a unit that is not the player’s, or of no unit at all, is refused', () => {

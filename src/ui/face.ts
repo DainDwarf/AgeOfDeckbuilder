@@ -7,8 +7,8 @@ import {
   type Catalogue,
   cardMade,
   cardOf,
+  costOf,
 } from '../rules/catalogue';
-import { costOf } from '../rules/chronicle';
 import { answerOf } from '../rules/schedule';
 import type { CardId, Chronicle, ChronicleCard, Cost } from '../rules/state';
 import {

@@ -40,18 +40,19 @@ import {
   cardMade,
   catalogued,
   civilizationOf,
-  type EnemyAct,
-  type EnemyScript,
   type Entering,
   entered,
   merged,
+  type Neutral,
   type NeutralScript,
   type Schedule,
+  type ScriptAct,
   type Slice,
   type Tables,
   type Technology,
   type UnitEntryRow,
   type UnitEntryTable,
+  type UnitScript,
 } from './catalogue';
 import {
   apply,
@@ -141,8 +142,8 @@ export const CAMP_KIND = 'PH_Warrior';
 /** The script the fixture's enemies enter with, and the one its camp's raiders carry. */
 export const SCRIPT = 'PH_Beeline';
 
-/** The id of the script the fixture camp's guards carry, `SENTRY`. */
-const GUARD_SCRIPT = 'PH_Sentry';
+/** The id of the script the fixture camp's guards and its neutral's guards carry, `SENTRY`. */
+export const GUARD_SCRIPT = 'PH_Sentry';
 
 /** The fixture camp's kind, as a raider. */
 export const RAIDER_ROW: UnitEntryRow = { kind: CAMP_KIND, script: SCRIPT, weight: 1 };
@@ -281,7 +282,7 @@ const EVENTS: Catalogue['events'] = {
       PH_Leave: {
         cost: {},
         reads: () => ({}),
-        lands: (_catalogue, chronicle) => populationTaken(chronicle),
+        lands: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
       },
       PH_Stay: {
         cost: {},
@@ -388,44 +389,62 @@ const EVENTS: Catalogue['events'] = {
 };
 
 /** What the fixture's scripts do with an action: attack the unit of the least health they can. */
-function struckAt(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct {
-  return attackOrNone(leastHealth(catalogue, chronicle.tiles, chronicle.units, enemy));
+function struckAt(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): ScriptAct {
+  return attackOrNone(leastHealth(catalogue, chronicle.tiles, chronicle.units, unit));
 }
 
-/** The script the fixture camp's guards carry: it stays where it stands and attacks what it can. */
-const SENTRY: EnemyScript = {
-  moveTo: (_catalogue, chronicle, enemy) => ({
-    landing: { tile: enemy.tile, cost: 0 },
+/**
+ * The script the fixture camp's guards and its neutral's guards carry: it stays where it stands and
+ * attacks what it can.
+ */
+const SENTRY: UnitScript = {
+  moveTo: (_catalogue, chronicle, unit) => ({
+    landing: { tile: unit.tile, cost: 0 },
     rng: chronicle.rng,
   }),
   acts: struckAt,
 };
 
 /**
- * The fixture's script. Unlike the raider, it attacks from the city's tile too, and prepares the
- * capture there only where it finds nothing to attack.
+ * The fixture's script, and its neutral's wave's. Unlike the raider, it attacks from the city's tile
+ * too, and prepares the capture there only where it finds nothing to attack.
  */
-const BEELINE: EnemyScript = {
-  moveTo(catalogue, chronicle, enemy) {
-    const stay: Landing = { tile: enemy.tile, cost: 0 };
+const BEELINE: UnitScript = {
+  moveTo(catalogue, chronicle, unit) {
+    const stay: Landing = { tile: unit.tile, cost: 0 };
     const { city } = chronicle;
     if (city === undefined) return { landing: stay, rng: chronicle.rng };
     let chosen = stay;
-    for (const landing of reachable(catalogue, chronicle, enemy)) {
+    for (const landing of reachable(catalogue, chronicle, unit)) {
       if (distance(landing.tile, city) < distance(chosen.tile, city)) chosen = landing;
     }
     return { landing: chosen, rng: chronicle.rng };
   },
-  acts(catalogue, chronicle, enemy) {
-    const struck = struckAt(catalogue, chronicle, enemy);
+  acts(catalogue, chronicle, unit) {
+    const struck = struckAt(catalogue, chronicle, unit);
     const { city } = chronicle;
-    const onCity = city !== undefined && tileKey(city) === tileKey(enemy.tile);
+    const onCity = city !== undefined && tileKey(city) === tileKey(unit.tile);
     return struck.act === 'none' && onCity ? { act: 'prepare' } : struck;
   },
 };
 
-/** The script every fixture age's neutral carries: it claims the first tile offered, in tile order. */
-const FIRST_OFFERED: NeutralScript = { claims: (_catalogue, _chronicle, offered) => offered[0] };
+/**
+ * The script every fixture age's neutral carries: it claims the first tile offered, in tile order,
+ * and enters its unit through the first card its ratio names.
+ */
+const FIRST_OFFERED: NeutralScript = {
+  claims: (_catalogue, _chronicle, offered) => offered[0],
+  enters: (_catalogue, _chronicle, ratio) => ratio[0]?.card,
+};
+
+/** The neutral every fixture age names: its warriors entered through the warrior card. */
+const FIXTURE_NEUTRAL: Neutral = {
+  building: NEUTRAL,
+  script: FIRST_OFFERED,
+  scripts: { guard: GUARD_SCRIPT, wave: SCRIPT },
+  ratio: [{ card: 'PH_Warrior', kind: 'PH_Warrior', share: 1 }],
+  wave: { gathered: 3, sent: 2 },
+};
 
 /** The id the fixture catalogue lists its one civilization under. */
 export const CIVILIZATION_ID = 'civilization';
@@ -642,7 +661,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       strikes: (_catalogue, chronicle) => {
         const shortened = shocked(chronicle, 'food', DROUGHT);
         return chronicle.resources.food < DROUGHT
-          ? followed(shortened, (left) => populationTaken(left))
+          ? followed(shortened, (left) => populationTaken(left, 'player'))
           : shortened;
       },
     },
@@ -1056,7 +1075,7 @@ export function agesOver(
         basePrice: 3 + at,
         schedule,
         camp,
-        neutral: { building: NEUTRAL, script: FIRST_OFFERED },
+        neutral: FIXTURE_NEUTRAL,
         sites: SITES,
         regions,
         achievements: achievementsOf(id),
@@ -1536,6 +1555,11 @@ export function standing(
       return { ...state, entering: { type: carried.type, tile, faction } };
     case 'enemy':
       return { ...state, entering: enemyEntering(carried.type, SCRIPT, tile) };
+    case 'neutral':
+      return {
+        ...state,
+        entering: { type: carried.type, faction: 'neutral', script: GUARD_SCRIPT, tile },
+      };
   }
 }
 
@@ -1556,6 +1580,15 @@ export function enemyStanding(
   const enemy = standing('enemy', tile, afloat);
   const entering = { ...enemyEntering(enemy.stats.type, script, tile), embarkedMove, camp };
   return { ...enemy, entering };
+}
+
+/** A unit of the neutral's standing as `standing` stands it, under `GUARD_SCRIPT` unless another is named. */
+export function neutralStanding(
+  tile: TileCoords,
+  { script = GUARD_SCRIPT, stats = {} }: { script?: string; stats?: Partial<UnitStats> } = {},
+): Standing {
+  const unit = standing('neutral', tile, stats);
+  return { ...unit, entering: { type: unit.stats.type, faction: 'neutral', script, tile } };
 }
 
 /** The unit a number names, for a fixture that expects it to be standing. */

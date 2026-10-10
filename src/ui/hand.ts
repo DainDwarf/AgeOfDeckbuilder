@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { aimOf } from '../rules/cards';
-import { type AimedCard, type Catalogue, cardOf } from '../rules/catalogue';
-import { costOf, refusalOf } from '../rules/chronicle';
+import { type AimedCard, type Catalogue, cardOf, costOf } from '../rules/catalogue';
+import { refusalOf } from '../rules/chronicle';
 import type { Aimed, Change, Group, Stage } from '../rules/stages';
 import {
   type Chronicle,

@@ -7,9 +7,12 @@ import {
   cardMade,
   cardOf,
   counterOf,
+  type Entering,
   entered,
   fullHealth,
   keywordOf,
+  neutralOf,
+  type UnitEntry,
   unitKind,
 } from './catalogue';
 import { claimable, populationTaken } from './city';
@@ -49,6 +52,9 @@ import {
   type Block,
   type Chronicle,
   type ChronicleCard,
+  type CityFaction,
+  cityRows,
+  cityTileOf,
   costsOf,
   holderOf,
   holds,
@@ -71,6 +77,11 @@ export function aimOf(card: Card): Aim {
     case 'settle':
       return charted(card);
     case 'unit':
+      return {
+        aim: 'none',
+        blocked: (catalogue, chronicle) => card.blocked(catalogue, chronicle, 'player'),
+        effect: (catalogue, paid) => card.effect(catalogue, paid, 'player'),
+      };
     case 'building':
     case 'action':
     case 'instant':
@@ -509,29 +520,50 @@ export function healthLost(
 }
 
 /**
- * How a unit card enters its unit, the block and the effect as one pair so neither is written
- * without the other: the city keeps its last population, needs one idle to turn into the unit, and
- * needs its own tile free; then one idle population becomes the unit, on the city's tile.
+ * How a unit card enters its unit for a city, the block and the effect as one pair so neither is
+ * written without the other: the city keeps its last population, needs one idle to turn into the
+ * unit, and needs its own tile free; then one idle population becomes the unit, on the city's tile.
  */
-export function enters(type: string): Aim & { readonly aim: 'none' } {
+export function enters(type: string): UnitEntry {
   return {
-    aim: 'none',
-    blocked: (_catalogue, chronicle) => {
+    blocked: (_catalogue, chronicle, whose) => {
+      const city = cityRows(chronicle, whose);
+      const tile = cityTileOf(chronicle, whose);
       const blocks: Block[] = [];
-      if (chronicle.population <= 1) blocks.push('population');
-      if (idle(chronicle) <= 0) blocks.push('idle');
-      if (chronicle.city !== undefined && unitAt(chronicle.units, chronicle.city) !== undefined)
-        blocks.push('city');
+      if ((city?.population ?? 0) <= 1) blocks.push('population');
+      if (city === undefined || idle(city) <= 0) blocks.push('idle');
+      if (tile !== undefined && unitAt(chronicle.units, tile) !== undefined) blocks.push('city');
       return blocks;
     },
-    effect: (catalogue, paid) => {
-      const { city } = paid;
-      if (city === undefined) refuse(catalogue, `a ${type} entered while the city stands nowhere`);
-      return followed(populationTaken(paid), (left) =>
-        entered(catalogue, left, { type, faction: 'player', tile: city }),
+    effect: (catalogue, paid, whose) => {
+      const tile = cityTileOf(paid, whose);
+      if (tile === undefined) refuse(catalogue, `a ${type} entered while the city stands nowhere`);
+      return followed(populationTaken(paid, whose), (left) =>
+        entered(catalogue, left, cityUnit(catalogue, left, whose, type, tile)),
       );
     },
   };
+}
+
+/** A unit of the kind entering for the faction's city on the tile: the neutral's under its guard script. */
+function cityUnit(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  whose: CityFaction,
+  type: string,
+  tile: TileCoords,
+): Entering {
+  switch (whose) {
+    case 'player':
+      return { type, faction: 'player', tile };
+    case 'neutral':
+      return {
+        type,
+        faction: 'neutral',
+        script: neutralOf(catalogue, chronicle.age).scripts.guard,
+        tile,
+      };
+  }
 }
 
 /**

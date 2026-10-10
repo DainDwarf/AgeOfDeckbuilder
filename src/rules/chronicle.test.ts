@@ -4,13 +4,13 @@ import {
   apply,
   type Command,
   drawPileEmptied,
-  enemiesKilledBy,
   gainedFrom,
   launched,
   outcome,
   playsOn,
   terrainsPlayedOn,
   turnsPlaying,
+  unitsKilledBy,
 } from './chronicle';
 import {
   AGE,
@@ -1195,12 +1195,12 @@ test('an achievement counting a card’s plays on a feature counts one on a tile
   });
 });
 
-test('an achievement counting the enemies a kind of unit kills counts each enemy the attack of a unit of the player’s of that kind kills, and nothing for a kill by another kind, damaged by that kind first or not, nor for a unit of the player’s killed', () => {
+test('an achievement counting the units a kind of unit kills counts each unit the attack of a unit of the player’s of that kind kills, an enemy or one of the neutral’s, and nothing for a kill by another kind, damaged by that kind first or not, nor for a unit of the player’s killed', () => {
   const killing = achieved({
     [HOARD]: {
       ...achievementOf(CATALOGUE, AGE, HOARD),
-      ...enemiesKilledBy('PH_Slinger'),
-      need: 2,
+      ...unitsKilledBy('PH_Slinger'),
+      need: 3,
     },
   });
   const slinger = { type: 'PH_Slinger', damage: 2 };
@@ -1211,9 +1211,11 @@ test('an achievement counting the enemies a kind of unit kills counts each enemy
       standing('player', { q: -1, r: 0 }, { damage: 2 }),
       standing('player', { q: 0, r: 1 }, { ...slinger, damage: 1 }),
       standing('player', { q: 1, r: 1 }, { damage: 2 }),
+      standing('player', { q: 0, r: -1 }, slinger),
       standing('enemy', { q: 2, r: 0 }, { health: 2 }),
       standing('enemy', { q: -2, r: 0 }, { health: 2 }),
       standing('enemy', { q: 0, r: 2 }, { health: 2 }),
+      standing('neutral', { q: 0, r: -2 }, { health: 2 }),
     ],
   });
   const attacked = (chronicle: Chronicle, unit: number, at: TileCoords): Chronicle =>
@@ -1223,12 +1225,14 @@ test('an achievement counting the enemies a kind of unit kills counts each enemy
   const byAnother = attacked(killed, 2, { q: -2, r: 0 });
   const damaged = attacked(byAnother, 3, { q: 0, r: 2 });
   const finished = attacked(damaged, 4, { q: 0, r: 2 });
+  const neutralKilled = attacked(finished, 5, { q: 0, r: -2 });
 
   expect(achievementIn(killed, HOARD).tally).toEqual({ killed: 1 });
-  expect([byAnother, damaged, finished].map((chronicle) => chronicle.units.length)).toEqual([
-    5, 5, 4,
-  ]);
+  expect(
+    [byAnother, damaged, finished, neutralKilled].map((chronicle) => chronicle.units.length),
+  ).toEqual([7, 7, 6, 5]);
   expect(achievementIn(finished, HOARD).tally).toEqual({ killed: 1 });
+  expect(achievementIn(neutralKilled, HOARD).tally).toEqual({ killed: 2 });
 
   const raided = reaching([], {
     tiles: field(2),

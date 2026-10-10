@@ -337,7 +337,7 @@ const TEXT = {
   'goal.herbalism': 'Play [card:gather] on {need} different terrains',
   'goal.irrigation': 'Build [card:farm] along a river {need} times',
   'goal.domestication': 'Play [card:gather] on [feature:cattle] {need} times',
-  'goal.bow-and-arrow': 'Kill {need} enemies with a [player:scout]',
+  'goal.bow-and-arrow': 'Kill {need} units with a [player:scout]',
   'goal.pottery': 'Gain {need}[production] from [terrain:hills]',
   'goal.calendar': 'Empty the draw pile {need} times', // glossary exception: calendar
   'goal.bread': 'Have {need} population',

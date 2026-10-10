@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued, type EnemyAct } from '../rules/catalogue';
+import { type Catalogue, catalogued, type ScriptAct } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
 import { claimable } from '../rules/city';
 import {
@@ -7,6 +7,7 @@ import {
   attacksOf,
   besideTheNeutral,
   builtOn,
+  CAMP,
   CATALOGUE,
   CITY,
   camped,
@@ -17,23 +18,28 @@ import {
   endedTurn,
   enemyStanding,
   field,
+  GUARD_SCRIPT,
   madeOf,
   movesOf,
   NEUTRAL_TILE,
+  neutralStanding,
   only,
+  plains,
   SCRIPT,
   SITE,
   type Standing,
   standing,
   WELL,
   WELL_GIVES,
+  WORKER_STATS,
   withTile,
+  withUnits,
   worker,
 } from '../rules/fixtures';
 import { distance, MOVE_POINT, type Tile, type TileCoords, tileKey } from '../rules/map';
 import { seedRng } from '../rules/rng';
 import { type Chronicle, withCityRows } from '../rules/state';
-import { guarding, PILLAGER, RAIDER, VILLAGER } from './scripts';
+import { guarding, NEUTRAL_GUARD, NEUTRAL_WAVE, PILLAGER, RAIDER, VILLAGER } from './scripts';
 
 /** The fixture's content, its enemies entering as raiders in place of its own script. */
 const RAIDING: Catalogue = catalogued({
@@ -71,7 +77,7 @@ function asked(script: Catalogue, chronicle: Chronicle): { to: string; acts?: st
   };
 }
 
-function readOf(act: EnemyAct): string | undefined {
+function readOf(act: ScriptAct): string | undefined {
   switch (act.act) {
     case 'attack':
       return tileKey(act.target.tile);
@@ -574,6 +580,223 @@ test('the villager claims the tile that yields most, a building beside counted, 
   expect(villagerClaims(opened)).toBe('0,1');
   expect(villagerClaims(welled)).toBe('2,-1');
   expect(villagerClaims(spread)).toBe('1,-1');
+});
+
+/** The fixture's content, its units under `SCRIPT` acting as the neutral's guard. */
+const KEEPING: Catalogue = catalogued({
+  ...CATALOGUE,
+  scripts: { ...CATALOGUE.scripts, [SCRIPT]: NEUTRAL_GUARD },
+});
+
+/** The fixture's content, its units under `SCRIPT` acting as the neutral's wave. */
+const SENDING: Catalogue = catalogued({
+  ...CATALOGUE,
+  scripts: { ...CATALOGUE.scripts, [SCRIPT]: NEUTRAL_WAVE },
+});
+
+/**
+ * `besideTheNeutral` on plains out to four unless the test hands its own ground, the neutral holding
+ * the tiles named beside its city's own, the units standing on it and the generator seeded.
+ */
+function neutralAround(
+  held: readonly TileCoords[],
+  units: readonly Standing[],
+  { ground = plains(4), seed = 7 }: { ground?: Tile[]; seed?: number } = {},
+): Chronicle {
+  const opened = besideTheNeutral({}, ground);
+  const holding = withCityRows(opened, 'neutral', { held: [NEUTRAL_TILE, ...held] });
+  return withUnits({ ...holding, rng: seedRng(seed) }, units);
+}
+
+/** A unit of the neutral's under `SCRIPT` on the tile, its move the move points named. */
+function scripted(tile: TileCoords, move = 2 * MOVE_POINT, sight = 2): Standing {
+  return neutralStanding(tile, { script: SCRIPT, stats: { move, sight } });
+}
+
+/** An enemy staying where it stands and attacking what it can, on the tile. */
+function sentry(tile: TileCoords): Standing {
+  return enemyStanding(tile, undefined, { script: GUARD_SCRIPT, stats: { move: 0 } });
+}
+
+test('the neutral’s guard lands where it can attack an enemy from inside the border, the nearest its city, and attacks it, never a unit of the player’s', () => {
+  const archer = neutralStanding(
+    { q: 3, r: 0 },
+    { script: SCRIPT, stats: { move: 2 * MOVE_POINT, range: 2 } },
+  );
+  const chronicle = neutralAround(
+    [
+      { q: 2, r: 0 },
+      { q: 2, r: -1 },
+      { q: 3, r: -1 },
+      { q: 3, r: 0 },
+    ],
+    [archer, standing('player', { q: 2, r: -2 }, { health: 1 }), sentry({ q: 4, r: -1 })],
+  );
+
+  expect(movesOf(chronicle, KEEPING)).toEqual([['3,0', '2,-1']]);
+  expect(attacksOf(chronicle, KEEPING)[0]).toEqual(['2,-1', '4,-1']);
+});
+
+test('the neutral’s guard that can attack no enemy from inside the border walks inside it toward the one it sees, never out of it', () => {
+  for (const seed of [1, 2, 3, 4, 5]) {
+    const chronicle = neutralAround(
+      [
+        { q: 2, r: 0 },
+        { q: 0, r: 1 },
+        { q: 1, r: 1 },
+      ],
+      [scripted(NEUTRAL_TILE, 2 * MOVE_POINT, 3), sentry({ q: 4, r: 0 })],
+      { seed },
+    );
+
+    expect(movesOf(chronicle, KEEPING)).toEqual([['1,0', '2,0']]);
+    expect(attacksOf(chronicle, KEEPING)).toEqual([]);
+  }
+});
+
+test('the neutral’s guard with no enemy in sight wanders inside the border drawn from the seed, off its city’s tile while another tile it holds is free: the same seed wanders the same, and seeds differ', () => {
+  const held = [
+    { q: 2, r: 0 },
+    { q: 1, r: 1 },
+    { q: 2, r: -1 },
+    { q: 0, r: 1 },
+  ];
+  const wandered = (seed: number): string =>
+    movesOf(neutralAround(held, [scripted(NEUTRAL_TILE, MOVE_POINT)], { seed }), KEEPING)[0][1];
+  const seeds = Array.from({ length: 30 }, (_, at) => at + 1);
+  const landed = seeds.map(wandered);
+
+  for (const seed of seeds) expect(wandered(seed)).toBe(wandered(seed));
+  for (const tile of landed) expect(held.map(tileKey)).toContain(tile);
+  expect(new Set(landed).size).toBeGreaterThan(1);
+});
+
+test('the neutral’s guard rests on its city’s tile only while no other tile its city holds is free', () => {
+  const beside = { q: 2, r: 0 };
+  const kept = (units: Standing[]): string[][] => movesOf(neutralAround([beside], units), KEEPING);
+
+  expect(kept([scripted(NEUTRAL_TILE)])).toEqual([['1,0', '2,0']]);
+  expect(kept([scripted(NEUTRAL_TILE), neutralStanding(beside, { stats: { move: 0 } })])).toEqual(
+    [],
+  );
+  for (const seed of [1, 2, 3, 4, 5]) {
+    expect(movesOf(neutralAround([beside], [scripted(beside)], { seed }), KEEPING)).toEqual([]);
+  }
+});
+
+test('the neutral’s guard outside the border walks back toward its city, and never embarks to', () => {
+  const island = { q: 4, r: 0 };
+  const coast = { q: 3, r: 0 };
+  const strait = deepBut(madeOf(plains(4), 'coast', [coast]), [
+    CITY,
+    NEUTRAL_TILE,
+    { q: 2, r: 0 },
+    coast,
+    island,
+  ]);
+  const content = camping({ embarkedMove: EMBARKED_MOVE }, KEEPING);
+
+  expect(movesOf(neutralAround([], [scripted({ q: 3, r: 0 }, MOVE_POINT)]), KEEPING)).toEqual([
+    ['3,0', '2,0'],
+  ]);
+  expect(movesOf(neutralAround([], [scripted(island)], { ground: strait }), content)).toEqual([]);
+});
+
+/** The chronicle with a camp built on each tile named, none of its enemies standing. */
+function campedOn(
+  chronicle: Chronicle,
+  camps: readonly TileCoords[],
+  terrain = 'plain',
+): Chronicle {
+  return camps.reduce(
+    (left, { q, r }) =>
+      withTile(left, { q, r, terrain, improvements: [], building: CAMP.building }),
+    chronicle,
+  );
+}
+
+test('the neutral’s wave goes for the camp its own walk weighs the least to, not the one fewest tiles off', () => {
+  const near = { q: 4, r: 0 };
+  const far = { q: 2, r: -3 };
+  const wave = neutralAround([], [scripted({ q: 2, r: 0 })]);
+  const open = campedOn(campedOn(wave, [far]), [near]);
+  const wooded = campedOn(
+    campedOn(withTile(wave, { q: 3, r: 0, terrain: 'forest', improvements: [] }), [far]),
+    [near],
+    'forest',
+  );
+
+  expect(distance({ q: 2, r: 0 }, near)).toBeLessThan(distance({ q: 2, r: 0 }, far));
+  expect(movesOf(open, SENDING)).toEqual([['2,0', '4,0']]);
+  expect(movesOf(wooded, SENDING)).toEqual([['2,0', '2,-2']]);
+});
+
+test('the neutral’s wave lands in range of an enemy it can attack on its way and attacks it, never a unit of the player’s, and with no camp standing it stands where it is', () => {
+  const camp = { q: 2, r: -3 };
+  const units = [
+    scripted({ q: 2, r: 0 }),
+    standing('player', { q: 3, r: -1 }, { health: 1 }),
+    sentry({ q: 4, r: -2 }),
+  ];
+  const beset = campedOn(neutralAround([], units), [camp]);
+  const campless = neutralAround([], units);
+
+  expect(movesOf(beset, SENDING)).toEqual([['2,0', '3,-2']]);
+  expect(attacksOf(beset, SENDING)[0]).toEqual(['3,-2', '4,-2']);
+  expect(movesOf(campless, SENDING)).toEqual([]);
+});
+
+test('the neutral’s wave embarks where the ground ends to cross toward its camp', () => {
+  const camp = { q: 4, r: 0 };
+  const coast = { q: 3, r: 0 };
+  const strait = deepBut(madeOf(plains(4), 'coast', [coast]), [
+    CITY,
+    NEUTRAL_TILE,
+    { q: 2, r: 0 },
+    coast,
+    camp,
+  ]);
+  const content = camping({ embarkedMove: EMBARKED_MOVE }, SENDING);
+  const chronicle = campedOn(neutralAround([], [scripted({ q: 2, r: 0 })], { ground: strait }), [
+    camp,
+  ]);
+
+  expect(movesOf(chronicle, content)).toEqual([['2,0', '3,0']]);
+});
+
+/** The card the villager enters a unit through, out of the ratio, two warriors to one worker. */
+function villagerEnters(
+  chronicle: Chronicle,
+  first: 'warrior' | 'worker' = 'warrior',
+): string | undefined {
+  const warrior = { card: 'PH_Warrior', kind: 'PH_Warrior', share: 2 };
+  const worker = { card: 'PH_Worker', kind: 'PH_Worker', share: 1 };
+  const ratio = first === 'warrior' ? [warrior, worker] : [worker, warrior];
+  return VILLAGER.enters(CATALOGUE, chronicle, ratio);
+}
+
+test('the villager enters the kind whose share of the neutral’s units falls shortest of the ratio, the first the ratio names of equals, counting no unit of another faction', () => {
+  const warrior = (tile: TileCoords): Standing => neutralStanding(tile);
+  const workerOf = (tile: TileCoords): Standing => neutralStanding(tile, { stats: WORKER_STATS });
+  const standingWith = (units: Standing[]): Chronicle => neutralAround([], units);
+
+  expect(villagerEnters(standingWith([]))).toBe('PH_Warrior');
+  expect(villagerEnters(standingWith([]), 'worker')).toBe('PH_Worker');
+  expect(villagerEnters(standingWith([warrior({ q: 2, r: 0 })]))).toBe('PH_Worker');
+  expect(villagerEnters(standingWith([warrior({ q: 2, r: 0 }), workerOf({ q: 2, r: -1 })]))).toBe(
+    'PH_Warrior',
+  );
+  expect(
+    villagerEnters(
+      standingWith([warrior({ q: 2, r: 0 }), warrior({ q: 3, r: 0 }), workerOf({ q: 2, r: -1 })]),
+      'worker',
+    ),
+  ).toBe('PH_Worker');
+  expect(
+    villagerEnters(
+      standingWith([warrior({ q: 2, r: 0 }), standing('enemy', { q: 3, r: 0 }, WORKER_STATS)]),
+    ),
+  ).toBe('PH_Worker');
 });
 
 test('a guard attacks the unit of the least health within its range', () => {

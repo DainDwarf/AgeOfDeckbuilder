@@ -23,19 +23,22 @@ import {
   cardMade,
   cardOf,
   checkContent,
-  enemyScript,
+  costOf,
   rewardsOf,
   technologyOf,
   unitKind,
+  unitScript,
 } from './catalogue';
 import {
   assign,
   type CityCommand,
   cityCommand,
   claim,
+  costPaid,
   grow,
   income,
   neutralClaims,
+  neutralEntered,
   reassign,
 } from './city';
 import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove, wavesSent } from './enemies';
@@ -93,10 +96,7 @@ import {
   type ChronicleAchievement,
   type ChronicleCard,
   type CityFaction,
-  type Cost,
-  costsOf,
   onSettlePhase,
-  paid,
   playable,
   type Refusal,
   type Tally,
@@ -105,6 +105,8 @@ import {
 } from './state';
 import {
   attackable,
+  canAttack,
+  type Faction,
   FIRST_UNIT_NUMBER,
   type Landing,
   reachable,
@@ -505,10 +507,10 @@ function onGround(chronicle: Chronicle, at: TileCoords | undefined, ground: Play
 }
 
 /**
- * An achievement's tally and count for the enemies the attacks of the player's units of a kind kill,
+ * An achievement's tally and count for the units the attacks of the player's units of a kind kill,
  * the attacker read as it stood when the attack began. A kind the catalogue does not hold is refused.
  */
-export function enemiesKilledBy(kind: string): Required<Pick<Achievement, 'tallies' | 'count'>> {
+export function unitsKilledBy(kind: string): Required<Pick<Achievement, 'tallies' | 'count'>> {
   return {
     tallies: (catalogue, started, stages, tally) => {
       unitKind(catalogue, kind);
@@ -895,11 +897,6 @@ function victory(chronicle: Chronicle): Change {
   return change('ended', { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } });
 }
 
-/** What a card costs, resource by resource, in the order the resource bar reads. */
-export function costOf(catalogue: Catalogue, id: CardId): Cost[] {
-  return costsOf(cardOf(catalogue, id).cost);
-}
-
 export function refusalOf(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Refusal {
   return {
     unaffordable: unaffordable(chronicle, costOf(catalogue, id)),
@@ -954,8 +951,7 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   if (effect === undefined) return refused(chronicle);
 
   const costs = costOf(catalogue, held.id);
-  const cost = (left: Chronicle): Landed =>
-    costs.length === 0 ? unchanged(left) : landedAs(change('stock', paid(left, costs)));
+  const cost = (left: Chronicle): Landed => costPaid(left, 'player', costs);
   return grouped(
     { name: 'played', card: held.id, aimed: aimedBy(command) },
     followed(followed(landedAs(playedAway(catalogue, chronicle, command.index)), cost), effect),
@@ -1180,18 +1176,22 @@ function everyPlace(pile: readonly ChronicleCard[]): number[] {
 }
 
 /**
- * The enemies' half of the turn, the one `enemy-phase` group: the prepares carried through the
- * player's turn land first, a capture's `ended` alone in the group; then the camps send their waves,
- * then the neutral claims, then every enemy acts in unit order, then the camps roll their enemies.
+ * The enemies' half of the turn, the one `enemy-phase` group, in the order `docs/CHRONICLE.md`'s
+ * _The turn_ gives, a capture's `ended` alone in it; only the units standing as it began act.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
-  let phase: Sequence = followed<Stage>(
-    followed(preparesLanded(catalogue, chronicle), (left) => wavesSent(catalogue, left)),
-    (left) => neutralClaims(catalogue, left),
+  let phase: Sequence = followed(preparesLanded(catalogue, chronicle), (left) =>
+    wavesSent(catalogue, left),
   );
-  for (const { id } of chronicle.units) {
-    phase = followed(phase, (left) => enemyActs(catalogue, left, id));
-  }
+  const actingAs = (faction: ScriptedFaction): void => {
+    for (const { id } of chronicle.units) {
+      phase = followed(phase, (left) => scriptedActs(catalogue, left, id, faction));
+    }
+  };
+  actingAs('neutral');
+  phase = followed<Stage>(phase, (left) => neutralClaims(catalogue, left));
+  phase = followed(phase, (left) => neutralEntered(catalogue, left));
+  actingAs('enemy');
   return grouped(
     { name: 'enemy-phase' },
     followed(phase, (left) => campsRolled(catalogue, left)),
@@ -1231,15 +1231,35 @@ function carriedPrepare(chronicle: Chronicle, enemy: Unit, prepared: boolean): L
   );
 }
 
+/** The factions whose units act by a script. */
+type ScriptedFaction = Exclude<Faction, 'player'>;
+
+/** The script a unit acts by, and nothing for a unit of the player's. */
+function scriptOf(unit: Unit): string | undefined {
+  switch (unit.faction) {
+    case 'player':
+      return undefined;
+    case 'enemy':
+    case 'neutral':
+      return unit.script;
+  }
+}
+
 /**
- * One enemy acting on the chronicle the one before it left: an enemy that steps acts no more after
- * it, nor one that prepares. The draws its script made ride on the chronicle even where it raised no
- * stage.
+ * One unit of the faction acting by its script on the chronicle the one before it left: a unit that
+ * steps acts no more after it, nor one that prepares. The draws its script made ride on the
+ * chronicle even where it raised no stage.
  */
-function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequence {
+function scriptedActs(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  id: number,
+  faction: ScriptedFaction,
+): Sequence {
   const found = unitOf(chronicle.units, id);
-  if (found?.faction !== 'enemy') return unchanged(chronicle);
-  const script = enemyScript(catalogue, found.script);
+  const named = found?.faction === faction ? scriptOf(found) : undefined;
+  if (found === undefined || named === undefined) return unchanged(chronicle);
+  const script = unitScript(catalogue, named);
   const { landing, step, rng } = script.moveTo(catalogue, chronicle, found);
   const drawn = rng === chronicle.rng ? chronicle : { ...chronicle, rng };
   const moving =
@@ -1247,7 +1267,7 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
       ? unchanged(drawn)
       : crossed(drawn, found, landing);
   if (step !== undefined) {
-    return followed<Stage>(moving, (left) => enemyStepped(catalogue, left, id, step));
+    return followed<Stage>(moving, (left) => scriptedStepped(catalogue, left, id, step));
   }
 
   const acts = (standing: Chronicle): Sequence => {
@@ -1262,8 +1282,7 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
       case 'attack': {
         const { target } = act;
         if (
-          distance(acting.tile, target.tile) > acting.stats.range ||
-          (target.embarked && acting.stats.range <= 1) ||
+          !canAttack(acting, target, distance(acting.tile, target.tile)) ||
           !inOwnSight(catalogue, standing.tiles, acting, target.tile)
         ) {
           return landedAs(change('runtime-error', standing));
@@ -1276,29 +1295,30 @@ function enemyActs(catalogue: Catalogue, chronicle: Chronicle, id: number): Sequ
 }
 
 /**
- * An enemy preparing on the tile it stands on, its action spent as an attack spends it and then its
- * prepare carried; one embarked, or on a tile with neither the city nor anything built on it, is a
- * `runtime-error` and no prepare.
+ * A unit preparing on the tile it stands on, its action spent as an attack spends it and then its
+ * prepare carried; a unit no enemy, one embarked, or one on a tile with neither the city nor anything
+ * built on it, is a `runtime-error` and no prepare.
  */
-function prepared(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): Landed {
-  const tile = tileAt(chronicle.tiles, enemy.tile);
+function prepared(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): Landed {
+  const tile = tileAt(chronicle.tiles, unit.tile);
   const { city } = chronicle;
-  const onCity = city !== undefined && tileKey(city) === tileKey(enemy.tile);
+  const onCity = city !== undefined && tileKey(city) === tileKey(unit.tile);
   if (
-    enemy.embarked ||
+    unit.faction !== 'enemy' ||
+    unit.embarked ||
     tile === undefined ||
     !(onCity || pillaged(catalogue, chronicle, tile) !== undefined)
   ) {
     return landedAs(change('runtime-error', chronicle));
   }
-  return followed(actionSpent(chronicle, enemy.tile), (left) => carriedPrepare(left, enemy, true));
+  return followed(actionSpent(chronicle, unit.tile), (left) => carriedPrepare(left, unit, true));
 }
 
 /**
- * An enemy embarking or disembarking onto the tile its script names, through the step the cards
- * take; a step the rules cannot take is a `runtime-error` and no step.
+ * A unit acting by its script embarking or disembarking onto the tile its script names, through the
+ * step the cards take; a step the rules cannot take is a `runtime-error` and no step.
  */
-function enemyStepped(
+function scriptedStepped(
   catalogue: Catalogue,
   chronicle: Chronicle,
   id: number,

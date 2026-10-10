@@ -14,18 +14,18 @@ import {
 import type { Age, Slice } from '../rules/catalogue';
 import {
   drawPileEmptied,
-  enemiesKilledBy,
   gainedFrom,
   playsOn,
   terrainsPlayedOn,
   turnsPlaying,
+  unitsKilledBy,
 } from '../rules/chronicle';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
-import { PILLAGER, VILLAGER } from './scripts';
+import { NEUTRAL_GUARD, NEUTRAL_WAVE, PILLAGER, VILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
 
@@ -134,7 +134,16 @@ export const STONE: Slice = {
       embarkedMove: EMBARKED_MOVE,
       wave: { gathered: 3, sent: 2 },
     },
-    neutral: { building: 'neutral-village', script: VILLAGER },
+    neutral: {
+      building: 'neutral-village',
+      script: VILLAGER,
+      scripts: { guard: 'neutral-guard', wave: 'neutral-wave' },
+      ratio: [
+        { card: 'warrior', kind: 'warrior', share: 2 },
+        { card: 'archer', kind: 'archer', share: 1 },
+      ],
+      wave: { gathered: 6, sent: 3 },
+    },
     sites: {
       'painted-cave': {
         building: 'stone-painted-cave',
@@ -185,7 +194,7 @@ export const STONE: Slice = {
         influence: 1,
       },
       'bow-and-arrow': {
-        ...enemiesKilledBy('scout'),
+        ...unitsKilledBy('scout'),
         need: 3,
         technology: 'bow-and-arrow',
         influence: 1,
@@ -258,7 +267,7 @@ export const STONE: Slice = {
         sight: 2,
       },
     },
-    scripts: { pillager: PILLAGER },
+    scripts: { pillager: PILLAGER, 'neutral-guard': NEUTRAL_GUARD, 'neutral-wave': NEUTRAL_WAVE },
     cards: {
       farm: {
         kind: 'building',

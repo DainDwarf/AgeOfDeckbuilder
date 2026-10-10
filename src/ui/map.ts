@@ -29,6 +29,7 @@ import {
   type Chronicle,
   type CityFaction,
   type Cost,
+  cityTileOf,
   holderOf,
   type Snapshot,
 } from '../rules/state';
@@ -68,7 +69,11 @@ import { VEILS_ON, type Veils } from './veils';
 
 const TILE_SIZE = 24;
 
-const FACTION_COLOURS: Record<Faction, number> = { player: LOOK.civilization, enemy: LOOK.enemy };
+const FACTION_COLOURS: Record<Faction, number> = {
+  player: LOOK.civilization,
+  enemy: LOOK.enemy,
+  neutral: LOOK.neutral,
+};
 
 const CITY_COLOURS: Record<CityFaction, number> = {
   player: LOOK.civilization,
@@ -482,16 +487,6 @@ function boxOf(tiles: readonly Tile[]): {
 
 function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
-}
-
-/** The tile the faction's city stands on, and nothing where that city stands nowhere. */
-function cityTileOf(chronicle: Chronicle, whose: CityFaction): TileCoords | undefined {
-  switch (whose) {
-    case 'player':
-      return chronicle.city;
-    case 'neutral':
-      return chronicle.neutral?.city;
-  }
 }
 
 function glowTile(

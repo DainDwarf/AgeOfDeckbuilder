@@ -1,6 +1,13 @@
 import { expect, test } from 'vitest';
 import { chartedTile, improvementPlaced } from './cards';
-import { type Catalogue, catalogued, type EnemyScript, unitKind, type Wave } from './catalogue';
+import {
+  type Catalogue,
+  catalogued,
+  neutralOf,
+  type UnitScript,
+  unitKind,
+  type Wave,
+} from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
 import { attackOrNone, enteredAround, enteredOnCamp, raided } from './enemies';
@@ -39,11 +46,13 @@ import {
   NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
+  neutralStanding,
   only,
   opening,
   plains,
   pointsOf,
   preparing,
+  QUIET,
   RAIDER_ROW,
   REGION,
   REGIONS,
@@ -1177,7 +1186,7 @@ test('an enemy its move leaves out of range attacks nothing', () => {
 });
 
 /** The fixture's content, its enemies staying where they stand and doing what `acts` names. */
-function naming(acts: EnemyScript['acts']): Catalogue {
+function naming(acts: UnitScript['acts']): Catalogue {
   return catalogued({
     ...CATALOGUE,
     scripts: {
@@ -1605,6 +1614,94 @@ test('a prepare on a tile with neither the city nor anything built on it, and on
     expect(phase[0].chronicle.units).toEqual(city.units);
   }
   expect(embarked.units[0].embarked).toBe(true);
+});
+
+test('a unit of the neutral’s whose script prepares raises a runtime error and no prepare, on a tile where an enemy’s prepare lands', () => {
+  const farm = { q: 2, r: 0 };
+  const on = (unit: Standing): Chronicle =>
+    cityOf(['urban'], { tiles: builtOn(field(3), 'PH_Farm', [farm]), units: [unit] });
+
+  expect(enemyPhaseOf(on(standing('enemy', farm)), PREPARING)).toEqual(['action-spent', 'prepare']);
+  expect(enemyPhaseOf(on(neutralStanding(farm, { script: SCRIPT })), PREPARING)).toEqual([
+    'runtime-error',
+  ]);
+});
+
+test('a unit of the neutral’s at peace attacks no unit of the player’s: its script naming one is a runtime error and no attack, and it attacks the enemy beside it over the weaker unit of the player’s, the enemy attacking it back once it has acted', () => {
+  const player = standing('player', { q: 1, r: 0 }, { health: 1 });
+  const named = cityOf(['urban'], {
+    tiles: field(3),
+    units: [player, neutralStanding({ q: 2, r: 0 }, { script: SCRIPT, stats: { move: 0 } })],
+  });
+  const beset = cityOf(['urban'], {
+    tiles: field(3),
+    units: [
+      player,
+      neutralStanding({ q: 2, r: 0 }, { stats: { move: 0 } }),
+      standing('enemy', { q: 3, r: 0 }, { move: 0 }),
+    ],
+  });
+
+  expect(enemyPhaseOf(named, RECKLESS)).toEqual(['runtime-error']);
+  expect(attacksOf(beset)).toEqual([
+    ['2,0', '3,0'],
+    ['3,0', '2,0'],
+  ]);
+});
+
+test('a unit of the neutral’s embarks as an enemy does through no card, onto no tile the player holds: a step onto one is a runtime error and no step', () => {
+  const shore = { q: 4, r: 0 };
+  const coast = { q: 4, r: -1 };
+  const rowing = stepping(() => coast, EMBARKED_MOVE);
+  const holding = (held: TileCoords[]): Chronicle =>
+    cityOf(['urban'], {
+      tiles: field(4, [coast]),
+      held: [CITY, ...held],
+      units: [neutralStanding(shore, { script: SCRIPT })],
+    });
+
+  expect(enemyPhaseOf(holding([]), rowing)).toEqual(['action-spent', 'move']);
+  expect(enemyPhaseOf(holding([coast]), rowing)).toEqual(['runtime-error']);
+});
+
+test('the neutral whose guards standing ashore are as many as its wave gathers sends as many as it sends under its wave’s script after the camps’ waves, the one on its city’s tile last; no enemy under its guard’s script counts', () => {
+  const neutral = neutralOf(CATALOGUE, QUIET);
+  const { wave } = neutral;
+  if (wave === undefined) throw new Error('the fixture’s neutral sends no wave');
+  const content = camping({ wave: WAVE });
+  const camp = { q: -3, r: 0 };
+  const guards = [NEUTRAL_TILE, { q: 2, r: 0 }, { q: 2, r: -1 }, { q: 3, r: -1 }]
+    .slice(0, wave.gathered)
+    .map((tile) => neutralStanding(tile, { stats: { move: 0 } }));
+  // The opening stands the first of the camp's guards on it.
+  const campGuards = [
+    { q: -3, r: 1 },
+    { q: -2, r: 0 },
+  ].map((tile) => enemyStanding(tile, camp, { ...GUARD, stats: { move: 0 } }));
+  const gathered = withUnits(besideTheNeutral({ catalogue: content }, camped(plains(3), [camp])), [
+    ...guards,
+    ...campGuards,
+  ]);
+  const short = withUnits(besideTheNeutral({ catalogue: content }), [
+    ...guards.slice(1),
+    enemyStanding({ q: -2, r: 0 }, undefined, GUARD),
+  ]);
+
+  const [, sent] = heldBy(apply(content, gathered, { type: 'end-turn' }), 'enemy-phase');
+  const scripts = sent.chronicle.units.flatMap((unit) =>
+    unit.faction === 'neutral' ? [unit.script] : [],
+  );
+
+  expect(tilesStaged('wave-sent', gathered, content)).toEqual([
+    tileKey(camp),
+    tileKey(NEUTRAL_TILE),
+  ]);
+  expect(scripts).toEqual(
+    guards.map((_, at) =>
+      at === 0 || at > wave.sent ? neutral.scripts.guard : neutral.scripts.wave,
+    ),
+  );
+  expect(tilesStaged('wave-sent', short, content)).toEqual([]);
 });
 
 test('an entry handed a table holding no row, or a row at a weight not above nought, is refused where it lands', () => {

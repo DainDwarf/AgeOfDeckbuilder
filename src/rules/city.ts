@@ -1,4 +1,4 @@
-import { ageOf, type Catalogue } from './catalogue';
+import { ageOf, type Catalogue, costOf, unitCardOf } from './catalogue';
 import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
@@ -87,6 +87,18 @@ export function yielded(
 }
 
 /**
+ * A cost paid out of the faction's city's stocks, one `stock`, and nothing for a cost of nothing or
+ * where that city is none.
+ */
+export function costPaid(chronicle: Chronicle, whose: CityFaction, costs: readonly Cost[]): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined || costs.length === 0) return unchanged(chronicle);
+  const resources = { ...city.resources };
+  for (const { resource, amount } of costs) resources[resource] -= amount;
+  return landedAs(change('stock', withCityRows(chronicle, whose, { resources })));
+}
+
+/**
  * What the faction's city's growth spends: twice its population and its own units counted together.
  * The neutral's on a chronicle holding none has neither.
  */
@@ -105,17 +117,31 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
   );
 }
 
-/** The population off the tile and then one fewer. */
-function populationLeaving(chronicle: Chronicle, at: TileCoords): Landed {
+/** The population of the faction's city off the tile and then one fewer. */
+function populationLeaving(chronicle: Chronicle, whose: CityFaction, at: TileCoords): Landed {
   const key = tileKey(at);
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
   return followed(
     landedAs(
-      changeOn('assigned', at, {
-        ...chronicle,
-        assigned: chronicle.assigned.filter((coord) => tileKey(coord) !== key),
-      }),
+      changeOn(
+        'assigned',
+        at,
+        withCityRows(chronicle, whose, {
+          assigned: city.assigned.filter((coord) => tileKey(coord) !== key),
+        }),
+      ),
     ),
-    (left) => landedAs(change('population', { ...left, population: left.population - 1 })),
+    (left) => populationFewer(left, whose),
+  );
+}
+
+/** The faction's city's population one fewer, and nothing where that city is none. */
+function populationFewer(chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
+  return landedAs(
+    change('population', withCityRows(chronicle, whose, { population: city.population - 1 })),
   );
 }
 
@@ -127,21 +153,20 @@ export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
   const key = tileKey(at);
   const working = chronicle.assigned.find((coord) => tileKey(coord) === key);
   if (working === undefined) return unchanged(chronicle);
-  return populationLeaving(chronicle, working);
+  return populationLeaving(chronicle, 'player', working);
 }
 
 /**
- * One population of the city taken, whichever it is: an idle one where one is idle, and where none
- * is the last assigned tile unassigned first, the city's last no exception; the population one fewer.
- * Nothing where the city has no population at all.
+ * One population of the faction's city taken, whichever it is: an idle one where one is idle, and
+ * where none is the last assigned tile unassigned first, the city's last no exception; the
+ * population one fewer. Nothing where that city has no population at all.
  */
-export function populationTaken(chronicle: Chronicle): Landed {
-  if (chronicle.population <= 0) return unchanged(chronicle);
-  const last = chronicle.assigned[chronicle.assigned.length - 1];
-  if (idle(chronicle) > 0 || last === undefined) {
-    return landedAs(change('population', { ...chronicle, population: chronicle.population - 1 }));
-  }
-  return populationLeaving(chronicle, last);
+export function populationTaken(chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined || city.population <= 0) return unchanged(chronicle);
+  const last = city.assigned[city.assigned.length - 1];
+  if (idle(city) > 0 || last === undefined) return populationFewer(chronicle, whose);
+  return populationLeaving(chronicle, whose, last);
 }
 
 /**
@@ -408,4 +433,33 @@ export function neutralClaims(catalogue: Catalogue, chronicle: Chronicle): Seque
     }
     claiming = followed<Stage>(claiming, () => grouped({ name: 'claim' }, landing));
   }
+}
+
+/**
+ * The neutral entering one unit through the unit card its script names, its cost one `stock` out of
+ * the neutral's stocks: a card it cannot pay for or one blocked enters nothing, and one its ratio
+ * does not name is a `runtime-error`.
+ */
+export function neutralEntered(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  const { neutral } = ageOf(catalogue, chronicle.age);
+  const city = chronicle.neutral;
+  if (neutral === undefined || city === undefined) return unchanged(chronicle);
+  const id = neutral.script.enters(catalogue, chronicle, neutral.ratio);
+  if (id === undefined) return unchanged(chronicle);
+  if (!neutral.ratio.some(({ card }) => card === id)) {
+    return landedAs(change('runtime-error', chronicle));
+  }
+  const card = unitCardOf(catalogue, id);
+  const costs = costOf(catalogue, id);
+  if (
+    !playable({
+      unaffordable: unaffordable(city, costs),
+      blocked: card.blocked(catalogue, chronicle, 'neutral'),
+    })
+  ) {
+    return unchanged(chronicle);
+  }
+  return followed(costPaid(chronicle, 'neutral', costs), (left) =>
+    card.effect(catalogue, left, 'neutral'),
+  );
 }

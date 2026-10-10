@@ -218,13 +218,6 @@ export function costsOf(cost: Partial<Resources>): Cost[] {
   return entries;
 }
 
-/** The chronicle with a cost paid out of the city's stocks. */
-export function paid(chronicle: Chronicle, costs: readonly Cost[]): Chronicle {
-  const resources = { ...chronicle.resources };
-  for (const { resource, amount } of costs) resources[resource] -= amount;
-  return { ...chronicle, resources };
-}
-
 /** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */
 export type Refusal = {
   readonly unaffordable: readonly Resource[];
@@ -238,10 +231,13 @@ export function playable(refusal: Refusal): boolean {
   return refusal.unaffordable.length === 0 && refusal.blocked.length === 0;
 }
 
-/** The resources a cost outruns; empty means the city can pay it. */
-export function unaffordable(chronicle: Chronicle, costs: readonly Cost[]): Resource[] {
+/** The resources a cost outruns in a city's stocks; empty means that city can pay it. */
+export function unaffordable(
+  city: Pick<CityRows, 'resources'>,
+  costs: readonly Cost[],
+): Resource[] {
   return costs
-    .filter(({ resource, amount }) => amount > chronicle.resources[resource])
+    .filter(({ resource, amount }) => amount > city.resources[resource])
     .map(({ resource }) => resource);
 }
 
@@ -283,6 +279,16 @@ export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
 /** The population on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(city: CityRows): number {
   return city.population - city.assigned.length;
+}
+
+/** The tile the faction's city stands on, and nothing where that city stands nowhere. */
+export function cityTileOf(chronicle: Chronicle, whose: CityFaction): TileCoords | undefined {
+  switch (whose) {
+    case 'player':
+      return chronicle.city;
+    case 'neutral':
+      return chronicle.neutral?.city;
+  }
 }
 
 /** The rows of the faction's city, and nothing for the neutral's on a chronicle holding none. */

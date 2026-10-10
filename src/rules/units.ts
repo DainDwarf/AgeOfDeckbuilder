@@ -9,8 +9,8 @@ import {
 } from './map';
 import type { MapContent } from './map-kinds';
 
-/** Who a unit acts for. The player commands theirs; an enemy attacks them. */
-export type Faction = 'player' | 'enemy';
+/** Who a unit acts for: the player, the enemies, or the neutral. */
+export type Faction = 'player' | 'enemy' | 'neutral';
 
 /**
  * What a unit is and what it can do. A unit carries its own copy, taken from its kind in the
@@ -29,9 +29,9 @@ export type UnitStats = {
 };
 
 /**
- * A unit standing on the map, with the move points and the action it has left; an enemy carries its
- * script, whether it has prepared, and its camp's tile, if any. `id` is the number dealt it as it
- * entered: what every command names it by, whoever else enters or is killed around it.
+ * A unit standing on the map, with the move points and the action it has left. `id` is the number
+ * dealt it as it entered: what every command names it by, whoever else enters or is killed around
+ * it.
  */
 export type Unit = {
   readonly id: number;
@@ -48,6 +48,7 @@ export type Unit = {
       readonly prepared: boolean;
       readonly camp?: TileCoords;
     }
+  | { readonly faction: 'neutral'; readonly script: string }
 );
 
 /** The least each number of a unit's stats may stand at. */
@@ -115,26 +116,45 @@ export function standsOn(
 
 /**
  * What a path over the map is read from: the ground it runs over, the rivers cutting it, who stands
- * on it, and which of it has ever been in sight. The chronicle answers for all four.
+ * on it, which of it has ever been in sight, and the tiles the player's city holds. The chronicle
+ * answers for all five.
  */
 type Crossed = {
   readonly tiles: readonly Tile[];
   readonly rivers: readonly River[];
   readonly units: readonly Unit[];
   readonly snapshots: readonly TileCoords[];
+  readonly held: readonly TileCoords[];
 };
 
 /**
- * Where a unit can land on the move points it has left, and what each landing spends: entering a
- * tile spends its movement cost, a step over a river edge every point the unit has left, and a
- * landing costs the cheapest route to it. A tile one of its own holds is crossed but never offered.
- * A unit of the player's neither lands on an uncharted tile nor crosses one, while the enemies read
- * the whole map and cross it charted or not.
+ * Whether a unit of the faction is kept off a tile, neither landing on it nor crossing it: a unit of
+ * the player's off an uncharted tile, a unit of the neutral's at peace off a tile the player holds,
+ * and an enemy off none, reading the whole map.
+ */
+export function shutTo(chronicle: Crossed, faction: Faction): (coord: TileCoords) => boolean {
+  switch (faction) {
+    case 'player': {
+      const charted = new Set(chronicle.snapshots.map(tileKey));
+      return (coord) => !charted.has(tileKey(coord));
+    }
+    case 'neutral': {
+      const held = new Set(chronicle.held.map(tileKey));
+      return (coord) => held.has(tileKey(coord));
+    }
+    case 'enemy':
+      return () => false;
+  }
+}
+
+/**
+ * Where a unit can land on the move points it has left, each at the cheapest route there, a step
+ * over a river edge spending every point it has left. A tile one of its own holds is crossed but
+ * never offered, and a tile its faction is shut out of is neither.
  */
 export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit): Landing[] {
   const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
-  const chartedTiles =
-    unit.faction === 'player' ? new Set(chronicle.snapshots.map(tileKey)) : undefined;
+  const shut = shutTo(chronicle, unit.faction);
 
   const spent = pathCosts(
     catalogue,
@@ -143,9 +163,8 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
     unit.tile,
     { points: unit.movePoints, embarked: unit.embarked },
     (coord) => {
-      const at = tileKey(coord);
-      if (chartedTiles !== undefined && !chartedTiles.has(at)) return true;
-      const held = standing.get(at);
+      if (shut(coord)) return true;
+      const held = standing.get(tileKey(coord));
       return held !== undefined && held !== unit.faction;
     },
   );
@@ -159,13 +178,14 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
 }
 
 /**
- * Whether a unit can attack another standing that many tiles away, action and sight aside: a worker
- * and an embarked unit attack nothing, no unit its own faction, and a unit whose range is one no
- * embarked unit; any other attack lands within the attacker's range.
+ * Whether a unit can attack another that many tiles away, action and sight aside: a worker and an
+ * embarked unit attack nothing, no unit its own faction, the neutral's at peace none of the player's,
+ * and a unit whose range is one no embarked unit; any other attack lands within its range.
  */
 export function canAttack(attacker: Unit, target: Unit, away: number): boolean {
   if (attacker.stats.worker || attacker.embarked) return false;
   if (target.faction === attacker.faction) return false;
+  if (attacker.faction === 'neutral' && target.faction === 'player') return false;
   if (target.embarked && attacker.stats.range <= 1) return false;
   return away <= attacker.stats.range;
 }

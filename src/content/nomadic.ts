@@ -134,7 +134,7 @@ const TABLES: Tables = {
         const taken = counter('food');
         const shortened = shocked(chronicle, 'food', taken);
         return chronicle.resources.food < taken
-          ? followed(shortened, (left) => populationTaken(left))
+          ? followed(shortened, (left) => populationTaken(left, 'player'))
           : shortened;
       },
     },
@@ -265,7 +265,7 @@ const TABLES: Tables = {
         'let-them-go': {
           cost: {},
           reads: () => ({}),
-          lands: (_catalogue, chronicle) => populationTaken(chronicle),
+          lands: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
         },
         'keep-them': {
           cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),

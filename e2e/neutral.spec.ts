@@ -1,14 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, technologyOf } from '../src/rules/catalogue';
+import { ageOf, neutralOf, technologyOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { LOOK } from '../src/ui/look';
-import { buildingName } from '../src/ui/text';
+import { buildingName, unitName } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   consoleKey,
@@ -25,6 +25,7 @@ import {
   standing,
   textOf,
   tileOnScreen,
+  unitEntered,
   watch,
 } from './chronicle-screen';
 
@@ -104,6 +105,52 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await textOf(page, 'panel-name')).toBe(buildingName(building));
+
+  expect(problems).toEqual([]);
+});
+
+/** The colours the named unit's mark is filled in, its hull's among them where it stands embarked. */
+function unitFills(page: Page, name: string): Promise<number[]> {
+  return page.evaluate((target) => {
+    const marker = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (marker === undefined) throw new Error(`nothing named ${target} stands on the screen`);
+    const [mark] = marker.list as Phaser.GameObjects.Container[];
+    return (mark.list as Phaser.GameObjects.Polygon[]).map((shape) => shape.fillColor);
+  }, name);
+}
+
+test('a unit of the neutral’s entered on its city stands on the map in the neutral’s colour, and its tile inspected heads its unit card with its kind’s name', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1, [], CAMPAIGN);
+  const { neutral } = opened;
+  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
+  const { script, scripts, ratio } = neutralOf(CATALOGUE, AGE);
+  const card = script.enters(CATALOGUE, opened, ratio);
+  const kind = ratio.find((row) => row.card === card)?.kind;
+  if (kind === undefined) throw new Error(`the neutral of the age ${AGE} enters no unit`);
+  const guarded = unitEntered(opened, {
+    type: kind,
+    faction: 'neutral',
+    script: scripts.guard,
+    tile: neutral.city,
+  });
+  const mark = `unit-${tileKey(neutral.city)}`;
+
+  await openSaved(page, guarded, CAMPAIGN);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+  await broughtIn(page, neutral.city);
+
+  expect(await unitFills(page, mark)).toEqual([LOOK.neutral]);
+
+  const at = await tileOnScreen(page, neutral.city);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('unit');
+  expect(await textOf(page, 'panel-name')).toBe(unitName(kind));
 
   expect(problems).toEqual([]);
 });

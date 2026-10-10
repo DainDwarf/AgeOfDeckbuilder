@@ -19,7 +19,9 @@ import {
   type CardId,
   type Chronicle,
   type ChronicleCard,
+  type CityFaction,
   type CitySection,
+  type Cost,
   type Counters,
   costsOf,
   type Tally,
@@ -28,11 +30,11 @@ import {
 import { type Landing, LEAST_STATS, standsOn, type Unit, type UnitStats } from './units';
 
 /**
- * What an enemy does in the enemy phase, asked of the enemy itself as the phase stands it. The phase
- * takes one enemy at a time — its move, then its step or an act for each of its action — and asks
- * again on the chronicle the last answer left; how either is chosen is the script's own business.
+ * What a unit does by its script in the enemy phase, asked of it as the phase stands it: one unit at
+ * a time, its move, then its step or an act for each of its action, each asked again on the
+ * chronicle the last answer left.
  */
-export type EnemyScript = {
+export type UnitScript = {
   /**
    * The landing it moves to, out of the tiles its move points reach and the one it already stands
    * on, which costs it nothing; the tile beside the landing it then embarks or disembarks onto, if
@@ -41,20 +43,47 @@ export type EnemyScript = {
   moveTo(
     catalogue: Catalogue,
     chronicle: Chronicle,
-    enemy: Unit,
+    unit: Unit,
   ): { readonly landing: Landing; readonly step?: TileCoords; readonly rng: Rng };
   /** What it does with one of its action now. */
-  acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct;
+  acts(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): ScriptAct;
 };
 
 /** What the neutral chooses where the enemy phase says the neutral acts, asked on the chronicle as it stands. */
 export type NeutralScript = {
   /** The tile its city claims, out of those offered: the tiles it may claim, never none. */
   claims(catalogue: Catalogue, chronicle: Chronicle, offered: readonly TileCoords[]): TileCoords;
+  /** The unit card it enters a unit through, out of those its ratio names, and none for no unit. */
+  enters(
+    catalogue: Catalogue,
+    chronicle: Chronicle,
+    ratio: readonly UnitShare[],
+  ): CardId | undefined;
 };
 
-/** What an enemy spends one of its action on: an attack on a unit, a prepare on its tile, or nothing. */
-export type EnemyAct =
+/** One kind of the neutral's units: the unit card that enters it, the kind, and its share of the ratio. */
+export type UnitShare = { readonly card: CardId; readonly kind: string; readonly share: number };
+
+/** The scripts the neutral's content names, the rules reading both: the one its wave counts, and the one it sends. */
+export type NeutralUnitScript = 'guard' | 'wave';
+
+/**
+ * The neutral an age names: its city's building, its script, the scripts its units carry, the
+ * ratio its units are kept near, and the wave it sends, a neutral naming none sending none.
+ */
+export type Neutral = {
+  readonly building: string;
+  readonly script: NeutralScript;
+  readonly scripts: Readonly<Record<NeutralUnitScript, string>>;
+  readonly ratio: readonly UnitShare[];
+  readonly wave?: Wave;
+};
+
+/**
+ * What a unit acting by its script spends one of its action on: an attack on a unit, a prepare on its
+ * tile, or nothing.
+ */
+export type ScriptAct =
   | { readonly act: 'attack'; readonly target: Unit }
   | { readonly act: 'prepare' }
   | { readonly act: 'none' };
@@ -133,12 +162,25 @@ export type Card = {
   readonly becomes?: CardId;
 } & (
   | ({ readonly kind: 'settle' | 'building' } & Aim)
-  | ({ readonly kind: 'unit' | 'action' | 'instant' } & Keyword & Aim)
+  | ({ readonly kind: 'action' | 'instant' } & Keyword & Aim)
+  | UnitCard
   | {
       readonly kind: 'hazard';
       readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
     }
 );
+
+/** What a unit card is past its cost: its keyword, and how it enters its unit for a city. */
+export type UnitCard = { readonly kind: 'unit' } & Keyword & UnitEntry;
+
+/**
+ * How a unit card enters its unit for the city named: what blocks it there, and its effect on the
+ * chronicle that city has paid the card's cost on.
+ */
+export type UnitEntry = {
+  readonly blocked: (catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction) => Block[];
+  readonly effect: (catalogue: Catalogue, paid: Chronicle, whose: CityFaction) => Landed;
+};
 
 /** The keyword a card of the kinds that carry one declares, exhaust or banish, or neither. */
 type Keyword =
@@ -257,7 +299,7 @@ export type UnitEntryRow = {
 /** What a unit entry draws each enemy's row from, by the rows' weights. */
 export type UnitEntryTable = readonly UnitEntryRow[];
 
-/** The guards a camp sends off together as raiders, once enough of its own stand ashore. */
+/** The guards a camp or the neutral sends off together, once enough of its own stand ashore. */
 export type Wave = {
   /** How many guards counted send it. */
   readonly gathered: number;
@@ -353,15 +395,14 @@ export type Technology = {
 };
 
 /**
- * What an age owns: its schedule, its camp, its neutral's city's building and its script where it
- * names a neutral, its sites by key, its regions by key, its achievements by key in order, and the
- * base price of its cards.
+ * What an age owns: its schedule, its camp, its neutral where it names one, its sites by key, its
+ * regions by key, its achievements by key in order, and the base price of its cards.
  */
 export type Age = {
   readonly basePrice: number;
   readonly schedule: Schedule;
   readonly camp: Camp;
-  readonly neutral?: { readonly building: string; readonly script: NeutralScript };
+  readonly neutral?: Neutral;
   readonly sites: Readonly<Record<string, Site>>;
   readonly regions: Readonly<Record<string, Region>>;
   readonly achievements: Readonly<Record<string, Achievement>>;
@@ -373,7 +414,7 @@ export type Age = {
  */
 export type Catalogue = MapContent & {
   readonly units: Readonly<Record<string, UnitStats>>;
-  readonly scripts: Readonly<Record<string, EnemyScript>>;
+  readonly scripts: Readonly<Record<string, UnitScript>>;
   readonly cards: Readonly<Record<string, Card>>;
   readonly civilizations: Readonly<Record<string, Civilization>>;
   readonly events: Readonly<Record<string, ScheduledEvent>>;
@@ -583,7 +624,7 @@ export function unitEntryTableHeld(content: Catalogue, table: UnitEntryTable, ow
   if (table.length === 0) refuse(content, `${owner} holds no row`);
   for (const { kind, script, weight } of table) {
     unitKind(content, kind);
-    enemyScript(content, script);
+    unitScript(content, script);
     if (!(weight > 0)) {
       refuse(content, `${owner} enters ${kind} as ${script} at a weight of ${weight}`);
     }
@@ -614,7 +655,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
 
   unitEntryTableHeld(content, camp.opening, `the age ${id}'s camp's opening`);
   unitEntryTableHeld(content, camp.roll, `the age ${id}'s camp's roll`);
-  for (const script of Object.values(camp.scripts)) enemyScript(content, script);
+  for (const script of Object.values(camp.scripts)) unitScript(content, script);
   if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
   for (const reward of camp.rewards) cardOf(content, reward);
   const { odds, raidCampOdds, embarkedMove } = camp;
@@ -629,15 +670,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
   } else if (!Number.isInteger(embarkedMove) || embarkedMove < 1) {
     refuse(content, `the age ${id}'s camp names an embarked move of ${embarkedMove}`);
   }
-  if (camp.wave !== undefined) {
-    const { gathered, sent } = camp.wave;
-    if (!Number.isInteger(gathered) || gathered < 1) {
-      refuse(content, `the age ${id}'s camp sends a wave once ${gathered} have gathered`);
-    }
-    if (!Number.isInteger(sent) || sent < 1 || sent > gathered) {
-      refuse(content, `the age ${id}'s camp sends ${sent} of ${gathered} gathered`);
-    }
-  }
+  if (camp.wave !== undefined) waveHeld(content, camp.wave, `the age ${id}'s camp`);
   const campKind = buildingKind(content, camp.building);
   const campNames = groundNamed(campKind);
   if (campNames !== undefined) {
@@ -652,7 +685,17 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
 
   const sitedBy = new Map<string, string>([[camp.building, 'camp']]);
   if (neutral !== undefined) {
-    const { building } = neutral;
+    const { building, scripts, ratio, wave } = neutral;
+    for (const script of Object.values(scripts)) unitScript(content, script);
+    if (wave !== undefined) waveHeld(content, wave, `the age ${id}'s neutral`);
+    if (ratio.length === 0) refuse(content, `the age ${id}'s neutral's ratio holds no row`);
+    for (const { card, kind, share } of ratio) {
+      unitCardOf(content, card);
+      unitKind(content, kind);
+      if (!Number.isInteger(share) || share < 1) {
+        refuse(content, `the age ${id}'s neutral keeps ${kind} at a share of ${share}`);
+      }
+    }
     const neutralNames = groundNamed(buildingKind(content, building));
     if (neutralNames !== undefined) {
       refuse(content, `the age ${id}'s neutral's city ${building} names ${neutralNames}`);
@@ -748,6 +791,16 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
         `the region ${name} keeps the neutral's city from ${band.least} to ${band.most} of the centre`,
       );
     }
+  }
+}
+
+/** A wave, checked as its owner's: a count gathered or sent below one, or more sent than gathered, is refused. */
+function waveHeld(content: Catalogue, { gathered, sent }: Wave, owner: string): void {
+  if (!Number.isInteger(gathered) || gathered < 1) {
+    refuse(content, `${owner} sends a wave once ${gathered} have gathered`);
+  }
+  if (!Number.isInteger(sent) || sent < 1 || sent > gathered) {
+    refuse(content, `${owner} sends ${sent} of ${gathered} gathered`);
   }
 }
 
@@ -906,14 +959,26 @@ export function fullHealth(catalogue: Catalogue, stats: UnitStats): number {
   return unitKind(catalogue, stats.type).health;
 }
 
-/** The script an enemy names; a script the catalogue does not hold is refused. */
-export function enemyScript(catalogue: Catalogue, id: string): EnemyScript {
-  return entryOf(catalogue, catalogue.scripts, id, 'enemy script');
+/** The script a unit acts by; a script the catalogue does not hold is refused. */
+export function unitScript(catalogue: Catalogue, id: string): UnitScript {
+  return entryOf(catalogue, catalogue.scripts, id, 'unit script');
 }
 
 /** The card an id names; a card the catalogue does not hold is refused. */
 export function cardOf(catalogue: Catalogue, id: string): Card {
   return entryOf(catalogue, catalogue.cards, id, 'card');
+}
+
+/** The unit card an id names; a card the catalogue does not hold, or one of another kind, is refused. */
+export function unitCardOf(catalogue: Catalogue, id: string): UnitCard {
+  const card = cardOf(catalogue, id);
+  if (card.kind !== 'unit') refuse(catalogue, `the card ${id} is no unit card`);
+  return card;
+}
+
+/** What a card costs, resource by resource, in the order the resource bar reads. */
+export function costOf(catalogue: Catalogue, id: CardId): Cost[] {
+  return costsOf(cardOf(catalogue, id).cost);
 }
 
 /** The age a card is of: the age whose slice brought it. A card the catalogue does not hold is refused. */
@@ -1046,6 +1111,13 @@ export function ageOf(catalogue: Catalogue, id: string): Age {
   return entryOf(catalogue, catalogue.ages, id, 'age');
 }
 
+/** The neutral of the age an id names; an age naming none is refused. */
+export function neutralOf(catalogue: Catalogue, age: string): Neutral {
+  const { neutral } = ageOf(catalogue, age);
+  if (neutral === undefined) refuse(catalogue, `the age ${age} names no neutral`);
+  return neutral;
+}
+
 /** The technology an id names; a technology the catalogue does not hold is refused. */
 export function technologyOf(catalogue: Catalogue, id: string): Technology {
   return entryOf(catalogue, catalogue.technologies, id, 'technology');
@@ -1080,7 +1152,8 @@ export function checkContent(catalogue: Catalogue, { content }: Pick<Chronicle, 
 
 /**
  * What a unit entering the map is: its kind, the tile it stands on, who it acts for, for one
- * entering embarked, the move it has embarked, and, for an enemy a camp enters, the camp's tile.
+ * entering embarked, the move it has embarked, its script but for the player's, and, for an enemy a
+ * camp enters, the camp's tile.
  */
 export type Entering = {
   readonly type: string;
@@ -1089,6 +1162,7 @@ export type Entering = {
 } & (
   | { readonly faction: 'player' }
   | { readonly faction: 'enemy'; readonly script: string; readonly camp?: TileCoords }
+  | { readonly faction: 'neutral'; readonly script: string }
 );
 
 /**
@@ -1127,5 +1201,7 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
         prepared: false,
         camp: entering.camp,
       });
+    case 'neutral':
+      return dealt({ ...carried, faction: 'neutral', script: entering.script });
   }
 }

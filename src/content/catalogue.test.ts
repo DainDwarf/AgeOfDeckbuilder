@@ -9,10 +9,12 @@ import {
   catalogued,
   civilizationOf,
   counterOf,
-  enemyScript,
   eventOf,
   firstCivilization,
   firstRegion,
+  type Neutral,
+  unitCardOf,
+  unitScript,
 } from '../rules/catalogue';
 import { admitted, apply, launched, refusalOf } from '../rules/chronicle';
 import { claimable } from '../rules/city';
@@ -334,33 +336,62 @@ test('every capstone of the catalogue has a name, a rules entry, a lore at each 
   }
 });
 
-test('every enemy script of the catalogue answers its move and its act for an enemy standing on a chronicle launched and settled in each age', () => {
+test('every unit script of the catalogue answers its move and its act for an enemy standing on a chronicle launched and settled in each age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     const enemy = chronicle.units.find((unit) => unit.faction === 'enemy');
     if (enemy === undefined) throw new Error(`no enemy stands on the chronicle of ${age}`);
     for (const id of Object.keys(CATALOGUE.scripts)) {
-      const script = enemyScript(CATALOGUE, id);
+      const script = unitScript(CATALOGUE, id);
       expect(() => script.moveTo(CATALOGUE, chronicle, enemy)).not.toThrow();
       expect(() => script.acts(CATALOGUE, chronicle, enemy)).not.toThrow();
     }
   }
 });
 
-test('every age’s neutral’s script answers a claim among the tiles its city may claim on a chronicle launched and settled in that age, on a region dealing it', () => {
+/**
+ * Every age naming a neutral, with it and a chronicle launched and settled in the age on its first
+ * region dealing the neutral, on the catalogue's first civilization.
+ */
+function neutralAges(): { neutral: Neutral; chronicle: Chronicle }[] {
   const civilization = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
-  for (const age of AGES) {
+  return AGES.flatMap((age) => {
     const { neutral, regions } = ageOf(CATALOGUE, age);
-    if (neutral === undefined) continue;
+    if (neutral === undefined) return [];
     const region = Object.keys(regions).find((id) => regions[id].neutralFromCentre !== undefined);
     if (region === undefined) throw new Error(`no region of the age ${age} deals its neutral`);
-    const chronicle = settledLaunch(CATALOGUE, age, region, 1, civilization, []);
+    return [{ neutral, chronicle: settledLaunch(CATALOGUE, age, region, 1, civilization, []) }];
+  });
+}
+
+test('every age’s neutral’s script answers a claim among the tiles its city may claim on a chronicle launched and settled in that age, on a region dealing it', () => {
+  for (const { neutral, chronicle } of neutralAges()) {
     const offered = claimable(CATALOGUE, chronicle, 'neutral');
 
     expect(offered).not.toEqual([]);
     expect(offered.map(tileKey)).toContain(
       tileKey(neutral.script.claims(CATALOGUE, chronicle, offered)),
     );
+  }
+});
+
+test('every age’s neutral’s script enters through a card of its ratio or none, every card of its ratio answers its block for the neutral and its effect enters a unit of the neutral’s of the kind its row names, and its guard’s and its wave’s scripts answer the move and the act of that unit, on a chronicle launched and settled in that age, on a region dealing it', () => {
+  for (const { neutral, chronicle } of neutralAges()) {
+    const named = neutral.script.enters(CATALOGUE, chronicle, neutral.ratio);
+    if (named !== undefined) expect(neutral.ratio.map(({ card }) => card)).toContain(named);
+    for (const { card, kind } of neutral.ratio) {
+      const entry = unitCardOf(CATALOGUE, card);
+      expect(() => entry.blocked(CATALOGUE, chronicle, 'neutral')).not.toThrow();
+      const standing = entry.effect(CATALOGUE, chronicle, 'neutral').chronicle;
+      const unit = standing.units.at(-1);
+      expect(unit).toMatchObject({ faction: 'neutral', stats: { type: kind } });
+      if (unit === undefined) throw new Error(`the card ${card} entered no unit`);
+      for (const id of Object.values(neutral.scripts)) {
+        const script = unitScript(CATALOGUE, id);
+        expect(() => script.moveTo(CATALOGUE, standing, unit)).not.toThrow();
+        expect(() => script.acts(CATALOGUE, standing, unit)).not.toThrow();
+      }
+    }
   }
 });
 
