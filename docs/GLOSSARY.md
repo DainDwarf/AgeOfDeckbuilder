@@ -73,7 +73,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **being aimed** | The state of a selected card or unit while what its aim admits is offered, until it lands or is let go of. | armed, pending, targeting, in flight |
 | **stock** | A city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
 | **cost** | What a city pays out of its stocks to play something, for example a card. | fee, charge, toll |
-| **unaffordable** | What cannot be paid for: a card whose cost the player's city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
+| **unaffordable** | What cannot be paid for: a card whose cost a city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
 | **recall** | To put a card from the discard pile into the hand; what a recall instant does. | retrieve, recover, reclaim, salvage |
 | **add** | To put a new card on a pile or into the collection, or a card of the collection into a deck. | lay (for a card), put (for a card on a pile), gain (for a card), give (for a card), insert, shuffle in |
@@ -86,7 +86,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |
-| **combat** | Units attacking one another: the player's by hand in play, the enemies' in the enemy phase. | battle, fight, skirmish, war |
+| **combat** | Units attacking one another: the player's by hand in play, the enemies' and the neutral's in the enemy phase. | battle, fight, skirmish, war |
 | **income** | The phase where standing things yield. | upkeep, production phase, resolution |
 | **sight** | A unit's stat and the player's city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |
