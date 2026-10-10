@@ -43,7 +43,7 @@ import {
 import { featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
-import { addedToDrawPileTop } from '../src/rules/schedule';
+import { addedToDrawPileTop, campsPlaced } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
 import {
@@ -1497,6 +1497,21 @@ export function sitesOf(chronicle: Chronicle): (TileCoords & { readonly building
 /** The chronicle with the unit entered as every unit card enters one, and charted as a command is. */
 export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle {
   return charted(CATALOGUE, entered(CATALOGUE, chronicle, entering).chronicle);
+}
+
+/**
+ * Seed 1's turn 1 on the campaign, a fresh one unless named, with one camp placed beside the city and
+ * nobody entered with it, and the unit `planted` names entered on it; and the camp.
+ */
+export function campBeside(
+  planted: (camp: TileCoords) => Entering,
+  campaign?: Campaign,
+): { chronicle: Chronicle; camp: TileCoords } {
+  const placing = campsPlaced(CATALOGUE, settledOn(1, [], campaign), 1, [1, 1], 1);
+  const [camp] = placing.placed;
+  if (camp === undefined) throw new Error('seed 1 places no camp beside its city');
+  const placed = charted(CATALOGUE, placing.chronicle);
+  return { chronicle: unitEntered(placed, planted(camp)), camp };
 }
 
 /** The unit kind cards are played through. */

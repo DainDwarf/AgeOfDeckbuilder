@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral at the camps** — a unit of the neutral's standing on a camp or a site through the enemy phase captures it as a unit of the player's does, the building leaving the map and dealing nothing, the camp's remaining enemies no camp's from then on. Doc-impact: `docs/CHRONICLE.md`. [board/neutral-at-the-camps.md](board/neutral-at-the-camps.md)
 - **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns, and whether a unit of the player's stepping onto a tile it holds turns it hostile — any unit or a military one alone, with or without a warning that the step declares war — are this line's questions.
 - **The neutral's fall** — the player destroys it: its city captured by standing on it through the enemy phase, its tiles nobody's from then on and its units of no city; what the capture deals is this line's question.
 - **The neutral's workers** — its script enters workers and plays improvement and building cards through them on the tiles it holds, where its stocks pay the cards' costs; and the neutral opens with one free worker of its own, since a city settled on anything but plain never grows a population to spare.

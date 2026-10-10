@@ -2,15 +2,20 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, neutralOf, technologyOf } from '../src/rules/catalogue';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { apply, outcome } from '../src/rules/chronicle';
+import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
+import { unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
 import { buildingName, unitName } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
+  budget,
+  campBeside,
+  chronicleOf,
   consoleKey,
   endedTurn,
   enter,
@@ -18,11 +23,14 @@ import {
   mapFrame,
   marksIn,
   openSaved,
+  playedOut,
+  readings,
   rested,
   settledOn,
   shownCard,
   sitesOf,
   standing,
+  stoppedTurn,
   textOf,
   tileOnScreen,
   unitEntered,
@@ -109,6 +117,15 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   expect(problems).toEqual([]);
 });
 
+/** The kind of the unit the neutral's script enters on this chronicle. */
+function kindEntered(chronicle: Chronicle): string {
+  const { script, ratio } = neutralOf(CATALOGUE, AGE);
+  const card = script.enters(CATALOGUE, chronicle, ratio);
+  const kind = ratio.find((row) => row.card === card)?.kind;
+  if (kind === undefined) throw new Error(`the neutral of the age ${AGE} enters no unit`);
+  return kind;
+}
+
 /** The colours the named unit's mark is filled in, its hull's among them where it stands embarked. */
 function unitFills(page: Page, name: string): Promise<number[]> {
   return page.evaluate((target) => {
@@ -126,14 +143,11 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   const opened = settledOn(1, [], CAMPAIGN);
   const { neutral } = opened;
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
-  const { script, scripts, ratio } = neutralOf(CATALOGUE, AGE);
-  const card = script.enters(CATALOGUE, opened, ratio);
-  const kind = ratio.find((row) => row.card === card)?.kind;
-  if (kind === undefined) throw new Error(`the neutral of the age ${AGE} enters no unit`);
+  const kind = kindEntered(opened);
   const guarded = unitEntered(opened, {
     type: kind,
     faction: 'neutral',
-    script: scripts.guard,
+    script: neutralOf(CATALOGUE, AGE).scripts.guard,
     tile: neutral.city,
   });
   const mark = `unit-${tileKey(neutral.city)}`;
@@ -240,5 +254,34 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
       ...neutral.held.map((): CityFaction => 'neutral'),
     ]),
   );
+  expect(problems).toEqual([]);
+});
+
+test('a unit of the neutral’s standing on a camp through the enemy phase captures it: the camp’s mark gone and no window dealt', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const kind = kindEntered(settledOn(1, [], CAMPAIGN));
+  const { wave } = neutralOf(CATALOGUE, AGE).scripts;
+  const { chronicle, camp } = campBeside(
+    (tile) => ({ type: kind, faction: 'neutral', script: wave, tile }),
+    CAMPAIGN,
+  );
+  const captured = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+  const mark = `building-${tileKey(camp)}`;
+  expect(unitAt(captured.units, camp)?.faction).toBe('neutral');
+  expect(tileAt(captured.tiles, camp)?.building).toBeUndefined();
+  expect(captured.deals).toEqual([]);
+
+  await openSaved(page, chronicle, CAMPAIGN);
+  expect(await standing(page, mark)).toBe(true);
+  await stoppedTurn(page);
+  await playedOut(page);
+
+  const read = await readings(page, [mark, 'deal']);
+  expect(read(mark).standing).toBe(false);
+  expect(read('deal').standing).toBe(false);
+  expect(await chronicleOf(page)).toEqual(captured);
   expect(problems).toEqual([]);
 });

@@ -996,6 +996,52 @@ test('a camp captured is one capture carrying its tile, over the camp leaving th
   expect(outcome(stages)).toBe(capture.chronicle);
 });
 
+test('a unit of the neutral’s standing on a camp when the turn ends captures it: one capture carrying its tile over the camp leaving the tile, its enemies no camp’s with it, dealing nothing, and the turn opens', () => {
+  const camp = { q: 4, r: 0 };
+  const other = { q: -4, r: 0 };
+  const besieging = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp, other]),
+    drawPile: fullDraw(),
+    units: [
+      neutralStanding(camp),
+      enemyStanding({ q: 0, r: 4 }, camp, GUARD),
+      enemyStanding(other, other, GUARD),
+    ],
+  });
+
+  const stages = apply(CATALOGUE, besieging, { type: 'end-turn' });
+  const taken = outcome(stages);
+
+  expect(unitAt(taken.units, camp)?.faction).toBe('neutral');
+  expect(tilesStaged('capture', besieging)).toEqual([tileKey(camp)]);
+  expect(heldBy(stages, 'capture')).toMatchObject([{ name: 'retiled', tile: camp }]);
+  expect(buildingAt(taken, camp)).toBeUndefined();
+  expect(campsNamed(taken)).toEqual([undefined, tileKey(other)]);
+  expect(taken.deals).toEqual([]);
+  expect(taken.turn).toBe(besieging.turn + 1);
+});
+
+test('a unit of the neutral’s standing on a site when the turn ends captures it as a camp: its slot emptied, dealing nothing', () => {
+  const site = { q: 2, r: 0 };
+  const sited = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: builtOn(madeOf(field(3), 'hills', [site]), SITE, [site]),
+    drawPile: fullDraw(),
+    units: [neutralStanding(site)],
+  });
+
+  const stages = apply(CATALOGUE, sited, { type: 'end-turn' });
+  const taken = outcome(stages);
+
+  expect(unitAt(taken.units, site)?.faction).toBe('neutral');
+  expect(tilesStaged('capture', sited)).toEqual([tileKey(site)]);
+  expect(heldBy(stages, 'capture')).toMatchObject([{ name: 'retiled', tile: site }]);
+  expect(buildingAt(taken, site)).toBeUndefined();
+  expect(taken.deals).toEqual([]);
+  expect(taken.turn).toBe(sited.turn + 1);
+});
+
 test('at odds of a half a seed enters on the same camps every time, and seeds differ in the camps they enter on', () => {
   const rolledOn = (seed: number): string =>
     tilesStaged('enter', { ...rollingCity(), rng: seedRng(seed) }, camping({ odds: 0.5 })).join(

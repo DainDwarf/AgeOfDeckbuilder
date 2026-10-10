@@ -1353,9 +1353,8 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 }
 
 /**
- * The camps and sites a unit of the player's still stands on once the enemy phase is over, each one
- * `capture` group carrying its tile in tile order, over its building leaving the slot, a camp's
- * enemies no camp's with it, and its rewards dealt behind the deals standing.
+ * The camps and sites a unit still stands on once the enemy phase is over, each one the capture of the
+ * faction standing on it, in tile order.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   let capturing: Sequence = unchanged(chronicle);
@@ -1363,8 +1362,11 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
     if (building === undefined) continue;
     const rewards = rewardsOf(catalogue, chronicle.age, building);
     if (rewards === undefined) continue;
-    if (unitAt(chronicle.units, { q, r })?.faction !== 'player') continue;
-    capturing = followed(capturing, (left) => captured(left, { q, r }, building, rewards));
+    const unit = unitAt(chronicle.units, { q, r });
+    if (unit === undefined) continue;
+    capturing = followed(capturing, (left) =>
+      captured(left, { q, r }, unit.faction, building, rewards),
+    );
   }
   return capturing;
 }
@@ -1372,27 +1374,36 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 function captured(
   chronicle: Chronicle,
   tile: TileCoords,
+  by: Faction,
   building: string,
   rewards: readonly CardId[],
 ): Sequence<Group> {
+  switch (by) {
+    case 'player':
+      return grouped(
+        { name: 'capture', tile },
+        followed(leftTheMap(chronicle, tile), (left) =>
+          landedAs(
+            change('dealt', {
+              ...left,
+              deals: [...left.deals, { of: 'capture', building, rewards }],
+            }),
+          ),
+        ),
+      );
+    case 'neutral':
+      return grouped({ name: 'capture', tile }, leftTheMap(chronicle, tile));
+    case 'enemy':
+      return unchanged(chronicle);
+  }
+}
+
+/** A captured building leaving the map, its slot empty and a camp's enemies no camp's with it. */
+function leftTheMap(chronicle: Chronicle, tile: TileCoords): Landed {
   const units = chronicle.units.map((unit) =>
     unit.faction === 'enemy' && unit.camp !== undefined && tileKey(unit.camp) === tileKey(tile)
       ? { ...unit, camp: undefined }
       : unit,
   );
-  const removed = retiled({ ...chronicle, units }, tile, (slot) => ({
-    ...slot,
-    building: undefined,
-  }));
-  return grouped(
-    { name: 'capture', tile },
-    followed(removed, (left) =>
-      landedAs(
-        change('dealt', {
-          ...left,
-          deals: [...left.deals, { of: 'capture', building, rewards }],
-        }),
-      ),
-    ),
-  );
+  return retiled({ ...chronicle, units }, tile, (slot) => ({ ...slot, building: undefined }));
 }

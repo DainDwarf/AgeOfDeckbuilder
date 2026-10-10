@@ -3,13 +3,12 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
-import { campsPlaced } from '../src/rules/schedule';
-import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { captureLore } from '../src/ui/lore';
 import { buildingName } from '../src/ui/text';
 import {
   budget,
+  campBeside,
   chronicleOf,
   consoleKey,
   enter,
@@ -22,7 +21,6 @@ import {
   standing,
   stoppedTurn,
   titleOf,
-  unitEntered,
   WARRIOR,
   watch,
 } from './chronicle-screen';
@@ -31,20 +29,6 @@ import {
 function campsOf(chronicle: Chronicle): TileCoords[] {
   const { building } = ageOf(CATALOGUE, chronicle.age).camp;
   return chronicle.tiles.filter((tile) => tile.building === building).map(({ q, r }) => ({ q, r }));
-}
-
-/**
- * Seed 1's turn 1 with one camp placed beside the city and nobody entered with it, and a warrior of
- * the player's entered on it; and the camp.
- */
-function campBeside(): { chronicle: Chronicle; camp: TileCoords } {
-  const bare = settledOn(1);
-  const placing = campsPlaced(CATALOGUE, bare, 1, [1, 1], 1);
-  const [camp] = placing.placed;
-  if (camp === undefined) throw new Error('seed 1 places no camp beside its city');
-  const placed = charted(CATALOGUE, placing.chronicle);
-  const chronicle = unitEntered(placed, { type: WARRIOR, faction: 'player', tile: camp });
-  return { chronicle, camp };
 }
 
 test('the map draws the camps it was dealt once the uncharted veil is off', async ({ page }) => {
@@ -79,7 +63,7 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, camp } = campBeside();
+  const { chronicle, camp } = campBeside((tile) => ({ type: WARRIOR, faction: 'player', tile }));
   const captured = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
 
   await openSaved(page, chronicle);
