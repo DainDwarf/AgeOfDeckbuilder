@@ -746,6 +746,51 @@ test('the neutral’s wave lands in range of an enemy it can attack on its way a
   expect(movesOf(campless, SENDING)).toEqual([]);
 });
 
+test('the neutral’s wave weighs no route through a tile the player holds: the camp only such a route reaches is none it goes for, and it walks for the other, where an enemy walks through the player’s tile onto the nearer camp', () => {
+  const from = { q: 2, r: 2 };
+  const held = { q: 1, r: 2 };
+  const behind = { q: 0, r: 2 };
+  const around = [
+    { q: 3, r: 1 },
+    { q: 4, r: 0 },
+  ];
+  const beyond = { q: 4, r: -1 };
+  const ground = deepBut(plains(4), [CITY, NEUTRAL_TILE, from, held, ...around]);
+  const walking = (unit: Standing): Chronicle => {
+    const opened = neutralAround([], [unit], { ground });
+    const holding = withCityRows(opened, 'player', { held: [CITY, held] });
+    return campedOn(holding, [behind, beyond]);
+  };
+
+  expect(movesOf(walking(scripted(from)), SENDING)).toEqual([[tileKey(from), '4,0']]);
+  expect(movesOf(walking(standing('enemy', from)), SENDING)).toEqual([
+    [tileKey(from), tileKey(behind)],
+  ]);
+});
+
+test('the neutral’s wave walks the long way round the tiles the player holds to its camp, where an enemy walks through them', () => {
+  const from = { q: 2, r: 3 };
+  const held = { q: 1, r: 3 };
+  const camp = { q: 0, r: 3 };
+  const round = [
+    { q: 3, r: 2 },
+    { q: 3, r: 1 },
+    { q: 2, r: 1 },
+    { q: 1, r: 2 },
+  ];
+  const ground = deepBut(plains(5), [CITY, NEUTRAL_TILE, from, held, ...round]);
+  const walking = (unit: Standing): Chronicle => {
+    const opened = neutralAround([], [unit], { ground });
+    const holding = withCityRows(opened, 'player', { held: [CITY, held] });
+    return campedOn(holding, [camp]);
+  };
+
+  expect(movesOf(walking(scripted(from)), SENDING)).toEqual([[tileKey(from), '3,1']]);
+  expect(movesOf(walking(standing('enemy', from)), SENDING)).toEqual([
+    [tileKey(from), tileKey(camp)],
+  ]);
+});
+
 test('the neutral’s wave embarks where the ground ends to cross toward its camp', () => {
   const camp = { q: 4, r: 0 };
   const coast = { q: 3, r: 0 };

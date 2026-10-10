@@ -481,7 +481,7 @@ test('a region naming the neutral’s band deals its city on every map, within t
 /** Every tile a walk over the whole map from the tile reaches, ashore or embarked. */
 function walkedFrom(map: HexMap, from: TileCoords, embarked: boolean): Set<string> {
   const moves = embarked ? { embarked: MOVE_POINT } : { ashore: MOVE_POINT };
-  const walked = routesFrom(CATALOGUE, map.tiles, map.rivers, from, embarked, moves);
+  const walked = routesFrom(CATALOGUE, map.tiles, map.rivers, from, embarked, moves, () => false);
   return new Set((embarked ? walked.embarked : walked.ashore).keys());
 }
 
@@ -551,11 +551,16 @@ test('a walk over the whole map toward a tile weighs each step in moves: the mov
   const moves = { ashore: 2 * MOVE_POINT, embarked: 3 * MOVE_POINT };
   const move = wholeMove(moves);
 
-  const toward = routesToward(CATALOGUE, tiles, rivers, CENTRE, false, moves);
-  const ashoreOnly = routesToward(CATALOGUE, tiles, rivers, CENTRE, false, {
-    ashore: moves.ashore,
-    embarked: 0,
-  });
+  const toward = routesToward(CATALOGUE, tiles, rivers, CENTRE, false, moves, () => false);
+  const ashoreOnly = routesToward(
+    CATALOGUE,
+    tiles,
+    rivers,
+    CENTRE,
+    false,
+    { ashore: moves.ashore, embarked: 0 },
+    () => false,
+  );
 
   expect(Object.fromEntries(toward.ashore)).toEqual({
     '0,0': 0,

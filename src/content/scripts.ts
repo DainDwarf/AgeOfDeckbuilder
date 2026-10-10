@@ -32,7 +32,7 @@ import { RESOURCES } from '../rules/resources';
 import { nextRng, type Rng } from '../rules/rng';
 import { inOwnSight } from '../rules/sight';
 import type { CardId, Chronicle } from '../rules/state';
-import { canAttack, type Landing, reachable, type Unit, unitAt } from '../rules/units';
+import { canAttack, type Landing, reachable, shutTo, type Unit, unitAt } from '../rules/units';
 
 export const RAIDER: UnitScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
@@ -256,6 +256,7 @@ function nearestByWalk(
     walker.tile,
     walker.embarked,
     moves,
+    shutTo(chronicle, walker.faction),
   );
   let chosen: TileCoords | undefined;
   let least = Number.POSITIVE_INFINITY;
@@ -301,7 +302,15 @@ function walkedTo(
   if (attacking.length > 0) return { landing: nearestTo(chronicle, attacking, to) };
 
   const moves = walkMoves(catalogue, chronicle, walker);
-  const toward = routesToward(catalogue, chronicle.tiles, chronicle.rivers, to, false, moves);
+  const toward = routesToward(
+    catalogue,
+    chronicle.tiles,
+    chronicle.rivers,
+    to,
+    false,
+    moves,
+    shutTo(chronicle, walker.faction),
+  );
   const landing = cheapestToward(chronicle, walker, landings, toward);
   return { landing, step: stepToward(catalogue, chronicle, walker, landing, toward) };
 }

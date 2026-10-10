@@ -387,7 +387,7 @@ export function pathCosts(
 /**
  * What the cheapest route to each tile weighs from a start, ashore and embarked apart, on a walk over
  * the whole map with these moves: it embarks where the ground ends and disembarks where it begins,
- * wherever the moves name both.
+ * wherever the moves name both. `shut` keeps the walk off tiles for the walker's own reasons.
  */
 export function routesFrom(
   catalogue: MapContent,
@@ -396,14 +396,16 @@ export function routesFrom(
   from: TileCoords,
   embarked: boolean,
   moves: Moves,
+  shut: (coord: TileCoords) => boolean,
 ): Routes {
   const ground = groundOf(catalogue, tiles, rivers);
-  return cheapestRoutes(ground, from, embarked, true, weighs(catalogue, moves, false), () => false);
+  return cheapestRoutes(ground, from, embarked, true, weighs(catalogue, moves, false), shut);
 }
 
 /**
  * What the cheapest route from each tile to a tile reached embarked or ashore weighs, on a walk over
- * the whole map with these moves, and the steps a cheapest route takes first.
+ * the whole map with these moves, and the steps a cheapest route takes first. `shut` keeps the walk
+ * off tiles for the walker's own reasons.
  */
 export function routesToward(
   catalogue: MapContent,
@@ -412,10 +414,11 @@ export function routesToward(
   to: TileCoords,
   embarked: boolean,
   moves: Moves,
+  shut: (coord: TileCoords) => boolean,
 ): Toward {
   const ground = groundOf(catalogue, tiles, rivers);
   const spending = weighs(catalogue, moves, true);
-  const routes = cheapestRoutes(ground, to, embarked, true, spending, () => false);
+  const routes = cheapestRoutes(ground, to, embarked, true, spending, shut);
   const reachedBy = (standsEmbarked: boolean): ReadonlyMap<string, number> =>
     standsEmbarked ? routes.embarked : routes.ashore;
   const next = (tile: TileCoords, standsEmbarked: boolean): Stood[] => {
@@ -447,7 +450,15 @@ export function groundRunsTo(
 ): ReadonlySet<string> {
   // Only which tiles the walk reached is read, never what reaching them weighed, so the move it is
   // weighed against shows nowhere.
-  const reached = routesFrom(catalogue, tiles, rivers, to, false, { ashore: MOVE_POINT });
+  const reached = routesFrom(
+    catalogue,
+    tiles,
+    rivers,
+    to,
+    false,
+    { ashore: MOVE_POINT },
+    () => false,
+  );
   return new Set(reached.ashore.keys());
 }
 
@@ -459,7 +470,7 @@ export function groundAndWaterRunTo(
   to: TileCoords,
 ): ReadonlySet<string> {
   const moves = { ashore: MOVE_POINT, embarked: MOVE_POINT };
-  const reached = routesFrom(catalogue, tiles, rivers, to, false, moves);
+  const reached = routesFrom(catalogue, tiles, rivers, to, false, moves, () => false);
   return new Set([...reached.ashore.keys(), ...reached.embarked.keys()]);
 }
 

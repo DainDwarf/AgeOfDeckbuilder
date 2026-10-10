@@ -308,7 +308,8 @@ function reached(
     [city, ...(chronicle.neutral === undefined ? [] : [chronicle.neutral.city])].map(tileKey),
   );
   const { tiles, rivers } = chronicle;
-  const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves);
+  const shut = shutTo(chronicle, 'enemy');
+  const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves, shut);
   return tiles.filter(
     (tile) =>
       !cities.has(tileKey(tile)) &&
