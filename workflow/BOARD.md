@@ -13,8 +13,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's; whether a tile it holds wears its ring, and how a held tile shows in fog, are this line's questions.
+- **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's, and Gather refused on a tile it holds, its city's included; whether a tile it holds wears its ring, and how a held tile shows in fog, are this line's questions.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
 - **The neutral at the camps** — its warriors go for the camps and kill the guards, and one standing on a camp through the enemy phase captures it, the camp leaving the map dealing nothing; whether the neutral takes sites too is this line's question.
-- **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns is this line's question.
+- **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns, and whether a unit of the player's stepping onto a tile it holds turns it hostile — any unit or a military one alone, with or without a warning that the step declares war — are this line's questions.
 - **The neutral's fall** — the player destroys it: its city captured by standing on it through the enemy phase, its tiles nobody's from then on and its units of no city; what the capture deals is this line's question.
