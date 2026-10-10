@@ -10,8 +10,8 @@ import {
   chronicleOf,
   click,
   consoleKey,
+  launchedAs,
   launchedFromScreen,
-  launchedOn,
   loreOf,
   readNames,
   rested,
@@ -93,7 +93,7 @@ test('Launch opens the chronicle on the firsts under its capstone’s window, an
 
   const launched = await chronicleOf(page);
   expect(named(page)).toBe('');
-  expect(launched).toEqual(launchedOn(launched.seed));
+  expect(launched).toEqual(launchedAs(launched.seed));
 
   const capstone = ageOf(CATALOGUE, launched.age).schedule.capstone.id;
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

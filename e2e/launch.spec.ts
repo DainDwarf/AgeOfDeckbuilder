@@ -195,7 +195,7 @@ test('on a campaign that has learned the first age’s technology the launch scr
   await launchedFromScreen(page);
   const chronicle = await chronicleOf(page);
   expect(chronicle).toEqual(
-    launchedAs(campaign, { age: UNLOCKED, region, civilization }, chronicle.seed),
+    launchedAs(chronicle.seed, campaign, { age: UNLOCKED, region, civilization }),
   );
 
   expect(problems).toEqual([]);

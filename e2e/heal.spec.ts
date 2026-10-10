@@ -7,6 +7,7 @@ import { unitDamaged } from '../src/rules/schedule';
 import { unitAt } from '../src/rules/units';
 import {
   aimed,
+  campaignWith,
   chronicleOf,
   cityTileOf,
   click,
@@ -20,11 +21,12 @@ import {
   unitEntered,
   WARRIOR,
   watch,
-  withCard,
 } from './chronicle-screen';
 
 /** The card that heals. */
 const HEAL = 'heal';
+
+const CAMPAIGN = campaignWith([HEAL]);
 
 test('the heal card played at a damaged warrior on the city’s tile heals it to full health', async ({
   page,
@@ -32,7 +34,7 @@ test('the heal card played at a damaged warrior on the city’s tile heals it to
   const problems = watch(page);
   const full = unitKind(CATALOGUE, WARRIOR).health;
   const paid = firstSeed(`opens turn 1 on ${HEAL} in hand`, (seed) => {
-    const opened = settledOn(seed, [], withCard(HEAL));
+    const opened = settledOn(seed, [], CAMPAIGN);
     if (!idsOf(opened.hand).includes(HEAL)) return undefined;
     const city = cityTileOf(opened);
     const standing = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: city });
@@ -42,7 +44,7 @@ test('the heal card played at a damaged warrior on the city’s tile heals it to
   });
   const healed = playedAtUnit(paid.chronicle, paid.index, paid.city);
 
-  await openSaved(page, paid.chronicle);
+  await openSaved(page, paid.chronicle, CAMPAIGN);
   await dragOut(page, paid.index);
   await aimed(page);
   await click(page, `tile-${tileKey(paid.city)}`);

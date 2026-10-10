@@ -5,12 +5,11 @@ import { ageOf, type Entering, entered, unitKind } from '../src/rules/catalogue'
 import { apply, chartedAndRead, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
-import { freshCampaign, readSave } from '../src/rules/save';
+import { readSave } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { standsOn, unitAt } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
-import { openingChoices } from '../src/ui/launch-layout';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
@@ -23,7 +22,6 @@ import {
   consoleKey,
   enemiesOf,
   enter,
-  firstsOf,
   heldSave,
   launchedAs,
   marksIn,
@@ -273,8 +271,6 @@ test('the launch screen holds no switch, and seed with a number there opens the 
 }) => {
   const problems = watch(page);
   const seed = 90210;
-  const choices = openingChoices(CATALOGUE, freshCampaign(CATALOGUE));
-
   await openLaunch(page);
   await consoleKey(page);
   await enter(page, 'fog');
@@ -296,7 +292,7 @@ test('the launch screen holds no switch, and seed with a number there opens the 
 
   await enter(page, `seed ${seed}`);
   await standsOnSeed(page, seed);
-  const oracle = launchedAs(freshCampaign(CATALOGUE), choices, seed);
+  const oracle = launchedAs(seed);
   expect(await chronicleOf(page)).toEqual(oracle);
   expect(await heldChronicle(page)).toEqual(oracle);
   expect(await shows(page, 'console')).toBe(false);
@@ -326,7 +322,7 @@ test('seed on the chronicle screen answers the seed of the chronicle standing, a
 
   await enter(page, `seed ${other}`);
   await standsOnSeed(page, other);
-  const oracle = launchedAs(freshCampaign(CATALOGUE), firstsOf(), other);
+  const oracle = launchedAs(other);
   expect(await chronicleOf(page)).toEqual(oracle);
   expect(await heldChronicle(page)).toEqual(oracle);
   expect(await shows(page, 'console')).toBe(false);

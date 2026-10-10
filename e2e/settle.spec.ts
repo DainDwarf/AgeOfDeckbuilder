@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf } from '../src/rules/cards';
-import { cardOf, civilizationOf } from '../src/rules/catalogue';
+import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileAt, tileKey } from '../src/rules/map';
 import { LOOK } from '../src/ui/look';
@@ -10,13 +10,13 @@ import {
   aimed,
   budget,
   chronicleOf,
+  civilizationOpened,
   click,
   dragOut,
   endTurnFill,
   endTurnLabel,
-  firstsOf,
   idsOf,
-  launchedOn,
+  launchedAs,
   marksIn,
   onScreen,
   openSaved,
@@ -34,7 +34,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(0));
-  const before = launchedOn(1);
+  const before = launchedAs(1);
 
   await openSaved(page, before);
 
@@ -42,7 +42,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(opened).toEqual(before);
   expect(opened.turn).toBe(0);
   expect(opened.city).toBeUndefined();
-  const civilization = civilizationOf(CATALOGUE, firstsOf().civilization);
+  const civilization = civilizationOpened();
   expect(idsOf(opened.hand)).toEqual([civilization.city.card, ...civilization.settle]);
   expect(await standing(page, `hand-${opened.hand.length - 1}`)).toBe(true);
   expect(await standing(page, `hand-${opened.hand.length}`)).toBe(false);
@@ -111,7 +111,7 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openSaved(page, launchedOn(1));
+  await openSaved(page, launchedAs(1));
 
   await dragOut(page, 0);
   await aimed(page);

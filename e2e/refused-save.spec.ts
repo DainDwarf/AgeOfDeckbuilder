@@ -10,9 +10,8 @@ import {
   click,
   continued,
   firstSeed,
-  firstsOf,
   onScreen,
-  plant,
+  plantSaved,
   playedOut,
   readNames,
   rested,
@@ -40,7 +39,7 @@ async function refuseStorage(page: Page): Promise<void> {
 
 /**
  * The pages this one loads from now on refuse every write to their storage, as a full one does, and
- * read it as it stands: added after `plant`, whose write runs first.
+ * read it as it stands: added after `plantSaved`, whose write runs first.
  */
 async function refuseWrites(page: Page): Promise<void> {
   await page.addInitScript((words) => {
@@ -142,9 +141,7 @@ test('a write refused mid-chronicle raises the refused-save window once over the
   test.setTimeout(budget(2));
   const problems = watch(page);
   const said = refusals(page);
-  const { region, civilization } = firstsOf();
-  await readNames(page);
-  await plant(page, { chronicle: twoBareTurns(), region, civilization });
+  await plantSaved(page, twoBareTurns());
   await refuseWrites(page);
 
   await continued(page);

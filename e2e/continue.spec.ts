@@ -8,8 +8,8 @@ import {
   chronicleOf,
   click,
   fillOf,
+  launchedAs,
   launchedFromScreen,
-  launchedOn,
   launchScreenOver,
   readNames,
   rested,
@@ -64,7 +64,7 @@ test('on a save holding a chronicle still on its settle phase, Continue reads th
   page,
 }) => {
   const problems = watch(page);
-  const saved = launchedOn(1);
+  const saved = launchedAs(1);
   expect(onSettlePhase(saved)).toBe(true);
 
   await launchScreenOver(page, saved);

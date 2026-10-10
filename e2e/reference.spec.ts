@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { civilizationOf } from '../src/rules/catalogue';
 import { offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { answerFace } from '../src/ui/face';
@@ -8,9 +7,9 @@ import {
   besideTheDeal,
   cardOnFace,
   chronicleOf,
+  civilizationOpened,
   cursorOverCanvas,
-  firstsOf,
-  launchedOn,
+  launchedAs,
   leanSeason,
   liftedName,
   namedIn,
@@ -146,11 +145,11 @@ test('a building named on the settle card raises its card small at a rest and sh
   page,
 }) => {
   const problems = watch(page);
-  const { city: section } = civilizationOf(CATALOGUE, firstsOf().civilization);
+  const { city: section } = civilizationOpened();
   const settle = section.card;
   const city = { kind: 'building', id: section.building };
 
-  await openSaved(page, launchedOn(1));
+  await openSaved(page, launchedAs(1));
   const opened = await chronicleOf(page);
   expect(opened.hand[0].id).toBe(settle);
 

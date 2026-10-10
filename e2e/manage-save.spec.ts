@@ -1,11 +1,11 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { catalogued, civilizationOf } from '../src/rules/catalogue';
-import { launched } from '../src/rules/chronicle';
+import { catalogued } from '../src/rules/catalogue';
 import { freshCampaign, type Save, writeSave } from '../src/rules/save';
 import { readSaveFile, writeSaveFile } from '../src/rules/save-file';
 import { bound, DEFAULTS, STORED } from '../src/ui/bindings';
+import { openingChoices } from '../src/ui/launch-layout';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
@@ -13,8 +13,8 @@ import {
   chronicleButton,
   click,
   counted,
-  firstsOf,
   heldSave,
+  launchedIn,
   onScreen,
   openSaved,
   plantCampaign,
@@ -32,17 +32,15 @@ import {
 
 /** The save a spec opens on: a new campaign, and the first seed's chronicle settled beside it. */
 function opening(): Save {
-  const { region, civilization } = firstsOf();
-  return {
-    campaign: freshCampaign(CATALOGUE),
-    chronicle: { chronicle: settledOn(1), region, civilization },
-  };
+  const campaign = freshCampaign(CATALOGUE);
+  const { region, civilization } = openingChoices(CATALOGUE, campaign);
+  return { campaign, chronicle: { chronicle: settledOn(1, [], campaign), region, civilization } };
 }
 
 /** The chronicle screen opened on the save, as the boot finds it. */
 async function openedOn(page: Page, save: Save): Promise<void> {
   if (save.chronicle === undefined) throw new Error('the save holds no chronicle to open');
-  await openSaved(page, save.chronicle.chronicle);
+  await openSaved(page, save.chronicle.chronicle, save.campaign);
 }
 
 /** The menu raised, and Manage Save pressed on it: its window stands. */
@@ -214,20 +212,11 @@ test('Import save on a save file whose chronicle names a content version the gam
 }) => {
   const problems = watch(page);
   const unshipped = catalogued({ ...CATALOGUE, version: `${CATALOGUE.version}-unshipped` });
-  const { age, region, civilization } = firstsOf();
-  const chronicle = launched(
-    unshipped,
-    age,
-    region,
-    1,
-    civilizationOf(unshipped, civilization),
-    [],
-  );
-  const file = writeSaveFile(unshipped, freshCampaign(unshipped), {
-    chronicle,
-    region,
-    civilization,
-  });
+  const campaign = freshCampaign(unshipped);
+  const choices = openingChoices(unshipped, campaign);
+  const chronicle = launchedIn(unshipped, campaign, choices, 1);
+  const { region, civilization } = choices;
+  const file = writeSaveFile(unshipped, campaign, { chronicle, region, civilization });
   const read = readSaveFile(CATALOGUE, file);
   if (read.save === undefined) throw new Error('the save file is refused');
   expect(read.save.chronicle).toBeUndefined();

@@ -24,7 +24,7 @@ import {
   type Glyphs,
   glyphs,
   glyphsOf,
-  launchedOn,
+  launchedAs,
   marksIn,
   nearestUncharted,
   noGlyphs,
@@ -121,7 +121,7 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   const problems = watch(page);
   test.setTimeout(budget(0));
 
-  await openSaved(page, launchedOn(1));
+  await openSaved(page, launchedAs(1));
 
   await page.keyboard.press('c');
   await answered(page);

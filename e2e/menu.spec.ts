@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { civilizationOf } from '../src/rules/catalogue';
 import { tileKey } from '../src/rules/map';
+import { freshCampaign } from '../src/rules/save';
 import type { Chronicle } from '../src/rules/state';
+import { openingChoices } from '../src/ui/launch-layout';
 import {
   aimed,
   bareAimable,
@@ -13,9 +14,9 @@ import {
   chronicleButton,
   chronicleOf,
   cityTileOf,
+  civilizationOpened,
   click,
   dragOut,
-  firstsOf,
   idsOf,
   launchedFromScreen,
   mapFrame,
@@ -209,8 +210,8 @@ test('Campaign opens the campaign screen, Chronicle there the launch screen on t
 }) => {
   const problems = watch(page);
   const played = settledOn(1);
-  const firsts = firstsOf();
-  const civilization = civilizationOf(CATALOGUE, firsts.civilization);
+  const firsts = openingChoices(CATALOGUE, freshCampaign(CATALOGUE));
+  const civilization = civilizationOpened();
 
   await openSaved(page, played);
 

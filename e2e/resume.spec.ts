@@ -13,10 +13,9 @@ import {
   continued,
   dragOut,
   firstDealt,
-  firstsOf,
-  launchedOn,
+  launchedAs,
   openSaved,
-  plant,
+  plantSaved,
   playedOut,
   readNames,
   rested,
@@ -38,7 +37,7 @@ test('a chronicle continued through the address stands where it stood, under its
   test.setTimeout(budget(0));
   const problems = watch(page);
 
-  await openSaved(page, launchedOn(1));
+  await openSaved(page, launchedAs(1));
   await dragOut(page, 0);
   await aimed(page);
   await click(page, `tile-${tileKey(CENTRE)}`);
@@ -90,10 +89,8 @@ test('a chronicle reopened waiting on a deal stands under its capstone’s windo
   const dealt = firstDealt(1);
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const { region, civilization } = firstsOf();
 
-  await readNames(page);
-  await plant(page, { chronicle: dealt, region, civilization });
+  await plantSaved(page, dealt);
   await resume(page);
 
   await expect.poll(() => standing(page, 'capstone')).toBe(true);

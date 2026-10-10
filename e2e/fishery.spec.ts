@@ -20,6 +20,7 @@ import { buildingName, terrainName, text } from '../src/ui/text';
 import {
   admits,
   aimed,
+  campaignWith,
   chronicleOf,
   cityTileOf,
   claimedAt,
@@ -45,7 +46,6 @@ import {
   unitEntered,
   WORKER,
   watch,
-  withCard,
 } from './chronicle-screen';
 
 /** The card that builds the Fishery, and the building it builds. */
@@ -54,7 +54,7 @@ const FISHERY = 'fishery';
 /** The card that embarks the worker the Fishery is built through. */
 const EMBARK = 'embark';
 
-const CIVILIZATION = withCard(EMBARK);
+const CAMPAIGN = campaignWith([EMBARK]);
 
 /** The terrain the Fishery stands on, and what it gives the tiles beside it. */
 const { SHORE, GIVES } = (() => {
@@ -73,7 +73,7 @@ const LINE = text('panel.beside', { terrain: terrainName(GIVES.terrain) });
  */
 function fisheryAdmitted(): Paid & { readonly beside: TileCoords } {
   return firstSeed(`opens turn 1 on ${EMBARK} in hand with ground to make coast`, (seed) => {
-    const opened = settledOn(seed, [], CIVILIZATION);
+    const opened = settledOn(seed, [], CAMPAIGN);
     const city = cityTileOf(opened);
     if (!idsOf(opened.hand).includes(EMBARK) || unitAt(opened.units, city) !== undefined) {
       return undefined;
@@ -120,7 +120,7 @@ test('the Fishery played at the coast tile inside the border its embarked worker
   const { chronicle, tile, index } = fisheryAdmitted();
   const built = playedOn(chronicle, index, tile);
 
-  await openSaved(page, chronicle);
+  await openSaved(page, chronicle, CAMPAIGN);
   const before = await marksIn(page, 'buildings');
   await dragOut(page, index);
   await aimed(page);
@@ -145,7 +145,7 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
   if (given === undefined) throw new Error(`the ${FISHERY} gives nothing to ${tileKey(beside)}`);
   if (own === undefined) throw new Error(`no building stands on ${tileKey(tile)}`);
 
-  await openSaved(page, built);
+  await openSaved(page, built, CAMPAIGN);
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
   expect(await glyphs(page)).toEqual(glyphsOf(drawnFaces(built)));

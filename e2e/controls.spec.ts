@@ -5,7 +5,7 @@ import {
   browse,
   capstoneClosed,
   click,
-  launchedOn,
+  launchedAs,
   liftedName,
   nameOnScreen,
   offsetOf,
@@ -483,7 +483,7 @@ test('a notch zooms the map over the Menu button and over a small card raised fr
 }) => {
   const problems = watch(page);
 
-  await openSaved(page, launchedOn(1));
+  await openSaved(page, launchedAs(1));
   expect(await notchedOver(page, await onScreen(page, 'menu-button'))).toBeCloseTo(NOTCH, 2);
 
   const card = await onScreen(page, 'hand-0');

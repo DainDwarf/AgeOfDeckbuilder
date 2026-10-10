@@ -6,6 +6,7 @@ import { achievementOf, firstAge } from '../src/rules/catalogue';
 import { countOn } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
+import { openingChoices, withAge } from '../src/ui/launch-layout';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import {
   aimed,
@@ -27,7 +28,6 @@ import {
   readings,
   readNames,
   rowOf,
-  secondEra,
   settledOn,
   standing,
   textOf,
@@ -100,11 +100,10 @@ test('a chronicle of the second age beside a campaign pinning a technology it re
   const problems = watch(page);
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
-  const era = secondEra(campaign);
-  const paid = paidOnDeer(HUNT, [], undefined, era);
+  const paid = paidOnDeer(HUNT, [], campaign);
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
   const { id } = rowOf(paid.chronicle, HUNTING);
-  const { need } = achievementOf(CATALOGUE, era.age, id);
+  const { need } = achievementOf(CATALOGUE, paid.chronicle.age, id);
   const countIn = (chronicle: Chronicle): string =>
     text('achievement.count', {
       count: countOn(CATALOGUE, chronicle, rowOf(chronicle, HUNTING)),
@@ -139,7 +138,7 @@ test('a chronicle of the second age stacks the pinned achievements it reads in i
 }) => {
   const problems = watch(page);
   const campaign = wonCampaign();
-  const reached = reachedByClaims(secondEra(campaign));
+  const reached = reachedByClaims(campaign);
   const stack = stackedIn(reached, campaign.pins);
   const at = stack.indexOf(HOLDING);
   const [name, , run, count, well] = partsOf(HOLDING);
@@ -177,13 +176,16 @@ test('a chronicle of the first age beside a campaign pinning a technology of the
 }) => {
   const problems = watch(page);
   const campaign = wonCampaign();
-  const chronicle = settledOn(1, [], undefined, {
-    age: firstAge(CATALOGUE),
-    learned: campaign.technologies,
-  });
+  const choices = withAge(
+    CATALOGUE,
+    campaign,
+    openingChoices(CATALOGUE, campaign),
+    firstAge(CATALOGUE),
+  );
+  const chronicle = settledOn(1, [], campaign, choices);
   expect(campaign.pins).toContain(HUNTING);
 
-  await openSaved(page, chronicle, campaign);
+  await openSaved(page, chronicle, campaign, choices);
   expect(await standing(page, pinnedAchievement(HUNTING))).toBe(false);
 
   expect(problems).toEqual([]);

@@ -5,6 +5,7 @@ import { improvementKind } from '../src/rules/map-kinds';
 import { improvementName } from '../src/ui/text';
 import {
   aimed,
+  campaignWith,
   chronicleOf,
   click,
   dragOut,
@@ -19,17 +20,16 @@ import {
   shownCard,
   TRAPPING,
   watch,
-  withCard,
 } from './chronicle-screen';
 
-const CIVILIZATION = withCard(TRAPPING);
+const CAMPAIGN = campaignWith([TRAPPING]);
 
 test('the trapping card places trapping on the deer the worker stands on', async ({ page }) => {
   const problems = watch(page);
-  const paid = paidOnDeer(TRAPPING, [], CIVILIZATION);
+  const paid = paidOnDeer(TRAPPING, [], CAMPAIGN);
   const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
-  await openSaved(page, paid.chronicle);
+  await openSaved(page, paid.chronicle, CAMPAIGN);
   const before = await marksIn(page, 'improvements');
   await dragOut(page, paid.index);
   await aimed(page);
@@ -45,9 +45,9 @@ test('the tile trapping was placed on inspects trapping on a card of its own, be
   page,
 }) => {
   const problems = watch(page);
-  const paid = paidOnDeer(TRAPPING, [], CIVILIZATION);
+  const paid = paidOnDeer(TRAPPING, [], CAMPAIGN);
 
-  await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile));
+  await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile), CAMPAIGN);
 
   // The worker that placed it still stands there, so trapping's card comes after the unit's.
   await click(page, `tile-${tileKey(paid.tile)}`);
@@ -75,10 +75,10 @@ test('the hunt card played on a trapped deer removes the deer and the trapping w
   page,
 }) => {
   const problems = watch(page);
-  const paid = paidOnDeer(HUNT, [TRAPPING], CIVILIZATION);
+  const paid = paidOnDeer(HUNT, [TRAPPING], CAMPAIGN);
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
-  await openSaved(page, paid.chronicle);
+  await openSaved(page, paid.chronicle, CAMPAIGN);
   const features = await marksIn(page, 'features');
   const improvements = await marksIn(page, 'improvements');
   await dragOut(page, paid.index);

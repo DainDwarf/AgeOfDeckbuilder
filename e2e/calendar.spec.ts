@@ -5,6 +5,7 @@ import { cardOf } from '../src/rules/catalogue';
 import { type Chronicle, turnShown } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
+  campaignWith,
   chronicleOf,
   dragOut,
   firstSeed,
@@ -15,17 +16,13 @@ import {
   refusalLines,
   settledOn,
   watch,
-  withCard,
 } from './chronicle-screen';
 
 /** The card that shows the turn of the next landing. */
 const CALENDAR = 'calendar';
 
-/** The first civilization the catalogue lists, with two copies of the card added to its cards. */
-const CIVILIZATION = (() => {
-  const once = withCard(CALENDAR);
-  return { ...once, cards: [...once.cards, CALENDAR] };
-})();
+/** A new campaign with two copies of the card added to its deck. */
+const CAMPAIGN = campaignWith([CALENDAR, CALENDAR]);
 
 /**
  * The first seed's turn 1 whose hand holds both copies of the card, the cost of both gained, and
@@ -33,7 +30,7 @@ const CIVILIZATION = (() => {
  */
 function twoInHand(): { opened: Chronicle; index: number } {
   return firstSeed(`opens turn 1 on two copies of ${CALENDAR} in hand`, (seed) => {
-    const settled = settledOn(seed, [], CIVILIZATION);
+    const settled = settledOn(seed, [], CAMPAIGN);
     const held = idsOf(settled.hand).filter((id) => id === CALENDAR);
     if (held.length < 2) return undefined;
     const { cost } = cardOf(CATALOGUE, CALENDAR);
@@ -52,7 +49,7 @@ test('the calendar played raises the strip over the end-turn button reading the 
   if (turn === undefined) throw new Error(`${CALENDAR} played shows no turn`);
   const other = idsOf(shown.hand).indexOf(CALENDAR);
 
-  await openSaved(page, opened);
+  await openSaved(page, opened, CAMPAIGN);
   const before = await readings(page, ['shown-event']);
   expect(before('shown-event').shows).toBe(false);
 

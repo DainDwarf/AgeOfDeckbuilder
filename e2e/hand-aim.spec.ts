@@ -19,9 +19,9 @@ test('a card aimed at the hand is being aimed from its second click, says it is 
   page,
 }) => {
   const problems = watch(page);
-  const { opened, card, other } = aimableAtHand();
+  const { campaign, opened, card, other } = aimableAtHand();
 
-  await openSaved(page, opened);
+  await openSaved(page, opened, campaign);
   const home = await onScreen(page, `hand-${card}`);
   const target = await onScreen(page, `hand-${other}`);
 

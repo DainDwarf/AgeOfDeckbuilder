@@ -10,6 +10,7 @@ import {
   admits,
   aimed,
   browse,
+  campaignWith,
   chronicleOf,
   cityTileOf,
   claimedAt,
@@ -28,22 +29,22 @@ import {
   unitEntered,
   WORKER,
   watch,
-  withCard,
 } from './chronicle-screen';
 
 /** The card that builds the farm. */
 const FARM = 'farm';
 
+const CAMPAIGN = campaignWith([FARM]);
+
 /**
- * The first seed's turn 1 with the farm in hand, a copy added to the first civilization's deck: a
- * claim's culture gained, a tile beside the city claimed, the farm's cost gained and a worker
- * entered there, the farm's aim admitting the tile.
+ * The first seed's turn 1 with the farm in hand, a copy added to the campaign's deck: a claim's
+ * culture gained, a tile beside the city claimed, the farm's cost gained and a worker entered there,
+ * the farm's aim admitting the tile.
  */
 function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number } {
-  const civilization = withCard(FARM);
   const { cost } = cardOf(CATALOGUE, FARM);
   return firstSeed('opens turn 1 on a farm to build beside the city', (seed) => {
-    const opened = settledOn(seed, [], civilization);
+    const opened = settledOn(seed, [], CAMPAIGN);
     if (!idsOf(opened.hand).includes(FARM)) return undefined;
     for (const tile of neighbours(cityTileOf(opened))) {
       const claimed = claimedAt(opened, tile);
@@ -67,7 +68,7 @@ test('the farm played at the tile inside the border its worker stands on builds 
   const label = (cards: readonly unknown[]): string =>
     text('tab.exhaust-pile', { count: cards.length });
 
-  await openSaved(page, chronicle);
+  await openSaved(page, chronicle, CAMPAIGN);
   const before = await marksIn(page, 'buildings');
   expect(await textOf(page, 'exhaust-pile-label')).toBe(label(chronicle.exhaustPile));
   await dragOut(page, index);

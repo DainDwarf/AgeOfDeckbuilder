@@ -1,14 +1,17 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { civilizationIn, removedFrom } from '../src/rules/campaign';
 import { gained, terraformed } from '../src/rules/cards';
-import { cardOf, civilizationOf, firstCivilization } from '../src/rules/catalogue';
+import { cardOf } from '../src/rules/catalogue';
 import { neighbours, runsAlong, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
 import { unchanged } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
+import { openingChoices } from '../src/ui/launch-layout';
 import { improvementName, text } from '../src/ui/text';
 import {
   aimed,
+  campaignWith,
   chronicleOf,
   cityTileOf,
   click,
@@ -32,17 +35,24 @@ import {
 /** The card that places the improvement, and the improvement it places. */
 const IRRIGATION = 'irrigation';
 
+/** A new campaign with the card added to its deck and every other card of the deck removed. */
+const CAMPAIGN = (() => {
+  const added = campaignWith([IRRIGATION]);
+  const { civilization } = openingChoices(CATALOGUE, added);
+  return civilizationIn(CATALOGUE, added, civilization)
+    .cards.filter((card) => card !== IRRIGATION)
+    .reduce((left, card) => removedFrom(CATALOGUE, left, civilization, card), added);
+})();
+
 /**
- * The first seed's turn 1 on the first civilization with the card alone in its deck, a river running
- * along a tile beside the city: that tile made the first terrain the improvement names, a worker
- * entered on it, and the card's cost gained.
+ * The first seed's turn 1 with the card alone in its deck, a river running along a tile beside the
+ * city: that tile made the first terrain the improvement names, a worker entered on it, and the
+ * card's cost gained.
  */
 function paidAlongRiver(): { chronicle: Chronicle; tile: TileCoords; index: number } {
   const [terrain] = improvementKind(CATALOGUE, IRRIGATION).terrains;
-  const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
-  const civilization = { ...first, cards: [IRRIGATION] };
   return firstSeed('runs a river along a tile beside the city', (seed) => {
-    const opened = settledOn(seed, [], civilization);
+    const opened = settledOn(seed, [], CAMPAIGN);
     const tile = neighbours(cityTileOf(opened)).find((at) => runsAlong(opened.rivers, at));
     if (tile === undefined) return undefined;
     const ground =
@@ -62,7 +72,7 @@ test('the irrigation card places irrigation on the tile a river runs along that 
   const paid = paidAlongRiver();
   const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
-  await openSaved(page, paid.chronicle);
+  await openSaved(page, paid.chronicle, CAMPAIGN);
   const before = await marksIn(page, 'improvements');
   await dragOut(page, paid.index);
   await aimed(page);
@@ -80,7 +90,7 @@ test('the tile irrigation was placed on inspects irrigation on a card of its own
   const problems = watch(page);
   const paid = paidAlongRiver();
 
-  await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile));
+  await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile), CAMPAIGN);
 
   // The worker that placed it still stands there, so irrigation's card comes after the unit's.
   await click(page, `tile-${tileKey(paid.tile)}`);

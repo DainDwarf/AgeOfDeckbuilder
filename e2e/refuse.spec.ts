@@ -10,6 +10,7 @@ import {
   admits,
   aimed,
   bareWith,
+  campaignWith,
   chronicleOf,
   cityTileOf,
   dragOut,
@@ -29,7 +30,6 @@ import {
   TRAPPING,
   waitGameClock,
   watch,
-  withCard,
 } from './chronicle-screen';
 
 function reasons(chronicle: Chronicle, id: CardId): Said {
@@ -149,7 +149,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
 }) => {
   const problems = watch(page);
   const unpaid = ({ aim, playable }: Judged): boolean => aim === 'tile' && !playable;
-  const civilization = withCard(TRAPPING);
+  const campaign = campaignWith([TRAPPING]);
   const {
     chronicle: aiming,
     tile,
@@ -157,7 +157,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
   } = firstSeed(
     'opens turn 1 on a card aimed at a tile the city cannot pay for, admitting the deer its worker stands on',
     (seed) => {
-      const opened = settledOn(seed, [], civilization);
+      const opened = settledOn(seed, [], campaign);
       if (inHand(opened, unpaid) === -1) return undefined;
       const ground = onDeer(opened, []);
       const at = inHand(ground.chronicle, unpaid);
@@ -165,7 +165,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
     },
   );
 
-  await openSaved(page, aiming);
+  await openSaved(page, aiming, campaign);
   const card = await onScreen(page, `hand-${index}`);
   await page.mouse.click(card.x, card.y);
   await aimed(page);

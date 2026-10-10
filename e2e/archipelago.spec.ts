@@ -100,7 +100,7 @@ test('on a campaign that has learned Raft, its plate stands learned reading the 
   await launchedFromScreen(page);
   const chronicle = await chronicleOf(page);
   expect(chronicle).toEqual(
-    launchedAs(campaign, { age, region: ARCHIPELAGO, civilization }, chronicle.seed),
+    launchedAs(chronicle.seed, campaign, { age, region: ARCHIPELAGO, civilization }),
   );
 
   expect(problems).toEqual([]);

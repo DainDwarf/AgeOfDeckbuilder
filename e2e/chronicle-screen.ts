@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { agesReached, type Campaign, civilizationIn, paidInto } from '../src/rules/campaign';
+import { addedTo, bought, type Campaign, civilizationIn, paidInto } from '../src/rules/campaign';
 import {
   aimOf,
   built,
@@ -16,15 +16,12 @@ import {
   type Aim,
   achievementOf,
   ageOf,
+  type Catalogue,
   type Civilization,
   cardOf,
-  civilizationOf,
   type Entering,
   earningOf,
   entered,
-  firstAge,
-  firstCivilization,
-  firstRegion,
   technologyOf,
   unitKind,
 } from '../src/rules/catalogue';
@@ -45,13 +42,7 @@ import {
 } from '../src/rules/map';
 import { featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
-import {
-  type ChronicleSave,
-  freshCampaign,
-  readSave,
-  type SaveRead,
-  writeSave,
-} from '../src/rules/save';
+import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
 import { addedToDrawPileTop } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
@@ -67,10 +58,12 @@ import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
+import { openingChoices } from '../src/ui/launch-layout';
 import type { PileKind } from '../src/ui/piles';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
+import { learnedWithNeeds } from '../tools/learned-with-needs';
 
 /** What the page answers of a reading: its value, or what a read of it throws. */
 type Answer<T> = { value: T } | { complaint: string };
@@ -118,31 +111,6 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
   return chronicle.city;
 }
 
-/** The age and the civilization the catalogue lists first, and the first region that age lists. */
-export function firstsOf(): { age: string; region: string; civilization: string } {
-  const age = firstAge(CATALOGUE);
-  return {
-    age,
-    region: firstRegion(CATALOGUE, age),
-    civilization: firstCivilization(CATALOGUE),
-  };
-}
-
-/** The age a chronicle is launched in, and the technologies learned it reads its achievements by. */
-export type Era = { readonly age: string; readonly learned: readonly string[] };
-
-/** The first age the catalogue lists, nothing learned. */
-function firstEra(): Era {
-  return { age: firstAge(CATALOGUE), learned: [] };
-}
-
-/** The second age the campaign has reached, and the technologies it has learned. */
-export function secondEra(campaign: Campaign): Era {
-  const [, age] = agesReached(CATALOGUE, campaign);
-  if (age === undefined) throw new Error('the campaign has reached no second age');
-  return { age, learned: campaign.technologies };
-}
-
 /** The technology whose achievement counts what the city holds, which claims alone reach. */
 export const HOLDING = 'agriculture';
 
@@ -162,12 +130,12 @@ export function rowOf(chronicle: Chronicle, technology: string): ChronicleAchiev
 }
 
 /**
- * The first seed's chronicle in the era's age, settled bare and taken by claims alone to the
- * achievement earning `HOLDING`.
+ * The first seed's chronicle launched from the campaign as `settledOn` launches it, settled bare and
+ * taken by claims alone to the achievement earning `HOLDING`.
  */
-export function reachedByClaims(era: Era): Chronicle {
+export function reachedByClaims(campaign: Campaign): Chronicle {
   return firstSeed(`reaches the achievement earning ${HOLDING} by claims`, (seed) => {
-    let chronicle = settledOn(seed, [], undefined, era);
+    let chronicle = settledOn(seed, [], campaign);
     while (!rowOf(chronicle, HOLDING).reached) {
       const counted = countOn(CATALOGUE, chronicle, rowOf(chronicle, HOLDING));
       const culture = gained(chronicle, { culture: cultureThreshold(chronicle) }).chronicle;
@@ -185,45 +153,57 @@ export function reachedByClaims(era: Era): Chronicle {
 }
 
 /**
- * A chronicle launched from a seed in the era's age, the first age the catalogue lists with nothing
- * learned unless one is given, on that age's first region and the catalogue's first civilization, or
- * the civilization given.
+ * The chronicle the rules launch on the seed on the catalogue's content, as the launch screen
+ * launches one from the campaign on the choices.
  */
-export function launchedOn(seed: number, civilization?: Civilization, era = firstEra()): Chronicle {
+export function launchedIn(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  choices: Choices,
+  seed: number,
+): Chronicle {
   return launched(
-    CATALOGUE,
-    era.age,
-    firstRegion(CATALOGUE, era.age),
-    seed,
-    civilization ?? civilizationOf(CATALOGUE, firstCivilization(CATALOGUE)),
-    era.learned,
-  );
-}
-
-/** The chronicle the rules launch on the choices and the seed, beside the campaign. */
-export function launchedAs(campaign: Campaign, choices: Choices, seed: number): Chronicle {
-  return launched(
-    CATALOGUE,
+    catalogue,
     choices.age,
     choices.region,
     seed,
-    civilizationIn(CATALOGUE, campaign, choices.civilization),
+    civilizationIn(catalogue, campaign, choices.civilization),
     campaign.technologies,
   );
 }
 
 /**
- * A chronicle launched as `launchedOn` launches it and settled headlessly: the city section's card,
+ * The chronicle `launchedIn` launches on the game's content from the campaign, a new one unless one
+ * is given, on the choices given, or those the launch screen opens on over it.
+ */
+export function launchedAs(
+  seed: number,
+  campaign = freshCampaign(CATALOGUE),
+  choices = openingChoices(CATALOGUE, campaign),
+): Chronicle {
+  return launchedIn(CATALOGUE, campaign, choices, seed);
+}
+
+/**
+ * The civilization the launch screen opens on over the campaign, a new one unless one is given, as a
+ * chronicle is launched on it.
+ */
+export function civilizationOpened(campaign = freshCampaign(CATALOGUE)): Civilization {
+  return civilizationIn(CATALOGUE, campaign, openingChoices(CATALOGUE, campaign).civilization);
+}
+
+/**
+ * A chronicle launched as `launchedAs` launches it and settled headlessly: the city section's card,
  * first in hand, played on the centre tile, the ones `onCity` names played on the city's tile, and
  * the settle phase ended with the rest in hand.
  */
 export function settledOn(
   seed: number,
   onCity: readonly CardId[] = [],
-  civilization?: Civilization,
-  era = firstEra(),
+  campaign = freshCampaign(CATALOGUE),
+  choices = openingChoices(CATALOGUE, campaign),
 ): Chronicle {
-  let settling = playedOn(launchedOn(seed, civilization, era), 0, CENTRE);
+  let settling = playedOn(launchedAs(seed, campaign, choices), 0, CENTRE);
   const city = cityTileOf(settling);
   for (const card of onCity)
     settling = playedOn(settling, idsOf(settling.hand).indexOf(card), city);
@@ -497,18 +477,6 @@ export async function reading(page: Page, name: string): Promise<Reading> {
 }
 
 /**
- * The chronicle kept as the save the next page this one loads finds, beside the campaign, a new one
- * on the first civilization unless one is given; a save the reading would refuse throws here.
- */
-export async function plant(
-  page: Page,
-  save: ChronicleSave,
-  campaign = freshCampaign(CATALOGUE),
-): Promise<void> {
-  await kept(page, writeSave(CATALOGUE, campaign, save));
-}
-
-/**
  * The campaign kept as the save the next page this one loads finds, with no chronicle beside it; a
  * save the reading would refuse throws here.
  */
@@ -626,14 +594,19 @@ export async function chronicleRaised(page: Page): Promise<void> {
 }
 
 /**
- * The chronicle planted as the save the next page this one loads finds, on its age's first region and
- * the first civilization the catalogue lists, beside the campaign `plant` keeps it beside, and that
- * page given the names.
+ * The chronicle kept as the save the next page finds, beside the campaign and on the choices it was
+ * launched from, by default a new one and the choices the launch screen opens on, and that page given
+ * the names; a save the reading would refuse throws here.
  */
-async function plantSaved(page: Page, chronicle: Chronicle, campaign?: Campaign): Promise<void> {
-  const region = firstRegion(CATALOGUE, chronicle.age);
+export async function plantSaved(
+  page: Page,
+  chronicle: Chronicle,
+  campaign = freshCampaign(CATALOGUE),
+  choices = openingChoices(CATALOGUE, campaign),
+): Promise<void> {
+  const { region, civilization } = choices;
   await readNames(page);
-  await plant(page, { chronicle, region, civilization: firstCivilization(CATALOGUE) }, campaign);
+  await kept(page, writeSave(CATALOGUE, campaign, { chronicle, region, civilization }));
 }
 
 /**
@@ -742,8 +715,9 @@ export async function openSaved(
   page: Page,
   chronicle: Chronicle,
   campaign?: Campaign,
+  choices?: Choices,
 ): Promise<void> {
-  await plantSaved(page, chronicle, campaign);
+  await plantSaved(page, chronicle, campaign, choices);
   await continued(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
@@ -1295,16 +1269,18 @@ export function admits(chronicle: Chronicle, index: number, at: TileCoords): boo
 }
 
 /**
- * The first seed's turn 1 in the era's age, the first unless given, its city settled bare, whose hand
- * holds a card `such` holds of, and where it lies; `named` tails the complaint when no seed does.
+ * The first seed's turn 1 launched from the campaign, a new one unless given, its city settled bare,
+ * whose hand holds a card `such` holds of, and where it lies; `named` tails the complaint when no
+ * seed does.
  */
 export function bareWith(
   named: string,
   such: (card: Judged) => boolean,
-  era = firstEra(),
+  campaign = freshCampaign(CATALOGUE),
 ): { chronicle: Chronicle; index: number } {
-  return firstSeed(`opens the ${era.age} age’s turn 1 on ${named}`, (seed) => {
-    const chronicle = settledOn(seed, [], undefined, era);
+  const { age } = openingChoices(CATALOGUE, campaign);
+  return firstSeed(`opens the ${age} age’s turn 1 on ${named}`, (seed) => {
+    const chronicle = settledOn(seed, [], campaign);
     const index = inHand(chronicle, such);
     return index === -1 ? undefined : { chronicle, index };
   });
@@ -1530,10 +1506,33 @@ export const TRAPPING = 'trapping';
 /** The card that removes a tile's feature. */
 export const HUNT = 'hunt';
 
-/** The first civilization the catalogue lists, with one copy of the card added to its cards. */
-export function withCard(card: CardId): Civilization {
-  const first = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
-  return { ...first, cards: [...first.cards, card] };
+/** The technology that unlocks the card; a card no technology unlocks throws. */
+function unlockerOf(card: CardId): string {
+  const found = Object.keys(CATALOGUE.technologies).find((technology) =>
+    Object.hasOwn(technologyOf(CATALOGUE, technology).unlocks.cards, card),
+  );
+  if (found === undefined) throw new Error(`no technology unlocks ${card}`);
+  return found;
+}
+
+/**
+ * A new campaign with a copy of each card handed added to the deck of the civilization it launches
+ * on, in the order handed: the technology that unlocks the card learned with its needs, and a copy
+ * bought first where that deck holds every copy the collection owns.
+ */
+export function campaignWith(cards: readonly CardId[]): Campaign {
+  let campaign = freshCampaign(CATALOGUE);
+  const { civilization } = openingChoices(CATALOGUE, campaign);
+  for (const card of cards) {
+    campaign = learnedWithNeeds(CATALOGUE, campaign, [unlockerOf(card)]);
+    const { settle, cards: deck } = civilizationOpened(campaign);
+    const held = [...settle, ...deck].filter((id) => id === card).length;
+    if (held === campaign.collection.filter(({ id }) => id === card).length) {
+      campaign = bought(CATALOGUE, campaign, card);
+    }
+    campaign = addedTo(CATALOGUE, campaign, civilization, card);
+  }
+  return campaign;
 }
 
 /** The card of the catalogue aimed at the hand. */
@@ -1546,17 +1545,22 @@ export const AIMED_AT_HAND = (() => {
 })();
 
 /**
- * The first seed's turn 1, its city settled bare, on the first civilization with one copy of the card
- * aimed at the hand in its deck, whose hand holds that card and the city can play it; where it lies,
- * and where the first other card of the hand lies.
+ * The first seed's turn 1, its city settled bare, launched from `campaignWith` the card aimed at the
+ * hand, whose hand holds that card and the city can play it: the campaign, where the card lies, and
+ * where the first other card of the hand lies.
  */
-export function aimableAtHand(): { opened: Chronicle; card: number; other: number } {
-  const civilization = withCard(AIMED_AT_HAND);
+export function aimableAtHand(): {
+  campaign: Campaign;
+  opened: Chronicle;
+  card: number;
+  other: number;
+} {
+  const campaign = campaignWith([AIMED_AT_HAND]);
   return firstSeed('opens turn 1 on the card aimed at the hand, playable', (seed) => {
-    const opened = settledOn(seed, [], civilization);
+    const opened = settledOn(seed, [], campaign);
     const card = inHand(opened, ({ aim, playable }) => aim === 'hand' && playable);
     if (card === -1) return undefined;
-    return { opened, card, other: card === 0 ? 1 : 0 };
+    return { campaign, opened, card, other: card === 0 ? 1 : 0 };
   });
 }
 
@@ -1624,17 +1628,18 @@ export function paidFor(
 }
 
 /**
- * The first seed's turn 1, launched as `settledOn` launches it, with the card in hand, on the ground
- * `made` makes of it, with the card paid for; a seed it makes none of is passed over.
+ * The first seed's turn 1, launched from the campaign as `settledOn` launches it, with the card in
+ * hand, on the ground `made` makes of it, with the card paid for; a seed it makes none of is passed
+ * over.
  */
 export function paidOnGround(
   card: CardId,
   made: (opened: Chronicle) => { chronicle: Chronicle; tile: TileCoords } | undefined,
-  civilization?: Civilization,
-  era = firstEra(),
+  campaign = freshCampaign(CATALOGUE),
 ): Paid {
-  return firstSeed(`opens the ${era.age} age’s turn 1 on ${card} in hand`, (seed) => {
-    const opened = settledOn(seed, [], civilization, era);
+  const { age } = openingChoices(CATALOGUE, campaign);
+  return firstSeed(`opens the ${age} age’s turn 1 on ${card} in hand`, (seed) => {
+    const opened = settledOn(seed, [], campaign);
     if (!idsOf(opened.hand).includes(card)) return undefined;
     const ground = made(opened);
     if (ground === undefined) return undefined;
@@ -1643,16 +1648,15 @@ export function paidOnGround(
 }
 
 /**
- * The first seed's turn 1, launched as `settledOn` launches it, with the card in hand, on the deer
- * the improvements named are placed on, with the card paid for.
+ * The first seed's turn 1, launched from the campaign as `settledOn` launches it, with the card in
+ * hand, on the deer the improvements named are placed on, with the card paid for.
  */
 export function paidOnDeer(
   card: CardId,
   improvements: readonly string[],
-  civilization?: Civilization,
-  era = firstEra(),
+  campaign?: Campaign,
 ): Paid {
-  return paidOnGround(card, (opened) => onDeer(opened, improvements), civilization, era);
+  return paidOnGround(card, (opened) => onDeer(opened, improvements), campaign);
 }
 
 /** The kind of the first row of the table the chronicle's age's camp opens with. */

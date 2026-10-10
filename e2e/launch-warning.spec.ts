@@ -18,7 +18,6 @@ import {
   reading,
   readings,
   rested,
-  secondEra,
   settledOn,
   standing,
   storedUnder,
@@ -70,7 +69,7 @@ test('Launch over a saved chronicle that has reached an achievement raises the w
 }) => {
   const problems = watch(page);
   const campaign = wonCampaign();
-  const saved = reachedByClaims(secondEra(campaign));
+  const saved = reachedByClaims(campaign);
   const reached = reachedIn(saved);
   expect(reached).not.toEqual([]);
   const first = firstAge(CATALOGUE);
@@ -121,7 +120,7 @@ test('Launch over a saved chronicle that has reached an achievement raises the w
   await click(page, `${WARNING}-through`);
   await chronicleRaised(page);
   const chronicle = await chronicleOf(page);
-  expect(chronicle).toEqual(launchedAs(campaign, choices, chronicle.seed));
+  expect(chronicle).toEqual(launchedAs(chronicle.seed, campaign, choices));
   await expect
     .poll(async () => (await heldSave(page)).chronicle)
     .toEqual({ chronicle, region: choices.region, civilization: choices.civilization });
@@ -144,9 +143,7 @@ test('Launch over a saved chronicle that has reached no achievement opens the ne
   expect(await standing(page, WARNING)).toBe(false);
   await chronicleRaised(page);
   const chronicle = await chronicleOf(page);
-  expect(chronicle).toEqual(
-    launchedAs(campaign, openingChoices(CATALOGUE, campaign), chronicle.seed),
-  );
+  expect(chronicle).toEqual(launchedAs(chronicle.seed, campaign));
 
   expect(problems).toEqual([]);
 });

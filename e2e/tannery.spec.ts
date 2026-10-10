@@ -5,6 +5,7 @@ import { buildingKind } from '../src/rules/map-kinds';
 import type { CardId } from '../src/rules/state';
 import {
   aimed,
+  campaignWith,
   chronicleOf,
   cityTileOf,
   claimedAt,
@@ -19,13 +20,12 @@ import {
   playedOn,
   playedOut,
   watch,
-  withCard,
 } from './chronicle-screen';
 
 /** The card that builds the tannery, and the building it builds. */
 const TANNERY = 'tannery';
 
-const CIVILIZATION = withCard(TANNERY);
+const CAMPAIGN = campaignWith([TANNERY]);
 
 /** The features the tannery is built on. */
 const FEATURES = (() => {
@@ -50,7 +50,7 @@ function paidOnFeature(card: CardId, feature: string, building?: string): Paid {
       }
       return undefined;
     },
-    CIVILIZATION,
+    CAMPAIGN,
   );
 }
 
@@ -62,7 +62,7 @@ for (const feature of FEATURES) {
     const paid = paidOnFeature(TANNERY, feature);
     const built = playedOn(paid.chronicle, paid.index, paid.tile);
 
-    await openSaved(page, paid.chronicle);
+    await openSaved(page, paid.chronicle, CAMPAIGN);
     const before = await marksIn(page, 'buildings');
     await dragOut(page, paid.index);
     await aimed(page);
@@ -84,7 +84,7 @@ for (const feature of FEATURES) {
     const paid = paidOnFeature(HUNT, feature, TANNERY);
     const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
-    await openSaved(page, paid.chronicle);
+    await openSaved(page, paid.chronicle, CAMPAIGN);
     const featureMarks = await marksIn(page, 'features');
     const buildingMarks = await marksIn(page, 'buildings');
     await dragOut(page, paid.index);

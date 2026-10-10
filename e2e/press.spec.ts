@@ -30,7 +30,7 @@ import {
   firstSeed,
   inHand,
   type Judged,
-  launchedOn,
+  launchedAs,
   mapFrame,
   marked,
   namedIn,
@@ -50,7 +50,6 @@ import {
   rested,
   ringedTile,
   scrolled,
-  secondEra,
   selected,
   settledOn,
   shownCard,
@@ -831,7 +830,7 @@ test('on the settle phase the chip and the dead end-turn button stop a press: ea
   page,
 }) => {
   const problems = watch(page);
-  const opened = launchedOn(1);
+  const opened = launchedAs(1);
 
   await openSaved(page, opened);
   const home = await onScreen(page, 'hand-0');
@@ -865,11 +864,10 @@ test('a click on a pinned achievement, a name in its goal included, lets the car
 }) => {
   const problems = watch(page);
   const won = wonCampaign();
-  const era = secondEra(won);
   const { chronicle: opened, index } = bareWith(
     'a card aimed at a tile the city can pay for',
     tilePlayable,
-    era,
+    won,
   );
   const pin = opened.achievements
     .map(({ id }) => ({ id, ...achievementOf(CATALOGUE, opened.age, id) }))
@@ -879,7 +877,7 @@ test('a click on a pinned achievement, a name in its goal included, lets the car
     );
   if (pin === undefined)
     throw new Error(
-      `the ${era.age} age reads no achievement of a pinned technology whose goal names a thing`,
+      `the ${opened.age} age reads no achievement of a pinned technology whose goal names a thing`,
     );
   const plate = pinnedAchievement(pin.technology);
 
@@ -1154,9 +1152,9 @@ test('a drag that carries the map leaves a card aimed at the hand being aimed', 
   page,
 }) => {
   const problems = watch(page);
-  const { opened, card } = aimableAtHand();
+  const { campaign, opened, card } = aimableAtHand();
 
-  await openSaved(page, opened);
+  await openSaved(page, opened, campaign);
   const home = await onScreen(page, `hand-${card}`);
 
   await page.mouse.click(home.x, home.y);
