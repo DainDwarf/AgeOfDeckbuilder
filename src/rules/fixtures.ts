@@ -1374,12 +1374,12 @@ export function settledLaunch(
 export const NEUTRAL_TILE: TileCoords = { q: 1, r: 0 };
 
 /**
- * Turn 1 of a chronicle begun as `begunOn` begins one, on plains out to three with the neutral's city
- * on `NEUTRAL_TILE`, its city settled on the centre.
+ * Turn 1 of a chronicle begun as `begunOn` begins one, on plains out to three unless the test hands
+ * in its own ground, with the neutral's city on `NEUTRAL_TILE`, its city settled on the centre.
  */
-export function besideTheNeutral(named: Opening = {}): Chronicle {
+export function besideTheNeutral(named: Opening = {}, ground: Tile[] = plains(3)): Chronicle {
   const { catalogue = CATALOGUE } = named;
-  const opened = opening(builtOn(plains(3), NEUTRAL, [NEUTRAL_TILE]), named);
+  const opened = opening(builtOn(ground, NEUTRAL, [NEUTRAL_TILE]), named);
   return outcome(apply(catalogue, settledOn(opened, CITY, catalogue), { type: 'end-turn' }));
 }
 

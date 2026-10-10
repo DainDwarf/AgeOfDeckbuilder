@@ -23,6 +23,7 @@ import {
   claimOf,
   culture,
   dealing,
+  deepBut,
   EMBARKED_MOVE,
   endedTurn,
   enemiesOf,
@@ -451,6 +452,16 @@ test('a camp across the water enters its guard on the nearest free tile of its i
 
   expect(tilesStaged('enter', held(camp), camping({ odds: 1 }))).toEqual([tileKey(beside)]);
   expect(tilesStaged('enter', held(camp, beside), camping({ odds: 1 }))).toEqual([]);
+});
+
+test('a camp beside the neutral’s city never enters its guard on the neutral’s city’s tile: it enters on the nearest free tile beyond, and nowhere where none is left', () => {
+  const camp = { q: 2, r: -1 };
+  const beyond = { q: 1, r: 1 };
+  const guarded = (...land: TileCoords[]): Chronicle =>
+    besideTheNeutral({}, camped(deepBut(plains(3), [CITY, NEUTRAL_TILE, camp, ...land]), [camp]));
+
+  expect(tilesStaged('enter', guarded(beyond), camping({ odds: 1 }))).toEqual([tileKey(beyond)]);
+  expect(tilesStaged('enter', guarded(), camping({ odds: 1 }))).toEqual([]);
 });
 
 test('a raid through a camp across the water enters on the camp’s island, never on the city’s ground, and the ones its island has no free tile for enter nowhere', () => {

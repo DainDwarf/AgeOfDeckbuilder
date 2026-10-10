@@ -264,7 +264,7 @@ export function standsAs(
 
 /**
  * The tiles the entrant stands on the way a walk over the whole map on its moves reaches them from
- * the tile, standing on it embarked or ashore as named, never the city's.
+ * the tile, standing on it embarked or ashore as named, never a city's: the neutral's as the player's.
  */
 function reached(
   catalogue: Catalogue,
@@ -275,11 +275,14 @@ function reached(
 ): Tile[] {
   const city =
     chronicle.city ?? refuse(catalogue, 'an enemy entered while the city stands nowhere');
+  const cities = new Set(
+    [city, ...(chronicle.neutral === undefined ? [] : [chronicle.neutral.city])].map(tileKey),
+  );
   const { tiles, rivers } = chronicle;
   const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves);
   return tiles.filter(
     (tile) =>
-      tileKey(tile) !== tileKey(city) &&
+      !cities.has(tileKey(tile)) &&
       [false, true].some(
         (standsEmbarked) =>
           (standsEmbarked ? routes.embarked : routes.ashore).has(tileKey(tile)) &&
