@@ -95,7 +95,7 @@ test('a raider with the city’s tile free and in reach steps onto it ahead of a
   expect(attacksOf(city, RAIDING)).toEqual([]);
 });
 
-test('a raider that can strike a unit lands in range of it, on the landing nearest the city, and strikes', () => {
+test('a raider that can attack a unit lands in range of it, on the landing nearest the city, and attacks', () => {
   const city = cityOf(['urban'], {
     tiles: field(4),
     units: [worker({ q: 3, r: -3 }), standing('enemy', { q: 4, r: 0 }, { move: 3 * MOVE_POINT })],
@@ -305,7 +305,7 @@ test('a guard off its camp, the camp’s tile free, lands on the camp, or as nea
   expect(movesOf(guard(MOVE_POINT), GUARDING)).toEqual([['4,-2', '4,-1']]);
 });
 
-test('a guard whose camp a fellow holds lands in range of a unit it could strike from inside its radius, nearest the camp, and strikes; failing the reach it closes on the unit inside its radius', () => {
+test('a guard whose camp a fellow holds lands in range of a unit it could attack from inside its radius, nearest the camp, and attacks; failing the reach it closes on the unit inside its radius', () => {
   const camp = { q: 4, r: 0 };
   const beside = (target: TileCoords, move: number): Chronicle =>
     cityOf(['urban'], {
@@ -323,7 +323,7 @@ test('a guard whose camp a fellow holds lands in range of a unit it could strike
   expect(attacksOf(beside({ q: 1, r: 0 }, MOVE_POINT), GUARDING)).toEqual([]);
 });
 
-test('a guard whose range is one passes over an embarked unit as over one out of its reach, and one of a longer range closes on it and strikes', () => {
+test('a guard whose range is one passes over an embarked unit as over one out of its reach, and one of a longer range closes on it and attacks', () => {
   const camp = { q: 4, r: 0 };
   const coast = { q: 1, r: 0 };
   const guarded = (range: number): Chronicle =>
@@ -344,7 +344,7 @@ test('a guard whose range is one passes over an embarked unit as over one out of
   expect(attacksOf(embarked(2), GUARDING)).toEqual([['3,0', '1,0']]);
 });
 
-test('a guard whose camp a unit of another faction stands on closes on that unit and strikes it', () => {
+test('a guard whose camp a unit of another faction stands on closes on that unit and attacks it', () => {
   const camp = { q: 4, r: 0 };
   const city = cityOf(['urban'], {
     tiles: camped(field(4), [camp]),
@@ -358,7 +358,7 @@ test('a guard whose camp a unit of another faction stands on closes on that unit
   expect(attacksOf(city, GUARDING)).toEqual([['3,0', '4,0']]);
 });
 
-test('a guard whose camp a fellow holds, with nothing to strike, wanders to a landing inside its radius drawn from the seed, the one it stands on included: the same seed wanders the same, and seeds differ', () => {
+test('a guard whose camp a fellow holds, with nothing to attack, wanders to a landing inside its radius drawn from the seed, the one it stands on included: the same seed wanders the same, and seeds differ', () => {
   const camp = { q: 4, r: 0 };
   const from = { q: 4, r: -1 };
   const wandered = (seed: number): string => {

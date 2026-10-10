@@ -86,8 +86,8 @@ export function guarding(radius: number): EnemyScript {
       const targets = chronicle.units.filter((unit) =>
         canAttack(enemy, unit, Math.max(0, distance(unit.tile, camp) - radius)),
       );
-      const striking = landingsWithTarget(catalogue, chronicle, enemy, inside, targets);
-      if (striking.length > 0) return kept(nearestTo(chronicle, striking, camp));
+      const attacking = landingsWithTarget(catalogue, chronicle, enemy, inside, targets);
+      if (attacking.length > 0) return kept(nearestTo(chronicle, attacking, camp));
       if (targets.length > 0) {
         return kept(nearestTo(chronicle, inside, nearestTo(chronicle, targets, enemy.tile).tile));
       }
@@ -163,8 +163,8 @@ function walkedTo(
 
   const onto = landings.find((landing) => tileKey(landing.tile) === tileKey(to));
   if (onto !== undefined) return { landing: onto };
-  const striking = landingsWithTarget(catalogue, chronicle, enemy, landings, chronicle.units);
-  if (striking.length > 0) return { landing: nearestTo(chronicle, striking, to) };
+  const attacking = landingsWithTarget(catalogue, chronicle, enemy, landings, chronicle.units);
+  if (attacking.length > 0) return { landing: nearestTo(chronicle, attacking, to) };
 
   const moves = enemyMoves(catalogue, chronicle, enemy);
   const toward = routesToward(catalogue, chronicle.tiles, chronicle.rivers, to, false, moves);
