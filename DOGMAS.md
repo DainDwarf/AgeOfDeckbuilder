@@ -40,6 +40,7 @@ How an age is authored:
 - **Thin is answered after playtest or at the balance pass, never ahead of them:** an age left thin by a card moving out, a doubt about the player's hold on a goal, a maybe on trial — each goes to play.
 - **A provisional number is a start:** never priced against a line ahead, never served twice; a correction is one line.
 - **A take is served from the technology's own theme**, never as practice on what it needs.
+- **A keyword does what its sentence says on the card that carries it, and nothing more:** no pair, no role, no reverse lookup; what neither the design nor the code forbids is permitted.
 
 ## Writing rules
 
@@ -138,6 +139,7 @@ How this code base is shaped, and what a change never deviates from:
 - **Search for an existing tool before writing one.** An unmaintained package is not an option; prefer tools whose output Claude can read in a terminal; pin versions in `npx`-style invocations.
 - **Standing analyses are CLIs with flags, never scratchpad scripts.** A question the CLI cannot answer is a flag to add.
 - **Slow commands run in the background**; a spawned child agent is awaited by ending the turn.
+- **A tracked file changes through Read and Edit/Write alone**, never through a shell edit. Why: a shell-written edit escapes the rewind and the diff the user reads.
 - **Profile before optimising**, keep measured and inferred visibly separate, and never slip a core change in as a performance fix for a tool.
 
 ## Stack
