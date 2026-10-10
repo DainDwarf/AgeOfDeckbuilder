@@ -493,14 +493,14 @@ function buildFace(
     );
     contents.push(rowName);
 
+    /** What the line being laid out has on its right: the row's width, less the name beside it. */
+    let room = right - (rowName.x + rowName.width + 0.3 * em);
     const gives = yieldsOf(row);
     if (gives.length === 0) {
-      contents.push(
-        addText(scene, right, rowTop + line / 2, text('panel.no-yield'), style.label).setOrigin(
-          1,
-          0.5,
-        ),
-      );
+      const none = addText(scene, right, 0, text('panel.no-yield'), style.label).setOrigin(1, 0.5);
+      if (none.width > room) rowTop += line + 0.35 * em;
+      none.setY(rowTop + line / 2);
+      contents.push(none);
       rowTop += line + 0.35 * em;
     } else {
       const chips = gives.map(({ resource, amount }) => {
@@ -508,8 +508,6 @@ function buildFace(
         return { resource, value, width: 0.7 * em + value.width };
       });
 
-      /** What the line being laid out has for its chips: the row's width, less the name beside them. */
-      let room = right - (rowName.x + rowName.width + 0.3 * em);
       const together =
         chips.reduce((total, chip) => total + chip.width, 0) + 0.3 * em * (chips.length - 1);
       if (together > room) {
