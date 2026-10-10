@@ -75,16 +75,18 @@ type Part = {
 };
 
 /**
- * Every `runtime-error` a command raised, on the console with the group holding it. Content only
- * runs inside a group, so no change outside one is a `runtime-error`.
+ * Every `runtime-error` among the stages, on the console with the group holding it where one does.
  */
 function logRuntimeErrors(stages: readonly Stage[]): void {
-  for (const stage of walked(stages)) {
-    if (stage.kind !== 'group') continue;
-    for (const held of stage.stages) {
-      if (held.name === 'runtime-error') console.error(`runtime-error during ${stage.name}`);
+  const lines = (stage: Stage, during: string): string[] => {
+    switch (stage.kind) {
+      case 'change':
+        return stage.name === 'runtime-error' ? [`runtime-error${during}`] : [];
+      case 'group':
+        return stage.stages.flatMap((held) => lines(held, ` during ${stage.name}`));
     }
-  }
+  };
+  for (const line of stages.flatMap((stage) => lines(stage, ''))) console.error(line);
 }
 
 /** Where a press landed or was let go: on a thing, on a drawn tile, or beside the things. */
@@ -155,7 +157,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const { age, region, civilization } = this.choices;
     const seed = typed === undefined ? (Math.random() * 2 ** 32) | 0 : typed;
     const campaign = campaignHeld();
-    const chronicle = launched(
+    const { stages, chronicle } = launched(
       CATALOGUE,
       age,
       region,
@@ -163,6 +165,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       civilizationIn(CATALOGUE, campaign, civilization),
       campaign.technologies,
     );
+    logRuntimeErrors(stages);
     keepChronicle(this.choices, chronicle);
     return chronicle;
   }

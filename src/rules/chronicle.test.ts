@@ -19,7 +19,10 @@ import {
   aimedAt,
   aimedAtUnit,
   attackOn,
+  begunOn,
   builtOn,
+  CAMP,
+  CAMPS,
   CATALOGUE,
   type Carrying,
   CITY,
@@ -80,23 +83,22 @@ function plainDisc(): Tile[] {
 }
 
 test('the same seed begins the same chronicle', () => {
-  expect(launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, [])).toEqual(
-    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []),
-  );
-  expect(launched(CATALOGUE, AGE, REGION, 1235, CIVILIZATION, [])).not.toEqual(
-    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []),
-  );
+  const begun = (seed: number): Chronicle =>
+    launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).chronicle;
+
+  expect(begun(1234)).toEqual(begun(1234));
+  expect(begun(1235)).not.toEqual(begun(1234));
 });
 
 test('a chronicle survives JSON and carries its generator on', () => {
-  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []).chronicle;
 
   expect(JSON.parse(JSON.stringify(chronicle))).toEqual(chronicle);
   expect(chronicle.rng).not.toEqual(seedRng(chronicle.seed));
 });
 
 test('a chronicle opens on the settle phase with empty stores, the city standing nowhere, the civilization’s city section carried, its card in hand before the settle cards, and the centre part alone in sight', () => {
-  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []);
+  const chronicle = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []).chronicle;
   const centre = chronicle.centre.map(tileKey).sort();
 
   expect(chronicle.turn).toBe(0);
@@ -681,7 +683,7 @@ test('a settle card played is banished, and the hand holds the city section’s 
 
 test('a chronicle is launched with the achievements of its age whose technology is not learned and needs none that is not, none reached, in the order the age declares them', () => {
   const launchedWith = (learned: readonly string[]): readonly ChronicleAchievement[] =>
-    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned).achievements;
+    launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned).chronicle.achievements;
 
   expect(launchedWith([])).toEqual([
     { id: HOARD, reached: false, tally: {} },
@@ -710,7 +712,7 @@ test('an achievement its count meets on the chronicle as it is launched is recor
     [SURVEY]: { ...achievementOf(CATALOGUE, AGE, SURVEY), ...seen },
   });
 
-  const launch = launched(metAtOnce, AGE, REGION, 1234, CIVILIZATION, []);
+  const launch = launched(metAtOnce, AGE, REGION, 1234, CIVILIZATION, []).chronicle;
 
   expect(launch.snapshots.length).toBeGreaterThan(0);
   expect(launch.achievements).toEqual([
@@ -721,9 +723,46 @@ test('an achievement its count meets on the chronicle as it is launched is recor
     { id: victoryOf(AGE), reached: false, tally: {} },
   ]);
   expect({ ...launch, achievements: [] }).toEqual({
-    ...launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []),
+    ...launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, []).chronicle,
     achievements: [],
   });
+});
+
+test('an opening answers an `enter` for each camp in tile order, each holding the guards entered so far, then a `reached` for each achievement met, every stage charted and the last leaving the chronicle; on a map with no camp and nothing met it answers no stage', () => {
+  const metAtOnce = achieved({
+    [HOARD]: {
+      ...achievementOf(CATALOGUE, AGE, HOARD),
+      count: (_catalogue, chronicle) => chronicle.snapshots.length,
+      need: 1,
+    },
+  });
+  const tiles = camped(plains(5), CAMPS);
+  const camps = tiles.filter((tile) => tile.building === CAMP.building).map(tileKey);
+  const begun = begunOn(tiles, { catalogue: metAtOnce, age: AGE });
+  const centre = begun.chronicle.centre.map(tileKey).sort();
+  const changes = begun.stages.filter((stage): stage is Change => stage.kind === 'change');
+
+  expect(changes).toHaveLength(begun.stages.length);
+  expect(changes.map(({ name }) => name)).toEqual([...camps.map(() => 'enter'), 'reached']);
+  expect(changes.flatMap((stage) => (stage.name === 'enter' ? [tileKey(stage.tile)] : []))).toEqual(
+    camps,
+  );
+  expect(changes.map(({ chronicle }) => chronicle.units.length)).toEqual([
+    ...camps.map((_, at) => at + 1),
+    camps.length,
+  ]);
+  for (const { chronicle } of changes) {
+    expect(chronicle.snapshots.map(tileKey).sort()).toEqual(centre);
+  }
+  expect(achievementIn(outcome(changes), HOARD).reached).toBe(true);
+  expect(begun.chronicle).toBe(outcome(begun.stages));
+
+  const bare = begunOn(plains(3));
+
+  expect(bare.stages).toEqual([]);
+  expect(bare.chronicle.snapshots.map(tileKey).sort()).toEqual(
+    bare.chronicle.centre.map(tileKey).sort(),
+  );
 });
 
 test('an achievement is recorded reached right after the change its count meets its need on, every stage after carries the record, and it is never read again', () => {

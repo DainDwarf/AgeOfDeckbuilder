@@ -1017,7 +1017,7 @@ test('a catalogue whose region’s rivers rise in a biome it does not hold is re
 
 test('a chronicle begun on another version of the content is refused by apply', () => {
   const other = catalogued(changed({ version: 'other' }));
-  const begun = launched(other, AGE, REGION, 1234, CIVILIZATION, []);
+  const begun = launched(other, AGE, REGION, 1234, CIVILIZATION, []).chronicle;
 
   expect(() => apply(CATALOGUE, begun, { type: 'end-turn' })).toThrow(/^fixture: /);
   expect(apply(other, begun, { type: 'end-turn' }).length).toBeGreaterThan(0);

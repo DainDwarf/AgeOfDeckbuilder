@@ -195,7 +195,7 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
         1,
         civilizationOf(CATALOGUE, civilization),
         [],
-      );
+      ).chronicle;
       for (const id of Object.keys(CATALOGUE.cards)) {
         expect(() => refusalOf(CATALOGUE, chronicle, id)).not.toThrow();
         const card = aimOf(cardOf(CATALOGUE, id));
@@ -252,7 +252,7 @@ test('every card of the catalogue lands its effect at its cheapest answer, on a 
       const region = firstRegion(CATALOGUE, age);
       const civilized = civilizationOf(CATALOGUE, civilization);
       const chronicles = [
-        launched(CATALOGUE, age, region, 1, civilized, []),
+        launched(CATALOGUE, age, region, 1, civilized, []).chronicle,
         settledLaunch(CATALOGUE, age, region, 1, civilized, []),
       ];
       for (const chronicle of chronicles) {

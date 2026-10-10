@@ -169,7 +169,7 @@ export function launchedIn(
     seed,
     civilizationIn(catalogue, campaign, choices.civilization),
     campaign.technologies,
-  );
+  ).chronicle;
 }
 
 /**

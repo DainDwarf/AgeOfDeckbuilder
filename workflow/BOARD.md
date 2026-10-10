@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A chronicle begins answering its changes** — `beginChronicle` answers the stages it raised beside the chronicle they leave, one `enter` per camp then the `reached` changes, `launched` passes them on, the chronicle screen logs a runtime-error among them to the console as it logs a command's, and one rules test on the fixture holds the shape. Doc-impact: none. [board/chronicle-begins-answering.md](board/chronicle-begins-answering.md)
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
 - **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.

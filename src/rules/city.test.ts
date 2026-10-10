@@ -131,7 +131,7 @@ function withWorkerBeside(
 function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords } {
   const reach = regionOf(CATALOGUE, ageOf(CATALOGUE, AGE), REGION).centre;
   for (let seed = 0; seed < 1000; seed++) {
-    const unsettled = launched(CATALOGUE, AGE, REGION, seed, claiming(6), []);
+    const unsettled = launched(CATALOGUE, AGE, REGION, seed, claiming(6), []).chronicle;
     for (const city of unsettled.centre) {
       if (distance(city, CITY) !== reach) continue;
       let settling = settledOn(unsettled, city);

@@ -104,7 +104,15 @@ import {
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import { followed, type Group, type Landed, type Stage, unchanged, walked } from './stages';
+import {
+  followed,
+  type Group,
+  type Landed,
+  type Sequence,
+  type Stage,
+  unchanged,
+  walked,
+} from './stages';
 import {
   type CardId,
   type Chronicle,
@@ -1289,11 +1297,11 @@ type Opening = {
 };
 
 /**
- * The chronicle opened on these tiles through the rules, on the settle phase with the city nowhere:
- * its centre part every tile within `reach` of the centre, two unless named, on the fixture's
- * content and civilization in the quiet age dealing nothing, unless the fixture names others.
+ * The opening on these tiles through the rules, on the settle phase with the city nowhere: its centre
+ * part every tile within `reach` of the centre, two unless named, on the fixture's content and
+ * civilization in the quiet age dealing nothing, unless the fixture names others.
  */
-export function opening(
+export function begunOn(
   tiles: Tile[],
   {
     catalogue = CATALOGUE,
@@ -1302,7 +1310,7 @@ export function opening(
     timeline = NO_DEALS,
     reach = 2,
   }: Opening = {},
-): Chronicle {
+): Sequence {
   const centre = tiles
     .filter((tile) => distance(tile, CITY) <= reach)
     .map(({ q, r }) => ({ q, r }));
@@ -1315,6 +1323,11 @@ export function opening(
     timeline,
     [],
   );
+}
+
+/** The chronicle `begunOn` leaves. */
+export function opening(tiles: Tile[], named: Opening = {}): Chronicle {
+  return begunOn(tiles, named).chronicle;
 }
 
 /** The chronicle with the first card of its hand played on a tile, refused or not. */
@@ -1339,7 +1352,7 @@ export function settledLaunch(
   learned: readonly string[],
   at: TileCoords = CITY,
 ): Chronicle {
-  const launch = launched(catalogue, age, region, seed, civilization, learned);
+  const launch = launched(catalogue, age, region, seed, civilization, learned).chronicle;
   const settling = settledOn(launch, at, catalogue);
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
@@ -1348,7 +1361,7 @@ export function settledLaunch(
 
 /** A city in the first age, carrying the achievements a launch with these technologies learned names. */
 export function reaching(learned: readonly string[], carrying: Carrying): Chronicle {
-  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned);
+  const { achievements } = launched(CATALOGUE, AGE, REGION, 1234, CIVILIZATION, learned).chronicle;
   return cityOf(['urban', 'plain'], { age: AGE, achievements, ...carrying });
 }
 

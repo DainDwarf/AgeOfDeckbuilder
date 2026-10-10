@@ -134,7 +134,7 @@ export function beginChronicle(
   map: HexMap,
   timeline: Timeline,
   learned: readonly string[],
-): Chronicle {
+): Sequence {
   const { camp } = ageOf(catalogue, age);
   for (const coord of map.centre) {
     if (tileAt(map.tiles, coord) !== undefined) continue;
@@ -170,14 +170,18 @@ export function beginChronicle(
     exhaustPile: [],
     achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
   };
-  let guarded = begun;
+  let guarded: Sequence = unchanged(begun);
   for (const { q, r, building } of map.tiles) {
     if (building !== camp.building) continue;
-    guarded = enteredOnCamp(catalogue, guarded, { q, r }, camp.opening).chronicle;
+    guarded = followed(guarded, (left) => enteredOnCamp(catalogue, left, { q, r }, camp.opening));
   }
-  const seen = charted(catalogue, guarded);
+  const entered = charting(catalogue, begun, guarded.stages);
+  const seen = entered.length === 0 ? charted(catalogue, guarded.chronicle) : outcome(entered);
   const raised = reachedOn(catalogue, seen, () => true);
-  return raised.length === 0 ? seen : outcome(raised);
+  return {
+    stages: [...entered, ...raised],
+    chronicle: raised.length === 0 ? seen : outcome(raised),
+  };
 }
 
 /** A technology the catalogue does not hold is refused, a learned one included. */
@@ -204,7 +208,7 @@ export function launched(
   seed: number,
   civilization: Civilization,
   learned: readonly string[],
-): Chronicle {
+): Sequence {
   const map = generateMap(catalogue, ageOf(catalogue, age), region, seedRng(seed));
   const timeline = timelineOf(catalogue, age, map.rng);
   const { tiles, rivers, centre } = map;
