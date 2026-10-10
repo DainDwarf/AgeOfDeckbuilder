@@ -13,6 +13,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **An enemy enters on no city** — a raid or a camp's roll enters its enemies on neither city's tile, the neutral's as the player's; today only the player's is kept clear.
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
 - **The neutral at the camps** — its warriors go for the camps and kill the guards, and one standing on a camp through the enemy phase captures it, the camp leaving the map dealing nothing; whether the neutral takes sites too is this line's question.
 - **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns, and whether a unit of the player's stepping onto a tile it holds turns it hostile — any unit or a military one alone, with or without a warning that the step declares war — are this line's questions.
