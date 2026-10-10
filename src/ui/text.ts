@@ -62,6 +62,8 @@ const TEXT = {
   'building.stone-painted-cave': 'Painted cave',
   'building.old-cairn': 'Old cairn',
   'building.stone-old-cairn': 'Old cairn',
+  'building.beast-bones': 'Beast bones',
+  'building.stone-beast-bones': 'Beast bones',
   'building.farm': 'Farm',
   'building.tannery': 'Tannery',
   'building.fishery': 'Fishery',
@@ -129,6 +131,8 @@ const TEXT = {
   'rules.cave-paintings': 'Banish.\n2[culture]',
   'card.honour-the-dead': 'Honour the dead', // glossary exception: dead
   'rules.honour-the-dead': 'Banish.\n2[culture]',
+  'card.bone-carvings': 'Bone carvings',
+  'rules.bone-carvings': 'Banish.\n2[culture]',
   'card.farm': 'Farm',
   'rules.farm': 'Build [building:farm] on [terrain:plain]',
   'card.trapping': 'Trapping',
@@ -170,6 +174,10 @@ const TEXT = {
   'rules.stone-honour-the-dead': 'Banish.\n4[culture]',
   'card.dig-the-graves': 'Dig the graves',
   'rules.dig-the-graves': 'Banish.\n4[money]',
+  'card.stone-bone-carvings': 'Bone carvings',
+  'rules.stone-bone-carvings': 'Banish.\n4[culture]',
+  'card.bone-tools': 'Bone tools',
+  'rules.bone-tools': 'Gain 2[production]',
   'card.megalith': 'Megalith',
   'rules.megalith':
     'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',

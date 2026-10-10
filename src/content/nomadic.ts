@@ -166,6 +166,13 @@ const TABLES: Tables = {
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { culture: 2 }),
     },
+    'bone-carvings': {
+      kind: 'instant',
+      cost: {},
+      banish: true,
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { culture: 2 }),
+    },
   },
   civilizations: {
     nomadic: {
@@ -362,6 +369,7 @@ const TABLES: Tables = {
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     'painted-cave': { terrains: ['hills'], yields: {} },
     'old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
+    'beast-bones': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
   },
   features: {
     fertile: { terrain: 'plain', yields: { food: 1 } },
@@ -393,7 +401,7 @@ const REGIONS: Age['regions'] = {
     camps: 4,
     campFromCentre: 7,
     campsApart: 4,
-    sites: ['painted-cave', 'old-cairn'],
+    sites: ['painted-cave', 'old-cairn', 'beast-bones'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: {
@@ -439,6 +447,7 @@ export const NOMADIC: Slice = {
     sites: {
       'painted-cave': { building: 'painted-cave', rewards: ['cave-paintings'] },
       'old-cairn': { building: 'old-cairn', rewards: ['honour-the-dead'] },
+      'beast-bones': { building: 'beast-bones', rewards: ['bone-carvings'] },
     },
     regions: REGIONS,
     achievements: {

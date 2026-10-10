@@ -69,7 +69,7 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    sites: ['painted-cave', 'old-cairn'],
+    sites: ['painted-cave', 'old-cairn', 'beast-bones'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: RIVERS,
@@ -93,7 +93,7 @@ const REGIONS: Age['regions'] = {
     camps: 6,
     campFromCentre: 7,
     campsApart: 4,
-    sites: ['painted-cave', 'old-cairn'],
+    sites: ['painted-cave', 'old-cairn', 'beast-bones'],
     siteFromCentre: 7,
     sitesApart: 4,
     rivers: RIVERS,
@@ -134,6 +134,10 @@ export const STONE: Slice = {
       'old-cairn': {
         building: 'stone-old-cairn',
         rewards: ['stone-honour-the-dead', 'dig-the-graves'],
+      },
+      'beast-bones': {
+        building: 'stone-beast-bones',
+        rewards: ['stone-bone-carvings', 'bone-tools'],
       },
     },
     regions: REGIONS,
@@ -340,6 +344,19 @@ export const STONE: Slice = {
         aim: 'none',
         effect: (_catalogue, paid) => gained(paid, { money: 4 }),
       },
+      'stone-bone-carvings': {
+        kind: 'instant',
+        cost: {},
+        banish: true,
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { culture: 4 }),
+      },
+      'bone-tools': {
+        kind: 'instant',
+        cost: {},
+        aim: 'none',
+        effect: (_catalogue, paid) => gained(paid, { production: 2 }),
+      },
     },
     technologies: {
       herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
@@ -390,6 +407,7 @@ export const STONE: Slice = {
       megalith: { terrains: ['plain', 'hills', 'desert'], yields: { culture: 1 } },
       'stone-painted-cave': { terrains: ['hills'], yields: {} },
       'stone-old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
+      'stone-beast-bones': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
     },
     improvements: {
       trapping: { terrains: ['forest'], features: ['deer'], yields: { food: 1 } },

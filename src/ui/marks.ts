@@ -22,6 +22,8 @@ const CAVE: number[] = [-16, 10, -12, -4, 0, -10, 12, -4, 16, 10];
 
 const CAIRN: number[] = [-16, 10, -16, -10, 16, 10];
 
+const BONES: number[] = [-16, -10, 0, -2, 16, -10, 16, 10, 0, 2, -16, 10];
+
 /** Each wide enough to show under the unit standing on its tile. */
 const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   city: WALL,
@@ -35,6 +37,8 @@ const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   'stone-painted-cave': CAVE,
   'old-cairn': CAIRN,
   'stone-old-cairn': CAIRN,
+  'beast-bones': BONES,
+  'stone-beast-bones': BONES,
 };
 
 /** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */

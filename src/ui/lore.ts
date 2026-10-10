@@ -20,6 +20,10 @@ const LORE = {
     'A heap of old stones in the open, and under it the dead of a band nobody remembers, laid down with their tools and their beads. The band sits with them a while before moving on.',
   'capture.stone-old-cairn':
     'A heap of old stones in the open, and under it the dead of a band nobody remembers, laid down with their tools and their beads. Do you leave them in peace, or take what they no longer need?',
+  'capture.beast-bones':
+    'Out on the open ground lie the bones of a beast larger than anything the band has ever hunted, bleached and half sunk in the earth. The children climb the ribs, the elders say it walked here before the first people did, and the band carries the tale on with it.',
+  'capture.stone-beast-bones':
+    'Out on the open ground lie the bones of a beast larger than anything the band has ever hunted, bleached and half sunk in the earth. The elders say it walked here before the first people did: do you carve what it left, or make tools of it?',
   'capstone-opening.first-shelter':
     'The tribe has wandered long enough. When the time comes, build the first shelter, and the Nomadic Age is won.',
   'capstone-landing.first-shelter':

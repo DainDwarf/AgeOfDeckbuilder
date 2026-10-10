@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The bones of a great beast** — the third site, lying on the city's ground in every region of both ages, each age's building its own under the one name **Beast bones**; it deals **Bone carvings** in the Nomadic Age, and in the Stone Age **Bone carvings** against **Bone tools**, each age's lore its own; with it the infopanel's building row drops "No yield" under a name that leaves it no room, as it drops the yield chips. Done when the bones stand in both ages' content on every region, the coherence test passes, `e2e/sites.spec.ts` captures a site on screen, the building card of the painted cave reads its name clear of "No yield", and the pages say so. Doc-impact: `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/beast-bones.md](board/beast-bones.md)
 - **The Nomadic city yields no culture** — the Nomadic city's building gives military alone, culture coming from the sites; the Stone Age's city keeps its culture.
 - **The neutral's city** — a second city, a third faction's, placed as a camp is and standing from the deal with its tile held and one population on it, yielding into its stocks and growing at the growth threshold, its tiles no claim of the player's.
 - **The neutral's claims** — the neutral claims a tile when its culture reaches the threshold, its script choosing which, the player's border stopping it as it stops the player's.

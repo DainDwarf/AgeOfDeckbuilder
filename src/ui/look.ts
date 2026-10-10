@@ -193,6 +193,8 @@ export const LOOK: Look = {
     'stone-painted-cave': 'site',
     'old-cairn': 'site',
     'stone-old-cairn': 'site',
+    'beast-bones': 'site',
+    'stone-beast-bones': 'site',
   },
   ground: {
     nomadic: 0x2a5a41,
