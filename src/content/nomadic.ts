@@ -106,7 +106,7 @@ const TABLES: Tables = {
       cost: {},
       ...throughWorker(
         (_catalogue, chronicle, tile) => outside(chronicle, tile),
-        (catalogue, paid, at) => yielded(catalogue, paid, at),
+        (catalogue, paid, at) => yielded(catalogue, paid, 'player', at),
       ),
     },
     hunt: {
@@ -150,7 +150,7 @@ const TABLES: Tables = {
       cost: {},
       banish: true,
       aim: 'none',
-      effect: (_catalogue, paid) => arrived(paid),
+      effect: (_catalogue, paid) => arrived(paid, 'player'),
     },
     'cave-paintings': {
       kind: 'instant',

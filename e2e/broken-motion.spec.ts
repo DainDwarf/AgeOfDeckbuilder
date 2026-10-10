@@ -113,7 +113,7 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
     ),
     food: text('reading.over', {
       count: committed.resources.food,
-      over: growthThreshold(committed),
+      over: growthThreshold(committed, 'player'),
     }),
     culture: text('reading.over', {
       count: committed.resources.culture,

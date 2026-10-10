@@ -21,7 +21,7 @@ import {
   turnsPlaying,
 } from '../rules/chronicle';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
-import type { RiverFlow } from '../rules/map-kinds';
+import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
@@ -66,12 +66,13 @@ const REGIONS: Age['regions'] = {
       { feature: 'flint', share: 0.1 },
       { feature: 'oasis', share: 0.05 },
     ],
-    camps: 6,
+    camps: 5,
     campFromCentre: 7,
     campsApart: 4,
     sites: ['painted-cave', 'old-cairn', 'beast-bones'],
     siteFromCentre: 7,
     sitesApart: 4,
+    neutralFromCentre: { least: 7, most: 9 },
     rivers: RIVERS,
   },
   archipelago: {
@@ -90,14 +91,20 @@ const REGIONS: Age['regions'] = {
       { feature: 'cattle', share: 0.05 },
       { feature: 'flint', share: 0.1 },
     ],
-    camps: 6,
+    camps: 5,
     campFromCentre: 7,
     campsApart: 4,
     sites: ['painted-cave', 'old-cairn', 'beast-bones'],
     siteFromCentre: 7,
     sitesApart: 4,
+    neutralFromCentre: { least: 5, most: 8 },
     rivers: RIVERS,
   },
+};
+
+const VILLAGE: BuildingKind = {
+  terrains: ['plain', 'forest', 'hills', 'desert'],
+  yields: { military: 1, culture: 1 },
 };
 
 /** The move a unit has embarked: the Embark card's and the camp's enemies' alike. */
@@ -127,6 +134,7 @@ export const STONE: Slice = {
       embarkedMove: EMBARKED_MOVE,
       wave: { gathered: 3, sent: 2 },
     },
+    neutral: { building: 'neutral-village' },
     sites: {
       'painted-cave': {
         building: 'stone-painted-cave',
@@ -394,10 +402,8 @@ export const STONE: Slice = {
       oasis: { terrain: 'desert', yields: { food: 1 } },
     },
     buildings: {
-      village: {
-        terrains: ['plain', 'forest', 'hills', 'desert'],
-        yields: { military: 1, culture: 1 },
-      },
+      village: VILLAGE,
+      'neutral-village': VILLAGE,
       'stone-camp': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
       farm: { terrains: ['plain'], yields: { food: 2 } },
       tannery: {

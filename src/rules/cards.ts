@@ -28,6 +28,7 @@ import {
   featureKind,
   improvementKind,
   type LayerKind,
+  neutralBuilding,
   refuse,
   terrainKind,
 } from './map-kinds';
@@ -435,8 +436,8 @@ export function slotFree(tile: Tile): TileBlock | undefined {
 
 /**
  * What a terraform of the player's into `to` asks of the tile besides the terrains it starts from: no
- * camp's tile until the camp is captured, and the city's tile only into a terrain the city's building
- * stands on.
+ * camp's tile until the camp is captured, not the neutral's city's tile, and the city's tile only
+ * into a terrain the city's building stands on.
  */
 export function terraformable(
   catalogue: Catalogue,
@@ -444,20 +445,34 @@ export function terraformable(
   tile: Tile,
   to: string,
 ): TileBlock | undefined {
-  if (tile.building === ageOf(catalogue, chronicle.age).camp.building) return 'other-faction';
+  const { neutral } = chronicle;
+  if (
+    tile.building === ageOf(catalogue, chronicle.age).camp.building ||
+    (neutral !== undefined && tileKey(neutral.city) === tileKey(tile))
+  ) {
+    return 'other-faction';
+  }
   return reaches(catalogue, chronicle, tile, to) ? undefined : 'wrong-terrain';
 }
 
 /**
- * Whether a terraform into `to` reaches the tile: every tile but the city's, and the city's into a
- * terrain its building stands on alone.
+ * Whether a terraform into `to` reaches the tile: every tile but the city's and the neutral's city's,
+ * and each of those into a terrain its building stands on alone.
  */
 function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to: string): boolean {
-  return (
-    chronicle.city === undefined ||
-    tileKey(chronicle.city) !== tileKey(at) ||
-    buildingKind(catalogue, chronicle.citySection.building).terrains.includes(to)
-  );
+  const { city, neutral } = chronicle;
+  const key = tileKey(at);
+  const building =
+    city !== undefined && tileKey(city) === key
+      ? chronicle.citySection.building
+      : neutral !== undefined && tileKey(neutral.city) === key
+        ? neutralBuilding(
+            catalogue,
+            ageOf(catalogue, chronicle.age),
+            `the age ${chronicle.age}, whose chronicle holds the neutral's city,`,
+          )
+        : undefined;
+  return building === undefined || buildingKind(catalogue, building).terrains.includes(to);
 }
 
 /** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */
@@ -687,8 +702,8 @@ export function featureRemoved(catalogue: Catalogue, paid: Chronicle, at: TileCo
 
 /**
  * The terrain a tile is terraformed into: its feature goes, and so does every layer that goes with
- * the old terrain or the feature, and a unit that cannot stand on it is killed. The city's tile, into
- * a terrain the city's building does not stand on, is left as it stands.
+ * the old terrain or the feature, and a unit that cannot stand on it is killed. A city's tile, the
+ * neutral's included, into a terrain its building does not stand on, is left as it stands.
  */
 export function terraformed(
   catalogue: Catalogue,

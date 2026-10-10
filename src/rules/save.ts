@@ -25,7 +25,7 @@ import {
   misfitIn,
   unitKind,
 } from './catalogue';
-import type { Corner, Tile, TileCoords } from './map';
+import { type Corner, type Tile, type TileCoords, tileAt, tileKey } from './map';
 import {
   buildingKind,
   featureKind,
@@ -41,6 +41,7 @@ import type {
   CardId,
   Chronicle,
   ChronicleCard,
+  CityRows,
   CitySection,
   Deal,
   DefeatCause,
@@ -496,29 +497,31 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     nextUnit,
     { next: 'the next unit number', holder: 'unit' },
   );
+  const tiles = list(catalogue, field('tiles'), (item) => tileOf(catalogue, item));
   return {
     content,
     age,
     seed: integer(catalogue, field('seed')),
     rng: rngOf(catalogue, field('rng')),
-    tiles: list(catalogue, field('tiles'), (item) => tileOf(catalogue, item)),
+    tiles,
     snapshots: list(catalogue, field('snapshots'), (item) => snapshotOf(catalogue, item)),
     rivers: list(catalogue, field('rivers'), (river) =>
       list(catalogue, river, (item) => cornerOf(catalogue, item)),
     ),
     centre: list(catalogue, field('centre'), coords),
     citySection: citySectionOf(catalogue, field('citySection')),
-    city: optional(field('city'), coords),
-    held: list(catalogue, field('held'), coords),
+    city: optional(field('city'), (item) => onMap(catalogue, item, tiles)),
+    ...cityRowsOf(catalogue, slot, tiles),
     turn: count(catalogue, field('turn'), slot, (turn) => `stands on turn ${turn}`),
     timeline: timelineOf(catalogue, field('timeline')),
     shownTurn: optional(field('shownTurn'), (item) =>
       count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
     ),
     deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item)),
-    resources: resourcesOf(catalogue, field('resources')),
-    population: count(catalogue, field('population'), slot, (held) => `holds ${held} population`),
-    assigned: list(catalogue, field('assigned'), coords),
+    neutral: optional(field('neutral'), (item) => ({
+      city: onMap(catalogue, record(catalogue, item)('city'), tiles),
+      ...cityRowsOf(catalogue, item, tiles),
+    })),
     units: units.map(({ unit }) => unit),
     nextUnit,
     drawPile: list(catalogue, field('drawPile'), card),
@@ -534,6 +537,42 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
       };
     }),
     ending: optional(field('ending'), (item) => endingOf(catalogue, item)),
+  };
+}
+
+/** A tile the save names; one the map does not hold is refused. */
+function onMap(catalogue: Catalogue, slot: Slot, tiles: readonly Tile[]): TileCoords {
+  const coord = coordsIn(catalogue, record(catalogue, slot));
+  if (tileAt(tiles, coord) === undefined) {
+    refused(catalogue, slot, `names ${tileKey(coord)}, a tile the map does not hold`);
+  }
+  return coord;
+}
+
+/**
+ * The rows of a city, the player's or the neutral's: a tile held that the map does not hold, a
+ * population below nought, and an assigned tile the city does not hold are refused.
+ */
+function cityRowsOf(catalogue: Catalogue, slot: Slot, tiles: readonly Tile[]): CityRows {
+  const field = record(catalogue, slot);
+  const held = list(catalogue, field('held'), (item) => onMap(catalogue, item, tiles));
+  const heldKeys = new Set(held.map(tileKey));
+  return {
+    held,
+    population: count(
+      catalogue,
+      field('population'),
+      slot,
+      (population) => `holds ${population} population`,
+    ),
+    assigned: list(catalogue, field('assigned'), (item) => {
+      const coord = coordsIn(catalogue, record(catalogue, item));
+      if (!heldKeys.has(tileKey(coord))) {
+        refused(catalogue, item, `names ${tileKey(coord)}, a tile its city does not hold`);
+      }
+      return coord;
+    }),
+    resources: resourcesOf(catalogue, field('resources')),
   };
 }
 

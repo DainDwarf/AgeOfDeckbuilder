@@ -83,6 +83,7 @@ import {
   type Chronicle,
   type ChronicleAchievement,
   type ChronicleCard,
+  type CityFaction,
   type Cost,
   costsOf,
   onSettlePhase,
@@ -135,7 +136,7 @@ export function beginChronicle(
   timeline: Timeline,
   learned: readonly string[],
 ): Sequence {
-  const { camp } = ageOf(catalogue, age);
+  const { camp, neutral } = ageOf(catalogue, age);
   for (const coord of map.centre) {
     if (tileAt(map.tiles, coord) !== undefined) continue;
     refuse(
@@ -145,6 +146,12 @@ export function beginChronicle(
   }
   const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
   const shuffled = shuffleItems(seedRng(seed), civilization.cards.map(made));
+  const nought = { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 };
+  const neutralTile =
+    neutral === undefined
+      ? undefined
+      : map.tiles.find((tile) => tile.building === neutral.building);
+  const neutralAt = neutralTile && { q: neutralTile.q, r: neutralTile.r };
   const begun: Chronicle = {
     content: catalogue.version,
     age,
@@ -159,9 +166,16 @@ export function beginChronicle(
     held: [],
     turn: 0,
     deals: [],
-    resources: { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    resources: nought,
     population: 0,
     assigned: [],
+    neutral: neutralAt && {
+      city: neutralAt,
+      held: [neutralAt],
+      population: 1,
+      assigned: [neutralAt],
+      resources: nought,
+    },
     units: [],
     nextUnit: FIRST_UNIT_NUMBER,
     drawPile: shuffled.items,
@@ -741,12 +755,24 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   return course(chronicle, [
     (left) => struck(catalogue, left),
     (left) => discarded(left, everyPlace(left.hand)),
-    (left) => grouped({ name: 'grow' }, grow(left)),
-    (left) => grouped({ name: 'income' }, income(catalogue, left)),
+    (left) => grouped({ name: 'grow' }, everyCity(left, grow)),
+    (left) =>
+      grouped(
+        { name: 'income' },
+        everyCity(left, (city, whose) => income(catalogue, city, whose)),
+      ),
     (left) => enemyPhase(catalogue, left),
     (left) => captures(catalogue, left),
     (left) => (left.deals.length > 0 ? unchanged(left) : opened(catalogue, left)),
   ]);
+}
+
+/** A step of the end of turn taken by every city in turn: the player's, then the neutral's. */
+function everyCity(
+  chronicle: Chronicle,
+  step: (left: Chronicle, whose: CityFaction) => Landed,
+): Landed {
+  return followed(step(chronicle, 'player'), (left) => step(left, 'neutral'));
 }
 
 /**

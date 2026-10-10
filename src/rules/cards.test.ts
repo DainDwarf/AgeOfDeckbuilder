@@ -32,6 +32,7 @@ import {
   aimedAtUnit,
   assignTo,
   attackOn,
+  besideTheNeutral,
   buildingAt,
   builtOn,
   CAMP,
@@ -56,6 +57,8 @@ import {
   HUNGER,
   idsOf,
   madeOf,
+  NEUTRAL,
+  NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
   opening,
@@ -86,7 +89,7 @@ import {
   tileAt,
   tileKey,
 } from './map';
-import { terrainKind } from './map-kinds';
+import { buildingKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { plays, walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
@@ -989,6 +992,45 @@ test('a worker’s terraform is refused for the faction on a camp’s tile until
   expect(outcome(apply(CATALOGUE, camp, aimedAt(at)))).toEqual(camp);
   expect(buildingAt(captured, at)).toBeUndefined();
   expect(refusedFor(captured, 'PH_Urbanisation', at)).toBeUndefined();
+});
+
+/** The fixture's content, the upheaval's quake terraforming the neutral's city's tile into `to`. */
+function quakingTheNeutral(to: Terrain): Catalogue {
+  const { PH_Upheaval } = CATALOGUE.events;
+  return catalogued({
+    ...CATALOGUE,
+    events: {
+      ...CATALOGUE.events,
+      PH_Upheaval: {
+        answers: {
+          ...PH_Upheaval.answers,
+          PH_Quake: {
+            ...PH_Upheaval.answers.PH_Quake,
+            lands: (catalogue, chronicle) => terraformed(catalogue, chronicle, NEUTRAL_TILE, to),
+          },
+        },
+      },
+    },
+  });
+}
+
+test('a worker’s terraform is refused for the faction on the neutral’s city’s tile; an event’s passes it over into a terrain its building does not stand on, and reaches it, building and all, into one it does', () => {
+  const worked = withUnits(besideTheNeutral(), [worker(NEUTRAL_TILE)]);
+  const [kept, lost] = ['forest', 'coast'].map((to) => {
+    const catalogue = quakingTheNeutral(to);
+    const dealt = besideTheNeutral({ catalogue, ...dealing({ turn: 2, event: 'PH_Upheaval' }) });
+    return { before: dealt, after: endedTurn(dealt, 'PH_Quake', catalogue) };
+  });
+  const ground = buildingKind(CATALOGUE, NEUTRAL).terrains;
+
+  expect(refusedFor(worked, 'PH_Urbanisation', NEUTRAL_TILE)).toBe('other-faction');
+  expect(ground).toContain('forest');
+  expect(ground).not.toContain('coast');
+  expect(tileAt(kept.after.tiles, NEUTRAL_TILE)).toMatchObject({
+    terrain: 'forest',
+    building: NEUTRAL,
+  });
+  expect(tileAt(lost.after.tiles, NEUTRAL_TILE)).toEqual(tileAt(lost.before.tiles, NEUTRAL_TILE));
 });
 
 /**

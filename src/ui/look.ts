@@ -18,7 +18,7 @@ export type Paper = {
 };
 
 /** Which role paints a building's mark. */
-export type BuildingRole = 'built' | 'civilization' | 'enemy' | 'site';
+export type BuildingRole = 'built' | 'civilization' | 'enemy' | 'neutral' | 'site';
 
 /** Every colour of the screen, by the role it paints. */
 export type Look = {
@@ -27,6 +27,7 @@ export type Look = {
   readonly actWaiting: number;
   readonly civilization: number;
   readonly enemy: number;
+  readonly neutral: number;
   readonly site: number;
   readonly pileCount: number;
   readonly exhaustTab: number;
@@ -103,6 +104,7 @@ export const LOOK: Look = {
   actWaiting: 0xd9a441,
   civilization: 0xd9a441,
   enemy: 0xb4453c,
+  neutral: 0x2b4f7a,
   site: 0x4a5058,
   pileCount: 0xd9a441,
   exhaustTab: 0xd4d7db,
@@ -186,6 +188,7 @@ export const LOOK: Look = {
     village: 'civilization',
     camp: 'enemy',
     'stone-camp': 'enemy',
+    'neutral-village': 'neutral',
     shelter: 'built',
     farm: 'built',
     tannery: 'built',

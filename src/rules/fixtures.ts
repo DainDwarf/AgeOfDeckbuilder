@@ -199,6 +199,9 @@ export const WELL_GIVES = { terrain: 'plain', yields: { production: 2 } } as con
 /** The move of a unit the fixture's embark card embarks: none of the fixture's units has it ashore. */
 export const EMBARKED_MOVE = 3 * MOVE_POINT;
 
+/** The building every fixture age's neutral's city is. */
+export const NEUTRAL = 'PH_Hamlet';
+
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
@@ -476,7 +479,8 @@ const TABLES: Omit<Tables, 'technologies'> = {
       cost: {},
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
-      effect: (_catalogue, paid, at) => followed(arrived(paid), (left) => bordered(left, at)),
+      effect: (_catalogue, paid, at) =>
+        followed(arrived(paid, 'player'), (left) => bordered(left, at)),
     },
     PH_Band: { kind: 'settle', cost: {}, ...entersOn('PH_Worker') },
     PH_Stores: {
@@ -543,7 +547,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       cost: {},
       ...throughWorker(
         (_catalogue, chronicle, tile) => outside(chronicle, tile),
-        (catalogue, paid, at) => yielded(catalogue, paid, at),
+        (catalogue, paid, at) => yielded(catalogue, paid, 'player', at),
       ),
     },
     PH_Recall: {
@@ -742,6 +746,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_City: { terrains: ['urban'], yields: {} },
     PH_Farm: { terrains: ['plain'], yields: { food: 1 } },
     PH_Camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
+    [NEUTRAL]: { terrains: ['plain', 'forest', 'hills'], yields: { culture: 1 } },
     PH_Cairn: { terrains: ['hills'], yields: {} },
     PH_Lodge: { terrains: ['forest'], features: ['PH_Game'], yields: { food: 1 } },
     PH_Smokehouse: {
@@ -831,6 +836,7 @@ export const REGIONS: Readonly<Record<string, Region>> = {
     sites: [],
     siteFromCentre: 6,
     sitesApart: 4,
+    neutralFromCentre: { least: 5, most: 6 },
     rivers: {
       source: 'mountain',
       relief: 1,
@@ -1033,7 +1039,7 @@ const TECHNOLOGIES: Tables['technologies'] = {
 
 /**
  * Every fixture age, each owning its own schedule and achievements over the camp and the regions
- * handed in, and the fixture's site.
+ * handed in, the fixture's neutral, and the fixture's site.
  */
 export function agesOver(
   camp: Camp,
@@ -1046,6 +1052,7 @@ export function agesOver(
         basePrice: 3 + at,
         schedule,
         camp,
+        neutral: { building: NEUTRAL },
         sites: SITES,
         regions,
         achievements: achievementsOf(id),
@@ -1357,6 +1364,19 @@ export function settledLaunch(
   if (settling.city === undefined)
     throw new Error(`seed ${seed} settles no city on ${tileKey(at)}`);
   return outcome(apply(catalogue, settling, { type: 'end-turn' }));
+}
+
+/** The tile the neutral's city stands on in `besideTheNeutral`: beside the city's own. */
+export const NEUTRAL_TILE: TileCoords = { q: 1, r: 0 };
+
+/**
+ * Turn 1 of a chronicle begun as `begunOn` begins one, on plains out to three with the neutral's city
+ * on `NEUTRAL_TILE`, its city settled on the centre.
+ */
+export function besideTheNeutral(named: Opening = {}): Chronicle {
+  const { catalogue = CATALOGUE } = named;
+  const opened = opening(builtOn(plains(3), NEUTRAL, [NEUTRAL_TILE]), named);
+  return outcome(apply(catalogue, settledOn(opened, CITY, catalogue), { type: 'end-turn' }));
 }
 
 /** A city in the first age, carrying the achievements a launch with these technologies learned names. */

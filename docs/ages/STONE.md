@@ -14,7 +14,7 @@ The desert is a biome of its own, desert nearly throughout with hills among it, 
 | ------- | ------- | --------- | ----- |
 | desert  | nothing | **oasis** | food  |
 
-The archipelago is the age's second region, the one Raft unlocks: a disc as big as the temperate one, of islands in a sea. The ground around the centre is the temperate region's own, the same biome dealt to the same size, an island here. The other islands are a biome of their own, the land's terrains dealt to a size and rolled rounder than the centre's, and two dealt side by side are one island. Between them lie the shallows, coast throughout and grown in arms, and the open sea, ocean throughout behind a coast rim as wide as the temperate sea's, with no island in it. No mountain range and no desert is dealt, so no river runs there and no oasis lies there; the other features lie in the temperate shares. The centre part reaches as far, and as many camps stand on it, kept as far from the centre and from one another.
+The archipelago is the age's second region, the one Raft unlocks: a disc as big as the temperate one, of islands in a sea. The ground around the centre is the temperate region's own, the same biome dealt to the same size, an island here. The other islands are a biome of their own, the land's terrains dealt to a size and rolled rounder than the centre's, and two dealt side by side are one island. Between them lie the shallows, coast throughout and grown in arms, and the open sea, ocean throughout behind a coast rim as wide as the temperate sea's, with no island in it. No mountain range and no desert is dealt, so no river runs there and no oasis lies there; the other features lie in the temperate shares. The centre part reaches as far, and as many camps stand on it as on the temperate region, kept as far from the centre and from one another.
 
 ## The sites 🔧
 
@@ -26,7 +26,7 @@ The **village** is the city's building Settlement unlocks in place of the hearth
 
 ## The neutral 🔧
 
-The neutral is another band that settled: a city of the age's own in every one of its regions, its units from the age's own, and a script that keeps it growing and sends its warriors at the camps.
+The neutral is another band that settled: a city in every one of the age's regions, standing a little further out than the centre part and no further than the camps may, with the camps and the sites kept from it. Its building is a **village** of its own, standing where the village stands and giving what the village gives, military and culture, so its border and its warriors have their sources. Its units are the age's own, and its script keeps it growing and sends its warriors at the camps.
 
 ## The technologies 🔧
 

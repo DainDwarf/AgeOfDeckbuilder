@@ -653,6 +653,50 @@ test('a catalogue whose site is its camp’s building or another site’s is ref
   );
 });
 
+test('a catalogue whose neutral’s city is a building it does not hold, one naming a feature or the river, or its camp’s or a site’s building, is refused, and the same building naming neither is not', () => {
+  const { features, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
+  const lodged = (lodge: LayerKind): Catalogue =>
+    changed({
+      ...aged({ neutral: { building: 'PH_Lodge' } }),
+      buildings: { ...CATALOGUE.buildings, PH_Lodge: lodge },
+    });
+
+  expect(() => catalogued(aged({ neutral: { building: 'PH_Fort' } }))).toThrow(
+    'fixture: no building is named PH_Fort',
+  );
+  expect(() => catalogued(lodged({ ...unnamed, features }))).toThrow(
+    `fixture: the age ${AGE}'s neutral's city PH_Lodge names the features ${features?.join(', ')}`,
+  );
+  expect(() => catalogued(lodged({ ...unnamed, river: true }))).toThrow(
+    `fixture: the age ${AGE}'s neutral's city PH_Lodge names the river`,
+  );
+  expect(catalogued(lodged(unnamed)).version).toBe('fixture');
+  expect(() => catalogued(aged({ neutral: { building: CAMP.building } }))).toThrow(
+    `fixture: the age ${AGE}'s camp and neutral's city are both the building ${CAMP.building}`,
+  );
+  expect(() => catalogued(aged({ neutral: { building: SITES[SITE].building } }))).toThrow(
+    `fixture: the age ${AGE}'s neutral's city and site ${SITE} are both the building ${SITES[SITE].building}`,
+  );
+});
+
+test('a catalogue whose region keeps the neutral’s city nearer the centre than the first steps’ edge, keeps it to less than it keeps it from, or deals it in an age naming no neutral, is refused, and one keeping it from that edge on is not', () => {
+  const disc = REGIONS[CLEARING];
+  const reach = disc.centre + FIRST_STEPS;
+  const banded = (least: number, most: number): Catalogue =>
+    changed(regioned({ [CLEARING]: { ...disc, neutralFromCentre: { least, most } } }));
+
+  expect(() => catalogued(banded(reach - 1, reach + 1))).toThrow(
+    `fixture: the region ${CLEARING} keeps the neutral's city ${reach - 1} from the centre, nearer than the first steps' edge at ${reach}`,
+  );
+  expect(() => catalogued(banded(reach + 1, reach))).toThrow(
+    `fixture: the region ${CLEARING} keeps the neutral's city from ${reach + 1} to ${reach} of the centre`,
+  );
+  expect(catalogued(banded(reach, reach)).version).toBe('fixture');
+  expect(() => catalogued(aged({ neutral: undefined }))).toThrow(
+    `fixture: the age ${AGE}, whose region ${CLEARING} deals the neutral's city, names no neutral`,
+  );
+});
+
 test('a catalogue whose site deals a reward it does not hold, or no reward at all, is refused', () => {
   const site = SITES[SITE];
 

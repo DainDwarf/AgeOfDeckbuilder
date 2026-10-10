@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { chartedTile } from './cards';
+import { chartedTile, improvementPlaced } from './cards';
 import { type Catalogue, catalogued, type EnemyScript, unitKind, type Wave } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable } from './city';
@@ -8,6 +8,7 @@ import {
   aimedAt,
   attackOn,
   attacksOf,
+  besideTheNeutral,
   buildingAt,
   builtOn,
   CAMP,
@@ -33,6 +34,8 @@ import {
   idsOf,
   madeOf,
   movesOf,
+  NEUTRAL,
+  NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
   only,
@@ -1534,6 +1537,15 @@ test('a prepare off the city’s tile lands at the next enemy phase ahead of eve
   });
   expect(carried).toMatchObject({ tile: FARMED });
   expect(carried.chronicle.units[0]).toMatchObject({ prepared: false });
+});
+
+test('a pillage on the neutral’s city’s tile removes every improvement and spares its building', () => {
+  const roaded = improvementPlaced(CATALOGUE, besideTheNeutral(), NEUTRAL_TILE, 'PH_Road');
+  const pillaging = withUnits(roaded.chronicle, [preparing(standing('enemy', NEUTRAL_TILE))]);
+
+  const after = outcome(apply(CATALOGUE, pillaging, { type: 'end-turn' }));
+
+  expect(tileAt(after.tiles, NEUTRAL_TILE)).toMatchObject({ building: NEUTRAL, improvements: [] });
 });
 
 test('an enemy prepared on the city’s tile captures the city ahead of every pillage', () => {

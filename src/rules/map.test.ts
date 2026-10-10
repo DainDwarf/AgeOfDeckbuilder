@@ -9,10 +9,13 @@ import {
   changed,
   deepBut,
   madeOf,
+  NEUTRAL,
   only,
   REGION,
   REGIONS,
   riverBetween,
+  SITE,
+  SITES,
 } from './fixtures';
 import {
   CENTRE,
@@ -226,6 +229,7 @@ test('a tile no biome reaches because a sized biome closed it off belongs to tha
         tilesPerBiome: 7,
         biomeShares: [],
         camps: 0,
+        neutralFromCentre: undefined,
       },
     },
   };
@@ -446,6 +450,31 @@ test('every map is dealt its camps, each keeping its distance from the centre an
         expect(distance(camp, other)).toBeGreaterThanOrEqual(campsApart);
       }
     }
+  }
+});
+
+test('a region naming the neutral’s band deals its city on every map, within the band and where the ground runs to the centre, the camps and the sites keeping from it as from their own kind; a region naming none deals none', () => {
+  const band = { least: 6, most: 7 };
+  const banded: MapAge = { ...OWNS, regions: { [REGION]: { ...DISC, neutralFromCentre: band } } };
+  const { campsApart, sitesApart } = DISC;
+  for (let seed = 0; seed < 30; seed++) {
+    const map = generateMap(CATALOGUE, banded, REGION, seedRng(seed));
+    const walked = walkedFrom(map, CENTRE, false);
+    const [city, ...others] = map.tiles.filter((tile) => tile.building === NEUTRAL);
+    const sites = map.tiles.filter((tile) => tile.building === SITES[SITE].building);
+
+    expect(others).toEqual([]);
+    expect(walked.has(tileKey(city))).toBe(true);
+    expect(distance(city, CENTRE)).toBeGreaterThanOrEqual(band.least);
+    expect(distance(city, CENTRE)).toBeLessThanOrEqual(band.most);
+    expect(campsOf(map.tiles)).toHaveLength(DISC.camps);
+    for (const camp of campsOf(map.tiles)) {
+      expect(distance(camp, city)).toBeGreaterThanOrEqual(campsApart);
+    }
+    for (const site of sites) expect(distance(site, city)).toBeGreaterThanOrEqual(sitesApart);
+  }
+  for (const seed of SEEDS) {
+    expect(mapOf(seed).filter((tile) => tile.building === NEUTRAL)).toEqual([]);
   }
 });
 

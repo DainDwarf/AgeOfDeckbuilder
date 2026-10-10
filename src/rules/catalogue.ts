@@ -6,6 +6,7 @@ import {
   featureKind,
   type LayerKind,
   type MapContent,
+  neutralBuilding,
   type Region,
   refuse,
   terrainKind,
@@ -346,13 +347,15 @@ export type Technology = {
 };
 
 /**
- * What an age owns: its schedule, its camp, its sites by key, its regions by key, its achievements by
- * key in order, and the base price of its cards.
+ * What an age owns: its schedule, its camp, its neutral's city's building where it names one, its
+ * sites by key, its regions by key, its achievements by key in order, and the base price of its
+ * cards.
  */
 export type Age = {
   readonly basePrice: number;
   readonly schedule: Schedule;
   readonly camp: Camp;
+  readonly neutral?: { readonly building: string };
   readonly sites: Readonly<Record<string, Site>>;
   readonly regions: Readonly<Record<string, Region>>;
   readonly achievements: Readonly<Record<string, Achievement>>;
@@ -582,11 +585,8 @@ export function unitEntryTableHeld(content: Catalogue, table: UnitEntryTable, ow
 }
 
 /** What one age owns, checked against the tables of the catalogue holding it. */
-function ageHeld(
-  content: Catalogue,
-  id: string,
-  { basePrice, schedule, camp, sites, regions }: Age,
-): void {
+function ageHeld(content: Catalogue, id: string, age: Age): void {
+  const { basePrice, schedule, camp, neutral, sites, regions } = age;
   if (!Number.isInteger(basePrice) || basePrice < 1) {
     refuse(content, `the age ${id} sets a base price of ${basePrice}`);
   }
@@ -645,6 +645,21 @@ function ageHeld(
   }
 
   const sitedBy = new Map<string, string>([[camp.building, 'camp']]);
+  if (neutral !== undefined) {
+    const { building } = neutral;
+    const neutralNames = groundNamed(buildingKind(content, building));
+    if (neutralNames !== undefined) {
+      refuse(content, `the age ${id}'s neutral's city ${building} names ${neutralNames}`);
+    }
+    const other = sitedBy.get(building);
+    if (other !== undefined) {
+      refuse(
+        content,
+        `the age ${id}'s ${other} and neutral's city are both the building ${building}`,
+      );
+    }
+    sitedBy.set(building, "neutral's city");
+  }
   for (const [site, { building, rewards }] of Object.entries(sites)) {
     const siteNames = groundNamed(buildingKind(content, building));
     if (siteNames !== undefined) {
@@ -712,13 +727,28 @@ function ageHeld(
         `the region ${name} keeps its camps ${region.campFromCentre} from the centre, within the first steps' reach of ${reach}`,
       );
     }
+    const band = region.neutralFromCentre;
+    if (band === undefined) continue;
+    neutralBuilding(content, age, `the age ${id}, whose region ${name} deals the neutral's city,`);
+    if (band.least < reach) {
+      refuse(
+        content,
+        `the region ${name} keeps the neutral's city ${band.least} from the centre, nearer than the first steps' edge at ${reach}`,
+      );
+    }
+    if (band.most < band.least) {
+      refuse(
+        content,
+        `the region ${name} keeps the neutral's city from ${band.least} to ${band.most} of the centre`,
+      );
+    }
   }
 }
 
 /**
  * The features or the river a building names, in a refusal's words, and nothing where it names
- * neither: the settle and the generator's placing never ask the ground a layer goes on, so a city's,
- * a camp's or a site's building naming either is refused.
+ * neither: the settle and the generator's placing never ask the ground a layer goes on, so a
+ * building the settle or the generator places naming either is refused.
  */
 function groundNamed({ features, river }: LayerKind): string | undefined {
   if (features !== undefined) return `the features ${features.join(', ')}`;

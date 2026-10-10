@@ -8,6 +8,7 @@ import {
   type LayerKind,
   type MapAge,
   type MapContent,
+  neutralBuilding,
   type Region,
   type RiverFlow,
   regionOf,
@@ -788,19 +789,27 @@ function flowRivers(
   return { rng, rivers };
 }
 
+/** How far from the disc's centre a building is placed, least and most, and from the others. */
+type Keeps = {
+  readonly fromCentre: number;
+  readonly mostFromCentre: number;
+  readonly apart: number;
+};
+
 /**
  * The buildings placed in order, one draw each among the bare tiles reached of a terrain it names,
- * as far from the centre and from every one placed before it as `keeps` names; where none is left
- * the placing stops, and `generateMap` deals the map again.
+ * kept from the centre, and from `before` and one another, as `keeps` names; where none is left the
+ * placing stops, and `generateMap` deals the map again.
  */
 function placedOn(
   catalogue: MapContent,
   buildings: readonly string[],
-  keeps: { readonly fromCentre: number; readonly apart: number },
+  keeps: Keeps,
   reached: ReadonlySet<string>,
   initial: Rng,
   tiles: readonly Tile[],
-): { rng: Rng; tiles: Tile[]; placed: number } {
+  before: readonly TileCoords[],
+): { rng: Rng; tiles: Tile[]; placed: Tile[] } {
   let rng = initial;
   const placed: Tile[] = [];
   for (const building of buildings) {
@@ -811,7 +820,8 @@ function placedOn(
         ground.includes(tile.terrain) &&
         reached.has(tileKey(tile)) &&
         distance(tile, CENTRE) >= keeps.fromCentre &&
-        placed.every((other) => distance(tile, other) >= keeps.apart),
+        distance(tile, CENTRE) <= keeps.mostFromCentre &&
+        [...before, ...placed].every((other) => distance(tile, other) >= keeps.apart),
     );
     if (candidates.length === 0) break;
 
@@ -821,17 +831,33 @@ function placedOn(
   }
 
   const built = new Map(placed.map((tile) => [tileKey(tile), tile]));
-  return {
-    rng,
-    tiles: tiles.map((tile) => built.get(tileKey(tile)) ?? tile),
-    placed: placed.length,
-  };
+  return { rng, tiles: tiles.map((tile) => built.get(tileKey(tile)) ?? tile), placed };
+}
+
+/** The neutral's city a region deals: its building, and the band of the centre it stands within. */
+type NeutralDealt = {
+  readonly building: string;
+  readonly band: { readonly least: number; readonly most: number };
+};
+
+/** The neutral's city placed within its band, and nothing where the region deals none. */
+function neutralPlaced(
+  catalogue: MapContent,
+  neutral: NeutralDealt | undefined,
+  reached: ReadonlySet<string>,
+  rng: Rng,
+  tiles: Tile[],
+): { rng: Rng; tiles: Tile[]; placed: Tile[] } {
+  if (neutral === undefined) return { rng, tiles, placed: [] };
+  const { building, band } = neutral;
+  const keeps = { fromCentre: band.least, mostFromCentre: band.most, apart: 0 };
+  return placedOn(catalogue, [building], keeps, reached, rng, tiles, []);
 }
 
 /**
  * The map a region deals, a disc around `CENTRE` in the seven layers of `docs/MAP.md`. A deal short
- * of the region's camps or sites is thrown away and the next dealt from the generator state it
- * leaves; a tenth one short throws.
+ * of the region's camps, sites or neutral's city is thrown away and the next dealt from the
+ * generator state it leaves; a tenth one short throws.
  */
 export function generateMap(
   catalogue: MapContent,
@@ -840,15 +866,18 @@ export function generateMap(
   initial: Rng,
 ): HexMap & { readonly rng: Rng } {
   const region = regionOf(catalogue, age, regionId);
-  const wanted = region.camps + region.sites.length;
-  let deal = dealMap(catalogue, age, region, initial);
+  const band = region.neutralFromCentre;
+  const owner = `the age whose region ${regionId} deals the neutral's city`;
+  const neutral = band && { building: neutralBuilding(catalogue, age, owner), band };
+  const wanted = (neutral === undefined ? 0 : 1) + region.camps + region.sites.length;
+  let deal = dealMap(catalogue, age, region, neutral, initial);
   for (let dealt = 1; deal.placed < wanted; dealt++) {
     if (dealt === 10) {
       throw new Error(
-        `this map was dealt 10 times and never held ${region.camps} camps and ${region.sites.length} sites`,
+        `this map was dealt 10 times and never held the ${wanted} camps, sites and cities its region deals`,
       );
     }
-    deal = dealMap(catalogue, age, region, deal.rng);
+    deal = dealMap(catalogue, age, region, neutral, deal.rng);
   }
   return { rng: deal.rng, tiles: deal.tiles, rivers: deal.rivers, centre: deal.centre };
 }
@@ -857,6 +886,7 @@ function dealMap(
   catalogue: MapContent,
   age: MapAge,
   region: Region,
+  neutral: NeutralDealt | undefined,
   initial: Rng,
 ): { rng: Rng; tiles: Tile[]; rivers: River[]; centre: TileCoords[]; placed: number } {
   const { radius, centreBiome, featureShares } = region;
@@ -1033,21 +1063,32 @@ function dealMap(
     age.camp.acrossWater === true
       ? groundAndWaterRunTo(catalogue, ground, flowed.rivers, CENTRE)
       : groundRunsTo(catalogue, ground, flowed.rivers, CENTRE);
+  const settled = neutralPlaced(catalogue, neutral, reached, rng, ground);
   const camped = placedOn(
     catalogue,
     Array(region.camps).fill(age.camp.building),
-    { fromCentre: region.campFromCentre, apart: region.campsApart },
+    {
+      fromCentre: region.campFromCentre,
+      mostFromCentre: Number.POSITIVE_INFINITY,
+      apart: region.campsApart,
+    },
     reached,
-    rng,
-    ground,
+    settled.rng,
+    settled.tiles,
+    settled.placed,
   );
   const sited = placedOn(
     catalogue,
     region.sites.map((site) => entryOf(catalogue, age.sites, site, 'site').building),
-    { fromCentre: region.siteFromCentre, apart: region.sitesApart },
+    {
+      fromCentre: region.siteFromCentre,
+      mostFromCentre: Number.POSITIVE_INFINITY,
+      apart: region.sitesApart,
+    },
     reached,
     camped.rng,
     camped.tiles,
+    settled.placed,
   );
 
   return {
@@ -1055,6 +1096,6 @@ function dealMap(
     rivers: flowed.rivers,
     tiles: sited.tiles,
     centre: coords.filter((coord) => distance(coord, CENTRE) <= region.centre),
-    placed: camped.placed + sited.placed,
+    placed: settled.placed.length + camped.placed.length + sited.placed.length,
   };
 }

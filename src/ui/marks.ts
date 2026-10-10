@@ -12,7 +12,7 @@ const UNIT_MARKS: Readonly<Record<string, number[]>> = {
   archer: [-13, -9, 13, -9, 0, 14],
 };
 
-/** The wall the city is drawn as, and the camp with it. */
+/** The wall the city is drawn as, and the camp and the neutral's city with it. */
 const WALL: number[] = [
   -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
   10,
@@ -30,6 +30,7 @@ const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   village: WALL,
   camp: WALL,
   'stone-camp': WALL,
+  'neutral-village': WALL,
   shelter: [-16, 10, 0, -13, 16, 10, 5, 10, 0, 2, -5, 10],
   farm: [-16, -6, 16, -6, 16, 6, -16, 6],
   tannery: [-16, 8, -6, -8, 16, -8, 6, 8],

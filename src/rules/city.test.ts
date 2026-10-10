@@ -16,19 +16,24 @@ import {
   AGE,
   aimedAt,
   assignTo,
+  besideTheNeutral,
   builtOn,
   CATALOGUE,
   type Carrying,
   CITY,
   CIVILIZATION,
+  CLEARING,
   camped,
   cityOf,
   claimOf,
   culture,
+  endedTurn,
   everyCard,
   field,
   heldBy,
   idsOf,
+  NEUTRAL,
+  NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
   opening,
@@ -43,6 +48,7 @@ import {
   WELL,
   WELL_GIVES,
   withTile,
+  withUnits,
   worker,
 } from './fixtures';
 import {
@@ -53,6 +59,8 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  tilesBeside,
+  tileYield,
 } from './map';
 import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
@@ -405,11 +413,12 @@ test('the growth threshold is the food the next population needs: one short of i
     resources: { ...city.resources, food },
   });
 
-  const short = outcome(apply(CATALOGUE, stocked(growthThreshold(city) - 1), { type: 'end-turn' }));
-  const reached = outcome(apply(CATALOGUE, stocked(growthThreshold(city)), { type: 'end-turn' }));
+  const threshold = growthThreshold(city, 'player');
+  const short = outcome(apply(CATALOGUE, stocked(threshold - 1), { type: 'end-turn' }));
+  const reached = outcome(apply(CATALOGUE, stocked(threshold), { type: 'end-turn' }));
 
   expect(short.population).toBe(city.population);
-  expect(short.resources.food).toBe(growthThreshold(city) - 1);
+  expect(short.resources.food).toBe(threshold - 1);
   expect(reached.population).toBe(city.population + 1);
   expect(reached.resources.food).toBe(0);
 });
@@ -767,6 +776,76 @@ test('an assign waits while one population is idle and the city holds a tile nob
   expect(assignWaiting(freed)).toBe(true);
   expect(idle(spent)).toBe(0);
   expect(assignWaiting(spent)).toBe(false);
+});
+
+test('a chronicle launched on a region dealing the neutral’s city opens with it standing on its building’s tile, that tile held with one population on it and every stock at nought; one on a region dealing none opens with no neutral', () => {
+  for (const seed of [0, 1234]) {
+    const { chronicle } = launched(CATALOGUE, AGE, CLEARING, seed, CIVILIZATION, []);
+    const [city, ...others] = chronicle.tiles
+      .filter((tile) => tile.building === NEUTRAL)
+      .map(({ q, r }) => ({ q, r }));
+
+    expect(others).toEqual([]);
+    expect(chronicle.neutral).toEqual({
+      city,
+      held: [city],
+      population: 1,
+      assigned: [city],
+      resources: together(),
+    });
+    expect(
+      launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).chronicle.neutral,
+    ).toBeUndefined();
+  }
+});
+
+test('at income the neutral’s assigned tile yields into its own stocks, after the player’s tiles in the same income group, one stock carrying the tile; occupied by an enemy, it yields nothing', () => {
+  const chronicle = besideTheNeutral();
+  const tile = tileAt(chronicle.tiles, NEUTRAL_TILE);
+  if (tile === undefined) throw new Error('the neutral’s city stands on no tile of the map');
+  const gives = tileYield(CATALOGUE, tile, tilesBeside(chronicle.tiles));
+  const occupied = withUnits(chronicle, [standing('enemy', NEUTRAL_TILE)]);
+
+  const income = heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'income');
+  const [last, before] = [income.at(-1), income.at(-2)];
+  const blocked = heldBy(apply(CATALOGUE, occupied, { type: 'end-turn' }), 'income');
+
+  expect(income.length).toBeGreaterThan(1);
+  expect(last).toMatchObject({ name: 'stock', tile: NEUTRAL_TILE });
+  expect(last?.chronicle.resources).toEqual(before?.chronicle.resources);
+  expect(last?.chronicle.neutral?.resources).toEqual(together(gives));
+  expect(outcome(blocked).neutral?.resources).toEqual(together());
+});
+
+test('at the growth phase the neutral’s food at its growth threshold is spent on one idle population, after the player’s growth in the same grow group, its threshold counting no unit of the player’s', () => {
+  const fed = endedTurn(besideTheNeutral());
+  const threshold = growthThreshold(fed, 'neutral');
+  const growing = { ...fed, resources: { ...fed.resources, food: growthThreshold(fed, 'player') } };
+  const neutral = fed.neutral;
+  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
+
+  const grow = heldBy(apply(CATALOGUE, growing, { type: 'end-turn' }), 'grow');
+
+  expect(neutral.resources.food).toBeGreaterThanOrEqual(threshold);
+  expect(growthThreshold(withUnits(fed, [worker(CITY)]), 'neutral')).toBe(threshold);
+  expect(namesOf(grow)).toEqual(['stock', 'population', 'stock', 'population']);
+  expect(grow[1].chronicle.population).toBe(fed.population + 1);
+  expect(grow[1].chronicle.neutral).toEqual(neutral);
+  expect(grow[3].chronicle.population).toBe(fed.population + 1);
+  expect(grow[3].chronicle.neutral).toEqual({
+    ...neutral,
+    population: neutral.population + 1,
+    resources: { ...neutral.resources, food: neutral.resources.food - threshold },
+  });
+});
+
+test('a tile the neutral holds is no claim of the city’s, though it touches the border', () => {
+  const opened = besideTheNeutral();
+  const city = { ...opened, resources: culture(20) };
+
+  expect(claimable(CATALOGUE, city).map(tileKey)).not.toContain(tileKey(NEUTRAL_TILE));
+  expect(tileRefusal(CATALOGUE, city, NEUTRAL_TILE)).toBeUndefined();
+  expect(stagedBy(city, claimOf(NEUTRAL_TILE))).toEqual(['refused']);
 });
 
 test('the same claim on the same chronicle gives the same chronicle back', () => {

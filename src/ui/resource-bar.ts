@@ -384,7 +384,7 @@ function readingOf(chronicle: Chronicle, key: BarReading): { count: number; over
     case 'idle':
       return { count: idle(chronicle) };
     case 'food':
-      return { count: chronicle.resources.food, over: growthThreshold(chronicle) };
+      return { count: chronicle.resources.food, over: growthThreshold(chronicle, 'player') };
     case 'culture':
       return { count: chronicle.resources.culture, over: cultureThreshold(chronicle) };
     case 'production':

@@ -295,7 +295,7 @@ test('the famine adds its hazard to the top of the draw pile, and leaves the cit
   expect(idsOf(after.drawPile)).toEqual(fullDraw().slice(4));
   expect(after.resources.food).toBe(STOCKED);
   expect(after.population).toBe(waiting.population);
-  expect(growthThreshold(after)).toBe(growthThreshold(waiting));
+  expect(growthThreshold(after, 'player')).toBe(growthThreshold(waiting, 'player'));
   expect(enemiesOf(after)).toEqual([]);
 });
 

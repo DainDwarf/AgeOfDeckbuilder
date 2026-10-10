@@ -14,14 +14,17 @@ import {
   AGE,
   achievementIn,
   aimedAt,
+  besideTheNeutral,
   builtOn,
   CATALOGUE,
   CENSUS,
   CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
+  CLEARING,
   chronicleSaved,
   cityOf,
+  endedTurn,
   FROST,
   field,
   GRANARY,
@@ -37,10 +40,17 @@ import {
   surveying,
   victoryOf,
 } from './fixtures';
+import { tileKey } from './map';
 import { RESOURCES } from './resources';
 import { type ChronicleSave, keptAfter, readSave, writeSave } from './save';
 import { addedToDrawPileTop } from './schedule';
-import { type Chronicle, type CitySection, type Counters, turnShown } from './state';
+import {
+  type Chronicle,
+  type CitySection,
+  type Counters,
+  type NeutralCity,
+  turnShown,
+} from './state';
 import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
 
 /** A campaign a won chronicle has paid into: technologies, influence, and cards in no section. */
@@ -446,6 +456,61 @@ test('a save whose chronicle carries no achievements, one its age does not own, 
   ]);
   expect(reading([{ ...first, tally: undefined }, ...rest])).toEqual([
     "fixture: the save's chronicle.achievements[0].tally is not an object",
+  ]);
+});
+
+test('a chronicle saved with the neutral’s city reads back with it, and one whose neutral names a tile the map does not hold, a population below nought or an assigned tile it does not hold is dropped', () => {
+  const save = {
+    chronicle: endedTurn(besideTheNeutral()),
+    region: CLEARING,
+    civilization: CIVILIZATION_ID,
+  };
+  const { neutral } = save.chronicle;
+  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
+  const reading = (change: (city: NeutralCity) => object): readonly string[] =>
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, neutral: change(neutral) })));
+  const off = { q: 9, r: 9 };
+  const unheld = { q: 2, r: 0 };
+
+  expect(readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save)).chronicle).toEqual(save);
+  expect(reading((city) => ({ ...city, city: off }))).toEqual([
+    "fixture: the save's chronicle.neutral.city names 9,9, a tile the map does not hold",
+  ]);
+  expect(reading((city) => ({ ...city, held: [...city.held, off] }))).toEqual([
+    "fixture: the save's chronicle.neutral.held[1] names 9,9, a tile the map does not hold",
+  ]);
+  expect(reading((city) => ({ ...city, population: -1 }))).toEqual([
+    "fixture: the save's chronicle.neutral holds -1 population",
+  ]);
+  expect(reading((city) => ({ ...city, assigned: [...city.assigned, unheld] }))).toEqual([
+    "fixture: the save's chronicle.neutral.assigned[1] names 2,0, a tile its city does not hold",
+  ]);
+});
+
+test('a save whose chronicle’s city stands on, or holds, a tile the map does not hold, or has a tile assigned it does not hold, drops it, as the neutral’s does', () => {
+  const save = chronicleSaved();
+  const reading = (change: (chronicle: Chronicle) => object): readonly string[] =>
+    chronicleDropped(tampered(save, change));
+  const off = { q: 99, r: 99 };
+  const unheld = save.chronicle.tiles.find(
+    (tile) => !save.chronicle.held.some((coord) => tileKey(coord) === tileKey(tile)),
+  );
+  if (unheld === undefined) throw new Error('the city holds every tile of the map');
+  const at = save.chronicle.assigned.length;
+
+  expect(reading((chronicle) => ({ ...chronicle, city: off }))).toEqual([
+    "fixture: the save's chronicle.city names 99,99, a tile the map does not hold",
+  ]);
+  expect(reading((chronicle) => ({ ...chronicle, held: [...chronicle.held, off] }))).toEqual([
+    `fixture: the save's chronicle.held[${save.chronicle.held.length}] names 99,99, a tile the map does not hold`,
+  ]);
+  expect(
+    reading((chronicle) => ({
+      ...chronicle,
+      assigned: [...chronicle.assigned, { q: unheld.q, r: unheld.r }],
+    })),
+  ).toEqual([
+    `fixture: the save's chronicle.assigned[${at}] names ${tileKey(unheld)}, a tile its city does not hold`,
   ]);
 });
 

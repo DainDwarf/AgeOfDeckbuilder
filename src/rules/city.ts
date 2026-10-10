@@ -6,13 +6,16 @@ import { change, changeOn, followed, type Landed, landedAs, unchanged } from './
 import {
   assignedTo,
   type Chronicle,
+  type CityFaction,
   type Cost,
+  cityRows,
   costsOf,
   holds,
   idle,
   playable,
   type Refusal,
   unaffordable,
+  withCityRows,
 } from './state';
 import { occupied } from './units';
 
@@ -34,42 +37,61 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
 /**
- * Income: an assigned tile no enemy occupies yields, the city's own tile no exception, tile by tile
- * in tile order.
+ * Income of the faction's city: an assigned tile no enemy occupies yields, the city's own tile no
+ * exception, tile by tile in tile order.
  */
-export function income(catalogue: Catalogue, chronicle: Chronicle): Landed {
-  const assigned = new Set(chronicle.assigned.map(tileKey));
+export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
+  const assigned = new Set(city.assigned.map(tileKey));
   let yielding = unchanged(chronicle);
   for (const { q, r } of chronicle.tiles) {
     if (!assigned.has(tileKey({ q, r }))) continue;
     if (occupied(chronicle.units, { q, r })) continue;
-    yielding = followed(yielding, (left) => yielded(catalogue, left, { q, r }));
+    yielding = followed(yielding, (left) => yielded(catalogue, left, whose, { q, r }));
   }
   return yielding;
 }
 
 /**
- * A tile's yield gained: the city's stock of each resource rises by what the tile yields, one `stock`
- * carrying the tile, and nothing where it yields nothing.
+ * A tile's yield gained: the faction's city's stock of each resource rises by what the tile yields,
+ * one `stock` carrying the tile, and nothing where it yields nothing or that city is none.
  */
-export function yielded(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords): Landed {
+export function yielded(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  whose: CityFaction,
+  at: TileCoords,
+): Landed {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) refuse(catalogue, `no tile of the map yields at ${tileKey(at)}`);
+  const city = cityRows(chronicle, whose);
   const yields = tileYield(catalogue, tile, (coord) => tileAt(chronicle.tiles, coord));
-  if (costsOf(yields).length === 0) return unchanged(chronicle);
-  const resources = { ...chronicle.resources };
+  if (city === undefined || costsOf(yields).length === 0) return unchanged(chronicle);
+  const resources = { ...city.resources };
   for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
-  return landedAs(changeOn('stock', { q: at.q, r: at.r }, { ...chronicle, resources }));
+  return landedAs(
+    changeOn('stock', { q: at.q, r: at.r }, withCityRows(chronicle, whose, { resources })),
+  );
 }
 
-export function growthThreshold(chronicle: Chronicle): number {
-  const fielded = chronicle.units.filter((unit) => unit.faction === 'player').length;
-  return 2 * (chronicle.population + fielded);
+/**
+ * What the faction's city's growth spends: twice its population and its own units counted together.
+ * The neutral's on a chronicle holding none has neither.
+ */
+export function growthThreshold(chronicle: Chronicle, whose: CityFaction): number {
+  const population = cityRows(chronicle, whose)?.population ?? 0;
+  const fielded = chronicle.units.filter((unit) => unit.faction === whose).length;
+  return 2 * (population + fielded);
 }
 
-/** One population more for the city, arriving idle. */
-export function arrived(chronicle: Chronicle): Landed {
-  return landedAs(change('population', { ...chronicle, population: chronicle.population + 1 }));
+/** One population more for the faction's city, arriving idle, and nothing where that city is none. */
+export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
+  return landedAs(
+    change('population', withCityRows(chronicle, whose, { population: city.population + 1 })),
+  );
 }
 
 /** The population off the tile and then one fewer. */
@@ -112,27 +134,31 @@ export function populationTaken(chronicle: Chronicle): Landed {
 }
 
 /**
- * Growth: the food stock that has reached the growth threshold is spent, and one idle population
- * arrives on what that leaves.
+ * Growth of the faction's city: the food stock that has reached the growth threshold is spent, and
+ * one idle population arrives on what that leaves.
  */
-export function grow(chronicle: Chronicle): Landed {
-  const threshold = growthThreshold(chronicle);
-  if (chronicle.resources.food < threshold) return unchanged(chronicle);
+export function grow(chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  const threshold = growthThreshold(chronicle, whose);
+  if (city === undefined || city.resources.food < threshold) return unchanged(chronicle);
   const spent = landedAs(
-    change('stock', {
-      ...chronicle,
-      resources: { ...chronicle.resources, food: chronicle.resources.food - threshold },
-    }),
+    change(
+      'stock',
+      withCityRows(chronicle, whose, {
+        resources: { ...city.resources, food: city.resources.food - threshold },
+      }),
+    ),
   );
-  return followed(spent, arrived);
+  return followed(spent, (left) => arrived(left, whose));
 }
 
 /**
- * The tiles the city may claim: charted, not held, touching a tile it holds, with no camp filling
- * the slot and no enemy occupying it.
+ * The tiles the city may claim: charted, held by no city, touching a tile it holds, with no camp
+ * filling the slot and no enemy occupying it.
  */
 export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
   const held = new Set(chronicle.held.map(tileKey));
+  const neutral = new Set(chronicle.neutral?.held.map(tileKey));
   const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
   const { building } = ageOf(catalogue, chronicle.age).camp;
   return chronicle.tiles
@@ -140,6 +166,7 @@ export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoord
       (tile) =>
         chartedTiles.has(tileKey(tile)) &&
         !held.has(tileKey(tile)) &&
+        !neutral.has(tileKey(tile)) &&
         tile.building !== building &&
         !occupied(chronicle.units, tile) &&
         neighbours(tile).some((coord) => held.has(tileKey(coord))),

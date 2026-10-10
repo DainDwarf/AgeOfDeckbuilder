@@ -108,6 +108,8 @@ export type Region = {
   readonly sites: readonly string[];
   readonly siteFromCentre: number;
   readonly sitesApart: number;
+  /** The band of the disc's centre the neutral's city stands within, both ends included. */
+  readonly neutralFromCentre?: { readonly least: number; readonly most: number };
   readonly rivers: RiverFlow;
 };
 
@@ -129,11 +131,13 @@ export type MapContent = {
 
 /**
  * The part of an age a map is dealt from: its regions, the building its camp is, whether its camp
- * stands across the water, and the building each of its sites is, by the site's key.
+ * stands across the water, the building its neutral's city is where it names one, and the building
+ * each of its sites is, by the site's key.
  */
 export type MapAge = {
   readonly regions: Readonly<Record<string, Region>>;
   readonly camp: { readonly building: string; readonly acrossWater?: boolean };
+  readonly neutral?: { readonly building: string };
   readonly sites: Readonly<Record<string, { readonly building: string }>>;
 };
 
@@ -165,6 +169,15 @@ export function improvementKind(catalogue: MapContent, id: string): LayerKind {
 /** The composition a map of that region is dealt from; a region the age does not hold is refused. */
 export function regionOf(catalogue: MapContent, age: MapAge, id: string): Region {
   return entryOf(catalogue, age.regions, id, 'region');
+}
+
+/**
+ * The building the age's neutral's city is; an age naming no neutral is refused, `owner` naming it
+ * in the refusal as the caller knows it.
+ */
+export function neutralBuilding(catalogue: MapContent, age: MapAge, owner: string): string {
+  if (age.neutral === undefined) refuse(catalogue, `${owner} names no neutral`);
+  return age.neutral.building;
 }
 
 /** The entry of one table of the catalogue a key names; a key the table does not hold is refused. */

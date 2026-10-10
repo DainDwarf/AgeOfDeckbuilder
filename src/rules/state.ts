@@ -79,6 +79,23 @@ export type SnapshotUnit = {
  */
 export type Snapshot = TileCoords & { readonly tile: Tile; readonly unit?: SnapshotUnit };
 
+/** Whose city: the player's, or the neutral's. */
+export type CityFaction = 'player' | 'neutral';
+
+/**
+ * What a city holds of the chronicle: the tiles inside its border, its population, the tiles that
+ * population stands on, and its stocks.
+ */
+export type CityRows = {
+  readonly held: TileCoords[];
+  readonly population: number;
+  readonly assigned: TileCoords[];
+  readonly resources: Resources;
+};
+
+/** The neutral's city: the tile it stands on, and its rows. */
+export type NeutralCity = CityRows & { readonly city: TileCoords };
+
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
   /** The version of the catalogue the chronicle was begun on, and the only one it is played on. */
@@ -124,6 +141,8 @@ export type Chronicle = {
    * comes off the last entry.
    */
   readonly assigned: TileCoords[];
+  /** The neutral's city, and nothing at all on a chronicle whose region deals none. */
+  readonly neutral?: NeutralCity;
   readonly units: Unit[];
   /**
    * The number the next unit to enter is named by. It only counts up, so a killed unit's number is
@@ -251,4 +270,33 @@ export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
 /** The population on no tile: what a unit card takes, and what an assign has to give a tile. */
 export function idle(chronicle: Chronicle): number {
   return chronicle.population - chronicle.assigned.length;
+}
+
+/** The rows of the faction's city, and nothing for the neutral's on a chronicle holding none. */
+export function cityRows(chronicle: Chronicle, whose: CityFaction): CityRows | undefined {
+  switch (whose) {
+    case 'player':
+      return chronicle;
+    case 'neutral':
+      return chronicle.neutral;
+  }
+}
+
+/**
+ * The chronicle with rows of the faction's city laid over, and as it stands for the neutral's on a
+ * chronicle holding none.
+ */
+export function withCityRows(
+  chronicle: Chronicle,
+  whose: CityFaction,
+  rows: Partial<CityRows>,
+): Chronicle {
+  switch (whose) {
+    case 'player':
+      return { ...chronicle, ...rows };
+    case 'neutral': {
+      const { neutral } = chronicle;
+      return neutral === undefined ? chronicle : { ...chronicle, neutral: { ...neutral, ...rows } };
+    }
+  }
 }
