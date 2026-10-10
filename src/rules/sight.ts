@@ -9,7 +9,7 @@ import {
   tileKey,
 } from './map';
 import { type MapContent, refuse } from './map-kinds';
-import { type Chronicle, onSettlePhase, type Snapshot } from './state';
+import { type Chronicle, holderOf, onSettlePhase, type Snapshot } from './state';
 import { type Unit, unitAt } from './units';
 
 /** A tile in the cube coordinates a line is drawn in: `x` is its q, `z` its r, and the three sum to nought. */
@@ -118,14 +118,15 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
 }
 
 /**
- * Whether a snapshot already records what the tile and whoever stands on it now show. A tile whose
- * layers did not change is the very object it was: every path that layers a tile over rebuilds that
- * one tile and leaves the others as they stand.
+ * Whether a snapshot already records what the tile, the city holding it and whoever stands on it now
+ * show. A tile whose layers did not change is the very object it was: every path that layers a tile
+ * over rebuilds that one tile and leaves the others as they stand.
  */
 function records(kept: Snapshot | undefined, snapshot: Snapshot): boolean {
   return (
     kept !== undefined &&
     kept.tile === snapshot.tile &&
+    kept.holder === snapshot.holder &&
     kept.unit?.type === snapshot.unit?.type &&
     kept.unit?.faction === snapshot.unit?.faction &&
     kept.unit?.embarked === snapshot.unit?.embarked
@@ -133,12 +134,12 @@ function records(kept: Snapshot | undefined, snapshot: Snapshot): boolean {
 }
 
 /**
- * The snapshot a tile is charted as: the tile as it stands, with the unit standing on it, nobody
- * where nobody stands and nobody where the unit is the player's own.
+ * The snapshot a tile is charted as: the tile as it stands, the city holding it, and the unit
+ * standing on it, nobody where nobody stands and nobody where the unit is the player's own.
  */
 function taken(chronicle: Chronicle, tile: Tile): Snapshot {
   const standing = unitAt(chronicle.units, tile);
-  const at: Snapshot = { q: tile.q, r: tile.r, tile };
+  const at: Snapshot = { q: tile.q, r: tile.r, tile, holder: holderOf(chronicle, tile) };
   if (standing === undefined || standing.faction === 'player') return at;
   const { stats, faction, embarked } = standing;
   return { ...at, unit: { type: stats.type, faction, embarked } };
@@ -190,5 +191,5 @@ export function chartedAt(catalogue: Catalogue, chronicle: Chronicle, at: TileCo
  */
 export function unitsGone(snapshots: Snapshot[]): Snapshot[] {
   if (snapshots.every((snapshot) => snapshot.unit === undefined)) return snapshots;
-  return snapshots.map(({ q, r, tile }) => ({ q, r, tile }));
+  return snapshots.map(({ unit, ...kept }) => kept);
 }

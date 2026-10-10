@@ -25,7 +25,7 @@ import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
-import { PILLAGER } from './scripts';
+import { PILLAGER, VILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
 
@@ -134,7 +134,7 @@ export const STONE: Slice = {
       embarkedMove: EMBARKED_MOVE,
       wave: { gathered: 3, sent: 2 },
     },
-    neutral: { building: 'neutral-village' },
+    neutral: { building: 'neutral-village', script: VILLAGER },
     sites: {
       'painted-cave': {
         building: 'stone-painted-cave',

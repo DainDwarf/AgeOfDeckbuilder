@@ -15,8 +15,9 @@ import {
   firstRegion,
 } from '../rules/catalogue';
 import { admitted, apply, launched, refusalOf } from '../rules/chronicle';
+import { claimable } from '../rules/city';
 import { settledLaunch } from '../rules/fixtures';
-import { tileAt } from '../rules/map';
+import { tileAt, tileKey } from '../rules/map';
 import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
@@ -343,6 +344,23 @@ test('every enemy script of the catalogue answers its move and its act for an en
       expect(() => script.moveTo(CATALOGUE, chronicle, enemy)).not.toThrow();
       expect(() => script.acts(CATALOGUE, chronicle, enemy)).not.toThrow();
     }
+  }
+});
+
+test('every age’s neutral’s script answers a claim among the tiles its city may claim on a chronicle launched and settled in that age, on a region dealing it', () => {
+  const civilization = civilizationOf(CATALOGUE, firstCivilization(CATALOGUE));
+  for (const age of AGES) {
+    const { neutral, regions } = ageOf(CATALOGUE, age);
+    if (neutral === undefined) continue;
+    const region = Object.keys(regions).find((id) => regions[id].neutralFromCentre !== undefined);
+    if (region === undefined) throw new Error(`no region of the age ${age} deals its neutral`);
+    const chronicle = settledLaunch(CATALOGUE, age, region, 1, civilization, []);
+    const offered = claimable(CATALOGUE, chronicle, 'neutral');
+
+    expect(offered).not.toEqual([]);
+    expect(offered.map(tileKey)).toContain(
+      tileKey(neutral.script.claims(CATALOGUE, chronicle, offered)),
+    );
   }
 });
 

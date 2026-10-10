@@ -41,6 +41,7 @@ import type {
   CardId,
   Chronicle,
   ChronicleCard,
+  CityFaction,
   CityRows,
   CitySection,
   Deal,
@@ -277,7 +278,7 @@ function campaignOf(
       ({ slot: item, card }) => ({ slot: item, number: card.number }),
     ),
     nextCard,
-    { next: 'the next number', holder: 'card' },
+    { next: 'the next number', numbered: 'card' },
   );
 
   const learned: string[] = [];
@@ -376,12 +377,12 @@ function integer(catalogue: Catalogue, slot: Slot): number {
 function count(
   catalogue: Catalogue,
   slot: Slot,
-  holder: Slot,
+  subject: Slot,
   reason: (value: number) => string,
   least = 0,
 ): number {
   const value = integer(catalogue, slot);
-  if (value < least) refused(catalogue, holder, reason(value));
+  if (value < least) refused(catalogue, subject, reason(value));
   return value;
 }
 
@@ -390,7 +391,7 @@ function dealtOnce(
   catalogue: Catalogue,
   held: readonly { readonly slot: Slot; readonly number: number }[],
   next: number,
-  names: { readonly next: string; readonly holder: string },
+  names: { readonly next: string; readonly numbered: string },
 ): void {
   const seen = new Set<number>();
   for (const { slot, number } of held) {
@@ -398,7 +399,7 @@ function dealtOnce(
       refused(catalogue, slot, `is numbered ${number}, not below ${names.next} ${next}`);
     }
     if (seen.has(number)) {
-      refused(catalogue, slot, `is numbered ${number}, a number another ${names.holder} holds`);
+      refused(catalogue, slot, `is numbered ${number}, a number another ${names.numbered} holds`);
     }
     seen.add(number);
   }
@@ -495,7 +496,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     catalogue,
     units.map(({ slot: item, unit }) => ({ slot: item, number: unit.id })),
     nextUnit,
-    { next: 'the next unit number', holder: 'unit' },
+    { next: 'the next unit number', numbered: 'unit' },
   );
   const tiles = list(catalogue, field('tiles'), (item) => tileOf(catalogue, item));
   return {
@@ -619,6 +620,7 @@ function snapshotOf(catalogue: Catalogue, slot: Slot): Snapshot {
   return {
     ...coordsIn(catalogue, field),
     tile: tileOf(catalogue, field('tile')),
+    holder: optional(field('holder'), (item) => cityFactionOf(catalogue, item)),
     unit: optional(field('unit'), (item): SnapshotUnit => {
       const standing = record(catalogue, item);
       return {
@@ -689,6 +691,17 @@ function factionOf(catalogue: Catalogue, slot: Slot): Faction {
   }
   const unlisted: never = faction;
   return refused(catalogue, slot, `names no faction ${unlisted}`);
+}
+
+function cityFactionOf(catalogue: Catalogue, slot: Slot): CityFaction {
+  const whose = string(catalogue, slot) as CityFaction;
+  switch (whose) {
+    case 'player':
+    case 'neutral':
+      return whose;
+  }
+  const unlisted: never = whose;
+  return refused(catalogue, slot, `names no city ${unlisted}`);
 }
 
 function unitOf(catalogue: Catalogue, slot: Slot): Unit {

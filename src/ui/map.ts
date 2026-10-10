@@ -24,7 +24,14 @@ import {
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
 import { type Change, type Group, type Stage, walked } from '../rules/stages';
-import { assignedTo, type Chronicle, type Cost, type Snapshot } from '../rules/state';
+import {
+  assignedTo,
+  type Chronicle,
+  type CityFaction,
+  type Cost,
+  holderOf,
+  type Snapshot,
+} from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
 import { MAP_FRAME } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
@@ -62,6 +69,11 @@ import { VEILS_ON, type Veils } from './veils';
 const TILE_SIZE = 24;
 
 const FACTION_COLOURS: Record<Faction, number> = { player: LOOK.civilization, enemy: LOOK.enemy };
+
+const CITY_COLOURS: Record<CityFaction, number> = {
+  player: LOOK.civilization,
+  neutral: LOOK.neutral,
+};
 
 // No corner of the hull, shifted by half its size, lands on the corner before it: Phaser's stroke
 // would skip it and leave the outline open (the trap over `diamond`).
@@ -107,7 +119,7 @@ const THRESHOLD_STYLE = {
 const THRESHOLD_GLYPH = 8;
 const THRESHOLD_GAP = 3;
 
-/** How heavy the ring around the city's own tile is, against the one every other tile takes. */
+/** How heavy the ring around either city's own tile is, against the one every other tile takes. */
 const CITY_RING = 4;
 const RING = 2;
 
@@ -470,6 +482,16 @@ function boxOf(tiles: readonly Tile[]): {
 
 function same(a: TileCoords, b: TileCoords): boolean {
   return a.q === b.q && a.r === b.r;
+}
+
+/** The tile the faction's city stands on, and nothing where that city stands nowhere. */
+function cityTileOf(chronicle: Chronicle, whose: CityFaction): TileCoords | undefined {
+  switch (whose) {
+    case 'player':
+      return chronicle.city;
+    case 'neutral':
+      return chronicle.neutral?.city;
+  }
 }
 
 function glowTile(
@@ -1061,7 +1083,7 @@ export function createMapView(
       cityMarks.add(mark);
       assignedMarks.set(tileKey(coord), mark);
     }
-    for (const coord of claimable(catalogue, shown)) {
+    for (const coord of claimable(catalogue, shown, 'player')) {
       cityMarks.add(ringMark(scene, coord, LOOK.reading.culture, RING).setName('claimable'));
     }
   };
@@ -1199,14 +1221,22 @@ export function createMapView(
     }
   };
 
-  /** The border repainted on the chronicle the map stands on: a claim moves it, so a render does. */
+  /**
+   * Both cities' borders repainted on the chronicle the map stands on, each tile ringed off the face
+   * the map draws of it: a claim moves a border, so a render does.
+   */
   const paintBorder = (): void => {
     wipe(rings);
-    if (shown === undefined) return;
-    const { city } = shown;
-    for (const coord of shown.held) {
-      const weight = city !== undefined && same(coord, city) ? CITY_RING : RING;
-      rings.add(ringMark(scene, coord, LOOK.civilization, weight));
+    const current = shown;
+    if (current === undefined) return;
+    for (const tile of current.tiles) {
+      const face = drawnOf(tile);
+      if (face === undefined) continue;
+      const holder = face.asStands ? holderOf(current, tile) : charted.get(tileKey(tile))?.holder;
+      if (holder === undefined) continue;
+      const own = cityTileOf(current, holder);
+      const weight = own !== undefined && same(tile, own) ? CITY_RING : RING;
+      rings.add(ringMark(scene, tile, CITY_COLOURS[holder], weight));
     }
   };
 

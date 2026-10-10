@@ -92,7 +92,7 @@ import {
 import { buildingKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { plays, walked } from './stages';
-import { type CardId, type Chronicle, idle, playable, type TileBlock } from './state';
+import { type CardId, type Chronicle, idle, playable, type TileBlock, withCityRows } from './state';
 import { standsOn } from './units';
 
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
@@ -1014,8 +1014,23 @@ function quakingTheNeutral(to: Terrain): Catalogue {
   });
 }
 
-test('a worker’s terraform is refused for the faction on the neutral’s city’s tile; an event’s passes it over into a terrain its building does not stand on, and reaches it, building and all, into one it does', () => {
-  const worked = withUnits(besideTheNeutral(), [worker(NEUTRAL_TILE)]);
+test('a card played through a worker is refused for the faction on every tile the neutral holds, its city’s included, after the worker’s own reasons and before the card’s', () => {
+  const beyond = { q: 2, r: 0 };
+  const opened = besideTheNeutral();
+  const neutral = opened.neutral;
+  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
+  const worked = withUnits(opened, [worker(NEUTRAL_TILE), worker(beyond)]);
+  const holding = withCityRows(worked, 'neutral', { held: [...neutral.held, beyond] });
+  const unworked = withCityRows(opened, 'neutral', { held: [...neutral.held, beyond] });
+
+  expect(refusedFor(worked, 'PH_Farm', beyond)).toBe('outside-border');
+  expect(refusedFor(holding, 'PH_Farm', beyond)).toBe('other-faction');
+  expect(refusedFor(holding, 'PH_Urbanisation', beyond)).toBe('other-faction');
+  expect(refusedFor(holding, 'PH_Urbanisation', NEUTRAL_TILE)).toBe('other-faction');
+  expect(refusedFor(unworked, 'PH_Farm', beyond)).toBe('no-worker');
+});
+
+test('an event’s terraform passes the neutral’s city’s tile over into a terrain its building does not stand on, and reaches it, building and all, into one it does', () => {
   const [kept, lost] = ['forest', 'coast'].map((to) => {
     const catalogue = quakingTheNeutral(to);
     const dealt = besideTheNeutral({ catalogue, ...dealing({ turn: 2, event: 'PH_Upheaval' }) });
@@ -1023,7 +1038,6 @@ test('a worker’s terraform is refused for the faction on the neutral’s city�
   });
   const ground = buildingKind(CATALOGUE, NEUTRAL).terrains;
 
-  expect(refusedFor(worked, 'PH_Urbanisation', NEUTRAL_TILE)).toBe('other-faction');
   expect(ground).toContain('forest');
   expect(ground).not.toContain('coast');
   expect(tileAt(kept.after.tiles, NEUTRAL_TILE)).toMatchObject({

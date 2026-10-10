@@ -62,7 +62,7 @@ function thresholdWorn(chronicle: Chronicle, tile: TileCoords): string {
 
 /** The first tile the city may claim, in the order the rules list them. */
 function firstClaim(chronicle: Chronicle): TileCoords {
-  const [tile] = claimable(CATALOGUE, chronicle);
+  const [tile] = claimable(CATALOGUE, chronicle, 'player');
   if (tile === undefined)
     throw new Error(`turn ${chronicle.turn} holds no tile the city may claim`);
   return tile;
@@ -507,7 +507,7 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, bare).length);
+  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, bare, 'player').length);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
@@ -595,8 +595,8 @@ test('a second click the city can pay for claims the tile, which stays selected 
   await expect.poll(() => chronicleOf(page)).toEqual(claimed);
   expect(await counted(page, 'assigned')).toBe(claimed.assigned.length);
   // The tile claimed is a claim no longer, and the marks are the claims the moved border opens.
-  expect(claimable(CATALOGUE, claimed).map(tileKey)).not.toContain(tileKey(nearTile));
-  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, claimed).length);
+  expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(nearTile));
+  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, claimed, 'player').length);
   // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(nearTile));
   expect(await thresholdShown(page)).toBeUndefined();
@@ -605,7 +605,7 @@ test('a second click the city can pay for claims the tile, which stays selected 
   await page.mouse.click(far.x, far.y);
   await answered(page);
   expect(await refusalLines(page)).toBeUndefined();
-  expect(claimable(CATALOGUE, claimed).map(tileKey)).not.toContain(tileKey(farTile));
+  expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(farTile));
 
   expect(problems).toEqual([]);
 });

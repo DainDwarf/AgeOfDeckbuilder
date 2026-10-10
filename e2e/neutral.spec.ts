@@ -1,13 +1,18 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, technologyOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
+import { chartedAt, inSight } from '../src/rules/sight';
+import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
+import { LOOK } from '../src/ui/look';
 import { buildingName } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   consoleKey,
+  endedTurn,
   enter,
   inside,
   mapFrame,
@@ -100,5 +105,93 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await textOf(page, 'panel-name')).toBe(buildingName(building));
 
+  expect(problems).toEqual([]);
+});
+
+/** How many rings of the map's border stand stroked in each colour, by the colour's value. */
+function ringsByColour(page: Page): Promise<Record<number, number>> {
+  return page.evaluate(() => {
+    const border = window.named?.('border')?.object as Phaser.GameObjects.Layer | undefined;
+    if (border === undefined) throw new Error('there is no border on the chronicle screen');
+    const counts: Record<number, number> = {};
+    for (const ring of border.list as Phaser.GameObjects.Polygon[]) {
+      counts[ring.strokeColor] = (counts[ring.strokeColor] ?? 0) + 1;
+    }
+    return counts;
+  });
+}
+
+/** The colour a city's border is drawn in. */
+function borderColour(holder: CityFaction): number {
+  switch (holder) {
+    case 'player':
+      return LOOK.civilization;
+    case 'neutral':
+      return LOOK.neutral;
+  }
+}
+
+/** How many rings each colour stands for over the holders named, by the colour's value. */
+function colouredBy(holders: readonly (CityFaction | undefined)[]): Record<number, number> {
+  const counts: Record<number, number> = {};
+  for (const holder of holders) {
+    if (holder === undefined) continue;
+    const colour = borderColour(holder);
+    counts[colour] = (counts[colour] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** The chronicle the turns from this one leave once the neutral's city has claimed a tile. */
+function neutralClaimed(chronicle: Chronicle): Chronicle {
+  let claiming = chronicle;
+  while ((claiming.neutral?.held.length ?? 0) < 2) {
+    if (claiming.turn > 10) throw new Error('the neutral claims no tile by turn 10');
+    claiming = endedTurn(claiming);
+  }
+  return claiming;
+}
+
+test('the map rings every tile the neutral holds in the neutral’s colour beside the city’s own border, a tile drawn in fog wearing the ring it wore when last seen', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1, [], CAMPAIGN);
+  const [, first] = neutralClaimed(opened).neutral?.held ?? [];
+  if (first === undefined) throw new Error('seed 1 opens with no neutral');
+  const claimed = neutralClaimed(chartedAt(CATALOGUE, opened, first));
+  const { neutral } = claimed;
+  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
+  const seen = inSight(CATALOGUE, claimed);
+  const kept = new Map(claimed.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
+  const worn = claimed.tiles.map((tile) => {
+    const snapshot = kept.get(tileKey(tile));
+    return seen.has(tileKey(tile)) || snapshot === undefined
+      ? holderOf(claimed, tile)
+      : snapshot.holder;
+  });
+  expect(holderOf(claimed, first)).toBe('neutral');
+  expect(seen.has(tileKey(first))).toBe(false);
+  expect(kept.get(tileKey(first))?.holder).toBeUndefined();
+
+  await openSaved(page, claimed, CAMPAIGN);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await consoleKey(page);
+  await rested(page);
+
+  expect(await ringsByColour(page)).toEqual(colouredBy(worn));
+
+  await consoleKey(page);
+  await enter(page, 'fog');
+  await consoleKey(page);
+  await rested(page);
+
+  expect(await ringsByColour(page)).toEqual(
+    colouredBy([
+      ...claimed.held.map((): CityFaction => 'player'),
+      ...neutral.held.map((): CityFaction => 'neutral'),
+    ]),
+  );
   expect(problems).toEqual([]);
 });

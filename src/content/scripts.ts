@@ -1,4 +1,10 @@
-import { ageOf, type Catalogue, type EnemyAct, type EnemyScript } from '../rules/catalogue';
+import {
+  ageOf,
+  type Catalogue,
+  type EnemyAct,
+  type EnemyScript,
+  type NeutralScript,
+} from '../rules/catalogue';
 import {
   attackOrNone,
   campAshore,
@@ -18,7 +24,10 @@ import {
   type Toward,
   tileAt,
   tileKey,
+  tilesBeside,
+  tileYield,
 } from '../rules/map';
+import { RESOURCES } from '../rules/resources';
 import { nextRng } from '../rules/rng';
 import type { Chronicle } from '../rules/state';
 import { canAttack, type Landing, reachable, type Unit, unitAt } from '../rules/units';
@@ -105,6 +114,32 @@ export function guarding(radius: number): EnemyScript {
     },
   };
 }
+
+/**
+ * The villager, claiming the tile that yields most in every resource together, the nearest to its
+ * city of equals, ties in tile order.
+ */
+export const VILLAGER: NeutralScript = {
+  claims(catalogue: Catalogue, chronicle: Chronicle, offered: readonly TileCoords[]): TileCoords {
+    const beside = tilesBeside(chronicle.tiles);
+    const among = new Set(offered.map(tileKey));
+    const city = chronicle.neutral?.city;
+    let chosen = offered[0];
+    let most = Number.NEGATIVE_INFINITY;
+    let nearest = Number.POSITIVE_INFINITY;
+    for (const tile of chronicle.tiles) {
+      if (!among.has(tileKey(tile))) continue;
+      const yields = tileYield(catalogue, tile, beside);
+      const worth = RESOURCES.reduce((sum, resource) => sum + (yields[resource] ?? 0), 0);
+      const away = city === undefined ? 0 : distance(tile, city);
+      if (worth < most || (worth === most && away >= nearest)) continue;
+      most = worth;
+      nearest = away;
+      chosen = { q: tile.q, r: tile.r };
+    }
+    return chosen;
+  },
+};
 
 /** Whether the tile is the city's. */
 function onCity(chronicle: Chronicle, tile: TileCoords): boolean {

@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's claims** — the neutral claims at the enemy phase through the one claim rule, as many tiles as its culture pays for, its script choosing which; a card played through a worker is refused on a tile the neutral holds; the map rings the tiles it holds in its colour, a tile in fog wearing the ring it wore when last seen. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/ages/STONE.md`. [board/neutral-claims.md](board/neutral-claims.md)
 - **The neutral's units** — the faction's units, entered on its city out of its population and stocks by its script, moving by their script where the neutral acts and attacking nothing at peace; whether a camp's guard attacks them on sight is this line's question.
 - **The neutral at the camps** — its warriors go for the camps and kill the guards, and one standing on a camp through the enemy phase captures it, the camp leaving the map dealing nothing; whether the neutral takes sites too is this line's question.
 - **The neutral's stance** — at peace or hostile: the player's attack on its unit or its city turns it hostile, and hostile its units attack the player's and go for the city; whether peace ever returns, and whether a unit of the player's stepping onto a tile it holds turns it hostile — any unit or a military one alone, with or without a warning that the step declares war — are this line's questions.

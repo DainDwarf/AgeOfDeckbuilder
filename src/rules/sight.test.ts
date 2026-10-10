@@ -1,11 +1,14 @@
 import { expect, test } from 'vitest';
 import { entered } from './catalogue';
 import { apply, outcome } from './chronicle';
+import { cultureThreshold } from './city';
 import {
   aimedAt,
   CATALOGUE,
   CIVILIZATION,
   camping,
+  claimOf,
+  culture,
   EMBARKED_MOVE,
   NO_DEALS,
   namesOf,
@@ -27,7 +30,7 @@ import {
 import { seedRng } from './rng';
 import { charted, inSight } from './sight';
 import { walked } from './stages';
-import type { Chronicle, CitySection, Snapshot } from './state';
+import type { Chronicle, CitySection, NeutralCity, Snapshot } from './state';
 import type { UnitStats } from './units';
 
 const CITY: TileCoords = { q: 0, r: 0 };
@@ -312,11 +315,14 @@ test('the snapshot keeps a tile as it was last seen once the unit that saw it ha
 
 /**
  * A watcher that saw an enemy on the hills two tiles off and has since stepped away twice, one tile
- * a command, leaving the enemy's tile in fog.
+ * a command, leaving the enemy's tile in fog; the neutral's city standing as named, where one is.
  */
-function leftInFog(): { readonly seen: Chronicle; readonly left: Chronicle[] } {
+function leftInFog(neutral?: NeutralCity): {
+  readonly seen: Chronicle;
+  readonly left: Chronicle[];
+} {
   const seen = raiding(
-    watching(cityOn(ground(['hills', [off(2, 0)]])), WATCHER, { sight: SIGHT }),
+    watching({ ...cityOn(ground(['hills', [off(2, 0)]])), neutral }, WATCHER, { sight: SIGHT }),
     off(2, 0),
   );
   const once = outcome(apply(CATALOGUE, seen, { type: 'move', unit: 1, tile: off(0, -1) }));
@@ -381,6 +387,35 @@ test('an enemy seen embarking is kept in the snapshot embarked, in fog as in sig
   expect(snapshotOf(ticked, coast)?.unit).toEqual({ ...ENEMY, embarked: true });
   expect(sees(left, coast)).toBe(false);
   expect(snapshotOf(left, coast)?.unit).toEqual({ ...ENEMY, embarked: true });
+});
+
+test('a snapshot keeps the city whose border its tile stands inside: taken again as a claim moves the border in sight, and kept when the turn ticks a unit out of it in fog', () => {
+  const claimed = { q: 2, r: 0 };
+  const city = cityOn(ground());
+  const bordered = outcome(
+    apply(
+      CATALOGUE,
+      { ...city, resources: culture(cultureThreshold(city, 'player')) },
+      claimOf(claimed),
+    ),
+  );
+  const neutralCity = off(3, 0);
+  const { left } = leftInFog({
+    city: neutralCity,
+    held: [neutralCity, off(2, 0)],
+    population: 1,
+    assigned: [neutralCity],
+    resources: culture(0),
+  });
+  const fogged = left[left.length - 1];
+  const ticked = outcome(apply(CATALOGUE, fogged, { type: 'end-turn' }));
+
+  expect(snapshotOf(city, CITY)?.holder).toBe('player');
+  expect(snapshotOf(city, claimed)?.holder).toBeUndefined();
+  expect(snapshotOf(bordered, claimed)?.holder).toBe('player');
+  expect(snapshotOf(fogged, off(2, 0))).toMatchObject({ holder: 'neutral', unit: ENEMY });
+  expect(snapshotOf(ticked, off(2, 0))?.unit).toBeUndefined();
+  expect(snapshotOf(ticked, off(2, 0))?.holder).toBe('neutral');
 });
 
 test('a unit standing in sight when the turn ticks is still recorded', () => {

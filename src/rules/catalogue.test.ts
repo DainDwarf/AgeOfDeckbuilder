@@ -653,15 +653,22 @@ test('a catalogue whose site is its camp’s building or another site’s is ref
   );
 });
 
+/** The fixture age's neutral, its city the building named. */
+function neutralOn(building: string): Pick<Age, 'neutral'> {
+  const { neutral } = ageOf(CATALOGUE, AGE);
+  if (neutral === undefined) throw new Error(`the age ${AGE} names no neutral`);
+  return { neutral: { ...neutral, building } };
+}
+
 test('a catalogue whose neutral’s city is a building it does not hold, one naming a feature or the river, or its camp’s or a site’s building, is refused, and the same building naming neither is not', () => {
   const { features, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
   const lodged = (lodge: LayerKind): Catalogue =>
     changed({
-      ...aged({ neutral: { building: 'PH_Lodge' } }),
+      ...aged(neutralOn('PH_Lodge')),
       buildings: { ...CATALOGUE.buildings, PH_Lodge: lodge },
     });
 
-  expect(() => catalogued(aged({ neutral: { building: 'PH_Fort' } }))).toThrow(
+  expect(() => catalogued(aged(neutralOn('PH_Fort')))).toThrow(
     'fixture: no building is named PH_Fort',
   );
   expect(() => catalogued(lodged({ ...unnamed, features }))).toThrow(
@@ -671,10 +678,10 @@ test('a catalogue whose neutral’s city is a building it does not hold, one nam
     `fixture: the age ${AGE}'s neutral's city PH_Lodge names the river`,
   );
   expect(catalogued(lodged(unnamed)).version).toBe('fixture');
-  expect(() => catalogued(aged({ neutral: { building: CAMP.building } }))).toThrow(
+  expect(() => catalogued(aged(neutralOn(CAMP.building)))).toThrow(
     `fixture: the age ${AGE}'s camp and neutral's city are both the building ${CAMP.building}`,
   );
-  expect(() => catalogued(aged({ neutral: { building: SITES[SITE].building } }))).toThrow(
+  expect(() => catalogued(aged(neutralOn(SITES[SITE].building)))).toThrow(
     `fixture: the age ${AGE}'s neutral's city and site ${SITE} are both the building ${SITES[SITE].building}`,
   );
 });

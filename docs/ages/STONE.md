@@ -26,7 +26,7 @@ The **village** is the city's building Settlement unlocks in place of the hearth
 
 ## The neutral 🔧
 
-The neutral is another band that settled: a city in every one of the age's regions, standing a little further out than the centre part and no further than the camps may, with the camps and the sites kept from it. Its building is a **village** of its own, standing where the village stands and giving what the village gives, military and culture, so its border and its warriors have their sources. Its units are the age's own, and its script keeps it growing and sends its warriors at the camps.
+The neutral is another band that settled: a city in every one of the age's regions, standing a little further out than the centre part and no further than the camps may, with the camps and the sites kept from it. Its building is a **village** of its own, standing where the village stands and giving what the village gives, military and culture, so its border and its warriors have their sources. Its units are the age's own, and its script keeps it growing and sends its warriors at the camps: it claims the tile that yields most among those it may claim, the nearest to its city of equals.
 
 ## The technologies 🔧
 

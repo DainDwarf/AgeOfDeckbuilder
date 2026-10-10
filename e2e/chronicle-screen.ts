@@ -138,8 +138,10 @@ export function reachedByClaims(campaign: Campaign): Chronicle {
     let chronicle = settledOn(seed, [], campaign);
     while (!rowOf(chronicle, HOLDING).reached) {
       const counted = countOn(CATALOGUE, chronicle, rowOf(chronicle, HOLDING));
-      const culture = gained(chronicle, { culture: cultureThreshold(chronicle) }).chronicle;
-      const next = claimable(CATALOGUE, culture)
+      const culture = gained(chronicle, {
+        culture: cultureThreshold(chronicle, 'player'),
+      }).chronicle;
+      const next = claimable(CATALOGUE, culture, 'player')
         .map((tile) => outcome(apply(CATALOGUE, culture, { type: 'claim', tile })))
         .find((claimed) => {
           const row = rowOf(claimed, HOLDING);
@@ -1609,7 +1611,7 @@ export function onDeer(
 
 /** The chronicle with a claim's culture gained and the tile claimed, or nothing where it cannot be. */
 export function claimedAt(chronicle: Chronicle, tile: TileCoords): Chronicle | undefined {
-  const cultured = gained(chronicle, { culture: cultureThreshold(chronicle) }).chronicle;
+  const cultured = gained(chronicle, { culture: cultureThreshold(chronicle, 'player') }).chronicle;
   const claimed = outcome(apply(CATALOGUE, cultured, { type: 'claim', tile }));
   return claimed === cultured ? undefined : claimed;
 }

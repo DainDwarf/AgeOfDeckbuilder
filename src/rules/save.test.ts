@@ -487,6 +487,32 @@ test('a chronicle saved with the neutral’s city reads back with it, and one wh
   ]);
 });
 
+test('a chronicle saved with snapshots inside either city’s border reads back with each inside it, and one whose snapshot names no city is dropped', () => {
+  const save = {
+    chronicle: endedTurn(besideTheNeutral()),
+    region: CLEARING,
+    civilization: CIVILIZATION_ID,
+  };
+  const holders = save.chronicle.snapshots.map(({ holder }) => holder);
+  const misnamed = tampered(save, (chronicle) => ({
+    ...chronicle,
+    snapshots: chronicle.snapshots.map((snapshot, at) =>
+      at === 0 ? { ...snapshot, holder: 'enemy' } : snapshot,
+    ),
+  }));
+
+  expect(holders).toContain('player');
+  expect(holders).toContain('neutral');
+  expect(
+    readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save)).chronicle?.chronicle.snapshots.map(
+      ({ holder }) => holder,
+    ),
+  ).toEqual(holders);
+  expect(chronicleDropped(misnamed)).toEqual([
+    "fixture: the save's chronicle.snapshots[0].holder names no city enemy",
+  ]);
+});
+
 test('a save whose chronicle’s city stands on, or holds, a tile the map does not hold, or has a tile assigned it does not hold, drops it, as the neutral’s does', () => {
   const save = chronicleSaved();
   const reading = (change: (chronicle: Chronicle) => object): readonly string[] =>

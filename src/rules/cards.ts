@@ -50,6 +50,7 @@ import {
   type Chronicle,
   type ChronicleCard,
   costsOf,
+  holderOf,
   holds,
   idle,
   type TileBlock,
@@ -238,8 +239,7 @@ export function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | unde
 
 /**
  * How a card played through a worker is aimed, the check and the spend as one pair so neither is
- * written without the other: the worker's reasons come before the tile's, and the worker standing on
- * the tile spends one of its action as the card's own effect lands.
+ * written without the other: the worker's reasons, then the neutral's tiles, then the card's own.
  */
 export function throughWorker(
   refusesTile: (catalogue: Catalogue, chronicle: Chronicle, tile: Tile) => TileBlock | undefined,
@@ -249,7 +249,11 @@ export function throughWorker(
     aim: 'tile',
     worker: true,
     refuses: (catalogue, chronicle, tile) =>
-      firstRefusal(worked(chronicle, tile), refusesTile(catalogue, chronicle, tile)),
+      firstRefusal(
+        worked(chronicle, tile),
+        holderOf(chronicle, tile) === 'neutral' ? 'other-faction' : undefined,
+        refusesTile(catalogue, chronicle, tile),
+      ),
     effect: (catalogue, paid, at) =>
       followed(actionSpent(paid, at), (left) => effect(catalogue, left, at)),
   };
@@ -385,7 +389,7 @@ export function claimableTile(
   tile: TileCoords,
 ): TileBlock | undefined {
   const at = tileKey(tile);
-  return claimable(catalogue, chronicle).some((coord) => tileKey(coord) === at)
+  return claimable(catalogue, chronicle, 'player').some((coord) => tileKey(coord) === at)
     ? undefined
     : 'no-claim';
 }
@@ -436,8 +440,8 @@ export function slotFree(tile: Tile): TileBlock | undefined {
 
 /**
  * What a terraform of the player's into `to` asks of the tile besides the terrains it starts from: no
- * camp's tile until the camp is captured, not the neutral's city's tile, and the city's tile only
- * into a terrain the city's building stands on.
+ * camp's tile until the camp is captured, and the city's tile only into a terrain the city's building
+ * stands on.
  */
 export function terraformable(
   catalogue: Catalogue,
@@ -445,13 +449,7 @@ export function terraformable(
   tile: Tile,
   to: string,
 ): TileBlock | undefined {
-  const { neutral } = chronicle;
-  if (
-    tile.building === ageOf(catalogue, chronicle.age).camp.building ||
-    (neutral !== undefined && tileKey(neutral.city) === tileKey(tile))
-  ) {
-    return 'other-faction';
-  }
+  if (tile.building === ageOf(catalogue, chronicle.age).camp.building) return 'other-faction';
   return reaches(catalogue, chronicle, tile, to) ? undefined : 'wrong-terrain';
 }
 

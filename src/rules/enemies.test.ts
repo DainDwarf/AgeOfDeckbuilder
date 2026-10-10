@@ -131,7 +131,7 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
   const taken = endedTurn(besieging);
 
   expect(tilesStaged('capture', besieging)).toEqual([tileKey(camp)]);
-  expect(claimable(CATALOGUE, taken).map(tileKey)).toContain(tileKey(camp));
+  expect(claimable(CATALOGUE, taken, 'player').map(tileKey)).toContain(tileKey(camp));
   expect(cityCommand(CATALOGUE, taken, camp)).toEqual(claimOf(camp));
   expect(stagedBy(taken, claimOf(camp))).toEqual(['claim', 'stock', 'held', 'assigned']);
   expect(outcome(apply(CATALOGUE, taken, claimOf(camp))).held.map(tileKey)).toContain(

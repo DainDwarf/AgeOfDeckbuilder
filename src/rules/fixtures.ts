@@ -45,6 +45,7 @@ import {
   type Entering,
   entered,
   merged,
+  type NeutralScript,
   type Schedule,
   type Slice,
   type Tables,
@@ -423,6 +424,9 @@ const BEELINE: EnemyScript = {
   },
 };
 
+/** The script every fixture age's neutral carries: it claims the first tile offered, in tile order. */
+const FIRST_OFFERED: NeutralScript = { claims: (_catalogue, _chronicle, offered) => offered[0] };
+
 /** The id the fixture catalogue lists its one civilization under. */
 export const CIVILIZATION_ID = 'civilization';
 
@@ -480,7 +484,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'tile',
       refuses: (catalogue, chronicle, tile) => claimableTile(catalogue, chronicle, tile),
       effect: (_catalogue, paid, at) =>
-        followed(arrived(paid, 'player'), (left) => bordered(left, at)),
+        followed(arrived(paid, 'player'), (left) => bordered(left, 'player', at)),
     },
     PH_Band: { kind: 'settle', cost: {}, ...entersOn('PH_Worker') },
     PH_Stores: {
@@ -1052,7 +1056,7 @@ export function agesOver(
         basePrice: 3 + at,
         schedule,
         camp,
-        neutral: { building: NEUTRAL },
+        neutral: { building: NEUTRAL, script: FIRST_OFFERED },
         sites: SITES,
         regions,
         achievements: achievementsOf(id),

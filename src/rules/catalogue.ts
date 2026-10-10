@@ -47,6 +47,12 @@ export type EnemyScript = {
   acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): EnemyAct;
 };
 
+/** What the neutral chooses where the enemy phase says the neutral acts, asked on the chronicle as it stands. */
+export type NeutralScript = {
+  /** The tile its city claims, out of those offered: the tiles it may claim, never none. */
+  claims(catalogue: Catalogue, chronicle: Chronicle, offered: readonly TileCoords[]): TileCoords;
+};
+
 /** What an enemy spends one of its action on: an attack on a unit, a prepare on its tile, or nothing. */
 export type EnemyAct =
   | { readonly act: 'attack'; readonly target: Unit }
@@ -347,15 +353,15 @@ export type Technology = {
 };
 
 /**
- * What an age owns: its schedule, its camp, its neutral's city's building where it names one, its
- * sites by key, its regions by key, its achievements by key in order, and the base price of its
- * cards.
+ * What an age owns: its schedule, its camp, its neutral's city's building and its script where it
+ * names a neutral, its sites by key, its regions by key, its achievements by key in order, and the
+ * base price of its cards.
  */
 export type Age = {
   readonly basePrice: number;
   readonly schedule: Schedule;
   readonly camp: Camp;
-  readonly neutral?: { readonly building: string };
+  readonly neutral?: { readonly building: string; readonly script: NeutralScript };
   readonly sites: Readonly<Record<string, Site>>;
   readonly regions: Readonly<Record<string, Region>>;
   readonly achievements: Readonly<Record<string, Achievement>>;

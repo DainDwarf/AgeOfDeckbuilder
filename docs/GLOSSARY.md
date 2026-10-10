@@ -113,7 +113,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
 | **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
 | **yield** | What a tile gives at income, resource by resource. | output, produce, harvest |
-| **claim** | To take a charted tile adjacent to one the city holds into the border, for culture. | purchase, expand, annex |
+| **claim** | To take a tile adjacent to one a city holds into its border, for culture. | purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |
 | **culture threshold** | The culture the next claim costs. | claim cost, step |
 | **health** | A unit's remaining life; at zero the unit is killed. | HP, hit points, hitpoints, life |

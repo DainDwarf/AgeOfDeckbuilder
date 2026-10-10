@@ -634,8 +634,8 @@ function keptAway(
   const taken = new Set<number>();
   for (const [at, { keepsAwayFrom = [] }] of shared.entries()) {
     const biome = at + 1;
-    const from = origins.flatMap((tile, holder) =>
-      keepsAwayFrom.includes(kinds[holder]) ? [coords[tile]] : [],
+    const from = origins.flatMap((tile, which) =>
+      keepsAwayFrom.includes(kinds[which]) ? [coords[tile]] : [],
     );
     if (from.length === 0) continue;
     let pick = origins[biome];
@@ -647,8 +647,8 @@ function keptAway(
       pick = tile;
       furthest = nearest;
     }
-    const holder = origins.indexOf(pick);
-    [origins[holder], origins[biome]] = [origins[biome], pick];
+    const was = origins.indexOf(pick);
+    [origins[was], origins[biome]] = [origins[biome], pick];
     taken.add(pick);
   }
   return origins;

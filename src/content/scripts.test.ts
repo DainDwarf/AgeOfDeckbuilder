@@ -1,9 +1,11 @@
 import { expect, test } from 'vitest';
 import { type Catalogue, catalogued, type EnemyAct } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
+import { claimable } from '../rules/city';
 import {
   aimedAt,
   attacksOf,
+  besideTheNeutral,
   builtOn,
   CATALOGUE,
   CITY,
@@ -17,17 +19,21 @@ import {
   field,
   madeOf,
   movesOf,
+  NEUTRAL_TILE,
   only,
   SCRIPT,
   SITE,
   type Standing,
   standing,
+  WELL,
+  WELL_GIVES,
+  withTile,
   worker,
 } from '../rules/fixtures';
 import { distance, MOVE_POINT, type Tile, type TileCoords, tileKey } from '../rules/map';
 import { seedRng } from '../rules/rng';
-import type { Chronicle } from '../rules/state';
-import { guarding, PILLAGER, RAIDER } from './scripts';
+import { type Chronicle, withCityRows } from '../rules/state';
+import { guarding, PILLAGER, RAIDER, VILLAGER } from './scripts';
 
 /** The fixture's content, its enemies entering as raiders in place of its own script. */
 const RAIDING: Catalogue = catalogued({
@@ -401,10 +407,10 @@ test('a guard off its camp beyond its radius walks toward the camp, whether a fe
   const guarded = (units: Standing[]): Chronicle =>
     cityOf(['urban'], { tiles: camped(field(4), [camp]), units });
   const walker = enemyStanding(far, camp, { stats: { move: MOVE_POINT } });
-  const holder = enemyStanding(camp, camp, { stats: { move: 0 } });
+  const keeper = enemyStanding(camp, camp, { stats: { move: 0 } });
 
   expect(movesOf(guarded([walker]), GUARDING)).toEqual([['4,-4', '4,-3']]);
-  expect(movesOf(guarded([holder, walker]), GUARDING)).toEqual([['4,-4', '4,-3']]);
+  expect(movesOf(guarded([keeper, walker]), GUARDING)).toEqual([['4,-4', '4,-3']]);
   expect(movesOf(guarded([standing('enemy', far, { move: MOVE_POINT })]), GUARDING)).toEqual([
     ['4,-4', '3,-3'],
   ]);
@@ -547,6 +553,27 @@ test('an embarked guard moves and steps as the raider does, however near its cam
     ['2,0', '1,0'],
     ['1,0', '0,0'],
   ]);
+});
+
+/** The tile the villager claims for the neutral's city, out of every tile it may claim. */
+function villagerClaims(chronicle: Chronicle): string {
+  return tileKey(VILLAGER.claims(CATALOGUE, chronicle, claimable(CATALOGUE, chronicle, 'neutral')));
+}
+
+test('the villager claims the tile that yields most, a building beside counted, and of equals the nearest to its city, the first in tile order of those', () => {
+  const opened = besideTheNeutral();
+  const welled = withTile(opened, {
+    q: 3,
+    r: -1,
+    terrain: WELL_GIVES.terrain,
+    improvements: [],
+    building: WELL,
+  });
+  const spread = withCityRows(opened, 'neutral', { held: [NEUTRAL_TILE, { q: 0, r: 1 }] });
+
+  expect(villagerClaims(opened)).toBe('0,1');
+  expect(villagerClaims(welled)).toBe('2,-1');
+  expect(villagerClaims(spread)).toBe('1,-1');
 });
 
 test('a guard attacks the unit of the least health within its range', () => {

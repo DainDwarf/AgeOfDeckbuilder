@@ -74,10 +74,15 @@ export type SnapshotUnit = {
 };
 
 /**
- * One tile as it was last in sight, and the unit standing on it then. The player's own units carry
- * sight with them and are never stale, so none of them is ever kept here.
+ * One tile as it was last in sight, the city whose border it stood inside, and the unit standing on
+ * it then. The player's own units carry sight with them and are never stale, so none of them is ever
+ * kept here.
  */
-export type Snapshot = TileCoords & { readonly tile: Tile; readonly unit?: SnapshotUnit };
+export type Snapshot = TileCoords & {
+  readonly tile: Tile;
+  readonly holder?: CityFaction;
+  readonly unit?: SnapshotUnit;
+};
 
 /** Whose city: the player's, or the neutral's. */
 export type CityFaction = 'player' | 'neutral';
@@ -259,6 +264,14 @@ export function holds(chronicle: Chronicle, tile: TileCoords): boolean {
   return chronicle.held.some((coord) => tileKey(coord) === tileKey(tile));
 }
 
+/** The city whose border the tile stands inside, and nothing where it stands inside none. */
+export function holderOf(chronicle: Chronicle, tile: TileCoords): CityFaction | undefined {
+  if (holds(chronicle, tile)) return 'player';
+  return chronicle.neutral?.held.some((coord) => tileKey(coord) === tileKey(tile))
+    ? 'neutral'
+    : undefined;
+}
+
 /**
  * Whether population stands on the tile: what an assign, both ends of a drag in city mode and the
  * mark the map puts on a tile all ask.
@@ -268,8 +281,8 @@ export function assignedTo(chronicle: Chronicle, tile: TileCoords): boolean {
 }
 
 /** The population on no tile: what a unit card takes, and what an assign has to give a tile. */
-export function idle(chronicle: Chronicle): number {
-  return chronicle.population - chronicle.assigned.length;
+export function idle(city: CityRows): number {
+  return city.population - city.assigned.length;
 }
 
 /** The rows of the faction's city, and nothing for the neutral's on a chronicle holding none. */

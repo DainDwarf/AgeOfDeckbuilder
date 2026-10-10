@@ -2,7 +2,17 @@ import { ageOf, type Catalogue } from './catalogue';
 import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
-import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
+import {
+  change,
+  changeOn,
+  followed,
+  grouped,
+  type Landed,
+  landedAs,
+  type Sequence,
+  type Stage,
+  unchanged,
+} from './stages';
 import {
   assignedTo,
   type Chronicle,
@@ -10,6 +20,7 @@ import {
   type Cost,
   cityRows,
   costsOf,
+  holderOf,
   holds,
   idle,
   playable,
@@ -17,7 +28,7 @@ import {
   unaffordable,
   withCityRows,
 } from './state';
-import { occupied } from './units';
+import { occupied, unitAt } from './units';
 
 /** One idle population put on a tile the city holds, or the one standing on that tile taken off. */
 type AssignCommand = { readonly type: 'assign'; readonly tile: TileCoords };
@@ -153,30 +164,49 @@ export function grow(chronicle: Chronicle, whose: CityFaction): Landed {
 }
 
 /**
- * The tiles the city may claim: charted, held by no city, touching a tile it holds, with no camp
- * filling the slot and no enemy occupying it.
+ * The tiles the faction's city may claim: held by no city, touching a tile it holds, with no camp
+ * filling the slot and no unit of another faction standing on it; the player's charted besides.
  */
-export function claimable(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
-  const held = new Set(chronicle.held.map(tileKey));
-  const neutral = new Set(chronicle.neutral?.held.map(tileKey));
-  const chartedTiles = new Set(chronicle.snapshots.map(tileKey));
+export function claimable(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  whose: CityFaction,
+): TileCoords[] {
+  const held = new Set(cityRows(chronicle, whose)?.held.map(tileKey));
+  const known = knownTo(chronicle, whose);
   const { building } = ageOf(catalogue, chronicle.age).camp;
   return chronicle.tiles
-    .filter(
-      (tile) =>
-        chartedTiles.has(tileKey(tile)) &&
-        !held.has(tileKey(tile)) &&
-        !neutral.has(tileKey(tile)) &&
+    .filter((tile) => {
+      const standing = unitAt(chronicle.units, tile);
+      return (
+        known(tile) &&
+        holderOf(chronicle, tile) === undefined &&
         tile.building !== building &&
-        !occupied(chronicle.units, tile) &&
-        neighbours(tile).some((coord) => held.has(tileKey(coord))),
-    )
+        (standing === undefined || standing.faction === whose) &&
+        neighbours(tile).some((coord) => held.has(tileKey(coord)))
+      );
+    })
     .map(({ q, r }) => ({ q, r }));
 }
 
-/** What a claim asks of the culture stock, whichever tile it takes: twice the tiles the city holds. */
-export function cultureThreshold(chronicle: Chronicle): number {
-  return 2 * chronicle.held.length;
+/** Whether the faction's city knows of a tile to claim it: the player's a charted one, the neutral's any. */
+function knownTo(chronicle: Chronicle, whose: CityFaction): (tile: TileCoords) => boolean {
+  switch (whose) {
+    case 'player': {
+      const charted = new Set(chronicle.snapshots.map(tileKey));
+      return (tile) => charted.has(tileKey(tile));
+    }
+    case 'neutral':
+      return () => true;
+  }
+}
+
+/**
+ * What a claim of the faction's city asks of its culture stock, whichever tile it takes: twice the
+ * tiles that city holds.
+ */
+export function cultureThreshold(chronicle: Chronicle, whose: CityFaction): number {
+  return 2 * (cityRows(chronicle, whose)?.held.length ?? 0);
 }
 
 /**
@@ -186,7 +216,7 @@ export function cultureThreshold(chronicle: Chronicle): number {
 export function tileCost(chronicle: Chronicle, tile: TileCoords): Cost[] {
   return holds(chronicle, tile)
     ? []
-    : [{ resource: 'culture', amount: cultureThreshold(chronicle) }];
+    : [{ resource: 'culture', amount: cultureThreshold(chronicle, 'player') }];
 }
 
 /**
@@ -203,7 +233,9 @@ export function tileRefusal(
     const standing = assignedTo(chronicle, tile);
     return { unaffordable: [], blocked: standing || idle(chronicle) > 0 ? [] : ['idle'] };
   }
-  if (!claimable(catalogue, chronicle).some((coord) => tileKey(coord) === tileKey(tile))) {
+  if (
+    !claimable(catalogue, chronicle, 'player').some((coord) => tileKey(coord) === tileKey(tile))
+  ) {
     return undefined;
   }
   return {
@@ -230,7 +262,7 @@ export function cityCommand(
 
 /** Whether one of the tiles the city may claim is one it can pay for. */
 export function claimWaiting(catalogue: Catalogue, chronicle: Chronicle): boolean {
-  return claimable(catalogue, chronicle).some(
+  return claimable(catalogue, chronicle, 'player').some(
     (tile) => cityCommand(catalogue, chronicle, tile) !== undefined,
   );
 }
@@ -292,39 +324,88 @@ function assigned(chronicle: Chronicle, tile: TileCoords): Landed {
 }
 
 /**
- * One tile claimed by hand: the culture is paid, one `stock`, and the tile taken inside the border.
- * Anything the city-mode click on that tile is not, or is refused for, answers nothing.
+ * One tile claimed by the faction's city: the culture threshold is paid, one `stock`, and the tile
+ * taken inside the border. A tile that city may not claim, or one it cannot pay for, answers nothing.
  */
 export function claim(
   catalogue: Catalogue,
   chronicle: Chronicle,
+  whose: CityFaction,
   tile: TileCoords,
 ): Landed | undefined {
-  if (cityCommand(catalogue, chronicle, tile)?.type !== 'claim') return undefined;
+  const city = cityRows(chronicle, whose);
+  const threshold = cultureThreshold(chronicle, whose);
+  if (
+    city === undefined ||
+    city.resources.culture < threshold ||
+    !claimable(catalogue, chronicle, whose).some((coord) => tileKey(coord) === tileKey(tile))
+  ) {
+    return undefined;
+  }
 
   const paid = landedAs(
-    change('stock', {
-      ...chronicle,
-      resources: {
-        ...chronicle.resources,
-        culture: chronicle.resources.culture - cultureThreshold(chronicle),
-      },
-    }),
+    change(
+      'stock',
+      withCityRows(chronicle, whose, {
+        resources: { ...city.resources, culture: city.resources.culture - threshold },
+      }),
+    ),
   );
-  return followed(paid, (left) => bordered(left, tile));
+  return followed(paid, (left) => bordered(left, whose, tile));
 }
 
 /**
- * One tile taken inside the border, however it was claimed: it joins the tiles the city holds, and
- * an idle population stands on it at once when the city has one.
+ * One tile taken inside the faction's city's border, however it was claimed: it joins the tiles that
+ * city holds, and an idle population of its stands on it at once when it has one. Nothing where that
+ * city is none.
  */
-export function bordered(chronicle: Chronicle, tile: TileCoords): Landed {
+export function bordered(chronicle: Chronicle, whose: CityFaction, tile: TileCoords): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
   const taken = { q: tile.q, r: tile.r };
   const held = landedAs(
-    changeOn('held', taken, { ...chronicle, held: [...chronicle.held, taken] }),
+    changeOn('held', taken, withCityRows(chronicle, whose, { held: [...city.held, taken] })),
   );
-  if (idle(chronicle) <= 0) return held;
+  if (idle(city) <= 0) return held;
   return followed(held, (left) =>
-    landedAs(changeOn('assigned', taken, { ...left, assigned: [...left.assigned, taken] })),
+    landedAs(
+      changeOn(
+        'assigned',
+        taken,
+        withCityRows(left, whose, { assigned: [...city.assigned, taken] }),
+      ),
+    ),
   );
+}
+
+/**
+ * The neutral's city claiming tile after tile while it may claim one and pay for it, one `claim`
+ * group each, the tile its script chooses; a choice outside those offered is a `runtime-error`.
+ */
+export function neutralClaims(catalogue: Catalogue, chronicle: Chronicle): Sequence<Stage> {
+  const { neutral } = ageOf(catalogue, chronicle.age);
+  if (neutral === undefined) return unchanged(chronicle);
+  let claiming: Sequence<Stage> = unchanged(chronicle);
+  for (;;) {
+    const left = claiming.chronicle;
+    const city = left.neutral;
+    const offered = claimable(catalogue, left, 'neutral');
+    if (
+      city === undefined ||
+      offered.length === 0 ||
+      city.resources.culture < cultureThreshold(left, 'neutral')
+    ) {
+      return claiming;
+    }
+    const landing = claim(
+      catalogue,
+      left,
+      'neutral',
+      neutral.script.claims(catalogue, left, offered),
+    );
+    if (landing === undefined) {
+      return followed<Stage>(claiming, (standing) => landedAs(change('runtime-error', standing)));
+    }
+    claiming = followed<Stage>(claiming, () => grouped({ name: 'claim' }, landing));
+  }
 }

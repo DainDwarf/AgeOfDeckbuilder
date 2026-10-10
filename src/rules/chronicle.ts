@@ -28,7 +28,16 @@ import {
   technologyOf,
   unitKind,
 } from './catalogue';
-import { assign, type CityCommand, claim, grow, income, reassign } from './city';
+import {
+  assign,
+  type CityCommand,
+  cityCommand,
+  claim,
+  grow,
+  income,
+  neutralClaims,
+  reassign,
+} from './city';
 import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove, wavesSent } from './enemies';
 import {
   distance,
@@ -716,7 +725,13 @@ function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     case 'reassign':
       return acted(chronicle, 'assign', reassign(chronicle, command.from, command.to));
     case 'claim':
-      return acted(chronicle, 'claim', claim(catalogue, chronicle, command.tile));
+      return acted(
+        chronicle,
+        'claim',
+        cityCommand(catalogue, chronicle, command.tile)?.type === 'claim'
+          ? claim(catalogue, chronicle, 'player', command.tile)
+          : undefined,
+      );
   }
 }
 
@@ -1167,11 +1182,12 @@ function everyPlace(pile: readonly ChronicleCard[]): number[] {
 /**
  * The enemies' half of the turn, the one `enemy-phase` group: the prepares carried through the
  * player's turn land first, a capture's `ended` alone in the group; then the camps send their waves,
- * then every enemy acts in unit order, then the camps roll their enemies.
+ * then the neutral claims, then every enemy acts in unit order, then the camps roll their enemies.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
-  let phase: Sequence = followed(preparesLanded(catalogue, chronicle), (left) =>
-    wavesSent(catalogue, left),
+  let phase: Sequence = followed<Stage>(
+    followed(preparesLanded(catalogue, chronicle), (left) => wavesSent(catalogue, left)),
+    (left) => neutralClaims(catalogue, left),
   );
   for (const { id } of chronicle.units) {
     phase = followed(phase, (left) => enemyActs(catalogue, left, id));

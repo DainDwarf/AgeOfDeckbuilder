@@ -89,7 +89,7 @@ export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefi
   return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);
 }
 
-/** Whether an enemy occupies a tile: what it stands on yields nothing and is no claim of the city's. */
+/** Whether an enemy occupies a tile: what it stands on yields nothing. */
 export function occupied(units: readonly Unit[], coord: TileCoords): boolean {
   return unitAt(units, coord)?.faction === 'enemy';
 }
