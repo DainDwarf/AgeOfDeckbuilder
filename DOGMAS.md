@@ -29,12 +29,26 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **No generative AI in assets.** Art, sound and music come from packs whose licence is recorded the moment they enter the repository, or are primitives drawn by code; a generative model produces none of it, placeholders included. Why: a part of the audience rejects genAI assets outright, and a placeholder has a way of shipping.
 - **A code-drawn placeholder is a flat polygon** — one fill, one outline, no curves, no gradients, no detail work, and the fewest vertices that tell it apart from the other marks: a mark says which thing it is, never what the thing looks like. A tent with a door notch or a snare with its V is a picture; a primitive that starts wanting one is an asset and waits for its pack. Why: an elaborate mark authored by the model is genAI art in polygon clothing.
 
+## Content
+
+How an age is authored:
+
+- **A goal is a focus.** Its need lies past what a chronicle played as usual gives, and it is a deed the player goes out for — never a state struck, a count of what chance dealt, a card counted twice under two goals, a deed undone of the player's own, or a worker parked on one tile. Its ground is dealt scarce, the journey to more of it being the goal, and a region that eases it is the region doing its job. Difficulty grows slowly across the ages, and it is the player's: what a take adds in rules or code never weighs against it.
+- **A goal is read from its technology's fiction, and its link is the user's:** what a technology needs binds its goal to no card.
+- **A need is kept low where reaching it means buying copies, and a door's reward is served small.**
+- **A resource may be given before anything costs it**, and a resource nothing in the age costs is a reason to turn a technology's free effect into a card that costs it.
+- **Thin is answered after playtest or at the balance pass, never ahead of them:** an age left thin by a card moving out, a doubt about the player's hold on a goal, a maybe on trial — each goes to play.
+- **A provisional number is a start:** never priced against a line ahead, never served twice; a correction is one line.
+- **A take is served from the technology's own theme**, never as practice on what it needs.
+
 ## Writing rules
 
 - **Glossary verbs only.** Every gameplay term on a card, in the UI, in the codex and in code comes from `GLOSSARY.md`. No synonym, no paraphrase, no "elegant variation". A missing term is a design question for the user.
 - **A glossary term is the simplest, most natural English for the thing it names.** A player says these words out loud about a mechanic; the right one is what a person would call it without being taught, not the cleverest, the most evocative, or the most precise-sounding. **Assume English is not the player's first language**: a common word beats a vivid one, a plain word beats an idiom, and a word a learner meets early beats one they meet late. A term that has to be translated before it can be played is the wrong term, however well it reads.
 - **Glossary candidates are drawn free of every constraint, and checked for collisions only afterwards.** Suggest from plain English alone — never filtered against the glossary, the design or the code, and never trimmed because a word is already spoken for. Once the term is chosen, look up what it collides with and hand the user that list as a warning, not as an objection. The new term wins: an older glossary row, a design sentence or a code identifier holding that word yields and is renamed in the same unit of work. Why: filtering candidates by what is unclaimed yields the best _available_ word, which is not the right one, and the name is permanent while the rename is cheap.
+- **A term is sized for the uses to come**, never for the one that asks for it.
 - **A card name is content, not vocabulary.** Prose cites a card by its verbatim name; code reaches it only through its text key, never a re-typed literal.
+- **A goal's sentence is the plain deed with its numbers**, never a state with its exceptions; naming two things, the count comes first.
 - **Card text is the shortest phrasing that is unambiguous.** Then shorten it again.
 - **A player-facing entry ends in no period**, the ending screen's excepted, and an answer addresses the player and reads its cost in its text.
 - **A count never stands in a sentence's subject.** A player-facing sentence takes a singular subject so one entry serves every number, and a reference is never pluralised; a sentence that cannot take one gets a plural branch inside its entry, never a second key.
