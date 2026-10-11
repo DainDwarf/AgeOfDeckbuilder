@@ -444,6 +444,7 @@ const FIXTURE_NEUTRAL: Neutral = {
   scripts: { guard: GUARD_SCRIPT, wave: SCRIPT },
   ratio: [{ card: 'PH_Warrior', kind: 'PH_Warrior', share: 1 }],
   wave: { gathered: 3, sent: 2 },
+  rewards: { PH_Cache: 3 },
 };
 
 /** The id the fixture catalogue lists its one civilization under. */
@@ -809,7 +810,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
 export const SITE = 'PH_Cairn';
 
 /** The site every fixture age owns. */
-export const SITES: Age['sites'] = { [SITE]: { building: SITE, rewards: ['PH_Relic'] } };
+export const SITES: Age['sites'] = { [SITE]: { building: SITE, rewards: { PH_Relic: 2 } } };
 
 /** The regions table every fixture age holds. */
 export const REGIONS: Readonly<Record<string, Region>> = {
@@ -881,7 +882,7 @@ export const CAMP: Camp = {
   roll: [GUARD_ROW],
   scripts: { guard: GUARD_SCRIPT, raider: SCRIPT },
   building: 'PH_Camp',
-  rewards: ['PH_Spoils', 'PH_Cache'],
+  rewards: { PH_Spoils: 1, PH_Cache: 1 },
   odds: 0,
   raidCampOdds: 1,
 };
@@ -1400,6 +1401,15 @@ export function besideTheNeutral(named: Opening = {}, ground: Tile[] = plains(3)
   const { catalogue = CATALOGUE } = named;
   const opened = opening(builtOn(ground, NEUTRAL, [NEUTRAL_TILE]), named);
   return outcome(apply(catalogue, settledOn(opened, CITY, catalogue), { type: 'end-turn' }));
+}
+
+/**
+ * Turn 1 of `besideTheNeutral` with the neutral hostile, a unit of the player's standing on its city,
+ * and the units named.
+ */
+export function onTheNeutralCity(others: readonly Standing[] = []): Chronicle {
+  const standingOn = withUnits(besideTheNeutral(), [standing('player', NEUTRAL_TILE), ...others]);
+  return warDeclared(standingOn).chronicle;
 }
 
 /**

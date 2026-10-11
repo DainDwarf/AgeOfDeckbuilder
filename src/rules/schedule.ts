@@ -160,7 +160,7 @@ export function offered(catalogue: Catalogue, deal: Deal): readonly string[] {
     case 'event':
       return Object.keys(eventOf(catalogue, deal.event).answers);
     case 'capture':
-      return deal.rewards;
+      return Object.keys(deal.rewards);
   }
 }
 
@@ -204,12 +204,19 @@ export function answered(catalogue: Catalogue, chronicle: Chronicle, answer: Ans
 }
 
 /**
- * A reward taken off the chronicle the deal is popped from: it is made and added to the discard
- * pile; a card the catalogue does not hold is refused.
+ * A reward taken off the chronicle the deal is popped from: its copies are made and added to the
+ * discard pile, one `added`; a card the catalogue does not hold is refused.
  */
-export function rewarded(catalogue: Catalogue, chronicle: Chronicle, card: CardId): Landed {
-  const made = cardMade(catalogue, card);
-  return landedAs(change('added', { ...chronicle, discardPile: [...chronicle.discardPile, made] }));
+export function rewarded(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  card: CardId,
+  copies: number,
+): Landed {
+  const made = Array.from({ length: copies }, () => cardMade(catalogue, card));
+  return landedAs(
+    change('added', { ...chronicle, discardPile: [...chronicle.discardPile, ...made] }),
+  );
 }
 
 /**

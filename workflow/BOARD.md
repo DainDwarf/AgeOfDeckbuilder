@@ -13,6 +13,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's fall** — a unit of the player's standing on the neutral's city through the enemy phase captures it: the village leaves the map with the neutral's population, stocks and border, its tiles claimable like any other, its units hostile still and raiding, and the capture deals the neutral's rewards in the deal window, each reward a card in several copies. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/GLOSSARY.md`, `docs/ages/STONE.md`. [board/neutral-fall.md](board/neutral-fall.md)
 - **The neutral's population** — its script decides how to assign, reassign and unassign its population, moving it to more fertile tiles as they are claimed, since a city that does not start on plain never grows for want of that; it may need to balance population against more units.
 - **The neutral's workers** — its script enters workers and plays improvement and building cards through them on the tiles it holds, where its stocks pay the cards' costs; and the neutral opens with one free worker of its own, since a city settled on anything but plain never grows a population to spare.

@@ -204,6 +204,7 @@ export function createPiles(
       case 'tallied':
       case 'reached':
       case 'relations':
+      case 'neutral-fallen':
       case 'runtime-error':
         return undefined;
     }

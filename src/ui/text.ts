@@ -182,6 +182,10 @@ const TEXT = {
   'rules.stone-bone-carvings': 'Banish.\n4[culture]',
   'card.bone-tools': 'Bone tools',
   'rules.bone-tools': 'Gain 2[production]',
+  'card.their-land': 'Their land',
+  'rules.their-land': 'Banish.\nClaim a tile for nothing',
+  'card.their-stores': 'Their stores',
+  'rules.their-stores': 'Banish.\n2[food] 2[production] 2[military] 2[money] 2[science]',
   'card.megalith': 'Megalith',
   'rules.megalith':
     'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',

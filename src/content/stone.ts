@@ -1,5 +1,6 @@
 import {
   builds,
+  claimableTile,
   discarded,
   disembarks,
   embarks,
@@ -20,6 +21,7 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from '../rules/chronicle';
+import { bordered } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
@@ -143,19 +145,20 @@ export const STONE: Slice = {
         { card: 'archer', kind: 'archer', share: 1 },
       ],
       wave: { gathered: 6, sent: 3 },
+      rewards: { 'band-joins': 3, 'their-land': 3, 'their-stores': 3 },
     },
     sites: {
       'painted-cave': {
         building: 'stone-painted-cave',
-        rewards: ['stone-cave-paintings', 'old-stories'],
+        rewards: { 'stone-cave-paintings': 1, 'old-stories': 1 },
       },
       'old-cairn': {
         building: 'stone-old-cairn',
-        rewards: ['stone-honour-the-dead', 'dig-the-graves'],
+        rewards: { 'stone-honour-the-dead': 1, 'dig-the-graves': 1 },
       },
       'beast-bones': {
         building: 'stone-beast-bones',
-        rewards: ['stone-bone-carvings', 'bone-tools'],
+        rewards: { 'stone-bone-carvings': 1, 'bone-tools': 1 },
       },
     },
     regions: REGIONS,
@@ -374,6 +377,22 @@ export const STONE: Slice = {
         cost: {},
         aim: 'none',
         effect: (_catalogue, paid) => gained(paid, { production: 2 }),
+      },
+      'their-land': {
+        kind: 'instant',
+        cost: {},
+        banish: true,
+        aim: 'tile',
+        refuses: claimableTile,
+        effect: (_catalogue, paid, at) => bordered(paid, 'player', at),
+      },
+      'their-stores': {
+        kind: 'instant',
+        cost: {},
+        banish: true,
+        aim: 'none',
+        effect: (_catalogue, paid) =>
+          gained(paid, { food: 2, production: 2, military: 2, money: 2, science: 2 }),
       },
     },
     technologies: {

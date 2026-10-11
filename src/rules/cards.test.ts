@@ -2202,13 +2202,14 @@ test('a card embarks a unit of the player’s ashore beside a charted, free tile
 
 test('a card’s step that lands a unit of the player’s on a tile the neutral holds declares war: one relations change ahead of the step, inside the play; once hostile it declares nothing', () => {
   const coast = { q: 1, r: -1 };
-  const { neutral } = besideTheNeutral();
+  const { neutral, relations } = besideTheNeutral();
   if (neutral === undefined) throw new Error('the chronicle holds no neutral');
   const opened = cityOf(['urban'], {
     tiles: field(3, [coast]),
     hand: ['PH_Embark'],
     units: [standing('player', CITY)],
     neutral,
+    relations,
   });
   const city = withCityRows(opened, 'neutral', { held: [...neutral.held, coast] });
   const hostile = warDeclared(city).chronicle;

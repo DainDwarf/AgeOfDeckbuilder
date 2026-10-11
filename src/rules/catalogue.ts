@@ -24,6 +24,7 @@ import {
   type Cost,
   type Counters,
   costsOf,
+  type Rewards,
   type Tally,
   type TileBlock,
 } from './state';
@@ -69,7 +70,8 @@ export type NeutralUnitScript = 'guard' | 'wave';
 
 /**
  * The neutral an age names: its city's building, its script, the scripts its units carry, the
- * ratio its units are kept near, and the wave it sends, a neutral naming none sending none.
+ * ratio its units are kept near, the wave it sends, a neutral naming none sending none, and what the
+ * capture of its city deals.
  */
 export type Neutral = {
   readonly building: string;
@@ -77,6 +79,7 @@ export type Neutral = {
   readonly scripts: Readonly<Record<NeutralUnitScript, string>>;
   readonly ratio: readonly UnitShare[];
   readonly wave?: Wave;
+  readonly rewards: Rewards;
 };
 
 /**
@@ -346,8 +349,7 @@ export type Camp = {
   readonly acrossWater?: boolean;
   /** The move its enemies have embarked: a camp naming none keeps its enemies ashore. */
   readonly embarkedMove?: number;
-  /** What a capture deals, in the order dealt. */
-  readonly rewards: readonly string[];
+  readonly rewards: Rewards;
   /** The chance, at every enemy phase, that a camp standing enters one enemy of its roll. */
   readonly odds: number;
   readonly raidCampOdds: number;
@@ -355,10 +357,10 @@ export type Camp = {
   readonly wave?: Wave;
 };
 
-/** What a site is, and what its capture gives, in the order dealt. */
+/** What a site is, and what its capture gives. */
 export type Site = {
   readonly building: string;
-  readonly rewards: readonly string[];
+  readonly rewards: Rewards;
 };
 
 /**
@@ -656,8 +658,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
   unitEntryTableHeld(content, camp.opening, `the age ${id}'s camp's opening`);
   unitEntryTableHeld(content, camp.roll, `the age ${id}'s camp's roll`);
   for (const script of Object.values(camp.scripts)) unitScript(content, script);
-  if (camp.rewards.length === 0) refuse(content, `the age ${id}'s camp deals no reward`);
-  for (const reward of camp.rewards) cardOf(content, reward);
+  rewardsHeld(content, camp.rewards, `the age ${id}'s camp`);
   const { odds, raidCampOdds, embarkedMove } = camp;
   if (!(odds >= 0 && odds <= 1)) refuse(content, `the age ${id}'s camp rolls at odds of ${odds}`);
   if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
@@ -685,9 +686,10 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
 
   const sitedBy = new Map<string, string>([[camp.building, 'camp']]);
   if (neutral !== undefined) {
-    const { building, scripts, ratio, wave } = neutral;
+    const { building, scripts, ratio, wave, rewards } = neutral;
     for (const script of Object.values(scripts)) unitScript(content, script);
     if (wave !== undefined) waveHeld(content, wave, `the age ${id}'s neutral`);
+    rewardsHeld(content, rewards, `the age ${id}'s neutral`);
     if (ratio.length === 0) refuse(content, `the age ${id}'s neutral's ratio holds no row`);
     for (const { card, kind, share } of ratio) {
       unitCardOf(content, card);
@@ -722,8 +724,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
       );
     }
     sitedBy.set(building, `site ${site}`);
-    if (rewards.length === 0) refuse(content, `the age ${id}'s site ${site} deals no reward`);
-    for (const reward of rewards) cardOf(content, reward);
+    rewardsHeld(content, rewards, `the age ${id}'s site ${site}`);
   }
 
   const held = Object.entries(regions);
@@ -790,6 +791,21 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
         content,
         `the region ${name} keeps the neutral's city from ${band.least} to ${band.most} of the centre`,
       );
+    }
+  }
+}
+
+/**
+ * A capture's rewards, checked as its owner's: no reward at all, a card the catalogue does not hold,
+ * and copies below one are refused.
+ */
+function rewardsHeld(content: Catalogue, rewards: Rewards, owner: string): void {
+  const dealt = Object.entries(rewards);
+  if (dealt.length === 0) refuse(content, `${owner} deals no reward`);
+  for (const [card, copies] of dealt) {
+    cardOf(content, card);
+    if (!Number.isInteger(copies) || copies < 1) {
+      refuse(content, `${owner} deals ${copies} copies of ${card}`);
     }
   }
 }
@@ -1046,32 +1062,40 @@ function firstListed(
 export type CivilizationSection = keyof Civilization;
 
 /**
- * A card no deck holds, named as what it is — a hazard, an age's camp's or site's reward — and
- * nothing for a card a deck may hold. A card the catalogue does not hold is refused.
+ * A card no deck holds, named as what it is — a hazard, an age's camp's, site's or neutral's reward
+ * — and nothing for a card a deck may hold. A card the catalogue does not hold is refused.
  */
 export function heldByNoDeck(catalogue: Catalogue, card: CardId): string | undefined {
   if (cardOf(catalogue, card).kind === 'hazard') return `the hazard ${card}`;
-  for (const [age, { camp, sites }] of Object.entries(catalogue.ages)) {
-    if (camp.rewards.includes(card)) return `the age ${age}'s camp's reward ${card}`;
+  for (const [age, { camp, neutral, sites }] of Object.entries(catalogue.ages)) {
+    if (Object.hasOwn(camp.rewards, card)) return `the age ${age}'s camp's reward ${card}`;
     for (const [site, { rewards }] of Object.entries(sites)) {
-      if (rewards.includes(card)) return `the age ${age}'s site ${site}'s reward ${card}`;
+      if (Object.hasOwn(rewards, card)) return `the age ${age}'s site ${site}'s reward ${card}`;
+    }
+    if (neutral !== undefined && Object.hasOwn(neutral.rewards, card)) {
+      return `the age ${age}'s neutral's reward ${card}`;
     }
   }
   return undefined;
 }
 
+/** What a capture takes: a camp, a site, or the neutral's city. */
+export type Captured = 'camp' | 'site' | 'neutral-city';
+
 /**
- * What a capture of the building deals in the age, in the order dealt: its camp's rewards or a
- * site's, and nothing for a building that is neither.
+ * What a capture of the building takes in the age and what the player's capture deals, and nothing
+ * for a building no capture takes.
  */
-export function rewardsOf(
+export function captureOf(
   catalogue: Catalogue,
   age: string,
   building: string,
-): readonly CardId[] | undefined {
-  const { camp, sites } = ageOf(catalogue, age);
-  if (building === camp.building) return camp.rewards;
-  return Object.values(sites).find((site) => site.building === building)?.rewards;
+): { readonly takes: Captured; readonly rewards: Rewards } | undefined {
+  const { camp, neutral, sites } = ageOf(catalogue, age);
+  if (building === camp.building) return { takes: 'camp', rewards: camp.rewards };
+  if (building === neutral?.building) return { takes: 'neutral-city', rewards: neutral.rewards };
+  const site = Object.values(sites).find((each) => each.building === building);
+  return site && { takes: 'site', rewards: site.rewards };
 }
 
 /**

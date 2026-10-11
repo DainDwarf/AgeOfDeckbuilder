@@ -3,13 +3,16 @@ import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, neutralOf, technologyOf, unitKind } from '../src/rules/catalogue';
 import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
+import { warDeclared } from '../src/rules/city';
 import { movementCost, neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
+import { walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
+import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
@@ -46,6 +49,7 @@ import {
   sitesOf,
   standing,
   stoppedTurn,
+  take,
   textOf,
   tileOnScreen,
   unitEntered,
@@ -479,5 +483,55 @@ test('a unit of the neutral’s standing on a camp through the enemy phase captu
   expect(read(mark).standing).toBe(false);
   expect(read('deal').standing).toBe(false);
   expect(await chronicleOf(page)).toEqual(captured);
+  expect(problems).toEqual([]);
+});
+
+test('a warrior of the player’s standing on the neutral’s city through the enemy phase captures it: the city’s mark gone, the window rising under its building’s name and lore with each reward of several copies a stack whose badge reads them, and the take adding every copy to the discard pile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const opened = settledOn(1, [], CAMPAIGN);
+  const { neutral } = opened;
+  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
+  const { city } = neutral;
+  const chronicle = warDeclared(
+    unitEntered(opened, { type: WARRIOR, faction: 'player', tile: city }),
+  ).chronicle;
+  const dealt = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+  const [deal] = dealt.deals;
+  if (deal?.of !== 'capture') throw new Error('the neutral’s city’s capture deals nothing');
+  const rewards = Object.entries(deal.rewards);
+  const [[card, copies]] = rewards;
+  const taking = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
+  const added = [...walked(taking)].find((stage) => stage.name === 'added');
+  const mark = `building-${tileKey(city)}`;
+  const faces = rewards.map((_, at) => `deal-card-${at}`);
+  const badges = faces.map((face) => `${face}-copies`);
+  expect(dealt.neutral).toBeUndefined();
+  expect(idsOf(added?.chronicle.discardPile ?? []).slice(-copies)).toEqual(
+    Array.from({ length: copies }, () => card),
+  );
+
+  await openSaved(page, chronicle, CAMPAIGN);
+  expect(await standing(page, mark)).toBe(true);
+  await stoppedTurn(page);
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
+
+  const read = await readings(page, [mark, 'deal-title', 'deal-lore', ...faces, ...badges]);
+  expect(read(mark).standing).toBe(false);
+  expect(read('deal-title').text).toBe(buildingName(deal.building));
+  expect(read('deal-lore').text).toBe(captureLore(deal.building));
+  for (const [at, [, each]] of rewards.entries()) {
+    expect(read(faces[at]).standing).toBe(true);
+    expect(read(badges[at]).text).toBe(
+      each > 1 ? text('collection.row-copies', { copies: each }) : undefined,
+    );
+  }
+  expect(await chronicleOf(page)).toEqual(dealt);
+
+  await take(page, 0);
+  expect(await chronicleOf(page)).toEqual(outcome(taking));
   expect(problems).toEqual([]);
 });

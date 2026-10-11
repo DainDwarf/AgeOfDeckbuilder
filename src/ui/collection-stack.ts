@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { NO_REFUSAL } from '../rules/state';
+import { NO_REFUSAL, type Refusal } from '../rules/state';
 import { type CardFace, createCardFace, drawCardSurface, heightOf } from './card-face';
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
@@ -126,8 +126,9 @@ export type StackedCards = {
 };
 
 /**
- * A stack of the face's copies from the left and the top handed, its face `width` wide and named
- * `name`: a card under its face for each copy past the first, three at most, stepped right and down.
+ * A stack of the face's copies from the left and the top handed, its face `width` wide, drawn
+ * refused as named and named `name`: a card under its face for each copy past the first, three at
+ * most, stepped right and down.
  */
 export function stackedCardsOf(
   scene: Phaser.Scene,
@@ -138,6 +139,7 @@ export function stackedCardsOf(
     top,
     width,
     name,
+    refusal = NO_REFUSAL,
     tone = (colour: number): number => colour,
   }: {
     readonly shown: Face;
@@ -146,6 +148,7 @@ export function stackedCardsOf(
     readonly top: number;
     readonly width: number;
     readonly name: string;
+    readonly refusal?: Refusal;
     readonly tone?: (colour: number) => number;
   },
 ): StackedCards {
@@ -161,7 +164,7 @@ export function stackedCardsOf(
     });
     return surface;
   });
-  const card = createCardFace(scene, shown, NO_REFUSAL, { width, tone });
+  const card = createCardFace(scene, shown, refusal, { width, tone });
   card.root
     .setPosition(left + width / 2, top + height)
     .setName(name)

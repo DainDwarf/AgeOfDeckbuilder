@@ -17,14 +17,15 @@ import {
   type AimedCard,
   achievementOf,
   ageOf,
+  type Captured,
   type Catalogue,
   type Civilization,
   capstoneOf,
+  captureOf,
   cardMade,
   cardOf,
   checkContent,
   costOf,
-  rewardsOf,
   technologyOf,
   unitKind,
   unitScript,
@@ -101,6 +102,7 @@ import {
   onSettlePhase,
   playable,
   type Refusal,
+  type Rewards,
   type Tally,
   type Timeline,
   unaffordable,
@@ -190,8 +192,8 @@ export function beginChronicle(
       population: 1,
       assigned: [neutralAt],
       resources: nought,
-      relations: 'peace',
     },
+    relations: neutralAt && 'peace',
     units: [],
     nextUnit: FIRST_UNIT_NUMBER,
     drawPile: shuffled.items,
@@ -710,6 +712,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'tallied':
     case 'reached':
     case 'relations':
+    case 'neutral-fallen':
     case 'runtime-error':
       return undefined;
   }
@@ -843,7 +846,7 @@ function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
 /**
  * One entry of the deal standing taken, by its place in the order dealt, and the deal popped: an
  * answer is the one `answer` group over the deal `taken`, its cost and its landing; a reward is the
- * one `reward` group over the deal `taken` and the card `added`, the rewards beside it added nowhere.
+ * one `reward` group over the deal `taken` and its copies `added`, the others added nowhere.
  * While a deal still stands nothing more resolves; once none does, the last reward taken resumes the
  * end of turn at its opening, and the last answer taken draws the hand. A take made while no deal
  * stands, one at a place the deal does not offer, and one of an answer the city cannot pay for are
@@ -871,7 +874,7 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence 
     case 'capture': {
       const rewarding = grouped(
         { name: 'reward' },
-        followed(taken, (left) => rewarded(catalogue, left, id)),
+        followed(taken, (left) => rewarded(catalogue, left, id, deal.rewards[id])),
       );
       return followed<Stage>(rewarding, (left) =>
         resumed(left, (standing) => opened(catalogue, standing)),
@@ -1379,48 +1382,85 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 }
 
 /**
- * The camps and sites a unit still stands on once the enemy phase is over, each one the capture of the
- * faction standing on it, in tile order.
+ * The camps, the sites and the neutral's city a unit still stands on once the enemy phase is over,
+ * each one the capture of the faction standing on it, in tile order.
  */
 function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   let capturing: Sequence = unchanged(chronicle);
   for (const { q, r, building } of chronicle.tiles) {
     if (building === undefined) continue;
-    const rewards = rewardsOf(catalogue, chronicle.age, building);
-    if (rewards === undefined) continue;
+    const capture = captureOf(catalogue, chronicle.age, building);
+    if (capture === undefined) continue;
     const unit = unitAt(chronicle.units, { q, r });
     if (unit === undefined) continue;
     capturing = followed(capturing, (left) =>
-      captured(left, { q, r }, unit.faction, building, rewards),
+      captured(left, { q, r }, unit.faction, building, capture),
     );
   }
   return capturing;
 }
 
+/**
+ * The building on the tile captured by a unit of the faction: the player's captures anything, and
+ * its capture deals the rewards under the building; the neutral's captures a camp or a site, dealing
+ * nothing; an enemy captures nothing.
+ */
 function captured(
   chronicle: Chronicle,
   tile: TileCoords,
   by: Faction,
   building: string,
-  rewards: readonly CardId[],
+  { takes, rewards }: { readonly takes: Captured; readonly rewards: Rewards },
 ): Sequence<Group> {
   switch (by) {
     case 'player':
       return grouped(
         { name: 'capture', tile },
-        followed(leftTheMap(chronicle, tile), (left) =>
-          landedAs(
-            change('dealt', {
-              ...left,
-              deals: [...left.deals, { of: 'capture', building, rewards }],
-            }),
-          ),
-        ),
+        course(chronicle, [
+          (left) => leftTheMap(left, tile),
+          (left) => fallenWith(left, takes),
+          (left) =>
+            landedAs(
+              change('dealt', {
+                ...left,
+                deals: [...left.deals, { of: 'capture', building, rewards }],
+              }),
+            ),
+        ]),
       );
     case 'neutral':
-      return grouped({ name: 'capture', tile }, leftTheMap(chronicle, tile));
+      return capturedByTheNeutral(chronicle, tile, takes);
     case 'enemy':
       return unchanged(chronicle);
+  }
+}
+
+/** What a unit of the neutral's standing on the building captures: a camp or a site, never its own city. */
+function capturedByTheNeutral(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  takes: Captured,
+): Sequence<Group> {
+  switch (takes) {
+    case 'camp':
+    case 'site':
+      return grouped({ name: 'capture', tile }, leftTheMap(chronicle, tile));
+    case 'neutral-city':
+      return unchanged(chronicle);
+  }
+}
+
+/**
+ * What leaves the chronicle with the building the player captures: with the neutral's city, the one
+ * `neutral-fallen`, its border, population and stocks gone and its relations standing.
+ */
+function fallenWith(chronicle: Chronicle, takes: Captured): Landed {
+  switch (takes) {
+    case 'camp':
+    case 'site':
+      return unchanged(chronicle);
+    case 'neutral-city':
+      return landedAs(change('neutral-fallen', { ...chronicle, neutral: undefined }));
   }
 }
 

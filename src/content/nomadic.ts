@@ -440,14 +440,14 @@ export const NOMADIC: Slice = {
       roll: [{ kind: 'warrior', script: 'guard', weight: 1 }],
       scripts: { guard: 'guard', raider: 'raider' },
       building: 'camp',
-      rewards: ['stores', 'band-joins'],
+      rewards: { stores: 1, 'band-joins': 1 },
       odds: 0.08,
       raidCampOdds: 0.8,
     },
     sites: {
-      'painted-cave': { building: 'painted-cave', rewards: ['cave-paintings'] },
-      'old-cairn': { building: 'old-cairn', rewards: ['honour-the-dead'] },
-      'beast-bones': { building: 'beast-bones', rewards: ['bone-carvings'] },
+      'painted-cave': { building: 'painted-cave', rewards: { 'cave-paintings': 1 } },
+      'old-cairn': { building: 'old-cairn', rewards: { 'honour-the-dead': 1 } },
+      'beast-bones': { building: 'beast-bones', rewards: { 'bone-carvings': 1 } },
     },
     regions: REGIONS,
     achievements: {

@@ -48,6 +48,7 @@ import {
   namesOf,
   neutralStanding,
   only,
+  onTheNeutralCity,
   opening,
   plains,
   pointsOf,
@@ -150,7 +151,7 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
   );
 });
 
-test('a site’s tile is claimed like any other, and a unit of the player’s standing on it when the turn ends captures it as a camp: its slot emptied and its rewards dealt under its building, the one taken added to the discard pile', () => {
+test('a site’s tile is claimed like any other, and a unit of the player’s standing on it when the turn ends captures it as a camp: its slot emptied and its rewards dealt under its building, the one taken added to the discard pile in every copy it names', () => {
   const site = { q: 2, r: 0 };
   const sited = ringed(3, {
     ...NO_GROWTH,
@@ -160,15 +161,17 @@ test('a site’s tile is claimed like any other, and a unit of the player’s st
     units: [standing('player', site)],
   });
   const { rewards } = SITES[SITE];
+  const [[relic, copies]] = Object.entries(rewards);
 
   const dealt = outcome(apply(CATALOGUE, sited, { type: 'end-turn' }));
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
+  expect(copies).toBeGreaterThan(1);
   expect(cityCommand(CATALOGUE, sited, site)).toEqual(claimOf(site));
   expect(tilesStaged('capture', sited)).toEqual([tileKey(site)]);
   expect(buildingAt(dealt, site)).toBeUndefined();
   expect(dealt.deals).toEqual([{ of: 'capture', building: SITE, rewards }]);
-  expect(idsOf(taken.discardPile)).toEqual([rewards[0]]);
+  expect(idsOf(taken.discardPile)).toEqual(Array.from({ length: copies }, () => relic));
 });
 
 test('a unit of the player’s standing on a camp when the turn ends captures it', () => {
@@ -208,7 +211,7 @@ test('a capture deals the camp’s rewards and stops the end of turn before the 
   const cache = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
   expect(dealt.deals).toEqual([
-    { of: 'capture', building: CAMP.building, rewards: ['PH_Spoils', 'PH_Cache'] },
+    { of: 'capture', building: CAMP.building, rewards: { PH_Spoils: 1, PH_Cache: 1 } },
   ]);
   expect(dealt.turn).toBe(besieging.turn);
   expect(dealt.hand).toEqual([]);
@@ -1041,6 +1044,62 @@ test('a unit of the neutral’s standing on a site when the turn ends captures i
   expect(buildingAt(taken, site)).toBeUndefined();
   expect(taken.deals).toEqual([]);
   expect(taken.turn).toBe(sited.turn + 1);
+});
+
+test('a unit of the player’s standing on the neutral’s city when the turn ends captures it: one capture carrying its tile over its building leaving the tile, the neutral’s city leaving with its border, its population and its stocks while its relations stay hostile, and its rewards dealt under its building', () => {
+  const standingOn = onTheNeutralCity();
+
+  const stages = apply(CATALOGUE, standingOn, { type: 'end-turn' });
+  const fallen = outcome(stages);
+
+  expect(tilesStaged('capture', standingOn)).toEqual([tileKey(NEUTRAL_TILE)]);
+  expect(namesOf(heldBy(stages, 'capture'))).toEqual(['retiled', 'neutral-fallen', 'dealt']);
+  expect(buildingAt(fallen, NEUTRAL_TILE)).toBeUndefined();
+  expect(fallen.neutral).toBeUndefined();
+  expect(relationsOf(fallen)).toBe('hostile');
+  expect(fallen.deals).toEqual([
+    { of: 'capture', building: NEUTRAL, rewards: neutralOf(CATALOGUE, fallen.age).rewards },
+  ]);
+});
+
+test('the neutral’s guard resting on its city’s tile, and an enemy standing there, capture nothing', () => {
+  for (const unit of [
+    neutralStanding(NEUTRAL_TILE, { stats: { move: 0 } }),
+    standing('enemy', NEUTRAL_TILE, { move: 0 }),
+  ]) {
+    const resting = withUnits(besideTheNeutral(), [unit]);
+
+    const after = outcome(apply(CATALOGUE, resting, { type: 'end-turn' }));
+
+    expect(tilesStaged('capture', resting)).toEqual([]);
+    expect(buildingAt(after, NEUTRAL_TILE)).toBe(NEUTRAL);
+    expect(after.neutral?.city).toEqual(NEUTRAL_TILE);
+  }
+});
+
+test('the tiles the neutral’s city held are nobody’s once it has fallen, and the player’s city claims them like any other', () => {
+  const standingOn = onTheNeutralCity();
+  const fallen = endedTurn(standingOn);
+  const claimed = (chronicle: Chronicle): string[] =>
+    claimable(CATALOGUE, chronicle, 'player').map(tileKey);
+
+  expect(claimed(standingOn)).not.toContain(tileKey(NEUTRAL_TILE));
+  expect(claimed(fallen)).toContain(tileKey(NEUTRAL_TILE));
+});
+
+test('once the neutral’s city has fallen its units stay the neutral’s and hostile: one attacks a unit of the player’s in its reach, and one walks onto the city', () => {
+  const fallen = endedTurn(
+    onTheNeutralCity([
+      neutralStanding({ q: 2, r: 0 }, { stats: { move: 0 } }),
+      neutralStanding({ q: -3, r: 0 }, { script: SCRIPT }),
+    ]),
+  );
+  const raider = fallen.units.find((unit) => unit.faction === 'neutral' && unit.script === SCRIPT);
+  if (raider === undefined) throw new Error('the neutral’s raider no longer stands');
+
+  expect(fallen.neutral).toBeUndefined();
+  expect(attacksOf(fallen)).toContainEqual([tileKey({ q: 2, r: 0 }), tileKey(NEUTRAL_TILE)]);
+  expect(movesOf(fallen)).toEqual([[tileKey(raider.tile), tileKey(CITY)]]);
 });
 
 test('at odds of a half a seed enters on the same camps every time, and seeds differ in the camps they enter on', () => {

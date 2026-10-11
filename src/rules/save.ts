@@ -47,6 +47,7 @@ import type {
   Deal,
   DefeatCause,
   Ending,
+  Rewards,
   Snapshot,
   SnapshotUnit,
   Timeline,
@@ -526,14 +527,11 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
       count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
     ),
     deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item)),
-    neutral: optional(field('neutral'), (item) => {
-      const city = record(catalogue, item);
-      return {
-        city: onMap(catalogue, city('city'), tiles),
-        ...cityRowsOf(catalogue, item, tiles),
-        relations: relationsIn(catalogue, city('relations')),
-      };
-    }),
+    neutral: optional(field('neutral'), (item) => ({
+      city: onMap(catalogue, record(catalogue, item)('city'), tiles),
+      ...cityRowsOf(catalogue, item, tiles),
+    })),
+    relations: optional(field('relations'), (item) => relationsIn(catalogue, item)),
     units: units.map(({ unit }) => unit),
     nextUnit,
     drawPile: list(catalogue, field('drawPile'), card),
@@ -668,11 +666,22 @@ function dealOf(catalogue: Catalogue, slot: Slot): Deal {
       return {
         of,
         building: id(catalogue, field('building'), buildingKind),
-        rewards: list(catalogue, field('rewards'), (item) => id(catalogue, item, cardOf)),
+        rewards: rewardsIn(catalogue, field('rewards')),
       };
   }
   const unlisted: never = of;
   return refused(catalogue, kind, `names no kind of deal ${unlisted}`);
+}
+
+/** A capture's rewards: a card the catalogue does not hold, and copies below one, are refused. */
+function rewardsIn(catalogue: Catalogue, slot: Slot): Rewards {
+  const field = record(catalogue, slot);
+  return Object.fromEntries(
+    Object.keys(object(catalogue, slot)).map((card) => [
+      id(catalogue, { raw: card, at: `${slot.at}.${card}` }, cardOf),
+      count(catalogue, field(card), slot, (copies) => `deals ${copies} copies of ${card}`, 1),
+    ]),
+  );
 }
 
 function resourcesOf(catalogue: Catalogue, slot: Slot): Resources {

@@ -26,6 +26,8 @@ const LORE = {
     'Out on the open ground lie the bones of a beast larger than anything the band has ever hunted, bleached and half sunk in the earth. The children climb the ribs, the elders say it walked here before the first people did, and the band carries the tale on with it.',
   'capture.stone-beast-bones':
     'Out on the open ground lie the bones of a beast larger than anything the band has ever hunted, bleached and half sunk in the earth. The elders say it walked here before the first people did: do you carve what it left, or make tools of it?',
+  'capture.neutral-village':
+    'The village is yours. Its fires are out, its stores lie open and its people stand waiting at the edge of the fields: what do you take?',
   'capstone-opening.first-shelter':
     'The tribe has wandered long enough. When the time comes, build the first shelter, and the Nomadic Age is won.',
   'capstone-landing.first-shelter':

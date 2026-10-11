@@ -171,7 +171,7 @@ test('a catalogue whose technology unlocks a card it does not hold, a card by fe
 });
 
 test('a catalogue whose technology unlocks a hazard or a camp’s reward is refused', () => {
-  const [reward] = CAMP.rewards;
+  const [reward] = Object.keys(CAMP.rewards);
   const unlocking = (card: string): Catalogue =>
     withTechnologies({
       [GRANARY]: {
@@ -691,7 +691,7 @@ function neutralWith(laid: Partial<Neutral>): Catalogue {
   return aged({ neutral: { ...neutralOf(CATALOGUE, AGE), ...laid } });
 }
 
-test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, or a ratio naming a card no unit card, a kind it does not hold or a share not a whole number above nought, is refused, and one naming no wave is not', () => {
+test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, a ratio naming a card no unit card, a kind it does not hold or a share not a whole number above nought, or a reward it does not hold, in copies below one or none at all, is refused, and one naming no wave is not', () => {
   const { scripts, ratio } = neutralOf(CATALOGUE, AGE);
   const [row] = ratio;
   const refusals: [Catalogue, string][] = [
@@ -721,6 +721,12 @@ test('a catalogue whose neutral names a guard’s or a wave’s script it does n
       neutralWith({ ratio: [{ ...row, share: 1.5 }] }),
       `the age ${AGE}'s neutral keeps ${row.kind} at a share of 1.5`,
     ],
+    [neutralWith({ rewards: { PH_Loot: 1 } }), 'no card is named PH_Loot'],
+    [
+      neutralWith({ rewards: { PH_Cache: 0 } }),
+      `the age ${AGE}'s neutral deals 0 copies of PH_Cache`,
+    ],
+    [neutralWith({ rewards: {} }), `the age ${AGE}'s neutral deals no reward`],
   ];
 
   for (const [content, refusal] of refusals) {
@@ -747,13 +753,18 @@ test('a catalogue whose region keeps the neutral’s city nearer the centre than
   );
 });
 
-test('a catalogue whose site deals a reward it does not hold, or no reward at all, is refused', () => {
+test('a catalogue whose site deals a reward it does not hold, a reward in copies below one, or no reward at all, is refused', () => {
   const site = SITES[SITE];
 
   expect(() =>
-    catalogued(sited({ [SITE]: { ...site, rewards: [...site.rewards, 'PH_Loot'] } })),
+    catalogued(sited({ [SITE]: { ...site, rewards: { ...site.rewards, PH_Loot: 1 } } })),
   ).toThrow('fixture: no card is named PH_Loot');
-  expect(() => catalogued(sited({ [SITE]: { ...site, rewards: [] } }))).toThrow(
+  for (const copies of [0, 1.5]) {
+    expect(() => catalogued(sited({ [SITE]: { ...site, rewards: { PH_Relic: copies } } }))).toThrow(
+      `fixture: the age ${AGE}'s site ${SITE} deals ${copies} copies of PH_Relic`,
+    );
+  }
+  expect(() => catalogued(sited({ [SITE]: { ...site, rewards: {} } }))).toThrow(
     `fixture: the age ${AGE}'s site ${SITE} deals no reward`,
   );
 });
@@ -777,7 +788,7 @@ test('a catalogue whose region deals one site twice is refused', () => {
 });
 
 test('a catalogue whose deck holds a site’s reward, or whose technology unlocks one, is refused', () => {
-  const [reward] = SITES[SITE].rewards;
+  const [reward] = Object.keys(SITES[SITE].rewards);
   const decked = changed({
     civilizations: { civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, reward] } },
   });
@@ -840,7 +851,7 @@ test('a catalogue whose deck holds a hazard in either section is refused', () =>
 });
 
 test('a catalogue whose deck holds any of the camp’s rewards in either section is refused', () => {
-  for (const reward of CAMP.rewards) {
+  for (const reward of Object.keys(CAMP.rewards)) {
     const cards = changed({
       civilizations: { civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, reward] } },
     });
@@ -856,7 +867,7 @@ test('a catalogue whose deck holds any of the camp’s rewards in either section
 });
 
 test('a catalogue whose card no deck holds carries exhaust is refused, and one carrying banish is not', () => {
-  const [reward] = CAMP.rewards;
+  const [reward] = Object.keys(CAMP.rewards);
   const carrying = (keyword: { exhaust: true } | { banish: true }): Catalogue =>
     changed({
       cards: {
@@ -947,11 +958,14 @@ test('a catalogue whose region’s camps keep within the centre part’s reach p
   expect(catalogued(seeing)).toBe(seeing);
 });
 
-test('a catalogue whose camp deals a reward it does not hold, or no reward at all, is refused', () => {
-  const loot = encamped({ rewards: [...CAMP.rewards, 'PH_Loot'] });
-  const none = encamped({ rewards: [] });
+test('a catalogue whose camp deals a reward it does not hold, a reward in copies below one, or no reward at all, is refused', () => {
+  const loot = encamped({ rewards: { ...CAMP.rewards, PH_Loot: 1 } });
+  const none = encamped({ rewards: {} });
 
   expect(() => catalogued(loot)).toThrow(/^fixture: /);
+  expect(() => catalogued(encamped({ rewards: { ...CAMP.rewards, PH_Cache: 0 } }))).toThrow(
+    `fixture: the age ${AGE}'s camp deals 0 copies of PH_Cache`,
+  );
   expect(() => catalogued(none)).toThrow(/^fixture: /);
 });
 

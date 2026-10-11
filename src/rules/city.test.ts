@@ -806,11 +806,11 @@ test('a chronicle launched on a region dealing the neutral’s city opens with i
       population: 1,
       assigned: [city],
       resources: together(),
-      relations: 'peace',
     });
-    expect(
-      launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).chronicle.neutral,
-    ).toBeUndefined();
+    expect(chronicle.relations).toBe('peace');
+    const bare = launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).chronicle;
+    expect(bare.neutral).toBeUndefined();
+    expect(bare.relations).toBeUndefined();
   }
 });
 

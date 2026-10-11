@@ -459,7 +459,7 @@ test('a reward taken is one reward group over the deal taken and the card added'
   expect(rest).toEqual([]);
   expect(taken.chronicle.deals).toEqual([]);
   expect(taken.chronicle.discardPile).toEqual([]);
-  expect(idsOf(added.chronicle.discardPile)).toEqual([CAMP.rewards[0]]);
+  expect(idsOf(added.chronicle.discardPile)).toEqual([Object.keys(CAMP.rewards)[0]]);
 });
 
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {

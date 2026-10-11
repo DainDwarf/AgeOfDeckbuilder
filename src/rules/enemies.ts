@@ -1,9 +1,9 @@
 import {
   ageOf,
   type Catalogue,
+  captureOf,
   type Entering,
   entered,
-  rewardsOf,
   type ScriptAct,
   type UnitEntryRow,
   type UnitEntryTable,
@@ -43,7 +43,7 @@ import {
  */
 export function targetsInOwnSight(
   catalogue: MapContent,
-  chronicle: Pick<Chronicle, 'tiles' | 'neutral'>,
+  chronicle: Pick<Chronicle, 'tiles' | 'relations'>,
   units: readonly Unit[],
   attacker: Unit,
 ): Unit[] {
@@ -61,7 +61,7 @@ export function targetsInOwnSight(
  */
 export function leastHealth(
   catalogue: MapContent,
-  chronicle: Pick<Chronicle, 'tiles' | 'neutral'>,
+  chronicle: Pick<Chronicle, 'tiles' | 'relations'>,
   units: readonly Unit[],
   attacker: Unit,
 ): Unit | undefined {
@@ -85,9 +85,7 @@ export function attackOrNone(target: Unit | undefined): ScriptAct {
 export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile): Tile | undefined {
   if (chronicle.city !== undefined && tileKey(tile) === tileKey(chronicle.city)) return undefined;
   const spared =
-    tile.building !== undefined &&
-    (rewardsOf(catalogue, chronicle.age, tile.building) !== undefined ||
-      tile.building === ageOf(catalogue, chronicle.age).neutral?.building);
+    tile.building !== undefined && captureOf(catalogue, chronicle.age, tile.building) !== undefined;
   const building = spared ? tile.building : undefined;
   if (tile.improvements.length === 0 && building === tile.building) return undefined;
   return { ...tile, improvements: [], building };
@@ -149,7 +147,7 @@ export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
   if (
     neutral?.wave !== undefined &&
     chronicle.neutral !== undefined &&
-    chronicle.neutral.relations === 'peace'
+    relationsOf(chronicle) === 'peace'
   ) {
     owners.push({
       at: chronicle.neutral.city,

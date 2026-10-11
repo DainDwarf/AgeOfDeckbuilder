@@ -35,11 +35,8 @@ import { actsAsEnemy, type Relations, relationsOf, type Unit, unitAt } from './u
  * where it is hostile already or the chronicle holds no neutral.
  */
 export function warDeclared(chronicle: Chronicle): Landed {
-  const { neutral } = chronicle;
-  if (neutral === undefined || neutral.relations === 'hostile') return unchanged(chronicle);
-  return landedAs(
-    change('relations', { ...chronicle, neutral: { ...neutral, relations: 'hostile' } }),
-  );
+  if (chronicle.relations !== 'peace') return unchanged(chronicle);
+  return landedAs(change('relations', { ...chronicle, relations: 'hostile' }));
 }
 
 /**

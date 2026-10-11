@@ -135,4 +135,4 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **prepare** | What an enemy does when it spends its action on the tile it stands on for an effect at the next enemy phase. | hold, besiege, ready, entrench |
 | **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything the player built on it is removed. | raze, loot, sack |
 | **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |
-| **reward** | What a capture deals: cards, of which the player chooses one. | gift, prize, bounty |
+| **reward** | What a capture deals: cards, of which the player chooses one, added in the copies it names. | gift, prize, bounty |

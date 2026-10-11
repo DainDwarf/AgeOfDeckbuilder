@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { type Campaign, civilizationIn } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
+import type { Refusal } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
 import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
 import { ended, stopMotion } from './card-motion';
 import { browseOf } from './collection-layout';
-import { type Cell, linesOf, spanOf, stackedCardsOf } from './collection-stack';
+import { type Cell, linesOf, type StackedCards, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
 import {
   addText,
@@ -22,7 +23,14 @@ import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createPanel, type Panel, type PanelOf, type Surface } from './panel';
-import { answersAround, type Inspecting, layingOf, type ShownLarge, standLarge } from './stack';
+import {
+  type Answers,
+  answersAround,
+  type Inspecting,
+  layingOf,
+  type ShownLarge,
+  standLarge,
+} from './stack';
 import { cardName, civilizationName, text } from './text';
 import { createTooltip } from './tooltip';
 
@@ -80,48 +88,75 @@ function badgeOf(
 }
 
 /**
- * The stack in the `name` browse's `at`th place, its copies on its badge: the right click anywhere on
- * it off a name shows its card large.
+ * A stack laid with its badge: its cards, everything it draws, the box it and its badge cover, and
+ * what it answers the pointer with there.
  */
+export type BadgedStack = {
+  readonly stacked: StackedCards;
+  readonly parts: readonly Phaser.GameObjects.GameObject[];
+  readonly box: Box;
+  readonly answers: Answers;
+};
+
+/**
+ * A stack of the face's copies from the left and the top handed, its face `width` wide, drawn
+ * refused as named and named `name`, and the badge reading its copies named `<name>-copies`: the
+ * right click anywhere on it off a name shows its card large.
+ */
+export function badgedStackOf(
+  { scene, inspecting }: { readonly scene: Phaser.Scene; readonly inspecting: Inspecting },
+  of: {
+    readonly shown: Face;
+    readonly copies: number;
+    readonly left: number;
+    readonly top: number;
+    readonly width: number;
+    readonly name: string;
+    readonly refusal?: Refusal;
+  },
+): BadgedStack {
+  const stacked = stackedCardsOf(scene, of);
+  const { face, box } = stacked;
+  const badge = badgeOf(
+    scene,
+    { right: face.x + face.width + BADGE_OUT, bottom: face.y + face.height + BADGE_OUT },
+    of.copies,
+    `${of.name}-copies`,
+  );
+  return {
+    stacked,
+    parts: [...stacked.unders, stacked.card.root, ...badge.parts],
+    box: Phaser.Geom.Rectangle.Union(
+      new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height),
+      new Phaser.Geom.Rectangle(badge.box.x, badge.box.y, badge.box.width, badge.box.height),
+    ),
+    answers: answersAround(stacked.card, stacked.shown, inspecting, () => {
+      inspecting.large.show(stacked.shown);
+    }),
+  };
+}
+
+/** The stack in the `name` browse's `at`th place, its copies on its badge. */
 function stackCellOf(
-  { scene, inspecting }: Browser,
+  browser: Browser,
   name: string,
   { stack, at }: { readonly stack: BrowseStack; readonly at: number },
 ): Cell {
+  const { scene } = browser;
   return ({ left, top }) => {
-    const card = `${name}-card-${at}`;
-    const stacked = stackedCardsOf(scene, {
+    const { stacked, parts, box, answers } = badgedStackOf(browser, {
       shown: stack.shown,
       copies: stack.copies,
       left,
       top,
       width: CARD_WIDTH,
-      name: card,
+      name: `${name}-card-${at}`,
     });
-    const { face, box } = stacked;
-    const badge = badgeOf(
-      scene,
-      { right: face.x + face.width + BADGE_OUT, bottom: face.y + face.height + BADGE_OUT },
-      stack.copies,
-      `${card}-copies`,
-    );
-    const edge = stack.edged ? [cityEdgeOf(scene, face, metricsOf(CARD_WIDTH).radius)] : [];
-    const root = scene.add
-      .container(0, 0, [...edge, ...stacked.unders, stacked.card.root, ...badge.parts])
-      .setName(`${name}-stack-${at}`);
+    const edge = stack.edged ? [cityEdgeOf(scene, stacked.face, metricsOf(CARD_WIDTH).radius)] : [];
+    const root = scene.add.container(0, 0, [...edge, ...parts]).setName(`${name}-stack-${at}`);
     return {
       parts: [root],
-      held: [
-        {
-          box: Phaser.Geom.Rectangle.Union(
-            new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height),
-            new Phaser.Geom.Rectangle(badge.box.x, badge.box.y, badge.box.width, badge.box.height),
-          ),
-          answers: answersAround(stacked.card, stacked.shown, inspecting, () => {
-            inspecting.large.show(stacked.shown);
-          }),
-        },
-      ],
+      held: [{ box, answers }],
       bottom: stacked.foot,
     };
   };

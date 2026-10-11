@@ -14,11 +14,12 @@ import {
   type Refusal,
 } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
-import { standBrowser } from './browse';
+import { badgedStackOf, standBrowser } from './browse';
 import { type CardFace, createCardFace, heightOf, type Name } from './card-face';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
+  type Box,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
@@ -35,7 +36,7 @@ import type { Held, Panel } from './panel';
 import { type PileKind, pileOf } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
-import { answersOf } from './stack';
+import { type Answers, answersOf } from './stack';
 import { buildingName, cardName, eventName, text } from './text';
 
 const GRID_WIDTH = 180;
@@ -72,25 +73,33 @@ export type Overlay = {
 
 /**
  * One face offered on the scrim, what the entry costs the city — which its note says, whether or not
- * the face wears a chip for it — what it is drawn refused by, and the number a press on it answers by.
+ * the face wears a chip for it — what it is drawn refused by, its copies, and the number a press on
+ * it answers by.
  */
 type Offered = {
   readonly face: Face;
   readonly costs: readonly Cost[];
   readonly refusal: Refusal;
+  readonly copies: number;
   readonly at: number;
 };
 
-/** One card of the deck offered as it stands: nothing refuses it, and its face wears its own cost. */
-function offeredCard(face: Face, at: number): Offered {
-  return { face, costs: face.costs, refusal: NO_REFUSAL, at };
+/** Copies of a card of the deck offered: nothing refuses them, and the face wears its own cost. */
+function offeredCard(face: Face, at: number, copies: number): Offered {
+  return { face, costs: face.costs, refusal: NO_REFUSAL, copies, at };
 }
 
-/** Where one offered face was laid out — about its own bottom centre, as a card is drawn — and its drawing. */
+/**
+ * Where one offered face was laid out — about its own bottom centre, as a card is drawn — its
+ * drawing, everything it draws, and the box it answers the pointer over and how.
+ */
 type Placed = Offered & {
   readonly x: number;
   readonly y: number;
   readonly drawn: CardFace;
+  readonly part: Phaser.GameObjects.GameObject;
+  readonly box: Box;
+  readonly answers: Answers;
 };
 
 /** A window's cards laid on its panel, and how tall one of them stands. */
@@ -239,9 +248,9 @@ export function createOverlay({
   };
 
   /**
-   * A window's cards on its panel, centred in its frame while they fit, a left click on one running
-   * `pressed`: each face is named `<name>-card-<n>`, the first drawn first, and carries its card and
-   * the number it was offered as in its data.
+   * A window's cards on its panel, centred in its frame while they fit, several copies stacked, a
+   * left click on one running `pressed`: each face is named `<name>-card-<n>`, the first drawn first,
+   * and carries its card and the number it was offered as in its data.
    */
   const layWindow = (
     name: string,
@@ -268,22 +277,52 @@ export function createOverlay({
       const spanX = inRow * GRID_WIDTH + (inRow - 1) * GRID_GAP;
       const x = (DESIGN_WIDTH - spanX) / 2 + column * (GRID_WIDTH + GRID_GAP) + GRID_WIDTH / 2;
       const y = firstY + row * (height + GRID_GAP) + height;
+      const card = `${name}-card-${index}`;
+      if (offered.copies > 1) {
+        const { stacked, parts, box, answers } = badgedStackOf(
+          { scene, inspecting },
+          {
+            shown: offered.face,
+            copies: offered.copies,
+            left: x - GRID_WIDTH / 2,
+            top: y - height,
+            width: GRID_WIDTH,
+            name: card,
+            refusal: offered.refusal,
+          },
+        );
+        stacked.card.root.setData('at', offered.at);
+        return {
+          ...offered,
+          x,
+          y,
+          drawn: stacked.card,
+          part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
+          box,
+          answers,
+        };
+      }
       const drawn = createCardFace(scene, offered.face, offered.refusal, { width: GRID_WIDTH });
-      drawn.root
-        .setPosition(x, y)
-        .setName(`${name}-card-${index}`)
-        .setData({ at: offered.at, card: offered.face.id });
-      return { ...offered, x, y, drawn };
+      drawn.root.setPosition(x, y).setName(card).setData({ at: offered.at, card: offered.face.id });
+      return {
+        ...offered,
+        x,
+        y,
+        drawn,
+        part: drawn.root,
+        box: { x: x - GRID_WIDTH / 2, y: y - height, width: GRID_WIDTH, height },
+        answers: answersOf(drawn, offered.face, inspecting),
+      };
     });
 
     const panel = browser.lay({
       name,
       frame,
-      parts: placed.map(({ drawn }) => drawn.root),
+      parts: placed.map(({ part }) => part),
       held: placed.map(
         (card): Held => ({
-          box: { x: card.x - GRID_WIDTH / 2, y: card.y - height, width: GRID_WIDTH, height },
-          answers: answersOf(card.drawn, card.face, inspecting),
+          box: card.box,
+          answers: card.answers,
           press: () => {
             pressed(card);
           },
@@ -367,7 +406,7 @@ export function createOverlay({
     const title = raiseTitle('capstone', text('capstone.title'));
     const laid = layWindow(
       'capstone',
-      [{ face, costs: [], refusal: NO_REFUSAL, at: 0 }],
+      [{ face, costs: [], refusal: NO_REFUSAL, copies: 1, at: 0 }],
       title.y + title.height + MARGIN,
       () => {
         closeCapstone(announcement);
@@ -488,7 +527,7 @@ export function createOverlay({
         aimed,
         cards: chronicle.discardPile
           .map((card, at) =>
-            offeredCard(cardFace(catalogue, card, chronicle.citySection.building), at),
+            offeredCard(cardFace(catalogue, card, chronicle.citySection.building), at, 1),
           )
           .reverse(),
         chosen,
@@ -528,7 +567,7 @@ export function createOverlay({
 /**
  * What the deal window reads of a deal: the name and lore of the event or of the building captured
  * over it, and its entries in the order dealt — an answer drawn unaffordable where the chronicle
- * cannot pay it, a reward as the card of the deck it is.
+ * cannot pay it, a reward as the card of the deck it is, in its copies.
  */
 function dealt(
   catalogue: Catalogue,
@@ -546,6 +585,7 @@ function dealt(
             face: answerFace(catalogue, chronicle, deal.event, id),
             costs: answerCost(catalogue, chronicle, answerOf(catalogue, deal.event, id)),
             refusal: answerRefusal(catalogue, chronicle, deal.event, id),
+            copies: 1,
             at,
           }),
         ),
@@ -555,7 +595,11 @@ function dealt(
         heading: buildingName(deal.building),
         lore: captureLore(deal.building),
         entries: ids.map((id, at) =>
-          offeredCard(cardFaceAtStart(catalogue, id, chronicle.citySection.building), at),
+          offeredCard(
+            cardFaceAtStart(catalogue, id, chronicle.citySection.building),
+            at,
+            deal.rewards[id],
+          ),
         ),
       };
   }

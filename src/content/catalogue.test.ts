@@ -25,7 +25,7 @@ import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
 import { answerCost, timelineOf } from '../rules/schedule';
 import type { Landed } from '../rules/stages';
-import type { Chronicle } from '../rules/state';
+import type { Chronicle, Rewards } from '../rules/state';
 import { answerFace } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
@@ -301,13 +301,13 @@ test('every event of the catalogue has a name and a lore on the screen, and ever
   }
 });
 
-/** What an age's captures take: its camp and its sites, each a building and its rewards. */
-function capturedIn(age: string): { building: string; rewards: readonly string[] }[] {
-  const { camp, sites } = ageOf(CATALOGUE, age);
-  return [camp, ...Object.values(sites)];
+/** What an age's captures take, its neutral's city among them, each a building and its rewards. */
+function capturedIn(age: string): { building: string; rewards: Rewards }[] {
+  const { camp, sites, neutral } = ageOf(CATALOGUE, age);
+  return [camp, ...Object.values(sites), ...(neutral === undefined ? [] : [neutral])];
 }
 
-test('every age’s camp and site has a lore on the screen, keyed on its building', () => {
+test('every age’s camp, site and neutral’s city has a lore on the screen, keyed on its building', () => {
   for (const age of AGES) {
     for (const { building } of capturedIn(age)) {
       expect(() => captureLore(building)).not.toThrow();
@@ -315,10 +315,10 @@ test('every age’s camp and site has a lore on the screen, keyed on its buildin
   }
 });
 
-test('every reward of every age’s camp and site has a name, and a rules entry read at the counters it starts with under each city’s building, and under no city section for a card no city section holds, on the screen', () => {
+test('every reward of every age’s camp, site and neutral’s city has a name, and a rules entry read at the counters it starts with under each city’s building, and under no city section for a card no city section holds, on the screen', () => {
   for (const age of AGES) {
     for (const { rewards } of capturedIn(age)) {
-      for (const id of rewards) {
+      for (const id of Object.keys(rewards)) {
         expect(() => cardName(id)).not.toThrow();
         expect(() => rulesAsDrawn(id)).not.toThrow();
       }

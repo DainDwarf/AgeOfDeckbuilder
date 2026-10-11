@@ -45,13 +45,16 @@ export type Timeline = {
   readonly capstone: { readonly id: string; readonly turn: number };
 };
 
+/** What a capture deals: cards by id, in the order dealt, each with the copies its take adds. */
+export type Rewards = Readonly<Record<CardId, number>>;
+
 /**
  * One deal waiting on the take: an event, which deals its answers, or a capture's rewards, under the
  * building captured.
  */
 export type Deal =
   | { readonly of: 'event'; readonly event: string }
-  | { readonly of: 'capture'; readonly building: string; readonly rewards: readonly CardId[] };
+  | { readonly of: 'capture'; readonly building: string; readonly rewards: Rewards };
 
 /** An achievement's tally: named numbers of its own, by name. */
 export type Tally = Readonly<Record<string, number>>;
@@ -98,8 +101,8 @@ export type CityRows = {
   readonly resources: Resources;
 };
 
-/** The neutral's city: the tile it stands on, its rows, and its relations with the player. */
-export type NeutralCity = CityRows & { readonly city: TileCoords; readonly relations: Relations };
+/** The neutral's city: the tile it stands on, and its rows. */
+export type NeutralCity = CityRows & { readonly city: TileCoords };
 
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {
@@ -146,8 +149,16 @@ export type Chronicle = {
    * comes off the last entry.
    */
   readonly assigned: TileCoords[];
-  /** The neutral's city, and nothing at all on a chronicle whose region deals none. */
+  /**
+   * The neutral's city, and nothing at all on a chronicle whose region deals none or once it has
+   * fallen.
+   */
   readonly neutral?: NeutralCity;
+  /**
+   * The neutral's relations with the player, which outlive its city, and nothing at all on a
+   * chronicle whose region deals no neutral.
+   */
+  readonly relations?: Relations;
   readonly units: Unit[];
   /**
    * The number the next unit to enter is named by. It only counts up, so a killed unit's number is

@@ -31,6 +31,7 @@ import {
   HOARD,
   hoardedVictory,
   NO_DEALS,
+  onTheNeutralCity,
   preparedOnTheCity,
   QUIET,
   REGION,
@@ -158,22 +159,18 @@ test('a chronicle saved with an enemy prepared reads back with it prepared', () 
   expect(read.chronicle).toEqual(save);
 });
 
-test('a chronicle saved with the neutral hostile and a unit of its prepared reads back with both, and one whose neutral names no relations is dropped', () => {
+test('a chronicle saved with the neutral hostile and a unit of its prepared reads back with both, and one naming no relations it knows is dropped', () => {
   const prepared = preparedOnTheCity();
   const save = { chronicle: prepared, region: CLEARING, civilization: CIVILIZATION_ID };
-  const { neutral } = prepared;
-  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
-  expect(neutral.relations).toBe('hostile');
+  expect(prepared.relations).toBe('hostile');
   expect(prepared.units[0]).toMatchObject({ faction: 'neutral', prepared: true });
   expect(read.chronicle).toEqual(save);
   expect(
-    chronicleDropped(
-      tampered(save, (chronicle) => ({ ...chronicle, neutral: { ...neutral, relations: 'war' } })),
-    ),
-  ).toEqual(["fixture: the save's chronicle.neutral.relations names no relations war"]);
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, relations: 'war' }))),
+  ).toEqual(["fixture: the save's chronicle.relations names no relations war"]);
 });
 
 test('a chronicle saved with a card on its exhaust pile reads back with it there', () => {
@@ -223,6 +220,25 @@ test('a chronicle saved waiting on a capture’s rewards reads back with the dea
   expect(outcome(apply(CATALOGUE, read.chronicle.chronicle, take))).toEqual(
     outcome(apply(CATALOGUE, dealt, take)),
   );
+  expect(
+    chronicleDropped(
+      tampered(save, (chronicle) => ({
+        ...chronicle,
+        deals: [{ of: 'capture', building: SITE, rewards: { PH_Relic: 0 } }],
+      })),
+    ),
+  ).toEqual(["fixture: the save's chronicle.deals[0].rewards deals 0 copies of PH_Relic"]);
+});
+
+test('a chronicle saved once the neutral’s city has fallen reads back without it, its relations hostile', () => {
+  const fallen = endedTurn(onTheNeutralCity());
+  const save = { chronicle: fallen, region: CLEARING, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(fallen.neutral).toBeUndefined();
+  expect(fallen.relations).toBe('hostile');
+  expect(read.chronicle).toEqual(save);
 });
 
 test('a campaign saved with no chronicle in progress reads back alone', () => {

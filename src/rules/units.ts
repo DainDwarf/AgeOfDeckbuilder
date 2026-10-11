@@ -17,10 +17,8 @@ export type Faction = 'player' | 'enemy' | 'neutral';
 export type Relations = 'peace' | 'hostile';
 
 /** The neutral's relations with the player, and peace on a chronicle holding no neutral. */
-export function relationsOf(chronicle: {
-  readonly neutral?: { readonly relations: Relations };
-}): Relations {
-  return chronicle.neutral?.relations ?? 'peace';
+export function relationsOf(chronicle: { readonly relations?: Relations }): Relations {
+  return chronicle.relations ?? 'peace';
 }
 
 /**
@@ -134,7 +132,8 @@ export function standsOn(
 
 /**
  * What a path over the map is read from: the ground it runs over, the rivers cutting it, who stands
- * on it, which of it has ever been in sight, the tiles the player's city holds, and the neutral's.
+ * on it, which of it has ever been in sight, the tiles the player's city holds, the neutral's, and
+ * its relations.
  */
 type Crossed = {
   readonly tiles: readonly Tile[];
@@ -142,7 +141,8 @@ type Crossed = {
   readonly units: readonly Unit[];
   readonly snapshots: readonly TileCoords[];
   readonly held: readonly TileCoords[];
-  readonly neutral?: { readonly held: readonly TileCoords[]; readonly relations: Relations };
+  readonly neutral?: { readonly held: readonly TileCoords[] };
+  readonly relations?: Relations;
 };
 
 /**

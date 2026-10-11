@@ -160,7 +160,7 @@ export function cardsOf(
   catalogue: Catalogue,
   tile: Tile,
   units: readonly Unit[],
-  cities: Pick<Chronicle, 'city' | 'neutral'>,
+  chronicle: Pick<Chronicle, 'city' | 'relations'>,
   rivers: readonly River[],
   beside: TilesBeside,
 ): Card[] {
@@ -168,8 +168,8 @@ export function cardsOf(
 
   const unit = unitAt(units, tile);
   if (unit !== undefined) {
-    const prepares = preparedAs(cities, unit);
-    const hostile = unit.faction === 'neutral' && relationsOf(cities) === 'hostile';
+    const prepares = preparedAs(chronicle, unit);
+    const hostile = unit.faction === 'neutral' && relationsOf(chronicle) === 'hostile';
     cards.push({ kind: 'unit', unit: { ...unit, prepares, hostile } });
   }
 
