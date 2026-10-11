@@ -13,6 +13,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's population** — where the neutral acts, after its claims and before its entry, its script's choice of the tiles its population works lands as `assigned` changes, the rest idle, under one test on the fixture; the villager works the tiles that feed it first, under one test beside it; the two pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/neutral-population.md](board/neutral-population.md)
 - **The neutral's workers** — its script enters workers and plays improvement and building cards through them on the tiles it holds, where its stocks pay the cards' costs; and the neutral opens with one free worker of its own, since a city settled on anything but plain never grows a population to spare.
 - **An enemy captures a faction's city** — decide what happens when enemies capture the city of a faction that is not the player's.

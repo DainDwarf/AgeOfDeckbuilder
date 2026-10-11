@@ -430,10 +430,12 @@ const BEELINE: UnitScript = {
 
 /**
  * The script every fixture age's neutral carries: it claims the first tile offered, in tile order,
- * and enters its unit through the first card its ratio names.
+ * works the first tiles held, as many as its population, and enters its unit through the first card
+ * its ratio names.
  */
 const FIRST_OFFERED: NeutralScript = {
   claims: (_catalogue, _chronicle, offered) => offered[0],
+  assigns: (_catalogue, chronicle, held) => held.slice(0, chronicle.neutral?.population ?? 0),
   enters: (_catalogue, _chronicle, ratio) => ratio[0]?.card,
 };
 

@@ -28,7 +28,7 @@ import {
   tilesBeside,
   tileYield,
 } from '../rules/map';
-import { RESOURCES } from '../rules/resources';
+import { RESOURCES, type Resources } from '../rules/resources';
 import { nextRng, type Rng } from '../rules/rng';
 import { inOwnSight } from '../rules/sight';
 import type { CardId, Chronicle } from '../rules/state';
@@ -195,9 +195,9 @@ function raidingWhileHostile(catalogue: Catalogue, chronicle: Chronicle, unit: U
 }
 
 /**
- * The villager, claiming the tile that yields most in every resource together, the nearest to its
- * city of equals, ties in tile order; and entering the kind whose share of the neutral's units falls
- * shortest of the ratio, the first the ratio names of equals.
+ * The villager: claiming the tile that yields most, the nearest to its city of equals, and working
+ * the most food, the most together of equals, ties in tile order; entering the kind falling shortest
+ * of the ratio.
  */
 export const VILLAGER: NeutralScript = {
   claims(catalogue: Catalogue, chronicle: Chronicle, offered: readonly TileCoords[]): TileCoords {
@@ -209,8 +209,7 @@ export const VILLAGER: NeutralScript = {
     let nearest = Number.POSITIVE_INFINITY;
     for (const tile of chronicle.tiles) {
       if (!among.has(tileKey(tile))) continue;
-      const yields = tileYield(catalogue, tile, beside);
-      const worth = RESOURCES.reduce((sum, resource) => sum + (yields[resource] ?? 0), 0);
+      const worth = worthOf(tileYield(catalogue, tile, beside));
       const away = city === undefined ? 0 : distance(tile, city);
       if (worth < most || (worth === most && away >= nearest)) continue;
       most = worth;
@@ -218,6 +217,23 @@ export const VILLAGER: NeutralScript = {
       chosen = { q: tile.q, r: tile.r };
     }
     return chosen;
+  },
+
+  assigns(catalogue: Catalogue, chronicle: Chronicle, held: readonly TileCoords[]) {
+    const beside = tilesBeside(chronicle.tiles);
+    const among = new Set(held.map(tileKey));
+    return chronicle.tiles
+      .filter((tile) => among.has(tileKey(tile)))
+      .map((tile) => ({
+        tile: { q: tile.q, r: tile.r },
+        yields: tileYield(catalogue, tile, beside),
+      }))
+      .sort(
+        (a, b) =>
+          (b.yields.food ?? 0) - (a.yields.food ?? 0) || worthOf(b.yields) - worthOf(a.yields),
+      )
+      .slice(0, chronicle.neutral?.population ?? 0)
+      .map(({ tile }) => tile);
   },
 
   enters(_catalogue: Catalogue, chronicle: Chronicle, ratio: readonly UnitShare[]) {
@@ -236,6 +252,11 @@ export const VILLAGER: NeutralScript = {
     return chosen;
   },
 };
+
+/** What a tile yields in every resource together. */
+function worthOf(yields: Partial<Resources>): number {
+  return RESOURCES.reduce((sum, resource) => sum + (yields[resource] ?? 0), 0);
+}
 
 /** Whether the tile is the city's. */
 function onCity(chronicle: Chronicle, tile: TileCoords): boolean {

@@ -54,6 +54,12 @@ export type UnitScript = {
 export type NeutralScript = {
   /** The tile its city claims, out of those offered: the tiles it may claim, never none. */
   claims(catalogue: Catalogue, chronicle: Chronicle, offered: readonly TileCoords[]): TileCoords;
+  /** The tiles its population works, out of those its city holds, each once and no more than its population. */
+  assigns(
+    catalogue: Catalogue,
+    chronicle: Chronicle,
+    held: readonly TileCoords[],
+  ): readonly TileCoords[];
   /** The unit card it enters a unit through, out of those its ratio names, and none for no unit. */
   enters(
     catalogue: Catalogue,

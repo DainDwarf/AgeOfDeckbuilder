@@ -867,6 +867,33 @@ test('the villager enters the kind whose share of the neutral’s units falls sh
   ).toBe('PH_Worker');
 });
 
+test('the villager works the tiles its city holds giving the most food first, the most of everything together of equals, a building beside counted, the first in tile order of those, as many as its population, and a population past the tiles held works none', () => {
+  const around = neutralAround(
+    [
+      { q: 2, r: -1 },
+      { q: 2, r: 0 },
+      { q: 2, r: 1 },
+      { q: 3, r: -1 },
+      { q: 3, r: 0 },
+    ],
+    [],
+  );
+  const laid = [
+    { q: 2, r: -1, terrain: 'hills' },
+    { q: 2, r: 0, terrain: 'forest' },
+    { q: 4, r: -2, terrain: WELL_GIVES.terrain, building: WELL },
+  ].reduce((chronicle, tile) => withTile(chronicle, { improvements: [], ...tile }), around);
+  const working = (population: number): string[] =>
+    VILLAGER.assigns(
+      CATALOGUE,
+      withCityRows(laid, 'neutral', { population }),
+      laid.neutral?.held ?? [],
+    ).map(tileKey);
+
+  expect(working(3)).toEqual(['3,-1', '1,0', '2,1']);
+  expect(working(8)).toEqual(['3,-1', '1,0', '2,1', '3,0', '2,0', '2,-1']);
+});
+
 test('a guard attacks the unit of the least health within its range', () => {
   const camp = { q: 4, r: 0 };
   const city = cityOf(['urban'], {

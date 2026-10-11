@@ -364,14 +364,18 @@ function neutralAges(): { neutral: Neutral; chronicle: Chronicle }[] {
   });
 }
 
-test('every age’s neutral’s script answers a claim among the tiles its city may claim on a chronicle launched and settled in that age, on a region dealing it', () => {
+test('every age’s neutral’s script answers a claim among the tiles its city may claim, and the tiles its population works among those its city holds, on a chronicle launched and settled in that age, on a region dealing it', () => {
   for (const { neutral, chronicle } of neutralAges()) {
     const offered = claimable(CATALOGUE, chronicle, 'neutral');
+    const held = chronicle.neutral?.held ?? [];
 
     expect(offered).not.toEqual([]);
     expect(offered.map(tileKey)).toContain(
       tileKey(neutral.script.claims(CATALOGUE, chronicle, offered)),
     );
+    for (const tile of neutral.script.assigns(CATALOGUE, chronicle, held)) {
+      expect(held.map(tileKey)).toContain(tileKey(tile));
+    }
   }
 });
 

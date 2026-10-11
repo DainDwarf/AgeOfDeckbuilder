@@ -39,6 +39,7 @@ import {
   declaredByLanding,
   grow,
   income,
+  neutralAssigns,
   neutralClaims,
   neutralEntered,
   reassign,
@@ -1207,6 +1208,7 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
   };
   actingAs('neutral');
   phase = followed<Stage>(phase, (left) => neutralClaims(catalogue, left));
+  phase = followed<Stage>(phase, (left) => neutralAssigns(catalogue, left));
   phase = followed(phase, (left) => neutralEntered(catalogue, left));
   actingAs('enemy');
   return grouped(

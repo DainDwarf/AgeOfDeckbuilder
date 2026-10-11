@@ -158,23 +158,12 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
   );
 }
 
-/** The population of the faction's city off the tile and then one fewer. */
+/**
+ * The population of the faction's city off the tile and then one fewer. The tile must be one its
+ * population works: `assigned` toggles, and on an unworked tile it would put one on.
+ */
 function populationLeaving(chronicle: Chronicle, whose: CityFaction, at: TileCoords): Landed {
-  const key = tileKey(at);
-  const city = cityRows(chronicle, whose);
-  if (city === undefined) return unchanged(chronicle);
-  return followed(
-    landedAs(
-      changeOn(
-        'assigned',
-        at,
-        withCityRows(chronicle, whose, {
-          assigned: city.assigned.filter((coord) => tileKey(coord) !== key),
-        }),
-      ),
-    ),
-    (left) => populationFewer(left, whose),
-  );
+  return followed(assigned(chronicle, whose, at), (left) => populationFewer(left, whose));
 }
 
 /** The faction's city's population one fewer, and nothing where that city is none. */
@@ -359,7 +348,7 @@ export function assign(
   tile: TileCoords,
 ): Landed | undefined {
   if (cityCommand(catalogue, chronicle, tile)?.type !== 'assign') return undefined;
-  return assigned(chronicle, tile);
+  return assigned(chronicle, 'player', tile);
 }
 
 /**
@@ -373,19 +362,27 @@ export function reassign(
   to: TileCoords,
 ): Landed | undefined {
   if (cityDrag(chronicle, from, to) === undefined) return undefined;
-  return followed(assigned(chronicle, from), (left) => assigned(left, to));
+  return followed(assigned(chronicle, 'player', from), (left) => assigned(left, 'player', to));
 }
 
-/** The population on the tile taken off it, or an idle one put on it where none stands there. */
-function assigned(chronicle: Chronicle, tile: TileCoords): Landed {
+/**
+ * The faction's city's population on the tile taken off it, or an idle one put on it where none
+ * stands there, and nothing where that city is none.
+ */
+function assigned(chronicle: Chronicle, whose: CityFaction, tile: TileCoords): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
   const at = { q: tile.q, r: tile.r };
   const key = tileKey(at);
-  const off = chronicle.assigned.filter((coord) => tileKey(coord) !== key);
+  const off = city.assigned.filter((coord) => tileKey(coord) !== key);
   return landedAs(
-    changeOn('assigned', at, {
-      ...chronicle,
-      assigned: off.length < chronicle.assigned.length ? off : [...off, at],
-    }),
+    changeOn(
+      'assigned',
+      at,
+      withCityRows(chronicle, whose, {
+        assigned: off.length < city.assigned.length ? off : [...off, at],
+      }),
+    ),
   );
 }
 
@@ -433,15 +430,7 @@ export function bordered(chronicle: Chronicle, whose: CityFaction, tile: TileCoo
     changeOn('held', taken, withCityRows(chronicle, whose, { held: [...city.held, taken] })),
   );
   if (idle(city) <= 0) return held;
-  return followed(held, (left) =>
-    landedAs(
-      changeOn(
-        'assigned',
-        taken,
-        withCityRows(left, whose, { assigned: [...city.assigned, taken] }),
-      ),
-    ),
-  );
+  return followed(held, (left) => assigned(left, whose, taken));
 }
 
 /**
@@ -474,6 +463,36 @@ export function neutralClaims(catalogue: Catalogue, chronicle: Chronicle): Seque
     }
     claiming = followed<Stage>(claiming, () => grouped({ name: 'claim' }, landing));
   }
+}
+
+/**
+ * The neutral's population laid over the tiles its script chooses among those its city holds, one
+ * `assigned` per population moved under one `assign` group; a choice naming a tile not held, a tile
+ * twice or more tiles than its population is a `runtime-error`.
+ */
+export function neutralAssigns(catalogue: Catalogue, chronicle: Chronicle): Sequence<Stage> {
+  const { neutral } = ageOf(catalogue, chronicle.age);
+  const city = chronicle.neutral;
+  if (neutral === undefined || city === undefined) return unchanged(chronicle);
+  const chosen = neutral.script.assigns(catalogue, chronicle, city.held);
+  const named = new Set(chosen.map(tileKey));
+  const held = new Set(city.held.map(tileKey));
+  if (
+    named.size < chosen.length ||
+    chosen.length > city.population ||
+    chosen.some((tile) => !held.has(tileKey(tile)))
+  ) {
+    return landedAs(change('runtime-error', chronicle));
+  }
+  const worked = new Set(city.assigned.map(tileKey));
+  const moving = [
+    ...city.assigned.filter((tile) => !named.has(tileKey(tile))),
+    ...chosen.filter((tile) => !worked.has(tileKey(tile))),
+  ];
+  if (moving.length === 0) return unchanged(chronicle);
+  let laying = unchanged(chronicle);
+  for (const tile of moving) laying = followed(laying, (left) => assigned(left, 'neutral', tile));
+  return grouped({ name: 'assign' }, laying);
 }
 
 /**

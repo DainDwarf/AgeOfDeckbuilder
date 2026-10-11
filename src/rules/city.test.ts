@@ -3,9 +3,11 @@ import { aimOf, refuses } from './cards';
 import {
   type AimedCard,
   ageOf,
+  type Catalogue,
   type Civilization,
   cardOf,
   catalogued,
+  type NeutralScript,
   neutralOf,
   unitKind,
 } from './catalogue';
@@ -1003,20 +1005,61 @@ test('a unit the neutral enters waits for the next enemy phase to act, and acts 
   ]);
 });
 
-test('a neutral’s script naming a card its ratio does not name raises a runtime error at the enemy phase and enters nothing', () => {
+/** The fixture's content, its quiet age's neutral choosing as the test lays over its script. */
+function neutralScripted(script: Partial<NeutralScript>): Catalogue {
   const quiet = ageOf(CATALOGUE, QUIET);
   const neutral = neutralOf(CATALOGUE, QUIET);
-  const straying = catalogued(
+  return catalogued(
     changed({
       ages: {
         ...CATALOGUE.ages,
-        [QUIET]: {
-          ...quiet,
-          neutral: { ...neutral, script: { ...neutral.script, enters: () => 'PH_Worker' } },
-        },
+        [QUIET]: { ...quiet, neutral: { ...neutral, script: { ...neutral.script, ...script } } },
       },
     }),
   );
+}
+
+test('where the neutral acts, after its claims and before its entry, its script lays its population over the tiles its city holds as one assign group, each population off a tile it leaves out and onto one it names, the rest idle for the entry; an answer naming a tile it does not hold, a tile twice or more tiles than its population is a runtime error, nothing moved, and the entry lands', () => {
+  const [named, left, unworked] = [
+    { q: 2, r: 0 },
+    { q: 2, r: -1 },
+    { q: 1, r: 1 },
+  ];
+  const chronicle = neutralHolding({
+    population: 3,
+    held: [NEUTRAL_TILE, named, left, unworked],
+    assigned: [NEUTRAL_TILE, left],
+    resources: military(2),
+  });
+  const phaseOn = (catalogue: Catalogue) =>
+    heldBy(apply(catalogue, chronicle, { type: 'end-turn' }), 'enemy-phase');
+  const entered = ['stock', 'population', 'enter'];
+
+  const laid = phaseOn(neutralScripted({ assigns: () => [named] }));
+
+  expect(namesOf(laid)).toEqual(['assign', 'assigned', 'assigned', 'assigned', ...entered]);
+  expect(heldBy(laid, 'assign')).toMatchObject([
+    { tile: NEUTRAL_TILE },
+    { tile: left },
+    { tile: named },
+  ]);
+  expect(laid.at(-1)?.chronicle.neutral).toMatchObject({ population: 2, assigned: [named] });
+  expect(namesOf(phaseOn(neutralScripted({ assigns: () => [left, NEUTRAL_TILE] })))).toEqual(
+    entered,
+  );
+  for (const assigns of [
+    () => [CITY],
+    () => [named, named],
+    () => [NEUTRAL_TILE, named, left, unworked],
+  ]) {
+    const straying = phaseOn(neutralScripted({ assigns }));
+    expect(namesOf(straying)).toEqual(['runtime-error', ...entered]);
+    expect(straying.at(-1)?.chronicle.neutral?.assigned).toEqual([NEUTRAL_TILE, left]);
+  }
+});
+
+test('a neutral’s script naming a card its ratio does not name raises a runtime error at the enemy phase and enters nothing', () => {
+  const straying = neutralScripted({ enters: () => 'PH_Worker' });
   const chronicle = neutralHolding({ population: 2, resources: military(2) });
 
   expect(namesOf(heldBy(apply(straying, chronicle, { type: 'end-turn' }), 'enemy-phase'))).toEqual([
@@ -1025,19 +1068,7 @@ test('a neutral’s script naming a card its ratio does not name raises a runtim
 });
 
 test('a neutral’s script choosing a tile it was not offered raises a runtime error at the enemy phase, its city claiming nothing more that phase, and the enemies act on', () => {
-  const quiet = ageOf(CATALOGUE, QUIET);
-  const neutral = neutralOf(CATALOGUE, QUIET);
-  const straying = catalogued(
-    changed({
-      ages: {
-        ...CATALOGUE.ages,
-        [QUIET]: {
-          ...quiet,
-          neutral: { ...neutral, script: { ...neutral.script, claims: () => CITY } },
-        },
-      },
-    }),
-  );
+  const straying = neutralScripted({ claims: () => CITY });
   const chronicle = withUnits(neutralHolding({ resources: culture(5) }), [
     standing('enemy', { q: -3, r: 0 }),
   ]);
