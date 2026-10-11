@@ -19,7 +19,7 @@ import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rul
 import { type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, type Stage, walked } from '../rules/stages';
-import { type Chronicle, type Cost, onSettlePhase, playable } from '../rules/state';
+import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
 import { type Unit, unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
@@ -446,12 +446,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           return;
         }
         if (cityMode) void act(found);
-        else if (
-          this.current.city !== undefined &&
-          tileKey(found.tile) === tileKey(this.current.city)
-        ) {
-          enterCityMode();
-        }
+        else if (cityOn(this.current, found.tile) === 'player') enterCityMode();
       },
       () => {
         panel.rescale();
@@ -814,7 +809,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
             refusal: (kind, tile) => {
               const at = tileAt(chronicle.tiles, tile);
               if (at === undefined) throw new Error(`no tile of the map is ${tileKey(tile)}`);
-              return entersOn(kind).refuses(CATALOGUE, chronicle, at);
+              return entersOn(kind).refuses(CATALOGUE, chronicle, at, 'player');
             },
           };
         },

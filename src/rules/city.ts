@@ -1,4 +1,4 @@
-import { ageOf, type Catalogue, costOf, unitCardOf } from './catalogue';
+import { ageOf, type Catalogue, cardOf, costOf, unitCardOf, workerAim } from './catalogue';
 import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
@@ -15,6 +15,8 @@ import {
 } from './stages';
 import {
   assignedTo,
+  type Block,
+  type CardId,
   type Chronicle,
   type CityFaction,
   type Cost,
@@ -496,30 +498,74 @@ export function neutralAssigns(catalogue: Catalogue, chronicle: Chronicle): Sequ
 }
 
 /**
- * The neutral entering one unit through the unit card its script names, its cost one `stock` out of
- * the neutral's stocks: a card it cannot pay for or one blocked enters nothing, and one its ratio
- * does not name is a `runtime-error`.
+ * The neutral entering one unit through the unit card its script names: a card it cannot pay for or
+ * one blocked enters nothing, and one its ratio does not name is a `runtime-error`.
  */
 export function neutralEntered(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const { neutral } = ageOf(catalogue, chronicle.age);
-  const city = chronicle.neutral;
-  if (neutral === undefined || city === undefined) return unchanged(chronicle);
+  if (neutral === undefined || chronicle.neutral === undefined) return unchanged(chronicle);
   const id = neutral.script.enters(catalogue, chronicle, neutral.ratio);
   if (id === undefined) return unchanged(chronicle);
   if (!neutral.ratio.some(({ card }) => card === id)) {
     return landedAs(change('runtime-error', chronicle));
   }
   const card = unitCardOf(catalogue, id);
-  const costs = costOf(catalogue, id);
-  if (
-    !playable({
-      unaffordable: unaffordable(city, costs),
-      blocked: card.blocked(catalogue, chronicle, 'neutral'),
-    })
-  ) {
-    return unchanged(chronicle);
-  }
-  return followed(costPaid(chronicle, 'neutral', costs), (left) =>
-    card.effect(catalogue, left, 'neutral'),
+  return (
+    neutralPaid(catalogue, chronicle, id, card.blocked(catalogue, chronicle, 'neutral'), (left) =>
+      card.effect(catalogue, left, 'neutral'),
+    ) ?? unchanged(chronicle)
   );
+}
+
+/**
+ * A card a worker of the neutral's plays on the tile it stands on, one `neutral-played` group; a play
+ * the neutral's workers cannot make there is a `runtime-error`, one refused or unpaid plays nothing.
+ */
+export function neutralPlayed(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+  id: CardId,
+  at: TileCoords,
+): Sequence<Stage> {
+  const tile = tileAt(chronicle.tiles, at);
+  const named = ageOf(catalogue, chronicle.age).neutral?.workers?.cards.includes(id) === true;
+  const aim = workerAim(cardOf(catalogue, id));
+  if (
+    !named ||
+    aim === undefined ||
+    unit.faction !== 'neutral' ||
+    unit.embarked ||
+    tile === undefined ||
+    tileKey(unit.tile) !== tileKey(at) ||
+    holderOf(chronicle, at) !== 'neutral'
+  ) {
+    return landedAs(change('runtime-error', chronicle));
+  }
+  if (aim.refuses(catalogue, chronicle, tile, 'neutral') !== undefined) return unchanged(chronicle);
+  const playing = neutralPaid(catalogue, chronicle, id, [], (left) =>
+    aim.effect(catalogue, left, at),
+  );
+  return playing === undefined
+    ? unchanged(chronicle)
+    : grouped({ name: 'neutral-played' }, playing);
+}
+
+/**
+ * A card the neutral plays out of its stocks, its cost one `stock` and then what it resolves as, and
+ * nothing where the chronicle holds no neutral, where it cannot pay for the card or where a block
+ * stands against it.
+ */
+function neutralPaid(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  id: CardId,
+  blocked: readonly Block[],
+  resolves: (paid: Chronicle) => Landed,
+): Landed | undefined {
+  const city = chronicle.neutral;
+  if (city === undefined) return undefined;
+  const costs = costOf(catalogue, id);
+  if (!playable({ unaffordable: unaffordable(city, costs), blocked })) return undefined;
+  return followed(costPaid(chronicle, 'neutral', costs), resolves);
 }

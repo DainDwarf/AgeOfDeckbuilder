@@ -34,6 +34,7 @@ import {
   EMBARKED_MOVE,
   endedTurn,
   enemiesOf,
+  enemyPhaseOf,
   enemyStanding,
   everyCard,
   field,
@@ -1313,11 +1314,6 @@ const RECKLESS = naming((_catalogue, chronicle) =>
   attackOrNone(chronicle.units.find((unit) => unit.faction === 'player')),
 );
 
-/** The names of the stages the enemy phase of the end of turn holds. */
-function enemyPhaseOf(chronicle: Chronicle, catalogue: Catalogue): string[] {
-  return namesOf(heldBy(apply(catalogue, chronicle, { type: 'end-turn' }), 'enemy-phase'));
-}
-
 test('an enemy attacks only a unit its own sight reaches: one its script names behind a forest from the plain is a runtime-error and no attack, and from the hills the attack lands', () => {
   const blind = naming((_catalogue, chronicle, enemy) =>
     attackOrNone(attackable(chronicle.units, enemy, relationsOf(chronicle))[0]),
@@ -1681,13 +1677,15 @@ test('a prepare off the city’s tile lands at the next enemy phase ahead of eve
   expect(carried.chronicle.units[0]).toMatchObject({ prepared: false });
 });
 
-test('a pillage on the neutral’s city’s tile removes every improvement and spares its building', () => {
+test('the neutral’s city’s tile is never pillaged: a prepare carried there takes nothing, its improvement and its building standing, and an enemy prepares nothing there', () => {
   const roaded = improvementPlaced(CATALOGUE, besideTheNeutral(), NEUTRAL_TILE, 'PH_Road');
   const pillaging = withUnits(roaded.chronicle, [preparing(standing('enemy', NEUTRAL_TILE))]);
+  const standingThere = withUnits(roaded.chronicle, [standing('enemy', NEUTRAL_TILE)]);
 
   const after = outcome(apply(CATALOGUE, pillaging, { type: 'end-turn' }));
 
-  expect(tileAt(after.tiles, NEUTRAL_TILE)).toMatchObject({ building: NEUTRAL, improvements: [] });
+  expect(tileAt(after.tiles, NEUTRAL_TILE)).toEqual(tileAt(roaded.chronicle.tiles, NEUTRAL_TILE));
+  expect(enemyPhaseOf(standingThere, PREPARING)).toEqual(['runtime-error']);
 });
 
 test('an enemy prepared on the city’s tile captures the city ahead of every pillage', () => {

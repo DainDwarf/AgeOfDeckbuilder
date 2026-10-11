@@ -27,7 +27,7 @@ import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed } from '../rules/stages';
 import { NOMADIC } from './nomadic';
-import { NEUTRAL_GUARD, NEUTRAL_WAVE, PILLAGER, VILLAGER } from './scripts';
+import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
 
 const { basePrice, schedule, camp } = NOMADIC.owns;
 
@@ -143,8 +143,13 @@ export const STONE: Slice = {
       ratio: [
         { card: 'warrior', kind: 'warrior', share: 2 },
         { card: 'archer', kind: 'archer', share: 1 },
+        { card: 'worker', kind: 'worker', share: 1 },
       ],
       wave: { gathered: 6, sent: 3 },
+      workers: {
+        script: 'neutral-worker',
+        cards: ['farm', 'clay-pit', 'irrigation', 'pasture', 'trapping'],
+      },
       rewards: { 'band-joins': 3, 'their-land': 3, 'their-stores': 3 },
     },
     sites: {
@@ -270,7 +275,12 @@ export const STONE: Slice = {
         sight: 2,
       },
     },
-    scripts: { pillager: PILLAGER, 'neutral-guard': NEUTRAL_GUARD, 'neutral-wave': NEUTRAL_WAVE },
+    scripts: {
+      pillager: PILLAGER,
+      'neutral-guard': NEUTRAL_GUARD,
+      'neutral-wave': NEUTRAL_WAVE,
+      'neutral-worker': NEUTRAL_WORKER,
+    },
     cards: {
       farm: {
         kind: 'building',
@@ -306,7 +316,7 @@ export const STONE: Slice = {
         cost: { food: 2 },
         aim: 'unit',
         refuses: (catalogue, chronicle, tile) =>
-          firstRefusal(inside(chronicle, tile), healthLost(catalogue, chronicle, tile)),
+          firstRefusal(inside(chronicle, tile, 'player'), healthLost(catalogue, chronicle, tile)),
         effect: (catalogue, paid, at) => healed(catalogue, paid, at),
       },
       embark: {

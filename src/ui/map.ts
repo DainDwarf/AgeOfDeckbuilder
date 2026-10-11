@@ -1691,6 +1691,7 @@ export function createMapView(
       case 'refused':
       case 'assign':
       case 'claim':
+      case 'neutral-played':
       case 'strike':
       case 'income':
       case 'grow':

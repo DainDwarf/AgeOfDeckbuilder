@@ -13,5 +13,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's workers** — the neutral opens with one worker of its own on its city's tile and enters more through its ratio; where the neutral acts, a worker of its plays an improvement or a building card its content names on the tile its city holds that it stands on, through the one door the player's play through a worker goes through, the cost paid out of the neutral's stocks, under one test on the fixture; the villager's worker goes for the tile where a card adds most to the yield, under one test beside it; a pillager goes for either city's workers and builds, the neutral's city's own tile spared; the pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`, `docs/ages/STONE.md`. [board/neutral-workers.md](board/neutral-workers.md)
 - **An enemy captures a faction's city** — decide what happens when enemies capture the city of a faction that is not the player's.

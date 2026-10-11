@@ -44,6 +44,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
 | **region** | The launch choice that biases map generation; the difficulty dial. | location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
+| **military unit** | A unit that attacks. | combat unit, soldier, fighter |
 | **faction** | Who a unit acts for: the player, the enemies, or the neutral. | side, team, owner, allegiance |
 | **building** | A standing structure on a tile; one slot per tile. | structure |
 | **place** | To put a thing onto a tile: a unit, a building, an improvement, a camp. | deploy, drop, spawn (for a thing on a tile), improve, lay, install |
@@ -133,6 +134,6 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **military** | The resource that pays for combat. | — |
 | **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
 | **prepare** | What an enemy does when it spends its action on the tile it stands on for an effect at the next enemy phase. | hold, besiege, ready, entrench |
-| **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything the player built on it is removed. | raze, loot, sack |
+| **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything built on it is removed. | raze, loot, sack |
 | **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |
 | **reward** | What a capture deals: cards, of which the player chooses one, added in the copies it names. | gift, prize, bounty |

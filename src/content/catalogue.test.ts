@@ -15,6 +15,7 @@ import {
   type Neutral,
   unitCardOf,
   unitScript,
+  workerAim,
 } from '../rules/catalogue';
 import { admitted, apply, launched, refusalOf } from '../rules/chronicle';
 import { claimable } from '../rules/city';
@@ -395,6 +396,36 @@ test('every age’s neutral’s script enters through a card of its ratio or non
         expect(() => script.moveTo(CATALOGUE, standing, unit)).not.toThrow();
         expect(() => script.acts(CATALOGUE, standing, unit)).not.toThrow();
       }
+    }
+  }
+});
+
+test('every age’s neutral naming workers opens with one on its city’s tile, whose script answers its move and its act, and every card its workers play answers its refusal for the neutral on every tile its city holds and lands its effect through that worker, on a chronicle launched and settled in that age, on a region dealing it', () => {
+  for (const { neutral, chronicle } of neutralAges()) {
+    const { workers } = neutral;
+    if (workers === undefined) continue;
+    const city = chronicle.neutral;
+    if (city === undefined) throw new Error('the chronicle holds no neutral');
+    const worker = chronicle.units.find(
+      (unit) =>
+        unit.faction === 'neutral' &&
+        unit.stats.worker &&
+        tileKey(unit.tile) === tileKey(city.city),
+    );
+    if (worker === undefined)
+      throw new Error('the neutral opens with no worker on its city’s tile');
+    const script = unitScript(CATALOGUE, workers.script);
+    expect(() => script.moveTo(CATALOGUE, chronicle, worker)).not.toThrow();
+    expect(() => script.acts(CATALOGUE, chronicle, worker)).not.toThrow();
+    for (const id of workers.cards) {
+      const aim = workerAim(cardOf(CATALOGUE, id));
+      if (aim === undefined) throw new Error(`the neutral’s workers play ${id}, no worker’s card`);
+      for (const at of city.held) {
+        const tile = tileAt(chronicle.tiles, at);
+        if (tile === undefined) throw new Error(`the neutral holds ${tileKey(at)}, off the map`);
+        expect(() => aim.refuses(CATALOGUE, chronicle, tile, 'neutral')).not.toThrow();
+      }
+      expect(() => aim.effect(CATALOGUE, chronicle, worker.tile)).not.toThrow();
     }
   }
 });

@@ -1,14 +1,29 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, neutralOf, technologyOf, unitKind } from '../src/rules/catalogue';
+import {
+  ageOf,
+  cardOf,
+  neutralOf,
+  neutralWorkerKind,
+  technologyOf,
+  unitKind,
+} from '../src/rules/catalogue';
 import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
-import { warDeclared } from '../src/rules/city';
-import { movementCost, neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { bordered, warDeclared, yielded } from '../src/rules/city';
+import {
+  movementCost,
+  neighbours,
+  type TileCoords,
+  tileAt,
+  tileKey,
+  tilesBeside,
+  tileYield,
+} from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
-import { walked } from '../src/rules/stages';
+import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
@@ -29,6 +44,7 @@ import {
   dragOut,
   EMBARK,
   endedTurn,
+  endTurn,
   enter,
   firstSeed,
   idsOf,
@@ -111,7 +127,7 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   page,
 }) => {
   const problems = watch(page);
-  const opened = settledOn(1, [], CAMPAIGN);
+  const opened = seedOneFreed();
   const { neutral } = opened;
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const building = neutralBuilding(CATALOGUE, ageOf(CATALOGUE, AGE), `the age ${AGE}`);
@@ -140,6 +156,29 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   expect(problems).toEqual([]);
 });
 
+/**
+ * The chronicle the turns from this one leave once no unit stands on the neutral's city's tile, the
+ * worker it opens with standing there until it steps off; nothing where the chronicle ends, the
+ * neutral falls or the tenth turn passes first.
+ */
+function cityFreed(chronicle: Chronicle): Chronicle | undefined {
+  let freeing = chronicle;
+  while (freeing.ending === undefined && freeing.turn <= 10) {
+    const { neutral } = freeing;
+    if (neutral === undefined) return undefined;
+    if (unitAt(freeing.units, neutral.city) === undefined) return freeing;
+    freeing = endedTurn(freeing);
+  }
+  return undefined;
+}
+
+/** Seed 1's turn on the campaign once the neutral's city's tile is free. */
+function seedOneFreed(): Chronicle {
+  const freed = cityFreed(settledOn(1, [], CAMPAIGN));
+  if (freed === undefined) throw new Error('no turn of seed 1 frees the neutral’s city’s tile');
+  return freed;
+}
+
 /** The kind of the unit the neutral's script enters on this chronicle. */
 function kindEntered(chronicle: Chronicle): string {
   const { script, ratio } = neutralOf(CATALOGUE, AGE);
@@ -163,7 +202,7 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   page,
 }) => {
   const problems = watch(page);
-  const opened = settledOn(1, [], CAMPAIGN);
+  const opened = seedOneFreed();
   const { neutral } = opened;
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const kind = kindEntered(opened);
@@ -281,11 +320,12 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
 });
 
 /**
- * Seed 1's turn 1 with a warrior of the player's entered on the first tile beside the neutral's city
- * that its move lands it on the city's tile from, and the command that lands it there.
+ * Seed 1's turn with the neutral's city's tile free and a warrior of the player's entered on the
+ * first tile beside it that its move lands it on the city's tile from, and the command that lands it
+ * there.
  */
 function besideTheNeutralCity(): { chronicle: Chronicle; move: UnitCommand; from: TileCoords } {
-  const opened = settledOn(1, [], CAMPAIGN);
+  const opened = seedOneFreed();
   const { neutral } = opened;
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   for (const from of neighbours(neutral.city)) {
@@ -378,37 +418,43 @@ test('a unit of the player’s pressed onto the neutral’s city at peace raises
 const SAILING = campaignWith([EMBARK]);
 
 /**
- * The first seed's turn with a warrior of the player's embarked by Embark beside the neutral's city,
- * Disembark in hand and paid for, admitting the city's tile; where Disembark lies, and the city's tile.
+ * The first seed's turn with the neutral's city's tile free and a warrior of the player's embarked by
+ * Embark beside it, Disembark in hand and paid for, admitting the city's tile; where Disembark lies,
+ * and the city's tile.
  */
 function offTheNeutralCity(): { chronicle: Chronicle; index: number; city: TileCoords } {
   const warrior = unitKind(CATALOGUE, WARRIOR);
-  return firstSeed(`opens on ${EMBARK} in hand beside water beside the neutral’s city`, (seed) => {
-    const opened = settledOn(seed, [], SAILING);
-    const { neutral } = opened;
-    if (neutral === undefined || !idsOf(opened.hand).includes(EMBARK)) return undefined;
-    const free = (coord: TileCoords): boolean =>
-      unitAt(opened.units, coord) === undefined && holderOf(opened, coord) === undefined;
-    for (const water of neighbours(neutral.city)) {
-      if (
-        !free(water) ||
-        movementCost(CATALOGUE, tileAt(opened.tiles, water), true) === undefined
-      ) {
-        continue;
+  return firstSeed(
+    `frees the neutral’s city with ${EMBARK} in hand beside water beside it`,
+    (seed) => {
+      const opened = cityFreed(settledOn(seed, [], SAILING));
+      const neutral = opened?.neutral;
+      if (opened === undefined || neutral === undefined || !idsOf(opened.hand).includes(EMBARK)) {
+        return undefined;
       }
-      for (const bank of neighbours(water)) {
-        if (!free(bank) || !standsOn(CATALOGUE, warrior, false, tileAt(opened.tiles, bank))) {
+      const free = (coord: TileCoords): boolean =>
+        unitAt(opened.units, coord) === undefined && holderOf(opened, coord) === undefined;
+      for (const water of neighbours(neutral.city)) {
+        if (
+          !free(water) ||
+          movementCost(CATALOGUE, tileAt(opened.tiles, water), true) === undefined
+        ) {
           continue;
         }
-        const manned = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: bank });
-        const paid = paidFor(manned, EMBARK);
-        if (!admits(paid.chronicle, paid.index, water)) continue;
-        const disembarking = disembarkingAt(paid, water, neutral.city, SAILING);
-        if (disembarking !== undefined) return { ...disembarking, city: neutral.city };
+        for (const bank of neighbours(water)) {
+          if (!free(bank) || !standsOn(CATALOGUE, warrior, false, tileAt(opened.tiles, bank))) {
+            continue;
+          }
+          const manned = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: bank });
+          const paid = paidFor(manned, EMBARK);
+          if (!admits(paid.chronicle, paid.index, water)) continue;
+          const disembarking = disembarkingAt(paid, water, neutral.city, SAILING);
+          if (disembarking !== undefined) return { ...disembarking, city: neutral.city };
+        }
       }
-    }
-    return undefined;
-  });
+      return undefined;
+    },
+  );
 }
 
 test('a card played at peace that lands a unit of the player’s on the neutral’s city raises the Declare War warning, reading Play; Back leaves the card being aimed with nothing paid, and the press gone through plays it, the unit landed there and the neutral hostile', async ({
@@ -486,12 +532,82 @@ test('a unit of the neutral’s standing on a camp through the enemy phase captu
   expect(problems).toEqual([]);
 });
 
+/**
+ * The first seed's turn 1 with the neutral's border taken onto a tile beside its city, its stocks
+ * given the cost of the first building card its workers play by a tile yielding production, and a
+ * worker of its entered on that tile, which the end of turn builds on; and the tile.
+ */
+function workerBeside(): { chronicle: Chronicle; tile: TileCoords } {
+  const neutral = neutralOf(CATALOGUE, AGE);
+  const kind = neutralWorkerKind(CATALOGUE, neutral);
+  const card = neutral.workers?.cards.find((id) => cardOf(CATALOGUE, id).kind === 'building');
+  if (kind === undefined || neutral.workers === undefined || card === undefined) {
+    throw new Error(`the neutral of the age ${AGE} builds nothing`);
+  }
+  const { script } = neutral.workers;
+  const { production = 0 } = cardOf(CATALOGUE, card).cost;
+  return firstSeed('builds on a tile beside the neutral’s city at the end of turn 1', (seed) => {
+    const opened = settledOn(seed, [], CAMPAIGN);
+    const city = opened.neutral?.city;
+    const beside = tilesBeside(opened.tiles);
+    const source = opened.tiles.find(
+      (tile) => (tileYield(CATALOGUE, tile, beside).production ?? 0) > 0,
+    );
+    if (city === undefined || source === undefined) return undefined;
+    const gives = tileYield(CATALOGUE, source, beside).production ?? 0;
+    for (const tile of neighbours(city)) {
+      const there = tileAt(opened.tiles, tile);
+      if (there === undefined || there.building !== undefined) continue;
+      if (holderOf(opened, tile) !== undefined || unitAt(opened.units, tile) !== undefined)
+        continue;
+      let paying = bordered(opened, 'neutral', tile);
+      for (let paid = 0; paid < production; paid += gives) {
+        paying = followed(paying, (left) => yielded(CATALOGUE, left, 'neutral', source));
+      }
+      const chronicle = unitEntered(paying.chronicle, {
+        type: kind,
+        faction: 'neutral',
+        script,
+        tile,
+      });
+      if (tileAt(endedTurn(chronicle).tiles, tile)?.building !== undefined) {
+        return { chronicle, tile };
+      }
+    }
+    return undefined;
+  });
+}
+
+test('a worker of the neutral’s standing on a tile its city holds builds there at the end of turn, the veils off: the building’s mark rises on the tile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle, tile } = workerBeside();
+  const built = endedTurn(chronicle);
+  const mark = `building-${tileKey(tile)}`;
+
+  await openSaved(page, chronicle, CAMPAIGN);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+  await rested(page);
+  expect(await standing(page, mark)).toBe(false);
+
+  await endTurn(page);
+  await expect.poll(() => chronicleOf(page)).toEqual(built);
+  expect(await standing(page, mark)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
 test('a warrior of the player’s standing on the neutral’s city through the enemy phase captures it: the city’s mark gone, the window rising under its building’s name and lore with each reward of several copies a stack whose badge reads them, and the take adding every copy to the discard pile', async ({
   page,
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const opened = settledOn(1, [], CAMPAIGN);
+  const opened = seedOneFreed();
   const { neutral } = opened;
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const { city } = neutral;

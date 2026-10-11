@@ -38,6 +38,7 @@ import {
   type Catalogue,
   type Civilization,
   cardMade,
+  cardOf,
   catalogued,
   civilizationOf,
   type Entering,
@@ -53,6 +54,7 @@ import {
   type UnitEntryRow,
   type UnitEntryTable,
   type UnitScript,
+  workerAim,
 } from './catalogue';
 import {
   apply,
@@ -83,6 +85,7 @@ import {
   type Terrain,
   type Tile,
   type TileCoords,
+  tileAt,
   tileKey,
 } from './map';
 import type { Region } from './map-kinds';
@@ -121,6 +124,7 @@ import {
   type ChronicleAchievement,
   type ChronicleCard,
   type CitySection,
+  cityOn,
   type Deal,
   holds,
   type Timeline,
@@ -144,6 +148,9 @@ export const SCRIPT = 'PH_Beeline';
 
 /** The id of the script the fixture camp's guards and its neutral's guards carry, `SENTRY`. */
 export const GUARD_SCRIPT = 'PH_Sentry';
+
+/** The id of the script the workers of `WORKING`'s neutral carry, `FIRST_ADMITTED`. */
+export const WORKER_SCRIPT = 'PH_FirstAdmitted';
 
 /** The fixture camp's kind, as a raider. */
 export const RAIDER_ROW: UnitEntryRow = { kind: CAMP_KIND, script: SCRIPT, weight: 1 };
@@ -422,9 +429,30 @@ const BEELINE: UnitScript = {
   },
   acts(catalogue, chronicle, unit) {
     const struck = struckAt(catalogue, chronicle, unit);
-    const { city } = chronicle;
-    const onCity = city !== undefined && tileKey(city) === tileKey(unit.tile);
-    return struck.act === 'none' && onCity ? { act: 'prepare' } : struck;
+    return struck.act === 'none' && cityOn(chronicle, unit.tile) === 'player'
+      ? { act: 'prepare' }
+      : struck;
+  },
+};
+
+/**
+ * The script the fixture's neutral's workers carry: it stays where it stands and plays there the
+ * first card its neutral's workers play that admits the tile, and otherwise nothing.
+ */
+const FIRST_ADMITTED: UnitScript = {
+  moveTo: (_catalogue, chronicle, unit) => ({
+    landing: { tile: unit.tile, cost: 0 },
+    rng: chronicle.rng,
+  }),
+  acts(catalogue, chronicle, unit) {
+    const tile = tileAt(chronicle.tiles, unit.tile);
+    const card = ageOf(catalogue, chronicle.age).neutral?.workers?.cards.find(
+      (id) =>
+        tile !== undefined &&
+        workerAim(cardOf(catalogue, id))?.refuses(catalogue, chronicle, tile, 'neutral') ===
+          undefined,
+    );
+    return card === undefined ? { act: 'none' } : { act: 'play', card, tile: unit.tile };
   },
 };
 
@@ -489,7 +517,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       sight: 2,
     },
   },
-  scripts: { [SCRIPT]: BEELINE, [GUARD_SCRIPT]: SENTRY },
+  scripts: { [SCRIPT]: BEELINE, [GUARD_SCRIPT]: SENTRY, [WORKER_SCRIPT]: FIRST_ADMITTED },
   cards: {
     PH_Settle: {
       kind: 'settle',
@@ -1154,6 +1182,20 @@ export function aged(owns: Partial<Age>): Catalogue {
   return changed({ ages: { ...CATALOGUE.ages, [AGE]: { ...ageOf(CATALOGUE, AGE), ...owns } } });
 }
 
+/**
+ * The fixture's content with its first age's neutral keeping workers beside its warriors, entered
+ * through the worker card under `WORKER_SCRIPT` and playing the farm and the mine.
+ */
+export const WORKING: Catalogue = catalogued(
+  aged({
+    neutral: {
+      ...FIXTURE_NEUTRAL,
+      ratio: [...FIXTURE_NEUTRAL.ratio, { card: 'PH_Worker', kind: 'PH_Worker', share: 1 }],
+      workers: { script: WORKER_SCRIPT, cards: ['PH_Farm', 'PH_Mine'] },
+    },
+  }),
+);
+
 /** The fixture's content with its first age's achievements laid over as the test lays them. */
 export function achieved(achievements: Age['achievements']): Catalogue {
   return aged({ achievements: { ...ageOf(CATALOGUE, AGE).achievements, ...achievements } });
@@ -1733,6 +1775,11 @@ export function heldBy(stages: readonly Stage[], name: Group['name']): readonly 
     if (stage.kind === 'group' && stage.name === name) return stage.stages;
   }
   throw new Error(`no ${name} group is staged`);
+}
+
+/** The names of the stages the enemy phase of the end of turn holds. */
+export function enemyPhaseOf(chronicle: Chronicle, catalogue: Catalogue): string[] {
+  return namesOf(heldBy(apply(catalogue, chronicle, { type: 'end-turn' }), 'enemy-phase'));
 }
 
 /** What every stage of the command is called, in the order the walk plays them. */

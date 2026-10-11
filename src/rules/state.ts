@@ -302,6 +302,18 @@ export function cityTileOf(chronicle: Chronicle, whose: CityFaction): TileCoords
   }
 }
 
+/** The city standing on the tile, and nothing where none does. */
+export function cityOn(
+  chronicle: Pick<Chronicle, 'city' | 'neutral'>,
+  tile: TileCoords,
+): CityFaction | undefined {
+  const at = tileKey(tile);
+  if (chronicle.city !== undefined && tileKey(chronicle.city) === at) return 'player';
+  return chronicle.neutral !== undefined && tileKey(chronicle.neutral.city) === at
+    ? 'neutral'
+    : undefined;
+}
+
 /** The rows of the faction's city, and nothing for the neutral's on a chronicle holding none. */
 export function cityRows(chronicle: Chronicle, whose: CityFaction): CityRows | undefined {
   switch (whose) {

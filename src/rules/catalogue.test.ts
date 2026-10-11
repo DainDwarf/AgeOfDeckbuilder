@@ -15,6 +15,7 @@ import {
   FIRST_STEPS,
   merged,
   type Neutral,
+  type NeutralWorkers,
   neutralOf,
   type Schedule,
   type Slice,
@@ -52,6 +53,7 @@ import {
   victoryOf,
   WARY,
   WELL,
+  WORKER_SCRIPT,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
 import { buildingKind, type LayerKind, type Region } from './map-kinds';
@@ -733,6 +735,46 @@ test('a catalogue whose neutral names a guard’s or a wave’s script it does n
     expect(() => catalogued(content)).toThrow(`fixture: ${refusal}`);
   }
   expect(catalogued(neutralWith({ wave: undefined })).version).toBe('fixture');
+});
+
+test('a catalogue whose neutral keeps a worker kind and names no workers, names workers and keeps no worker kind, or names a workers’ script it does not hold, no card, a card no worker’s action goes to or one placing neither a building nor an improvement, is refused, and one naming workers beside a worker kind is not', () => {
+  const { ratio } = neutralOf(CATALOGUE, AGE);
+  const working = [...ratio, { card: 'PH_Worker', kind: 'PH_Worker', share: 1 }];
+  const workers = (laid: Partial<NeutralWorkers>) =>
+    neutralWith({
+      ratio: working,
+      workers: { script: WORKER_SCRIPT, cards: ['PH_Farm'], ...laid },
+    });
+  const refusals: [Catalogue, string][] = [
+    [
+      neutralWith({ ratio: working }),
+      `the age ${AGE}'s neutral keeps the worker kind PH_Worker and names no workers`,
+    ],
+    [
+      neutralWith({ workers: { script: WORKER_SCRIPT, cards: [] } }),
+      `the age ${AGE}'s neutral names workers and keeps no worker kind`,
+    ],
+    [workers({ script: 'retreat' }), 'no unit script is named retreat'],
+    [workers({ cards: ['PH_Loot'] }), 'no card is named PH_Loot'],
+    [
+      workers({ cards: ['PH_Embark'] }),
+      `the age ${AGE}'s neutral's workers play PH_Embark, which no worker's action goes to`,
+    ],
+    [
+      workers({ cards: ['PH_Harvest'] }),
+      `the age ${AGE}'s neutral's workers play PH_Harvest, which no worker's action goes to`,
+    ],
+    [
+      workers({ cards: ['PH_Hunt'] }),
+      `the age ${AGE}'s neutral's workers play PH_Hunt, which places neither a building nor an improvement`,
+    ],
+    [workers({ cards: [] }), `the age ${AGE}'s neutral's workers play no card`],
+  ];
+
+  for (const [content, refusal] of refusals) {
+    expect(() => catalogued(content)).toThrow(`fixture: ${refusal}`);
+  }
+  expect(catalogued(workers({})).version).toBe('fixture');
 });
 
 test('a catalogue whose region keeps the neutral’s city nearer the centre than the first steps’ edge, keeps it to less than it keeps it from, or deals it in an age naming no neutral, is refused, and one keeping it from that edge on is not', () => {

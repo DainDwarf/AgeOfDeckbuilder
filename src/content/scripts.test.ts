@@ -1,8 +1,9 @@
 import { expect, test } from 'vitest';
-import { type Catalogue, catalogued, type ScriptAct } from '../rules/catalogue';
+import { ageOf, type Catalogue, catalogued, neutralOf, type ScriptAct } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
 import { claimable, warDeclared } from '../rules/city';
 import {
+  AGE,
   aimedAt,
   attacksOf,
   besideTheNeutral,
@@ -13,6 +14,7 @@ import {
   camped,
   camping,
   cityOf,
+  culture,
   deepBut,
   EMBARKED_MOVE,
   endedTurn,
@@ -24,6 +26,7 @@ import {
   NEUTRAL_TILE,
   neutralStanding,
   only,
+  onTheNeutralCity,
   plains,
   SCRIPT,
   SITE,
@@ -31,15 +34,26 @@ import {
   standing,
   WELL,
   WELL_GIVES,
+  WORKER_SCRIPT,
   WORKER_STATS,
+  WORKING,
   withTile,
   withUnits,
   worker,
 } from '../rules/fixtures';
-import { distance, MOVE_POINT, type Tile, type TileCoords, tileKey } from '../rules/map';
+import { distance, MOVE_POINT, type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { seedRng } from '../rules/rng';
+import { walked } from '../rules/stages';
 import { type Chronicle, withCityRows } from '../rules/state';
-import { guarding, NEUTRAL_GUARD, NEUTRAL_WAVE, PILLAGER, RAIDER, VILLAGER } from './scripts';
+import {
+  guarding,
+  NEUTRAL_GUARD,
+  NEUTRAL_WAVE,
+  NEUTRAL_WORKER,
+  PILLAGER,
+  RAIDER,
+  VILLAGER,
+} from './scripts';
 
 /** The fixture's content, its enemies entering as raiders in place of its own script. */
 const RAIDING: Catalogue = catalogued({
@@ -83,6 +97,8 @@ function readOf(act: ScriptAct): string | undefined {
       return tileKey(act.target.tile);
     case 'prepare':
       return 'prepare';
+    case 'play':
+      return `${act.card} on ${tileKey(act.tile)}`;
     case 'none':
       return undefined;
   }
@@ -892,6 +908,158 @@ test('the villager works the tiles its city holds giving the most food first, th
 
   expect(working(3)).toEqual(['3,-1', '1,0', '2,1']);
   expect(working(8)).toEqual(['3,-1', '1,0', '2,1', '3,0', '2,0', '2,-1']);
+});
+
+/** `WORKING`, its neutral's workers acting as the neutral's worker and playing the cards named. */
+function workersPlaying(cards: readonly string[]): Catalogue {
+  const neutral = neutralOf(WORKING, AGE);
+  return catalogued({
+    ...WORKING,
+    scripts: { ...WORKING.scripts, [WORKER_SCRIPT]: NEUTRAL_WORKER },
+    ages: {
+      ...WORKING.ages,
+      [AGE]: {
+        ...ageOf(WORKING, AGE),
+        neutral: { ...neutral, workers: { script: WORKER_SCRIPT, cards } },
+      },
+    },
+  });
+}
+
+/**
+ * `besideTheNeutral` on the content in its first age, its worker opening on its city's tile, the
+ * neutral holding the tiles named beside its city's own and the production named.
+ */
+function workerAround(
+  content: Catalogue,
+  held: readonly TileCoords[],
+  {
+    ground = plains(3),
+    production = 3,
+    units = [],
+    seed = 7,
+  }: { ground?: Tile[]; production?: number; units?: readonly Standing[]; seed?: number } = {},
+): Chronicle {
+  const opened = besideTheNeutral({ catalogue: content, age: AGE }, ground);
+  const holding = withCityRows(opened, 'neutral', {
+    held: [NEUTRAL_TILE, ...held],
+    resources: { ...culture(0), production },
+  });
+  return withUnits({ ...holding, rng: seedRng(seed) }, units);
+}
+
+/** Each tile a worker of the neutral's built on at the end of turn, with the layers it then carries. */
+function builtBy(content: Catalogue, chronicle: Chronicle): string[] {
+  return [...walked(apply(content, chronicle, { type: 'end-turn' }))].flatMap((stage) => {
+    if (stage.kind !== 'group' || stage.name !== 'neutral-played') return [];
+    return stage.stages.flatMap((held) => {
+      if (held.kind !== 'change' || held.name !== 'retiled') return [];
+      const tile = tileAt(held.chronicle.tiles, held.tile);
+      const layers = [tile?.building ?? [], tile?.improvements ?? []].flat();
+      return [`${tileKey(held.tile)} ${layers.join(' ')}`];
+    });
+  });
+}
+
+test('the neutral’s worker plays, on the tile its city holds where it adds the most to the yield, the card adding it: the most food first, the most of everything together of equals, the tile nearest its city of those, the first in tile order, and the first card named', () => {
+  const hills = madeOf(plains(3), 'hills', [{ q: 1, r: -1 }]);
+  const game = plains(3).map((tile) =>
+    tileKey(tile) === '2,0' ? { ...tile, terrain: 'forest', feature: 'PH_Game' } : tile,
+  );
+
+  const mining = workersPlaying(['PH_Mine', 'PH_Farm']);
+  const roading = workersPlaying(['PH_Road', 'PH_Mine']);
+  const farming = workersPlaying(['PH_Farm']);
+  const hillsAndPlain = [
+    { q: 1, r: -1 },
+    { q: 3, r: -1 },
+  ];
+
+  expect(builtBy(mining, workerAround(mining, hillsAndPlain, { ground: hills }))).toEqual([
+    '3,-1 PH_Farm',
+  ]);
+  expect(builtBy(roading, workerAround(roading, [{ q: 1, r: -1 }], { ground: hills }))).toEqual([
+    '1,-1 PH_Mine',
+  ]);
+  expect(
+    builtBy(
+      farming,
+      workerAround(farming, [
+        { q: -1, r: 1 },
+        { q: 2, r: -1 },
+      ]),
+    ),
+  ).toEqual(['2,-1 PH_Farm']);
+  expect(
+    builtBy(
+      farming,
+      workerAround(farming, [
+        { q: 2, r: 0 },
+        { q: 1, r: -1 },
+      ]),
+    ),
+  ).toEqual(['1,-1 PH_Farm']);
+  for (const cards of [
+    ['PH_Snare', 'PH_Lodge'],
+    ['PH_Lodge', 'PH_Snare'],
+  ]) {
+    const content = workersPlaying(cards);
+    expect(builtBy(content, workerAround(content, [{ q: 2, r: 0 }], { ground: game }))).toEqual([
+      `2,0 ${cards[0]}`,
+    ]);
+  }
+});
+
+test('the neutral’s worker walks toward the tile it goes for out of its reach and plays nothing on the way', () => {
+  const farming = workersPlaying(['PH_Farm']);
+  const far = workerAround(farming, [{ q: -2, r: 1 }]);
+
+  expect(movesOf(far, farming)).toEqual([['1,0', '-1,1']]);
+  expect(builtBy(farming, far)).toEqual([]);
+});
+
+test('the neutral’s worker with nothing to play rests as its guard does: off its city’s tile while another tile its city holds is free, and on it while none is', () => {
+  const farming = workersPlaying(['PH_Farm']);
+  const beside = { q: 2, r: 0 };
+
+  for (const seed of [1, 2, 3, 4, 5]) {
+    const unpaid = workerAround(farming, [beside], { production: 0, seed });
+    expect(movesOf(unpaid, farming)).toEqual([['1,0', '2,0']]);
+    expect(builtBy(farming, unpaid)).toEqual([]);
+  }
+  const kept = workerAround(farming, [beside], {
+    production: 0,
+    units: [neutralStanding(beside, { stats: { move: 0 } })],
+  });
+  expect(movesOf(kept, farming)).toEqual([]);
+});
+
+test('hostile, the neutral’s worker builds as it does at peace, and of no city it stands where it is and plays nothing', () => {
+  const farming = workersPlaying(['PH_Farm']);
+  const peace = workerAround(farming, [{ q: 2, r: 0 }]);
+  const fallen = withUnits(endedTurn(onTheNeutralCity()), [
+    neutralStanding({ q: 2, r: 0 }, { script: WORKER_SCRIPT, stats: WORKER_STATS }),
+  ]);
+  const unit = fallen.units.at(-1);
+  if (unit === undefined) throw new Error('no unit stands on the fallen chronicle');
+
+  expect(builtBy(farming, warDeclared(peace).chronicle)).toEqual(builtBy(farming, peace));
+  expect(builtBy(farming, peace)).toEqual(['2,0 PH_Farm']);
+  expect(fallen.neutral).toBeUndefined();
+  expect(tileKey(NEUTRAL_WORKER.moveTo(farming, fallen, unit).landing.tile)).toBe('2,0');
+  expect(readOf(NEUTRAL_WORKER.acts(farming, fallen, unit))).toBeUndefined();
+});
+
+test('a pillager goes for a worker of the neutral’s as for one of the player’s, and never for the neutral’s city’s tile, a worker standing on it or not', () => {
+  const from = { q: 2, r: 0 };
+  const pillager = standing('enemy', from, { move: MOVE_POINT });
+  const workerOf = (tile: TileCoords): Standing => neutralStanding(tile, { stats: WORKER_STATS });
+  const moves = (units: Standing[]): string[][] =>
+    movesOf(neutralAround([], [...units, pillager]), PILLAGING);
+
+  expect(moves([workerOf({ q: 4, r: -3 })])).toEqual([['2,0', '2,-1']]);
+  expect(moves([worker({ q: 4, r: -3 })])).toEqual([['2,0', '2,-1']]);
+  expect(moves([workerOf(NEUTRAL_TILE)])).toEqual(moves([neutralStanding(NEUTRAL_TILE)]));
 });
 
 test('a guard attacks the unit of the least health within its range', () => {

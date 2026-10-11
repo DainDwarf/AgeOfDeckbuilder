@@ -74,10 +74,13 @@ export type UnitShare = { readonly card: CardId; readonly kind: string; readonly
 /** The scripts the neutral's content names, the rules reading both: the one its wave counts, and the one it sends. */
 export type NeutralUnitScript = 'guard' | 'wave';
 
+/** What the neutral's workers build: the script they carry, and the cards they play. */
+export type NeutralWorkers = { readonly script: string; readonly cards: readonly CardId[] };
+
 /**
  * The neutral an age names: its city's building, its script, the scripts its units carry, the
- * ratio its units are kept near, the wave it sends, a neutral naming none sending none, and what the
- * capture of its city deals.
+ * ratio its units are kept near, the wave it sends, a neutral naming none sending none, its workers,
+ * named where its ratio keeps a worker kind and nowhere else, and what the capture of its city deals.
  */
 export type Neutral = {
   readonly building: string;
@@ -85,16 +88,34 @@ export type Neutral = {
   readonly scripts: Readonly<Record<NeutralUnitScript, string>>;
   readonly ratio: readonly UnitShare[];
   readonly wave?: Wave;
+  readonly workers?: NeutralWorkers;
   readonly rewards: Rewards;
 };
 
+/** The first worker kind the neutral's ratio names, and nothing where it names none. */
+export function neutralWorkerKind(catalogue: Catalogue, neutral: Neutral): string | undefined {
+  return neutral.ratio.find(({ kind }) => unitKind(catalogue, kind).worker)?.kind;
+}
+
+/**
+ * The script a unit of the neutral's of the kind enters with: a worker its workers', any other kind
+ * its guard's. A worker kind of a neutral naming no workers is refused.
+ */
+export function neutralScriptOf(catalogue: Catalogue, neutral: Neutral, kind: string): string {
+  if (!unitKind(catalogue, kind).worker) return neutral.scripts.guard;
+  if (neutral.workers === undefined)
+    refuse(catalogue, `the neutral enters ${kind} and names no workers`);
+  return neutral.workers.script;
+}
+
 /**
  * What a unit acting by its script spends one of its action on: an attack on a unit, a prepare on its
- * tile, or nothing.
+ * tile, a card played through it on a tile, or nothing.
  */
 export type ScriptAct =
   | { readonly act: 'attack'; readonly target: Unit }
   | { readonly act: 'prepare' }
+  | { readonly act: 'play'; readonly card: CardId; readonly tile: TileCoords }
   | { readonly act: 'none' };
 
 /**
@@ -119,10 +140,13 @@ export type Aim =
        * alone, which is what checks and spends that worker.
        */
       readonly worker?: true;
+      /** Places a building or an improvement on the tile: set by `builds` and `placesImprovement` alone. */
+      readonly places?: true;
       readonly refuses: (
         catalogue: Catalogue,
         chronicle: Chronicle,
         tile: Tile,
+        whose: CityFaction,
       ) => TileBlock | undefined;
       /**
        * For a card played through a unit beside the tile, the one reason it refuses this unit of the
@@ -231,6 +255,20 @@ export function actionGoesTo(aim: Aim): 'worker' | 'any' | 'none' {
     case 'discard-pile':
     case 'hand':
       return 'none';
+  }
+}
+
+/** The aim of a card played through the worker standing on its tile, and nothing for any other card. */
+export function workerAim(card: Card): Extract<Aim, { readonly aim: 'tile' }> | undefined {
+  switch (card.kind) {
+    case 'settle':
+    case 'building':
+    case 'action':
+    case 'instant':
+      return card.aim === 'tile' && actionGoesTo(card) === 'worker' ? card : undefined;
+    case 'unit':
+    case 'hazard':
+      return undefined;
   }
 }
 
@@ -692,7 +730,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
 
   const sitedBy = new Map<string, string>([[camp.building, 'camp']]);
   if (neutral !== undefined) {
-    const { building, scripts, ratio, wave, rewards } = neutral;
+    const { building, scripts, ratio, wave, workers, rewards } = neutral;
     for (const script of Object.values(scripts)) unitScript(content, script);
     if (wave !== undefined) waveHeld(content, wave, `the age ${id}'s neutral`);
     rewardsHeld(content, rewards, `the age ${id}'s neutral`);
@@ -702,6 +740,37 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
       unitKind(content, kind);
       if (!Number.isInteger(share) || share < 1) {
         refuse(content, `the age ${id}'s neutral keeps ${kind} at a share of ${share}`);
+      }
+    }
+    const workerKind = neutralWorkerKind(content, neutral);
+    if (workers === undefined) {
+      if (workerKind !== undefined) {
+        refuse(
+          content,
+          `the age ${id}'s neutral keeps the worker kind ${workerKind} and names no workers`,
+        );
+      }
+    } else {
+      if (workerKind === undefined) {
+        refuse(content, `the age ${id}'s neutral names workers and keeps no worker kind`);
+      }
+      unitScript(content, workers.script);
+      if (workers.cards.length === 0)
+        refuse(content, `the age ${id}'s neutral's workers play no card`);
+      for (const card of workers.cards) {
+        const aim = workerAim(cardOf(content, card));
+        if (aim === undefined) {
+          refuse(
+            content,
+            `the age ${id}'s neutral's workers play ${card}, which no worker's action goes to`,
+          );
+        }
+        if (aim.places !== true) {
+          refuse(
+            content,
+            `the age ${id}'s neutral's workers play ${card}, which places neither a building nor an improvement`,
+          );
+        }
       }
     }
     const neutralNames = groundNamed(buildingKind(content, building));

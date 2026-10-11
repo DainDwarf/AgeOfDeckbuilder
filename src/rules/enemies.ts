@@ -26,7 +26,7 @@ import { type MapContent, refuse } from './map-kinds';
 import { nextRng, pickWeighted } from './rng';
 import { inOwnSight } from './sight';
 import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
-import type { Chronicle } from './state';
+import { type Chronicle, cityOn } from './state';
 import {
   canAttack,
   passageFor,
@@ -78,12 +78,11 @@ export function attackOrNone(target: Unit | undefined): ScriptAct {
 }
 
 /**
- * The tile as a pillage leaves it, everything the player built on it removed — every improvement, and
- * a building that is neither the city, a camp, a site nor the neutral's city — and nothing where it
- * would take nothing.
+ * The tile as a pillage leaves it, everything a city built on it removed — every improvement, and a
+ * building no capture takes — and nothing on a city's own tile or where it would take nothing.
  */
 export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile): Tile | undefined {
-  if (chronicle.city !== undefined && tileKey(tile) === tileKey(chronicle.city)) return undefined;
+  if (cityOn(chronicle, tile) !== undefined) return undefined;
   const spared =
     tile.building !== undefined && captureOf(catalogue, chronicle.age, tile.building) !== undefined;
   const building = spared ? tile.building : undefined;
@@ -96,12 +95,17 @@ export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile)
  * pillage on any other; nothing for a unit that has prepared nothing.
  */
 export function preparedAs(
-  chronicle: Pick<Chronicle, 'city'>,
+  chronicle: Pick<Chronicle, 'city' | 'neutral'>,
   unit: Unit,
 ): 'capture' | 'pillage' | undefined {
   if (unit.faction === 'player' || !unit.prepared) return undefined;
-  const { city } = chronicle;
-  return city !== undefined && tileKey(unit.tile) === tileKey(city) ? 'capture' : 'pillage';
+  switch (cityOn(chronicle, unit.tile)) {
+    case 'player':
+      return 'capture';
+    case 'neutral':
+    case undefined:
+      return 'pillage';
+  }
 }
 
 /** The camp of an enemy standing ashore: none embarked, none of no camp, none of the player's. */
@@ -314,17 +318,15 @@ function reached(
   from: TileCoords,
   embarked: boolean,
 ): Tile[] {
-  const city =
-    chronicle.city ?? refuse(catalogue, 'an enemy entered while the city stands nowhere');
-  const cities = new Set(
-    [city, ...(chronicle.neutral === undefined ? [] : [chronicle.neutral.city])].map(tileKey),
-  );
+  if (chronicle.city === undefined) {
+    refuse(catalogue, 'an enemy entered while the city stands nowhere');
+  }
   const { tiles, rivers } = chronicle;
   const passage = passageFor(chronicle, 'enemy');
   const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves, passage);
   return tiles.filter(
     (tile) =>
-      !cities.has(tileKey(tile)) &&
+      cityOn(chronicle, tile) === undefined &&
       [false, true].some(
         (standsEmbarked) =>
           (standsEmbarked ? routes.embarked : routes.ashore).has(tileKey(tile)) &&

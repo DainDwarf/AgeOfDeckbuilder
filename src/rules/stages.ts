@@ -120,6 +120,7 @@ type PlainGroup =
   | 'refused'
   | 'assign'
   | 'claim'
+  | 'neutral-played'
   | 'income'
   | 'grow'
   | 'turn'

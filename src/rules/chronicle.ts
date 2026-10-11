@@ -26,6 +26,9 @@ import {
   cardOf,
   checkContent,
   costOf,
+  entered,
+  neutralScriptOf,
+  neutralWorkerKind,
   technologyOf,
   unitKind,
   unitScript,
@@ -42,6 +45,7 @@ import {
   neutralAssigns,
   neutralClaims,
   neutralEntered,
+  neutralPlayed,
   reassign,
   warDeclared,
 } from './city';
@@ -100,6 +104,7 @@ import {
   type ChronicleAchievement,
   type ChronicleCard,
   type CityFaction,
+  cityOn,
   onSettlePhase,
   playable,
   type Refusal,
@@ -203,16 +208,25 @@ export function beginChronicle(
     exhaustPile: [],
     achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
   };
-  let guarded: Sequence = unchanged(begun);
+  const workerKind = neutral && neutralWorkerKind(catalogue, neutral);
+  let guarded: Sequence =
+    neutral === undefined || neutralAt === undefined || workerKind === undefined
+      ? unchanged(begun)
+      : entered(catalogue, begun, {
+          type: workerKind,
+          faction: 'neutral',
+          script: neutralScriptOf(catalogue, neutral, workerKind),
+          tile: neutralAt,
+        });
   for (const { q, r, building } of map.tiles) {
     if (building !== camp.building) continue;
     guarded = followed(guarded, (left) => enteredOnCamp(catalogue, left, { q, r }, camp.opening));
   }
-  const entered = charting(catalogue, begun, guarded.stages);
-  const seen = entered.length === 0 ? charted(catalogue, guarded.chronicle) : outcome(entered);
+  const stood = charting(catalogue, begun, guarded.stages);
+  const seen = stood.length === 0 ? charted(catalogue, guarded.chronicle) : outcome(stood);
   const raised = reachedOn(catalogue, seen, () => true);
   return {
-    stages: [...entered, ...raised],
+    stages: [...stood, ...raised],
     chronicle: raised.length === 0 ? seen : outcome(raised),
   };
 }
@@ -351,6 +365,7 @@ function conditionsRead(
             case 'refused':
             case 'assign':
             case 'claim':
+            case 'neutral-played':
             case 'strike':
             case 'income':
             case 'grow':
@@ -1277,8 +1292,8 @@ function scriptOf(unit: Unit): string | undefined {
 
 /**
  * One unit of the faction acting by its script on the chronicle the one before it left: a unit that
- * steps acts no more after it, nor one that prepares. The draws its script made ride on the
- * chronicle even where it raised no stage.
+ * steps acts no more after it, nor one that prepares, nor one whose play moved nothing. The draws its
+ * script made ride on the chronicle even where it raised no stage.
  */
 function scriptedActs(
   catalogue: Catalogue,
@@ -1309,6 +1324,10 @@ function scriptedActs(
         return unchanged(standing);
       case 'prepare':
         return prepared(catalogue, standing, acting);
+      case 'play': {
+        const playing = neutralPlayed(catalogue, standing, acting, act.card, act.tile);
+        return playing.chronicle === standing ? playing : followed<Stage>(playing, acts);
+      }
       case 'attack': {
         const { target } = act;
         const away = distance(acting.tile, target.tile);
@@ -1332,13 +1351,11 @@ function scriptedActs(
  */
 function prepared(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): Landed {
   const tile = tileAt(chronicle.tiles, unit.tile);
-  const { city } = chronicle;
-  const onCity = city !== undefined && tileKey(city) === tileKey(unit.tile);
   if (
     !actsAsEnemy(unit, relationsOf(chronicle)) ||
     unit.embarked ||
     tile === undefined ||
-    !(onCity || pillaged(catalogue, chronicle, tile) !== undefined)
+    !(cityOn(chronicle, tile) === 'player' || pillaged(catalogue, chronicle, tile) !== undefined)
   ) {
     return landedAs(change('runtime-error', chronicle));
   }

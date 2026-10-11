@@ -494,6 +494,7 @@ export function createOverlay({
       case 'refused':
       case 'assign':
       case 'claim':
+      case 'neutral-played':
       case 'strike':
       case 'income':
       case 'grow':

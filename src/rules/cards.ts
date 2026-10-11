@@ -12,6 +12,7 @@ import {
   fullHealth,
   keywordOf,
   neutralOf,
+  neutralScriptOf,
   type UnitEntry,
   unitKind,
 } from './catalogue';
@@ -53,6 +54,7 @@ import {
   type Chronicle,
   type ChronicleCard,
   type CityFaction,
+  cityOn,
   cityRows,
   cityTileOf,
   costsOf,
@@ -97,8 +99,11 @@ function charted(aim: Aim): Aim {
     case 'tile':
       return {
         ...aim,
-        refuses: (catalogue, chronicle, tile) =>
-          firstRefusal(chartedTile(chronicle, tile), aim.refuses(catalogue, chronicle, tile)),
+        refuses: (catalogue, chronicle, tile, whose) =>
+          firstRefusal(
+            chartedTile(chronicle, tile),
+            aim.refuses(catalogue, chronicle, tile, whose),
+          ),
       };
     case 'none':
     case 'unit':
@@ -177,7 +182,7 @@ export function refuses(
 ): TileBlock | undefined {
   switch (card.aim) {
     case 'tile':
-      return card.refuses(catalogue, chronicle, tile);
+      return card.refuses(catalogue, chronicle, tile, 'player');
     case 'unit':
       return firstRefusal(unitThere(chronicle, tile), card.refuses(catalogue, chronicle, tile));
   }
@@ -241,30 +246,41 @@ export function chartedTile(chronicle: Chronicle, tile: TileCoords): TileBlock |
     : 'tile-uncharted';
 }
 
-/** A worker of the player's standing on the tile, with action left to spend. */
-export function worked(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
+/** A worker of the city's faction standing on the tile, with action left to spend. */
+export function worked(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  whose: CityFaction,
+): TileBlock | undefined {
   const standing = unitAt(chronicle.units, tile);
-  if (standing?.faction !== 'player' || !standing.stats.worker) return 'no-worker';
+  if (standing?.faction !== whose || !standing.stats.worker) return 'no-worker';
   return standing.action > 0 ? undefined : 'worker-spent';
 }
 
 /**
  * How a card played through a worker is aimed, the check and the spend as one pair so neither is
- * written without the other: the worker's reasons, then the neutral's tiles, then the card's own.
+ * written without the other: the worker's reasons, then the other city's tiles, then the card's own.
  */
 export function throughWorker(
-  refusesTile: (catalogue: Catalogue, chronicle: Chronicle, tile: Tile) => TileBlock | undefined,
+  refusesTile: (
+    catalogue: Catalogue,
+    chronicle: Chronicle,
+    tile: Tile,
+    whose: CityFaction,
+  ) => TileBlock | undefined,
   effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed,
 ): Aim & { readonly aim: 'tile' } {
   return {
     aim: 'tile',
     worker: true,
-    refuses: (catalogue, chronicle, tile) =>
-      firstRefusal(
-        worked(chronicle, tile),
-        holderOf(chronicle, tile) === 'neutral' ? 'other-faction' : undefined,
-        refusesTile(catalogue, chronicle, tile),
-      ),
+    refuses: (catalogue, chronicle, tile, whose) => {
+      const holder = holderOf(chronicle, tile);
+      return firstRefusal(
+        worked(chronicle, tile, whose),
+        holder !== undefined && holder !== whose ? 'other-faction' : undefined,
+        refusesTile(catalogue, chronicle, tile, whose),
+      );
+    },
     effect: (catalogue, paid, at) =>
       followed(actionSpent(paid, at), (left) => effect(catalogue, left, at)),
   };
@@ -386,9 +402,13 @@ export function steppedOnto(
   );
 }
 
-/** The tile inside the city's border. */
-export function inside(chronicle: Chronicle, tile: TileCoords): TileBlock | undefined {
-  return holds(chronicle, tile) ? undefined : 'outside-border';
+/** The tile inside the border of the city named. */
+export function inside(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  whose: CityFaction,
+): TileBlock | undefined {
+  return holderOf(chronicle, tile) === whose ? undefined : 'outside-border';
 }
 
 /** The tile outside the city's border. */
@@ -472,19 +492,22 @@ export function terraformable(
  * and each of those into a terrain its building stands on alone.
  */
 function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to: string): boolean {
-  const { city, neutral } = chronicle;
-  const key = tileKey(at);
-  const building =
-    city !== undefined && tileKey(city) === key
-      ? chronicle.citySection.building
-      : neutral !== undefined && tileKey(neutral.city) === key
-        ? neutralBuilding(
-            catalogue,
-            ageOf(catalogue, chronicle.age),
-            `the age ${chronicle.age}, whose chronicle holds the neutral's city,`,
-          )
-        : undefined;
-  return building === undefined || buildingKind(catalogue, building).terrains.includes(to);
+  const standsOnTo = (building: string): boolean =>
+    buildingKind(catalogue, building).terrains.includes(to);
+  switch (cityOn(chronicle, at)) {
+    case undefined:
+      return true;
+    case 'player':
+      return standsOnTo(chronicle.citySection.building);
+    case 'neutral':
+      return standsOnTo(
+        neutralBuilding(
+          catalogue,
+          ageOf(catalogue, chronicle.age),
+          `the age ${chronicle.age}, whose chronicle holds the neutral's city,`,
+        ),
+      );
+  }
 }
 
 /** No copy of this improvement on the tile: distinct ones stack, the same one never twice. */
@@ -548,7 +571,7 @@ export function enters(type: string): UnitEntry {
   };
 }
 
-/** A unit of the kind entering for the faction's city on the tile: the neutral's under its guard script. */
+/** A unit of the kind entering for the faction's city on the tile: the neutral's under its kind's script. */
 function cityUnit(
   catalogue: Catalogue,
   chronicle: Chronicle,
@@ -563,7 +586,7 @@ function cityUnit(
       return {
         type,
         faction: 'neutral',
-        script: neutralOf(catalogue, chronicle.age).scripts.guard,
+        script: neutralScriptOf(catalogue, neutralOf(catalogue, chronicle.age), type),
         tile,
       };
   }
@@ -593,15 +616,18 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
  * inside the border, its slot free; then the building fills that slot.
  */
 export function builds(building: string): Aim & { readonly aim: 'tile' } {
-  return throughWorker(
-    (catalogue, chronicle, tile) =>
-      firstRefusal(
-        groundFor(catalogue, chronicle, tile, buildingKind(catalogue, building)),
-        inside(chronicle, tile),
-        slotFree(tile),
-      ),
-    (catalogue, paid, at) => built(catalogue, paid, at, building),
-  );
+  return {
+    ...throughWorker(
+      (catalogue, chronicle, tile, whose) =>
+        firstRefusal(
+          groundFor(catalogue, chronicle, tile, buildingKind(catalogue, building)),
+          inside(chronicle, tile, whose),
+          slotFree(tile),
+        ),
+      (catalogue, paid, at) => built(catalogue, paid, at, building),
+    ),
+    places: true,
+  };
 }
 
 /**
@@ -610,14 +636,17 @@ export function builds(building: string): Aim & { readonly aim: 'tile' } {
  * on, not carrying it yet; then the tile carries it.
  */
 export function placesImprovement(improvement: string): Aim & { readonly aim: 'tile' } {
-  return throughWorker(
-    (catalogue, chronicle, tile) =>
-      firstRefusal(
-        groundFor(catalogue, chronicle, tile, improvementKind(catalogue, improvement)),
-        improvementAbsent(catalogue, tile, improvement),
-      ),
-    (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, improvement),
-  );
+  return {
+    ...throughWorker(
+      (catalogue, chronicle, tile) =>
+        firstRefusal(
+          groundFor(catalogue, chronicle, tile, improvementKind(catalogue, improvement)),
+          improvementAbsent(catalogue, tile, improvement),
+        ),
+      (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, improvement),
+    ),
+    places: true,
+  };
 }
 
 /**

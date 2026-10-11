@@ -1,10 +1,13 @@
 import {
   ageOf,
   type Catalogue,
+  cardOf,
+  costOf,
   type NeutralScript,
   type ScriptAct,
   type UnitScript,
   type UnitShare,
+  workerAim,
 } from '../rules/catalogue';
 import {
   attackOrNone,
@@ -31,7 +34,13 @@ import {
 import { RESOURCES, type Resources } from '../rules/resources';
 import { nextRng, type Rng } from '../rules/rng';
 import { inOwnSight } from '../rules/sight';
-import type { CardId, Chronicle } from '../rules/state';
+import {
+  type CardId,
+  type Chronicle,
+  cityOn,
+  type NeutralCity,
+  unaffordable,
+} from '../rules/state';
 import {
   canAttack,
   type Landing,
@@ -50,13 +59,13 @@ export const RAIDER: UnitScript = {
   },
 
   acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): ScriptAct {
-    if (onCity(chronicle, enemy.tile)) return { act: 'prepare' };
+    if (cityOn(chronicle, enemy.tile) === 'player') return { act: 'prepare' };
     return weakest(catalogue, chronicle, enemy);
   },
 };
 
 /**
- * The pillager, going for the nearest of the player's workers and of what they built, and raiding
+ * The pillager, going for the nearest of either city's workers and of what they built, and raiding
  * with nothing to go for.
  */
 export const PILLAGER: UnitScript = {
@@ -67,7 +76,10 @@ export const PILLAGER: UnitScript = {
   },
 
   acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): ScriptAct {
-    if (onCity(chronicle, enemy.tile) && goesFor(catalogue, chronicle, enemy) === undefined) {
+    if (
+      cityOn(chronicle, enemy.tile) === 'player' &&
+      goesFor(catalogue, chronicle, enemy) === undefined
+    ) {
       return RAIDER.acts(catalogue, chronicle, enemy);
     }
     const act = weakest(catalogue, chronicle, enemy);
@@ -132,45 +144,141 @@ export function guarding(radius: number): UnitScript {
 export const NEUTRAL_GUARD: UnitScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, unit: Unit) {
     if (relationsOf(chronicle) === 'hostile') return RAIDER.moveTo(catalogue, chronicle, unit);
-    const kept = (landing: Landing) => ({ landing, rng: chronicle.rng });
-    const stay: Landing = { tile: unit.tile, cost: 0 };
     const { neutral } = chronicle;
-    if (neutral === undefined) return kept(stay);
-    const { city } = neutral;
-    const held = new Set(neutral.held.map(tileKey));
-    const landings = [stay, ...reachable(catalogue, chronicle, unit)];
-    const inside = landings.filter((landing) => held.has(tileKey(landing.tile)));
-    if (inside.length === 0) return kept(nearestTo(chronicle, landings, city));
-
-    const attacking = landingsWithTarget(catalogue, chronicle, unit, inside, chronicle.units);
-    if (attacking.length > 0) return kept(nearestTo(chronicle, attacking, city));
-    const seen = chronicle.units.filter(
-      (other) =>
-        canAttack(unit, other, 0, relationsOf(chronicle)) &&
-        inOwnSight(catalogue, chronicle.tiles, unit, other.tile),
-    );
-    if (seen.length > 0) {
-      return kept(nearestTo(chronicle, inside, nearestTo(chronicle, seen, unit.tile).tile));
-    }
-
-    const free = neutral.held
-      .filter((tile) => {
-        const there = unitAt(chronicle.units, tile);
-        return tileKey(tile) !== tileKey(city) && (there === undefined || there.id === unit.id);
-      })
-      .map((tile) => ({ tile }));
-    const resting =
-      free.length === 0
-        ? inside
-        : inside.filter((landing) => tileKey(landing.tile) !== tileKey(city));
-    if (resting.length === 0) {
-      return kept(nearestTo(chronicle, inside, nearestTo(chronicle, free, unit.tile).tile));
-    }
-    return wanderedTo(chronicle, resting);
+    if (neutral === undefined) return { landing: { tile: unit.tile, cost: 0 }, rng: chronicle.rng };
+    return keptInside(catalogue, chronicle, unit, neutral, (inside) => {
+      const attacking = landingsWithTarget(catalogue, chronicle, unit, inside, chronicle.units);
+      if (attacking.length > 0) return nearestTo(chronicle, attacking, neutral.city);
+      const seen = chronicle.units.filter(
+        (other) =>
+          canAttack(unit, other, 0, relationsOf(chronicle)) &&
+          inOwnSight(catalogue, chronicle.tiles, unit, other.tile),
+      );
+      if (seen.length === 0) return undefined;
+      return nearestTo(chronicle, inside, nearestTo(chronicle, seen, unit.tile).tile);
+    });
   },
 
   acts: raidingWhileHostile,
 };
+
+/**
+ * The neutral's worker, at peace and hostile alike: going for the tile its city holds where one of
+ * its cards adds the most to the yield and playing it there, else resting as the guard does; of no
+ * city it stands where it is.
+ */
+export const NEUTRAL_WORKER: UnitScript = {
+  moveTo(catalogue: Catalogue, chronicle: Chronicle, unit: Unit) {
+    const { neutral } = chronicle;
+    if (neutral === undefined) return { landing: { tile: unit.tile, cost: 0 }, rng: chronicle.rng };
+    const build = buildOf(catalogue, chronicle, unit);
+    if (build === undefined)
+      return keptInside(catalogue, chronicle, unit, neutral, () => undefined);
+    return { ...walkedTo(catalogue, chronicle, unit, build.tile), rng: chronicle.rng };
+  },
+
+  acts(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): ScriptAct {
+    const build = buildOf(catalogue, chronicle, unit);
+    if (unit.embarked || build === undefined || tileKey(build.tile) !== tileKey(unit.tile)) {
+      return { act: 'none' };
+    }
+    return { act: 'play', card: build.card, tile: build.tile };
+  },
+};
+
+/**
+ * What a worker of the neutral's builds, and nothing where it can build nothing: the free tile its
+ * city holds and the card the neutral can pay for that adds the most to the tile's yield there.
+ */
+function buildOf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  worker: Unit,
+): { readonly tile: TileCoords; readonly card: CardId } | undefined {
+  const { neutral } = chronicle;
+  if (neutral === undefined) return undefined;
+  const cards = ageOf(catalogue, chronicle.age).neutral?.workers?.cards ?? [];
+  const held = new Set(neutral.held.map(tileKey));
+  const beside = tilesBeside(chronicle.tiles);
+  let chosen: { readonly tile: TileCoords; readonly card: CardId } | undefined;
+  let most = { food: Number.NEGATIVE_INFINITY, worth: Number.NEGATIVE_INFINITY };
+  let nearest = Number.POSITIVE_INFINITY;
+  for (const tile of chronicle.tiles) {
+    const at = { q: tile.q, r: tile.r };
+    const standing = unitAt(chronicle.units, at);
+    if (!held.has(tileKey(at)) || (standing !== undefined && standing.id !== worker.id)) continue;
+    const there = {
+      ...chronicle,
+      units: chronicle.units.map((unit) => (unit.id === worker.id ? { ...unit, tile: at } : unit)),
+    };
+    const before = tileYield(catalogue, tile, beside);
+    const away = distance(at, neutral.city);
+    for (const card of cards) {
+      const aim = workerAim(cardOf(catalogue, card));
+      if (
+        aim === undefined ||
+        aim.refuses(catalogue, there, tile, 'neutral') !== undefined ||
+        unaffordable(neutral, costOf(catalogue, card)).length > 0
+      ) {
+        continue;
+      }
+      const after = aim.effect(catalogue, there, at).chronicle.tiles;
+      const relaid = tileAt(after, at);
+      if (relaid === undefined) continue;
+      const yields = tileYield(catalogue, relaid, tilesBeside(after));
+      const added = {
+        food: (yields.food ?? 0) - (before.food ?? 0),
+        worth: worthOf(yields) - worthOf(before),
+      };
+      const better =
+        added.food > most.food ||
+        (added.food === most.food &&
+          (added.worth > most.worth || (added.worth === most.worth && away < nearest)));
+      if (!better) continue;
+      chosen = { tile: at, card };
+      most = added;
+      nearest = away;
+    }
+  }
+  return chosen;
+}
+
+/**
+ * Where a unit of the neutral's keeping the tiles its city holds lands: back toward its city from
+ * outside them, where `keeping` chooses inside them, and else wandering among them, off its city's
+ * tile while another is free.
+ */
+function keptInside(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+  neutral: NeutralCity,
+  keeping: (inside: readonly Landing[]) => Landing | undefined,
+): { readonly landing: Landing; readonly rng: Rng } {
+  const kept = (landing: Landing) => ({ landing, rng: chronicle.rng });
+  const { city } = neutral;
+  const held = new Set(neutral.held.map(tileKey));
+  const landings = [{ tile: unit.tile, cost: 0 }, ...reachable(catalogue, chronicle, unit)];
+  const inside = landings.filter((landing) => held.has(tileKey(landing.tile)));
+  if (inside.length === 0) return kept(nearestTo(chronicle, landings, city));
+  const chosen = keeping(inside);
+  if (chosen !== undefined) return kept(chosen);
+
+  const free = neutral.held
+    .filter((tile) => {
+      const there = unitAt(chronicle.units, tile);
+      return tileKey(tile) !== tileKey(city) && (there === undefined || there.id === unit.id);
+    })
+    .map((tile) => ({ tile }));
+  const resting =
+    free.length === 0
+      ? inside
+      : inside.filter((landing) => tileKey(landing.tile) !== tileKey(city));
+  if (resting.length === 0) {
+    return kept(nearestTo(chronicle, inside, nearestTo(chronicle, free, unit.tile).tile));
+  }
+  return wanderedTo(chronicle, resting);
+}
 
 /**
  * The neutral's wave, going for the nearest camp by its own walk, crossing the water on its way and
@@ -258,23 +366,31 @@ function worthOf(yields: Partial<Resources>): number {
   return RESOURCES.reduce((sum, resource) => sum + (yields[resource] ?? 0), 0);
 }
 
-/** Whether the tile is the city's. */
-function onCity(chronicle: Chronicle, tile: TileCoords): boolean {
-  return chronicle.city !== undefined && tileKey(tile) === tileKey(chronicle.city);
-}
-
 /**
- * What a pillager goes for: of the tiles a worker of the player's stands on and those a pillage takes
- * something from, the city's and a camp's never, the one its own walk weighs the least to.
+ * What a pillager goes for: of the tiles a worker of either city's stands on and those a pillage
+ * takes something from, a city's own and a camp's never, the one its own walk weighs the least to.
  */
 function goesFor(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): TileCoords | undefined {
   const { building: camp } = ageOf(catalogue, chronicle.age).camp;
   return nearestByWalk(catalogue, chronicle, enemy, (tile) => {
-    if (onCity(chronicle, tile) || tile.building === camp) return false;
-    const standing = unitAt(chronicle.units, tile);
-    const worked = standing?.faction === 'player' && standing.stats.worker;
-    return worked || pillaged(catalogue, chronicle, tile) !== undefined;
+    if (cityOn(chronicle, tile) !== undefined || tile.building === camp) return false;
+    return (
+      cityWorker(unitAt(chronicle.units, tile)) ||
+      pillaged(catalogue, chronicle, tile) !== undefined
+    );
   });
+}
+
+/** Whether the unit is a worker of either city's. */
+function cityWorker(unit: Unit | undefined): boolean {
+  if (unit === undefined || !unit.stats.worker) return false;
+  switch (unit.faction) {
+    case 'player':
+    case 'neutral':
+      return true;
+    case 'enemy':
+      return false;
+  }
 }
 
 /**

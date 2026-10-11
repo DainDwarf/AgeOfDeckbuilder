@@ -41,6 +41,8 @@ import {
   standing,
   surveying,
   victoryOf,
+  WORKER_SCRIPT,
+  WORKING,
 } from './fixtures';
 import { tileKey } from './map';
 import { RESOURCES } from './resources';
@@ -338,6 +340,16 @@ test('a chronicle saved with a unit of the neutral’s reads back with its scrip
       ),
     ),
   ).toEqual(['fixture: no unit script is named PH_Unheld']);
+});
+
+test('a chronicle saved with the worker of the neutral’s it opened with reads back with it', () => {
+  const opened = besideTheNeutral({ catalogue: WORKING, age: AGE });
+  const save = { chronicle: opened, region: CLEARING, civilization: CIVILIZATION_ID };
+
+  const read = readSave(WORKING, writeSave(WORKING, campaign(), save));
+
+  expect(opened.units).toMatchObject([{ faction: 'neutral', script: WORKER_SCRIPT }]);
+  expect(read.chronicle).toEqual(save);
 });
 
 /** The chronicle with its first unit changed. */

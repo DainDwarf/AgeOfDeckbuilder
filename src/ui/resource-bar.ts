@@ -197,6 +197,7 @@ export function createResourceBar(
       case 'refused':
       case 'assign':
       case 'claim':
+      case 'neutral-played':
       case 'strike':
       case 'turn':
       case 'enemy-phase':

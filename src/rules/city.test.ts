@@ -9,6 +9,7 @@ import {
   catalogued,
   type NeutralScript,
   neutralOf,
+  type ScriptAct,
   unitKind,
 } from './catalogue';
 import { admitted, apply, type Command, launched, outcome } from './chronicle';
@@ -40,11 +41,15 @@ import {
   cityOf,
   claimOf,
   culture,
+  EMBARKED_MOVE,
   endedTurn,
+  enemyPhaseOf,
+  enemyStanding,
   everyCard,
   field,
   heldBy,
   idsOf,
+  madeOf,
   NEUTRAL,
   NEUTRAL_TILE,
   NO_GROWTH,
@@ -62,6 +67,9 @@ import {
   standing,
   WELL,
   WELL_GIVES,
+  WORKER_SCRIPT,
+  WORKER_STATS,
+  WORKING,
   withTile,
   withUnits,
   worker,
@@ -81,6 +89,7 @@ import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } fro
 import { RESOURCES, type Resources } from './resources';
 import { inSight } from './sight';
 import { type Chronicle, type CityRows, idle, type Snapshot, withCityRows } from './state';
+import { FIRST_UNIT_NUMBER, type Unit, unitAt } from './units';
 
 /** The command a drag in city mode sends: the population off one tile and onto another. */
 function reassignTo(from: TileCoords, to: TileCoords): Command {
@@ -1064,6 +1073,175 @@ test('a neutral’s script naming a card its ratio does not name raises a runtim
 
   expect(namesOf(heldBy(apply(straying, chronicle, { type: 'end-turn' }), 'enemy-phase'))).toEqual([
     'runtime-error',
+  ]);
+});
+
+test('a chronicle launched on a region dealing the neutral’s city opens with one worker of the neutral’s standing on its city’s tile under its workers’ script, the first unit dealt, its city as it stands without; a neutral keeping no worker kind opens with none', () => {
+  for (const seed of [0, 1234]) {
+    const working = launched(WORKING, AGE, CLEARING, seed, CIVILIZATION, []).chronicle;
+    const bare = launched(CATALOGUE, AGE, CLEARING, seed, CIVILIZATION, []).chronicle;
+    const neutralsOf = (chronicle: Chronicle) =>
+      chronicle.units.filter((unit) => unit.faction === 'neutral');
+
+    expect(neutralsOf(working)).toEqual([
+      expect.objectContaining({
+        id: FIRST_UNIT_NUMBER,
+        script: WORKER_SCRIPT,
+        tile: working.neutral?.city,
+        stats: unitKind(WORKING, 'PH_Worker'),
+      }),
+    ]);
+    expect(working.neutral).toEqual(bare.neutral);
+    expect(neutralsOf(bare)).toEqual([]);
+  }
+});
+
+/** What the neutral pays for the fixture's farm, and nothing besides. */
+const FARM_COST: Resources = { ...culture(0), ...cardOf(WORKING, 'PH_Farm').cost };
+
+/**
+ * `besideTheNeutral` in the first age as the fixture's own content opens it, no worker standing, the
+ * neutral's city carrying the rows named and the units named standing: the ground `WORKING` plays on.
+ */
+function workingBeside(
+  rows: Partial<CityRows>,
+  units: readonly Standing[],
+  ground: Tile[] = plains(3),
+): Chronicle {
+  return withUnits(withCityRows(besideTheNeutral({ age: AGE }, ground), 'neutral', rows), units);
+}
+
+/** A worker of the neutral's standing on the tile under `WORKER_SCRIPT`. */
+function neutralWorker(tile: TileCoords): Standing {
+  return neutralStanding(tile, { script: WORKER_SCRIPT, stats: WORKER_STATS });
+}
+
+/** `WORKING`, its workers' script staying where it stands and answering the act named. */
+function workersAnswering(act: (unit: Unit) => ScriptAct): Catalogue {
+  return catalogued({
+    ...WORKING,
+    scripts: {
+      ...WORKING.scripts,
+      [WORKER_SCRIPT]: {
+        moveTo: (_catalogue, chronicle, unit) => ({
+          landing: { tile: unit.tile, cost: 0 },
+          rng: chronicle.rng,
+        }),
+        acts: (_catalogue, _chronicle, unit) => act(unit),
+      },
+    },
+  });
+}
+
+test('where the neutral’s units act, a worker of its plays the card its script names on the tile it stands on as the player plays one through a worker: one neutral-played group, the cost out of the neutral’s stocks, the worker’s action and move points spent, and the tile relaid', () => {
+  const plain = { q: 2, r: 0 };
+  const chronicle = workingBeside({ held: [NEUTRAL_TILE, plain], resources: FARM_COST }, [
+    neutralWorker(plain),
+  ]);
+
+  const phase = heldBy(apply(WORKING, chronicle, { type: 'end-turn' }), 'enemy-phase');
+  const after = outcome(phase);
+
+  expect(namesOf(phase)).toEqual(['neutral-played', 'stock', 'action-spent', 'retiled']);
+  expect(after.neutral?.resources.production).toBe(0);
+  expect(unitAt(after.units, plain)).toMatchObject({ action: 0, movePoints: 0 });
+  expect(tileAt(after.tiles, plain)?.building).toBe('PH_Farm');
+});
+
+/** `WORKING`, its workers answering the card named on the tile each stands on. */
+function everyWorkerPlays(card: string): Catalogue {
+  return workersAnswering((unit) => ({ act: 'play', card, tile: unit.tile }));
+}
+
+test('a worker of the neutral’s plays nothing, and acts no more that phase, where the neutral cannot pay for the card or the card refuses the tile its city holds for the neutral', () => {
+  const [plain, hills] = [
+    { q: 2, r: 0 },
+    { q: 2, r: -1 },
+  ];
+  const ground = madeOf(plains(3), 'hills', [hills]);
+  const plenty = { ...FARM_COST, production: 10 };
+  const holding = (resources: Resources, tile: TileCoords): Chronicle =>
+    workingBeside({ held: [NEUTRAL_TILE, tile], resources }, [neutralWorker(tile)], ground);
+
+  expect(enemyPhaseOf(holding(culture(0), plain), everyWorkerPlays('PH_Farm'))).toEqual([]);
+  expect(enemyPhaseOf(holding(plenty, plain), everyWorkerPlays('PH_Mine'))).toEqual([]);
+  expect(enemyPhaseOf(holding(plenty, hills), everyWorkerPlays('PH_Mine'))).toEqual([
+    'neutral-played',
+    'stock',
+    'action-spent',
+    'retiled',
+  ]);
+});
+
+test('a play answered with a card the neutral’s workers do not play, by an enemy, by an embarked worker of the neutral’s, on a tile the worker does not stand on or on one the neutral’s city does not hold is a runtime error and plays nothing', () => {
+  const [plain, coast, unheld] = [
+    { q: 2, r: 0 },
+    { q: 2, r: -1 },
+    { q: 2, r: 1 },
+  ];
+  const resources = { ...FARM_COST, production: 10 };
+  const rows = { held: [NEUTRAL_TILE, plain, coast], resources };
+  const afloat = neutralWorker(coast);
+  const embarked = { ...afloat, entering: { ...afloat.entering, embarkedMove: EMBARKED_MOVE } };
+
+  expect(
+    enemyPhaseOf(workingBeside(rows, [neutralWorker(plain)]), everyWorkerPlays('PH_Lodge')),
+  ).toEqual(['runtime-error']);
+  expect(
+    enemyPhaseOf(
+      workingBeside(rows, [
+        enemyStanding(plain, undefined, { script: WORKER_SCRIPT, stats: WORKER_STATS }),
+      ]),
+      everyWorkerPlays('PH_Farm'),
+    ),
+  ).toEqual(['runtime-error']);
+  expect(
+    enemyPhaseOf(
+      workingBeside(rows, [embarked], madeOf(plains(3), 'coast', [coast])),
+      everyWorkerPlays('PH_Farm'),
+    ),
+  ).toEqual(['runtime-error']);
+  expect(
+    enemyPhaseOf(
+      workingBeside(rows, [neutralWorker(unheld)]),
+      workersAnswering(() => ({ act: 'play', card: 'PH_Farm', tile: plain })),
+    ),
+  ).toEqual(['runtime-error']);
+  expect(
+    enemyPhaseOf(
+      workingBeside(rows, [neutralWorker(unheld)], madeOf(plains(3), 'hills', [unheld])),
+      everyWorkerPlays('PH_Mine'),
+    ),
+  ).toEqual(['runtime-error']);
+});
+
+test('the neutral enters a unit of a worker kind under its workers’ script', () => {
+  const neutral = neutralOf(WORKING, AGE);
+  const entering = catalogued(
+    changed({
+      ages: {
+        ...WORKING.ages,
+        [AGE]: {
+          ...ageOf(WORKING, AGE),
+          neutral: { ...neutral, script: { ...neutral.script, enters: () => 'PH_Worker' } },
+        },
+      },
+    }),
+  );
+  const chronicle = workingBeside(
+    { population: 2, resources: { ...culture(0), ...cardOf(WORKING, 'PH_Worker').cost } },
+    [],
+  );
+
+  const after = outcome(apply(entering, chronicle, { type: 'end-turn' }));
+
+  expect(after.units).toEqual([
+    expect.objectContaining({
+      faction: 'neutral',
+      script: WORKER_SCRIPT,
+      tile: NEUTRAL_TILE,
+      stats: unitKind(WORKING, 'PH_Worker'),
+    }),
   ]);
 });
 

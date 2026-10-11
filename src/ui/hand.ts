@@ -643,6 +643,7 @@ export function createHand(
       case 'played':
       case 'assign':
       case 'claim':
+      case 'neutral-played':
       case 'strike':
       case 'income':
       case 'grow':
