@@ -825,11 +825,11 @@ test('a unit that is not a worker, with action left, is refused every card playe
   for (const [id, terrain] of cards) {
     const tiles = madeOf(field(2), terrain, [at]);
     const fighting = ringed(2, { tiles, units: [standing('player', at)] });
-    const worked = ringed(2, { tiles, units: [worker(at)] });
+    const withWorker = ringed(2, { tiles, units: [worker(at)] });
 
     expect(actionOf(fighting, 1)).toBeGreaterThan(0);
     expect(refusedFor(fighting, id, at)).toBe('no-worker');
-    expect(refusedFor(worked, id, at)).toBeUndefined();
+    expect(refusedFor(withWorker, id, at)).toBeUndefined();
   }
 });
 
@@ -1028,11 +1028,11 @@ test('a card played through a worker is refused for the faction on every tile th
   const opened = besideTheNeutral();
   const neutral = opened.neutral;
   if (neutral === undefined) throw new Error('the chronicle holds no neutral');
-  const worked = withUnits(opened, [worker(NEUTRAL_TILE), worker(beyond)]);
-  const holding = withCityRows(worked, 'neutral', { held: [...neutral.held, beyond] });
+  const withWorker = withUnits(opened, [worker(NEUTRAL_TILE), worker(beyond)]);
+  const holding = withCityRows(withWorker, 'neutral', { held: [...neutral.held, beyond] });
   const unworked = withCityRows(opened, 'neutral', { held: [...neutral.held, beyond] });
 
-  expect(refusedFor(worked, 'PH_Farm', beyond)).toBe('outside-border');
+  expect(refusedFor(withWorker, 'PH_Farm', beyond)).toBe('outside-border');
   expect(refusedFor(holding, 'PH_Farm', beyond)).toBe('other-faction');
   expect(refusedFor(holding, 'PH_Urbanisation', beyond)).toBe('other-faction');
   expect(refusedFor(holding, 'PH_Urbanisation', NEUTRAL_TILE)).toBe('other-faction');
@@ -1332,13 +1332,13 @@ test('a unit card takes one idle population, and is refused while every one is a
 test('a building card with nowhere to stand is playable all the same, and every tile refuses it', () => {
   const at = { q: 1, r: 0 };
   const alone = cityOf(['urban', 'plain'], { tiles: field(2) });
-  const worked = withUnits(alone, [worker(at)]);
+  const withWorker = withUnits(alone, [worker(at)]);
 
   expect(admittedTiles(alone, 'PH_Farm')).toEqual([]);
   expect(refusalOf(CATALOGUE, alone, 'PH_Farm').blocked).toEqual([]);
   expect(refusedFor(alone, 'PH_Farm', at)).toBe('no-worker');
-  expect(admittedTiles(worked, 'PH_Farm')).toEqual([at]);
-  expect(refusalOf(CATALOGUE, worked, 'PH_Farm').blocked).toEqual([]);
+  expect(admittedTiles(withWorker, 'PH_Farm')).toEqual([at]);
+  expect(refusalOf(CATALOGUE, withWorker, 'PH_Farm').blocked).toEqual([]);
 });
 
 test('every card the map answers for is playable whatever the map holds, and blocked only by its cost', () => {
@@ -1448,8 +1448,8 @@ test('the farm card names the first of its five reasons: worker, action, terrain
     resources: production(2),
   });
   const flat = ringed(2, { tiles: madeOf(field(2), 'plain', [at, out]) });
-  const worked = withUnits(flat, [worker(at)]);
-  const filled = withTile(worked, {
+  const withWorker = withUnits(flat, [worker(at)]);
+  const filled = withTile(withWorker, {
     ...at,
     terrain: 'plain',
     improvements: [],
@@ -1468,7 +1468,7 @@ test('the farm card names the first of its five reasons: worker, action, terrain
   ).toBe('worker-spent');
   expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('outside-border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot-filled');
-  expect(refusedFor(worked, 'PH_Farm', at)).toBeUndefined();
+  expect(refusedFor(withWorker, 'PH_Farm', at)).toBeUndefined();
 });
 
 test('the forage card names the first of its three reasons: worker, action, then held', () => {
@@ -1506,8 +1506,8 @@ test('the mine card names the first of its four reasons: worker, action, terrain
   const at = { q: 1, r: 0 };
   const plain = ringed(2, { hand: ['PH_Road'], resources: production(2) });
   const hills = ringed(2, { tiles: madeOf(field(2), 'hills', [at]) });
-  const worked = withUnits(hills, [worker(at)]);
-  const mined = withTile(worked, { ...at, terrain: 'hills', improvements: ['PH_Mine'] });
+  const withWorker = withUnits(hills, [worker(at)]);
+  const mined = withTile(withWorker, { ...at, terrain: 'hills', improvements: ['PH_Mine'] });
 
   expect(refusedFor(plain, 'PH_Mine', at)).toBe('no-worker');
   expect(
@@ -1526,7 +1526,7 @@ test('the mine card names the first of its four reasons: worker, action, terrain
     ),
   ).toBe('worker-spent');
   expect(refusedFor(mined, 'PH_Mine', at)).toBe('improvement-placed');
-  expect(refusedFor(worked, 'PH_Mine', at)).toBeUndefined();
+  expect(refusedFor(withWorker, 'PH_Mine', at)).toBeUndefined();
 });
 
 test('a card removing a feature takes it off the tile the worker stands on, inside the border and outside it, and leaves every other layer standing', () => {
@@ -1560,7 +1560,7 @@ test('a card asking for one feature of several names the first of its reasons: w
   const bare = ringed(2);
   const carrying = (terrain: Terrain, feature?: FeatureId): Chronicle =>
     withTile(bare, { ...at, terrain, feature, improvements: [] });
-  const worked = (terrain: Terrain, feature?: FeatureId): Chronicle =>
+  const withWorker = (terrain: Terrain, feature?: FeatureId): Chronicle =>
     withUnits(carrying(terrain, feature), [worker(at)]);
   const spent = withUnits(carrying('plain', 'PH_Fertile'), [
     standing('player', at, WORKER_STATS, 0, 0),
@@ -1568,10 +1568,10 @@ test('a card asking for one feature of several names the first of its reasons: w
 
   expect(refusedFor(carrying('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBe('no-worker');
   expect(refusedFor(spent, 'PH_Hunt', at)).toBe('worker-spent');
-  expect(refusedFor(worked('plain'), 'PH_Hunt', at)).toBe('wrong-feature');
-  expect(refusedFor(worked('hills', 'PH_Flint'), 'PH_Hunt', at)).toBe('wrong-feature');
-  expect(refusedFor(worked('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBeUndefined();
-  expect(refusedFor(worked('forest', 'PH_Game'), 'PH_Hunt', at)).toBeUndefined();
+  expect(refusedFor(withWorker('plain'), 'PH_Hunt', at)).toBe('wrong-feature');
+  expect(refusedFor(withWorker('hills', 'PH_Flint'), 'PH_Hunt', at)).toBe('wrong-feature');
+  expect(refusedFor(withWorker('plain', 'PH_Fertile'), 'PH_Hunt', at)).toBeUndefined();
+  expect(refusedFor(withWorker('forest', 'PH_Game'), 'PH_Hunt', at)).toBeUndefined();
 });
 
 test('an improvement naming a feature names the first of its reasons: worker, action, the feature whatever the terrain, then improvement', () => {
@@ -1582,7 +1582,7 @@ test('an improvement naming a feature names the first of its reasons: worker, ac
     feature?: FeatureId,
     improvements: string[] = [],
   ): Chronicle => withTile(bare, { ...at, terrain, feature, improvements });
-  const worked = (terrain: Terrain, feature?: FeatureId, improvements?: string[]): Chronicle =>
+  const withWorker = (terrain: Terrain, feature?: FeatureId, improvements?: string[]): Chronicle =>
     withUnits(carrying(terrain, feature, improvements), [worker(at)]);
   const spent = withUnits(carrying('forest', 'PH_Game'), [
     standing('player', at, WORKER_STATS, 0, 0),
@@ -1590,13 +1590,13 @@ test('an improvement naming a feature names the first of its reasons: worker, ac
 
   expect(refusedFor(carrying('forest', 'PH_Game'), 'PH_Snare', at)).toBe('no-worker');
   expect(refusedFor(spent, 'PH_Snare', at)).toBe('worker-spent');
-  expect(refusedFor(worked('forest'), 'PH_Snare', at)).toBe('wrong-feature');
-  expect(refusedFor(worked('plain'), 'PH_Snare', at)).toBe('wrong-feature');
-  expect(refusedFor(worked('plain', 'PH_Fertile'), 'PH_Snare', at)).toBe('wrong-feature');
-  expect(refusedFor(worked('forest', 'PH_Game', ['PH_Snare']), 'PH_Snare', at)).toBe(
+  expect(refusedFor(withWorker('forest'), 'PH_Snare', at)).toBe('wrong-feature');
+  expect(refusedFor(withWorker('plain'), 'PH_Snare', at)).toBe('wrong-feature');
+  expect(refusedFor(withWorker('plain', 'PH_Fertile'), 'PH_Snare', at)).toBe('wrong-feature');
+  expect(refusedFor(withWorker('forest', 'PH_Game', ['PH_Snare']), 'PH_Snare', at)).toBe(
     'improvement-placed',
   );
-  expect(refusedFor(worked('forest', 'PH_Game'), 'PH_Snare', at)).toBeUndefined();
+  expect(refusedFor(withWorker('forest', 'PH_Game'), 'PH_Snare', at)).toBeUndefined();
 });
 
 test('the snare card places a snare on the game the worker stands on, and the game stays', () => {
@@ -1624,20 +1624,20 @@ test('the snare card places a snare on the game the worker stands on, and the ga
 test('a building naming a feature names the first of its reasons: worker, action, the feature whatever the terrain, border, then slot', () => {
   const inside = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
-  const worked = (at: TileCoords, terrain: Terrain, feature?: FeatureId, building?: string) =>
+  const withWorker = (at: TileCoords, terrain: Terrain, feature?: FeatureId, building?: string) =>
     withUnits(withTile(ringed(2), { ...at, terrain, feature, improvements: [], building }), [
       worker(at),
     ]);
 
-  expect(refusedFor(worked(inside, 'forest'), 'PH_Lodge', inside)).toBe('wrong-feature');
-  expect(refusedFor(worked(inside, 'plain', 'PH_Fertile'), 'PH_Lodge', inside)).toBe(
+  expect(refusedFor(withWorker(inside, 'forest'), 'PH_Lodge', inside)).toBe('wrong-feature');
+  expect(refusedFor(withWorker(inside, 'plain', 'PH_Fertile'), 'PH_Lodge', inside)).toBe(
     'wrong-feature',
   );
-  expect(refusedFor(worked(out, 'forest', 'PH_Game'), 'PH_Lodge', out)).toBe('outside-border');
-  expect(refusedFor(worked(inside, 'forest', 'PH_Game', CAMP.building), 'PH_Lodge', inside)).toBe(
-    'slot-filled',
-  );
-  expect(refusedFor(worked(inside, 'forest', 'PH_Game'), 'PH_Lodge', inside)).toBeUndefined();
+  expect(refusedFor(withWorker(out, 'forest', 'PH_Game'), 'PH_Lodge', out)).toBe('outside-border');
+  expect(
+    refusedFor(withWorker(inside, 'forest', 'PH_Game', CAMP.building), 'PH_Lodge', inside),
+  ).toBe('slot-filled');
+  expect(refusedFor(withWorker(inside, 'forest', 'PH_Game'), 'PH_Lodge', inside)).toBeUndefined();
 });
 
 test('a building naming two features is built on a tile carrying either, refused on one carrying neither, and removed with the one it stands on', () => {
@@ -1685,20 +1685,20 @@ test('an improvement naming the river names the first of its reasons: worker, ac
   const away = [riverBetween({ q: -2, r: 0 }, { q: -2, r: 1 })];
   const carrying = (terrain: Terrain, rivers: River[], improvements: string[] = []): Chronicle =>
     withTile(ringed(2, { rivers }), { ...at, terrain, improvements });
-  const worked = (terrain: Terrain, rivers: River[], improvements?: string[]): Chronicle =>
+  const withWorker = (terrain: Terrain, rivers: River[], improvements?: string[]): Chronicle =>
     withUnits(carrying(terrain, rivers, improvements), [worker(at)]);
   const spent = withUnits(carrying('plain', along), [standing('player', at, WORKER_STATS, 0, 0)]);
 
   expect(refusedFor(carrying('plain', along), 'PH_Ditch', at)).toBe('no-worker');
   expect(refusedFor(spent, 'PH_Ditch', at)).toBe('worker-spent');
-  expect(refusedFor(worked('plain', away), 'PH_Ditch', at)).toBe('no-river');
-  expect(refusedFor(worked('hills', away), 'PH_Ditch', at)).toBe('no-river');
-  expect(refusedFor(worked('hills', along), 'PH_Ditch', at)).toBe('wrong-terrain');
-  expect(refusedFor(worked('plain', along, ['PH_Ditch']), 'PH_Ditch', at)).toBe(
+  expect(refusedFor(withWorker('plain', away), 'PH_Ditch', at)).toBe('no-river');
+  expect(refusedFor(withWorker('hills', away), 'PH_Ditch', at)).toBe('no-river');
+  expect(refusedFor(withWorker('hills', along), 'PH_Ditch', at)).toBe('wrong-terrain');
+  expect(refusedFor(withWorker('plain', along, ['PH_Ditch']), 'PH_Ditch', at)).toBe(
     'improvement-placed',
   );
-  expect(refusedFor(worked('plain', along), 'PH_Ditch', at)).toBeUndefined();
-  expect(refusedFor(worked('forest', along), 'PH_Ditch', at)).toBeUndefined();
+  expect(refusedFor(withWorker('plain', along), 'PH_Ditch', at)).toBeUndefined();
+  expect(refusedFor(withWorker('forest', along), 'PH_Ditch', at)).toBeUndefined();
 });
 
 test('the ditch card places a ditch on the tile a river runs along that the worker stands on', () => {
@@ -1718,19 +1718,19 @@ test('a building naming the river names the first of its reasons: the river what
   const inside = { q: 1, r: 0 };
   const out = { q: 2, r: 0 };
   const along = [riverBetween(inside, { q: 1, r: -1 }), riverBetween(out, { q: 2, r: -1 })];
-  const worked = (at: TileCoords, terrain: Terrain, rivers: River[], building?: string) =>
+  const withWorker = (at: TileCoords, terrain: Terrain, rivers: River[], building?: string) =>
     withUnits(withTile(ringed(2, { rivers }), { ...at, terrain, improvements: [], building }), [
       worker(at),
     ]);
 
-  expect(refusedFor(worked(inside, 'plain', []), 'PH_Mill', inside)).toBe('no-river');
-  expect(refusedFor(worked(inside, 'hills', []), 'PH_Mill', inside)).toBe('no-river');
-  expect(refusedFor(worked(inside, 'hills', along), 'PH_Mill', inside)).toBe('wrong-terrain');
-  expect(refusedFor(worked(out, 'plain', along), 'PH_Mill', out)).toBe('outside-border');
-  expect(refusedFor(worked(inside, 'plain', along, CAMP.building), 'PH_Mill', inside)).toBe(
+  expect(refusedFor(withWorker(inside, 'plain', []), 'PH_Mill', inside)).toBe('no-river');
+  expect(refusedFor(withWorker(inside, 'hills', []), 'PH_Mill', inside)).toBe('no-river');
+  expect(refusedFor(withWorker(inside, 'hills', along), 'PH_Mill', inside)).toBe('wrong-terrain');
+  expect(refusedFor(withWorker(out, 'plain', along), 'PH_Mill', out)).toBe('outside-border');
+  expect(refusedFor(withWorker(inside, 'plain', along, CAMP.building), 'PH_Mill', inside)).toBe(
     'slot-filled',
   );
-  expect(refusedFor(worked(inside, 'plain', along), 'PH_Mill', inside)).toBeUndefined();
+  expect(refusedFor(withWorker(inside, 'plain', along), 'PH_Mill', inside)).toBeUndefined();
 });
 
 /**
@@ -1813,7 +1813,7 @@ test('the urbanisation card names the first of its four reasons: worker, action,
     resources: production(2),
   });
   const built = withTile(plain, { ...at, terrain: 'plain', improvements: [], building: 'PH_Farm' });
-  const worked = withUnits(plain, [worker(at)]);
+  const withWorker = withUnits(plain, [worker(at)]);
   const wooded = withUnits(forest, [worker(at)]);
   const filled = withUnits(built, [worker(at)]);
   const camp = withUnits(
@@ -1835,7 +1835,7 @@ test('the urbanisation card names the first of its four reasons: worker, action,
   expect(refusedFor(built, 'PH_Urbanisation', at)).toBe('no-worker');
   expect(refusedFor(camp, 'PH_Urbanisation', at)).toBe('other-faction');
   expect(refusedFor(filled, 'PH_Urbanisation', at)).toBeUndefined();
-  expect(refusedFor(worked, 'PH_Urbanisation', at)).toBeUndefined();
+  expect(refusedFor(withWorker, 'PH_Urbanisation', at)).toBeUndefined();
 });
 
 test('a card aimed at a unit admits the tiles the player’s units stand on, and no others', () => {
@@ -1881,15 +1881,15 @@ test('the refresh instant names the first of its two reasons: the unit, then its
 });
 
 test('a card’s aim admits exactly the tiles of the map it names no reason for', () => {
-  const worked = [
+  const workerTiles = [
     { q: 1, r: 0 },
     { q: 0, r: 1 },
   ];
-  const city = ringed(2, { units: worked.map(worker) });
+  const city = ringed(2, { units: workerTiles.map(worker) });
 
   const lit = admittedTiles(city, 'PH_Farm');
 
-  expect(lit.map(tileKey).sort()).toEqual(worked.map(tileKey).sort());
+  expect(lit.map(tileKey).sort()).toEqual(workerTiles.map(tileKey).sort());
   for (const tile of city.tiles) {
     expect(refusedFor(city, 'PH_Farm', tile) === undefined).toBe(
       lit.some((coord) => tileKey(coord) === tileKey(tile)),

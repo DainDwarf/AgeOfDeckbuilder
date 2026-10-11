@@ -13,7 +13,7 @@ import {
   whileUp,
 } from './design-space';
 import { LOOK } from './look';
-import { createScroll, heldAt, inside, reachOf } from './scroll';
+import { createScroll, heldAt, pointInBox, reachOf } from './scroll';
 import type { Answers, Point } from './stack';
 
 /**
@@ -71,7 +71,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
     if (carried === undefined) return;
     const { carry, copy, edge, home, from } = carried;
     copy.setPosition(home.x + at.x - from.x, home.y + at.y - from.y);
-    edge.setVisible(inside(carry.lands, at.x, at.y));
+    edge.setVisible(pointInBox(carry.lands, at.x, at.y));
   };
 
   const letGo = (): typeof carried => {
@@ -99,7 +99,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
   scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
     if (carried === undefined || pressOf(pointer) !== 'left') return;
     const at = on.at(pointer.x, pointer.y);
-    if (!inside(carried.carry.lands, at.x, at.y)) {
+    if (!pointInBox(carried.carry.lands, at.x, at.y)) {
       slideHome();
       return;
     }

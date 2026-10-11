@@ -99,7 +99,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **instant** | A card with an immediate effect that no unit's action goes to. | spell, effect card |
 | **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
 | **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
-| **worker** | A non-fighting unit that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
+| **worker** | A unit that does not attack, that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
 | **population** | A city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border. | allocate |
 | **unassign** | To take one population off the tile it stands on; the reverse of assign. | free up, release |

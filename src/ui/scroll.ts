@@ -132,7 +132,7 @@ function speedOf(trail: readonly Sample[], now: number): number {
 }
 
 /** Whether a point of the design space lies in the box, its edges included. */
-export function inside(box: Box, x: number, y: number): boolean {
+export function pointInBox(box: Box, x: number, y: number): boolean {
   return x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height;
 }
 
@@ -148,6 +148,6 @@ export function heldAt<T extends { readonly box: Box }>(
   x: number,
   y: number,
 ): T | undefined {
-  if (!inside(frame, x, y)) return undefined;
-  return held.find(({ box }) => inside(box, x, y + offset));
+  if (!pointInBox(frame, x, y)) return undefined;
+  return held.find(({ box }) => pointInBox(box, x, y + offset));
 }
