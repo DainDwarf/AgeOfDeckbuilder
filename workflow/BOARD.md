@@ -15,3 +15,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 - **The neutral's population** — its script decides how to assign, reassign and unassign its population, moving it to more fertile tiles as they are claimed, since a city that does not start on plain never grows for want of that; it may need to balance population against more units.
 - **The neutral's workers** — its script enters workers and plays improvement and building cards through them on the tiles it holds, where its stocks pay the cards' costs; and the neutral opens with one free worker of its own, since a city settled on anything but plain never grows a population to spare.
+- **An enemy captures a faction's city** — decide what happens when enemies capture the city of a faction that is not the player's.
