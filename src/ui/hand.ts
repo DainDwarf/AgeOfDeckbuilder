@@ -610,6 +610,7 @@ export function createHand(
       case 'action-spent':
       case 'prepare':
       case 'wave-sent':
+      case 'camp-joined':
       case 'retiled':
       case 'charted':
       case 'held':

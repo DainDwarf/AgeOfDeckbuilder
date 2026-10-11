@@ -773,9 +773,14 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
         }
       }
     }
-    const neutralNames = groundNamed(buildingKind(content, building));
+    const neutralKind = buildingKind(content, building);
+    const neutralNames = groundNamed(neutralKind);
     if (neutralNames !== undefined) {
       refuse(content, `the age ${id}'s neutral's city ${building} names ${neutralNames}`);
+    }
+    for (const terrain of neutralKind.terrains) {
+      if (campKind.terrains.includes(terrain)) continue;
+      refuse(content, `the age ${id}'s camp ${camp.building} does not stand on ${terrain}`);
     }
     const other = sitedBy.get(building);
     if (other !== undefined) {

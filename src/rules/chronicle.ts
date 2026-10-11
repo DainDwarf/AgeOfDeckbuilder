@@ -2,6 +2,7 @@ import { available } from './campaign';
 import {
   actionSpent,
   aimOf,
+  built,
   discarded,
   goesTo,
   lyingAs,
@@ -49,7 +50,15 @@ import {
   reassign,
   warDeclared,
 } from './city';
-import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove, wavesSent } from './enemies';
+import {
+  enteredAround,
+  enteredOnCamp,
+  otherCityOn,
+  pillaged,
+  preparedAs,
+  stepMove,
+  wavesSent,
+} from './enemies';
 import {
   distance,
   type FeatureId,
@@ -104,7 +113,6 @@ import {
   type ChronicleAchievement,
   type ChronicleCard,
   type CityFaction,
-  cityOn,
   onSettlePhase,
   playable,
   type Refusal,
@@ -706,6 +714,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'action-spent':
     case 'prepare':
     case 'wave-sent':
+    case 'camp-joined':
     case 'retiled':
     case 'held':
     case 'settled':
@@ -1210,7 +1219,8 @@ function everyPlace(pile: readonly ChronicleCard[]): number[] {
 
 /**
  * The enemies' half of the turn, the one `enemy-phase` group, in the order `docs/CHRONICLE.md`'s
- * _The turn_ gives, a capture's `ended` alone in it; only the units standing as it began act.
+ * _The turn_ gives, the player's city's capture's `ended` alone in it; only the units standing as it
+ * began act.
  */
 function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   let phase: Sequence = followed(preparesLanded(catalogue, chronicle), (left) =>
@@ -1233,24 +1243,49 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
 }
 
 /**
- * Every unit still carrying a prepare landing it: one prepared on the city's tile captures the city
- * ahead of every pillage, and otherwise each pillages its tile in unit order, its prepare gone.
+ * Every unit still carrying a prepare landing it, the captures ahead of every pillage: one prepared
+ * on the player's city's tile captures it, ending the chronicle there; one on the neutral's captures
+ * that; and each of the rest pillages its tile in unit order, its prepare gone.
  */
-function preparesLanded(catalogue: Catalogue, chronicle: Chronicle): Landed {
-  const preparing = chronicle.units.filter((unit) => preparedAs(chronicle, unit) !== undefined);
-  if (preparing.some((unit) => preparedAs(chronicle, unit) === 'capture')) {
-    return landedAs(change('ended', fall(chronicle, 'capture')));
-  }
-  let landing = unchanged(chronicle);
+function preparesLanded(catalogue: Catalogue, chronicle: Chronicle): Sequence {
+  const landingOn = (on: Chronicle, unit: Unit): CityFaction | undefined =>
+    otherCityOn(on, unit.tile, unit.faction);
+  const preparing = chronicle.units
+    .filter((unit) => preparedAs(chronicle, unit) !== undefined)
+    .sort(
+      (one, other) =>
+        landingOrder(landingOn(chronicle, one)) - landingOrder(landingOn(chronicle, other)),
+    );
+  let landing: Sequence = unchanged(chronicle);
   for (const unit of preparing) {
-    landing = followed(landing, (left) => {
-      const tile = tileAt(left.tiles, unit.tile);
-      const bare = tile === undefined ? undefined : pillaged(catalogue, left, tile);
-      const taken = bare === undefined ? unchanged(left) : retiled(left, unit.tile, () => bare);
-      return followed(taken, (after) => carriedPrepare(after, unit, false));
+    landing = followed<Stage>(landing, (left) => {
+      switch (landingOn(left, unit)) {
+        case 'player':
+          return landedAs(change('ended', fall(left, 'capture')));
+        case 'neutral':
+          return capturedByTheEnemies(catalogue, left, unit);
+        case undefined: {
+          const tile = tileAt(left.tiles, unit.tile);
+          const bare = tile === undefined ? undefined : pillaged(catalogue, left, tile);
+          const taken = bare === undefined ? unchanged(left) : retiled(left, unit.tile, () => bare);
+          return followed(taken, (after) => carriedPrepare(after, unit, false));
+        }
+      }
     });
   }
   return landing;
+}
+
+/** Where a prepare landing on a city's tile, or on none, lands among the phase's: the player's first. */
+function landingOrder(city: CityFaction | undefined): number {
+  switch (city) {
+    case 'player':
+      return 0;
+    case 'neutral':
+      return 1;
+    case undefined:
+      return 2;
+  }
 }
 
 /** Whether the unit carries a prepare, set as named: the one `prepare` change. */
@@ -1346,8 +1381,8 @@ function scriptedActs(
 
 /**
  * A unit preparing on the tile it stands on, its action spent as an attack spends it and then its
- * prepare carried; a unit acting as no enemy, one embarked, or one on a tile with neither the city
- * nor anything built on it, is a `runtime-error` and no prepare.
+ * prepare carried; a unit acting as no enemy, one embarked, or one on a tile with neither a city not
+ * its own nor anything built on it, is a `runtime-error` and no prepare.
  */
 function prepared(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): Landed {
   const tile = tileAt(chronicle.tiles, unit.tile);
@@ -1355,7 +1390,10 @@ function prepared(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): Lande
     !actsAsEnemy(unit, relationsOf(chronicle)) ||
     unit.embarked ||
     tile === undefined ||
-    !(cityOn(chronicle, tile) === 'player' || pillaged(catalogue, chronicle, tile) !== undefined)
+    !(
+      otherCityOn(chronicle, tile, unit.faction) !== undefined ||
+      pillaged(catalogue, chronicle, tile) !== undefined
+    )
   ) {
     return landedAs(change('runtime-error', chronicle));
   }
@@ -1420,9 +1458,9 @@ function captures(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 }
 
 /**
- * The building on the tile captured by a unit of the faction: the player's captures anything, and
- * its capture deals the rewards under the building; the neutral's captures a camp or a site, dealing
- * nothing; an enemy captures nothing.
+ * The building on the tile captured by a unit of the faction standing on it: the player's captures
+ * anything, and its capture deals the rewards under the building; the neutral's captures a camp or a
+ * site, dealing nothing; an enemy captures nothing by standing.
  */
 function captured(
   chronicle: Chronicle,
@@ -1470,7 +1508,43 @@ function capturedByTheNeutral(
 }
 
 /**
- * What leaves the chronicle with the building the player captures: with the neutral's city, the one
+ * The neutral's city captured by the enemy prepared on its tile: the age's camp built in its slot,
+ * the neutral fallen, and the enemy that took it that camp's guard, its prepare gone; nothing dealt.
+ */
+function capturedByTheEnemies(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  capturer: Unit,
+): Sequence<Group> {
+  const { building, scripts } = ageOf(catalogue, chronicle.age).camp;
+  const { tile } = capturer;
+  return grouped(
+    { name: 'capture', tile },
+    course(chronicle, [
+      (left) => built(catalogue, left, tile, building),
+      (left) => fallenWith(left, 'neutral-city'),
+      (left) => campJoined(left, capturer, scripts.guard),
+      (left) => carriedPrepare(left, capturer, false),
+    ]),
+  );
+}
+
+/** The enemy made the camp's on the tile it stands on, under the script named: the one `camp-joined`. */
+function campJoined(chronicle: Chronicle, joining: Unit, script: string): Landed {
+  return landedAs(
+    changeOn('camp-joined', joining.tile, {
+      ...chronicle,
+      units: chronicle.units.map((unit) =>
+        unit.id === joining.id && unit.faction === 'enemy'
+          ? { ...unit, script, camp: joining.tile }
+          : unit,
+      ),
+    }),
+  );
+}
+
+/**
+ * What leaves the chronicle with the building captured: with the neutral's city, the one
  * `neutral-fallen`, its border, population and stocks gone and its relations standing.
  */
 function fallenWith(chronicle: Chronicle, takes: Captured): Landed {

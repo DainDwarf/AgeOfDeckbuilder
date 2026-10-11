@@ -830,6 +830,17 @@ test('hostile, the neutral’s wave walks and acts as the raider: onto the city�
   expect(raidedBy(SENDING)).toEqual({ moves: [['2,0', '0,0']], prepared: true });
 });
 
+test('a raider goes for the nearer city by its own walk, the neutral’s or the player’s, and prepares the capture on either’s tile', () => {
+  const raiding = (unit: Standing): Chronicle => neutralAround([], [unit]);
+  const raider = (tile: TileCoords): Standing => standing('enemy', tile, { move: 2 * MOVE_POINT });
+
+  expect(movesOf(raiding(raider({ q: 3, r: 0 })), RAIDING)).toEqual([['3,0', '1,0']]);
+  expect(movesOf(raiding(raider({ q: -2, r: 0 })), RAIDING)).toEqual([['-2,0', '0,0']]);
+  for (const city of [NEUTRAL_TILE, CITY]) {
+    expect(asked(RAIDING, raiding(raider(city)))).toEqual({ to: tileKey(city), acts: 'prepare' });
+  }
+});
+
 test('the neutral’s wave embarks where the ground ends to cross toward its camp', () => {
   const camp = { q: 4, r: 0 };
   const coast = { q: 3, r: 0 };
@@ -1060,6 +1071,12 @@ test('a pillager goes for a worker of the neutral’s as for one of the player�
   expect(moves([workerOf({ q: 4, r: -3 })])).toEqual([['2,0', '2,-1']]);
   expect(moves([worker({ q: 4, r: -3 })])).toEqual([['2,0', '2,-1']]);
   expect(moves([workerOf(NEUTRAL_TILE)])).toEqual(moves([neutralStanding(NEUTRAL_TILE)]));
+});
+
+test('a pillager with nothing left to go for, standing on the neutral’s city’s tile, prepares the capture there', () => {
+  const standingOn = neutralAround([], [standing('enemy', NEUTRAL_TILE, { move: MOVE_POINT })]);
+
+  expect(asked(PILLAGING, standingOn)).toEqual({ to: tileKey(NEUTRAL_TILE), acts: 'prepare' });
 });
 
 test('a guard attacks the unit of the least health within its range', () => {

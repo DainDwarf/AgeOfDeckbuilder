@@ -109,6 +109,7 @@ type TiledChange =
   | 'action-spent'
   | 'prepare'
   | 'wave-sent'
+  | 'camp-joined'
   | 'retiled'
   | 'charted'
   | 'held'

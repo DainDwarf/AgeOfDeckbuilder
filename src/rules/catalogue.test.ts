@@ -41,6 +41,7 @@ import {
   field,
   GRANARY,
   HOARD,
+  NEUTRAL,
   NO_DEALS,
   QUIET,
   REGION,
@@ -598,7 +599,10 @@ test('a catalogue whose layer names a feature it does not hold, or one lying on 
 });
 
 test('a catalogue whose civilization’s city or whose camp is a building naming a feature or the river is refused, and the same building naming neither is not', () => {
-  const { features, ...unnamed } = CATALOGUE.buildings.PH_Lodge;
+  const { features, ...unnamed } = {
+    ...CATALOGUE.buildings.PH_Lodge,
+    terrains: CATALOGUE.buildings[NEUTRAL].terrains,
+  };
   const named: LayerKind[] = [
     { ...unnamed, features },
     { ...unnamed, river: true },
@@ -686,6 +690,23 @@ test('a catalogue whose neutral’s city is a building it does not hold, one nam
   expect(() => catalogued(aged(neutralOn(SITES[SITE].building)))).toThrow(
     `fixture: the age ${AGE}'s neutral's city and site ${SITE} are both the building ${SITES[SITE].building}`,
   );
+});
+
+test('a catalogue whose camp does not stand on every terrain its neutral’s city stands on is refused, and one whose camp stands on more is not', () => {
+  const { buildings } = CATALOGUE;
+  const standingOn = (camp: string[], village: string[]): Catalogue =>
+    changed({
+      buildings: {
+        ...buildings,
+        [CAMP.building]: { ...buildings[CAMP.building], terrains: camp },
+        [NEUTRAL]: { ...buildings[NEUTRAL], terrains: village },
+      },
+    });
+
+  expect(() => catalogued(standingOn(['plain', 'forest'], ['plain', 'hills']))).toThrow(
+    `fixture: the age ${AGE}'s camp ${CAMP.building} does not stand on hills`,
+  );
+  expect(catalogued(standingOn(['plain', 'forest'], ['forest'])).version).toBe('fixture');
 });
 
 /** The fixture's content, its first age's neutral naming these over its own. */

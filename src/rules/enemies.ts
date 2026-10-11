@@ -26,9 +26,10 @@ import { type MapContent, refuse } from './map-kinds';
 import { nextRng, pickWeighted } from './rng';
 import { inOwnSight } from './sight';
 import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
-import { type Chronicle, cityOn } from './state';
+import { type Chronicle, type CityFaction, cityOn } from './state';
 import {
   canAttack,
+  type Faction,
   passageFor,
   relationsOf,
   standsOn,
@@ -90,19 +91,29 @@ export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile)
   return { ...tile, improvements: [], building };
 }
 
+/** The city standing on the tile, and nothing where none does or where it is the faction's own. */
+export function otherCityOn(
+  chronicle: Pick<Chronicle, 'city' | 'neutral'>,
+  tile: TileCoords,
+  faction: Faction,
+): CityFaction | undefined {
+  const city = cityOn(chronicle, tile);
+  return city === faction ? undefined : city;
+}
+
 /**
- * What a unit's prepare lands as at the next enemy phase: the city's capture on the city's tile, a
- * pillage on any other; nothing for a unit that has prepared nothing.
+ * What a unit's prepare lands as at the next enemy phase: the capture of a city not its own on that
+ * city's tile, a pillage on any other; nothing for a unit that has prepared nothing.
  */
 export function preparedAs(
   chronicle: Pick<Chronicle, 'city' | 'neutral'>,
   unit: Unit,
 ): 'capture' | 'pillage' | undefined {
   if (unit.faction === 'player' || !unit.prepared) return undefined;
-  switch (cityOn(chronicle, unit.tile)) {
+  switch (otherCityOn(chronicle, unit.tile, unit.faction)) {
     case 'player':
-      return 'capture';
     case 'neutral':
+      return 'capture';
     case undefined:
       return 'pillage';
   }

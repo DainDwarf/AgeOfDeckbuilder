@@ -132,7 +132,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **action** | A unit's stat and the pool it refreshes to: what it spends to attack or on a card played through it; also the kind of card a unit's action goes to. | action points, energy, attack pool |
 | **refresh** | To bring a unit's spendable stat — move points, action — back to its full value; health is healed, never refreshed. | restore, replenish, reset, recharge, recover, regain |
 | **military** | The resource that pays for combat. | — |
-| **occupy** | What an enemy does to a tile it stands on: the tile yields nothing and is not claimable. | blockade |
+| **occupy** | What a unit does to a tile a city of another faction holds, by standing on it: the tile yields nothing and is not claimable. | blockade |
 | **prepare** | What an enemy does when it spends its action on the tile it stands on for an effect at the next enemy phase. | hold, besiege, ready, entrench |
 | **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything built on it is removed. | raze, loot, sack |
 | **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |

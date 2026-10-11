@@ -13,6 +13,7 @@ import {
   attackOrNone,
   campAshore,
   leastHealth,
+  otherCityOn,
   pillaged,
   standsAs,
   stepMove,
@@ -51,16 +52,29 @@ import {
   unitAt,
 } from '../rules/units';
 
+/**
+ * The raider, going for the nearest by its own walk of the cities not its own, the player's where
+ * its walk reaches none, and preparing the capture on that city's tile.
+ */
 export const RAIDER: UnitScript = {
-  moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
+  moveTo(catalogue: Catalogue, chronicle: Chronicle, raider: Unit) {
     const { city } = chronicle;
-    if (city === undefined) return { landing: { tile: enemy.tile, cost: 0 }, rng: chronicle.rng };
-    return { ...walkedTo(catalogue, chronicle, enemy, city), rng: chronicle.rng };
+    if (city === undefined) return { landing: { tile: raider.tile, cost: 0 }, rng: chronicle.rng };
+    const target =
+      nearestByWalk(
+        catalogue,
+        chronicle,
+        raider,
+        (tile) => otherCityOn(chronicle, tile, raider.faction) !== undefined,
+      ) ?? city;
+    return { ...walkedTo(catalogue, chronicle, raider, target), rng: chronicle.rng };
   },
 
-  acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): ScriptAct {
-    if (cityOn(chronicle, enemy.tile) === 'player') return { act: 'prepare' };
-    return weakest(catalogue, chronicle, enemy);
+  acts(catalogue: Catalogue, chronicle: Chronicle, raider: Unit): ScriptAct {
+    if (otherCityOn(chronicle, raider.tile, raider.faction) !== undefined) {
+      return { act: 'prepare' };
+    }
+    return weakest(catalogue, chronicle, raider);
   },
 };
 
@@ -77,7 +91,7 @@ export const PILLAGER: UnitScript = {
 
   acts(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit): ScriptAct {
     if (
-      cityOn(chronicle, enemy.tile) === 'player' &&
+      otherCityOn(chronicle, enemy.tile, enemy.faction) !== undefined &&
       goesFor(catalogue, chronicle, enemy) === undefined
     ) {
       return RAIDER.acts(catalogue, chronicle, enemy);

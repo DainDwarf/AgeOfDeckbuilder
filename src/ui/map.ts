@@ -1648,6 +1648,7 @@ export function createMapView(
       case 'refreshed':
       case 'action-spent':
       case 'wave-sent':
+      case 'camp-joined':
       case 'held':
       case 'settled':
       case 'stock':

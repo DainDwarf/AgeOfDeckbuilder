@@ -30,7 +30,7 @@ import {
   unaffordable,
   withCityRows,
 } from './state';
-import { actsAsEnemy, type Relations, relationsOf, type Unit, unitAt } from './units';
+import { type Relations, relationsOf, type Unit, unitAt } from './units';
 
 /**
  * The neutral turned hostile, for the rest of the chronicle: the one `relations` change, and nothing
@@ -88,8 +88,8 @@ export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFa
 }
 
 /**
- * Whether a tile of the faction's city is occupied, so it yields nothing: one of the player's by a
- * unit acting as an enemy, one of the neutral's by an enemy.
+ * Whether a tile of the faction's city is occupied, so it yields nothing: by an enemy, and while
+ * hostile by a unit of the other city's.
  */
 function occupied(
   units: readonly Unit[],
@@ -99,11 +99,12 @@ function occupied(
 ): boolean {
   const there = unitAt(units, coord);
   if (there === undefined) return false;
-  switch (whose) {
+  switch (there.faction) {
+    case 'enemy':
+      return true;
     case 'player':
-      return actsAsEnemy(there, relations);
     case 'neutral':
-      return there.faction === 'enemy';
+      return there.faction !== whose && relations === 'hostile';
   }
 }
 

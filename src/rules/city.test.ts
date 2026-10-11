@@ -55,6 +55,7 @@ import {
   NO_GROWTH,
   namesOf,
   neutralStanding,
+  onTheNeutralCity,
   opening,
   plains,
   QUIET,
@@ -841,6 +842,17 @@ test('at income the neutral’s assigned tile yields into its own stocks, after 
   expect(last?.chronicle.resources).toEqual(before?.chronicle.resources);
   expect(last?.chronicle.neutral?.resources).toEqual(together(gives));
   expect(outcome(blocked).neutral?.resources).toEqual(together());
+});
+
+test('hostile, a unit of the player’s occupies the tile of the neutral’s it stands on, which yields nothing at income', () => {
+  const income = heldBy(apply(CATALOGUE, onTheNeutralCity(), { type: 'end-turn' }), 'income');
+  const yielding = income.flatMap((stage) =>
+    stage.kind === 'change' && stage.name === 'stock' && stage.tile !== undefined
+      ? [tileKey(stage.tile)]
+      : [],
+  );
+
+  expect(yielding).toEqual([tileKey(CITY)]);
 });
 
 test('at the growth phase the neutral’s food at its growth threshold is spent on one idle population, after the player’s growth in the same grow group, its threshold counting no unit of the player’s', () => {
