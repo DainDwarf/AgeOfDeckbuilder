@@ -1,6 +1,7 @@
 import {
   distance,
   movementCost,
+  type Passage,
   pathCosts,
   type River,
   type Tile,
@@ -11,6 +12,16 @@ import type { MapContent } from './map-kinds';
 
 /** Who a unit acts for: the player, the enemies, or the neutral. */
 export type Faction = 'player' | 'enemy' | 'neutral';
+
+/** A faction's relations with the player: at peace, or hostile. */
+export type Relations = 'peace' | 'hostile';
+
+/** The neutral's relations with the player, and peace on a chronicle holding no neutral. */
+export function relationsOf(chronicle: {
+  readonly neutral?: { readonly relations: Relations };
+}): Relations {
+  return chronicle.neutral?.relations ?? 'peace';
+}
 
 /**
  * What a unit is and what it can do. A unit carries its own copy, taken from its kind in the
@@ -48,7 +59,7 @@ export type Unit = {
       readonly prepared: boolean;
       readonly camp?: TileCoords;
     }
-  | { readonly faction: 'neutral'; readonly script: string }
+  | { readonly faction: 'neutral'; readonly script: string; readonly prepared: boolean }
 );
 
 /** The least each number of a unit's stats may stand at. */
@@ -90,9 +101,16 @@ export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefi
   return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);
 }
 
-/** Whether an enemy occupies a tile: what it stands on yields nothing. */
-export function occupied(units: readonly Unit[], coord: TileCoords): boolean {
-  return unitAt(units, coord)?.faction === 'enemy';
+/** Whether a unit acts against the player as an enemy does: an enemy, or the neutral's while hostile. */
+export function actsAsEnemy(unit: Unit, relations: Relations): boolean {
+  switch (unit.faction) {
+    case 'player':
+      return false;
+    case 'enemy':
+      return true;
+    case 'neutral':
+      return relations === 'hostile';
+  }
 }
 
 /** The unit a number names, and nothing once that unit has left the map. */
@@ -116,8 +134,7 @@ export function standsOn(
 
 /**
  * What a path over the map is read from: the ground it runs over, the rivers cutting it, who stands
- * on it, which of it has ever been in sight, and the tiles the player's city holds. The chronicle
- * answers for all five.
+ * on it, which of it has ever been in sight, the tiles the player's city holds, and the neutral's.
  */
 type Crossed = {
   readonly tiles: readonly Tile[];
@@ -125,36 +142,42 @@ type Crossed = {
   readonly units: readonly Unit[];
   readonly snapshots: readonly TileCoords[];
   readonly held: readonly TileCoords[];
+  readonly neutral?: { readonly held: readonly TileCoords[]; readonly relations: Relations };
 };
 
 /**
- * Whether a unit of the faction is kept off a tile, neither landing on it nor crossing it: a unit of
- * the player's off an uncharted tile, a unit of the neutral's at peace off a tile the player holds,
- * and an enemy off none, reading the whole map.
+ * What a unit of the faction's walk does at a tile: the player's keeps off the uncharted and, at
+ * peace, ends on a tile the neutral holds; the neutral's at peace keeps off a tile the player holds.
  */
-export function shutTo(chronicle: Crossed, faction: Faction): (coord: TileCoords) => boolean {
+export function passageFor(chronicle: Crossed, faction: Faction): (coord: TileCoords) => Passage {
+  const atPeace = relationsOf(chronicle) === 'peace';
   switch (faction) {
     case 'player': {
       const charted = new Set(chronicle.snapshots.map(tileKey));
-      return (coord) => !charted.has(tileKey(coord));
+      const theirs = new Set(atPeace ? (chronicle.neutral?.held ?? []).map(tileKey) : []);
+      return (coord) => {
+        const key = tileKey(coord);
+        if (!charted.has(key)) return 'shut';
+        return theirs.has(key) ? 'end' : 'open';
+      };
     }
     case 'neutral': {
-      const held = new Set(chronicle.held.map(tileKey));
-      return (coord) => held.has(tileKey(coord));
+      const held = new Set(atPeace ? chronicle.held.map(tileKey) : []);
+      return (coord) => (held.has(tileKey(coord)) ? 'shut' : 'open');
     }
     case 'enemy':
-      return () => false;
+      return () => 'open';
   }
 }
 
 /**
  * Where a unit can land on the move points it has left, each at the cheapest route there, a step
  * over a river edge spending every point it has left. A tile one of its own holds is crossed but
- * never offered, and a tile its faction is shut out of is neither.
+ * never offered; the faction's passage says the rest.
  */
 export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit): Landing[] {
   const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
-  const shut = shutTo(chronicle, unit.faction);
+  const passage = passageFor(chronicle, unit.faction);
 
   const spent = pathCosts(
     catalogue,
@@ -163,9 +186,8 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
     unit.tile,
     { points: unit.movePoints, embarked: unit.embarked },
     (coord) => {
-      if (shut(coord)) return true;
       const held = standing.get(tileKey(coord));
-      return held !== undefined && held !== unit.faction;
+      return held !== undefined && held !== unit.faction ? 'shut' : passage(coord);
     },
   );
 
@@ -182,10 +204,17 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
  * embarked unit attack nothing, no unit its own faction, the neutral's at peace none of the player's,
  * and a unit whose range is one no embarked unit; any other attack lands within its range.
  */
-export function canAttack(attacker: Unit, target: Unit, away: number): boolean {
+export function canAttack(
+  attacker: Unit,
+  target: Unit,
+  away: number,
+  relations: Relations,
+): boolean {
   if (attacker.stats.worker || attacker.embarked) return false;
   if (target.faction === attacker.faction) return false;
-  if (attacker.faction === 'neutral' && target.faction === 'player') return false;
+  if (attacker.faction === 'neutral' && target.faction === 'player' && relations === 'peace') {
+    return false;
+  }
   if (target.embarked && attacker.stats.range <= 1) return false;
   return away <= attacker.stats.range;
 }
@@ -194,9 +223,11 @@ export function canAttack(attacker: Unit, target: Unit, away: number): boolean {
  * Every unit a unit can attack from where it stands, while it has the action an attack spends.
  * Range alone: sight is not read here.
  */
-export function attackable(units: readonly Unit[], attacker: Unit): Unit[] {
+export function attackable(units: readonly Unit[], attacker: Unit, relations: Relations): Unit[] {
   if (attacker.action <= 0) return [];
-  return units.filter((other) => canAttack(attacker, other, distance(other.tile, attacker.tile)));
+  return units.filter((other) =>
+    canAttack(attacker, other, distance(other.tile, attacker.tile), relations),
+  );
 }
 
 /** A unit losing health by an amount, whatever took it: at zero health or below it is killed. */

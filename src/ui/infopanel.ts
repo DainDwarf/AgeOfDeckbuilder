@@ -9,14 +9,14 @@ import {
   type River,
   runsAlong,
   type Tile,
-  type TileCoords,
   type TilesBeside,
   type YieldSource,
   yieldParts,
 } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
-import { type Unit, unitAt } from '../rules/units';
+import type { Chronicle } from '../rules/state';
+import { relationsOf, type Unit, unitAt } from '../rules/units';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
@@ -39,11 +39,12 @@ import type { Tooltip } from './tooltip';
 type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Partial<Resources> };
 
 /**
- * What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it, and what its
- * prepare lands as, if it has prepared.
+ * What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it, what its
+ * prepare lands as, if it has prepared, and whether it is the neutral's while it is hostile.
  */
 type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
   readonly prepares?: 'capture' | 'pillage';
+  readonly hostile?: boolean;
 };
 
 /** One card an inspection steps through, headed by the first of the rows it holds. */
@@ -159,7 +160,7 @@ export function cardsOf(
   catalogue: Catalogue,
   tile: Tile,
   units: readonly Unit[],
-  city: TileCoords | undefined,
+  cities: Pick<Chronicle, 'city' | 'neutral'>,
   rivers: readonly River[],
   beside: TilesBeside,
 ): Card[] {
@@ -167,7 +168,9 @@ export function cardsOf(
 
   const unit = unitAt(units, tile);
   if (unit !== undefined) {
-    cards.push({ kind: 'unit', unit: { ...unit, prepares: preparedAs({ city }, unit) } });
+    const prepares = preparedAs(cities, unit);
+    const hostile = unit.faction === 'neutral' && relationsOf(cities) === 'hostile';
+    cards.push({ kind: 'unit', unit: { ...unit, prepares, hostile } });
   }
 
   const parts = yieldParts(catalogue, tile, beside);
@@ -577,6 +580,7 @@ function stateOf(unit: UnitReading): string | undefined {
     case undefined:
       break;
   }
+  if (unit.hostile === true) states.push(text('unit-state.hostile'));
   if (states.length === 0) return undefined;
   return states.reduce((one, other) => text('unit-state.joined', { one, other }));
 }

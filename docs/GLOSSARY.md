@@ -49,7 +49,9 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **place** | To put a thing onto a tile: a unit, a building, an improvement, a camp. | deploy, drop, spawn (for a thing on a tile), improve, lay, install |
 | **build** | To put a building on a tile; what a building card does. | raise, construct, erect |
 | **neutral** | The third faction: the other city on the map, with its border, its population and its units. | NPC, city-state, friendly, neighbour, AI |
-| **hostile** | What the neutral is once turned against the player: its units attack the player's and go for the player's city. | at war, aggressive, enemy (for the neutral) |
+| **hostile** | What the neutral is once the player declares war: its units attack the player's and go for the player's city. | at war, aggressive, enemy (for the neutral) |
+| **relations** | Whether a faction is at peace with the player or hostile. | stance, attitude, standing, disposition, mood |
+| **declare war** | To turn a neutral faction hostile. | provoke, aggress, turn against |
 | **enemy** | A unit of the faction that enters from camps and in raids, and attacks. | barbarian, raider, invader, foe |
 | **killed** | What befalls a unit or a population: the unit leaves the map, the population its city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the player's city, dealt with its answers. | disaster, threat, crisis, encounter |
@@ -86,7 +88,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |
-| **combat** | Units attacking one another: the player's by hand in play, the enemies' and the neutral's in the enemy phase. | battle, fight, skirmish, war |
+| **combat** | Units attacking one another: the player's by hand in play, the enemies' and the neutral's in the enemy phase. | battle, fight, skirmish |
 | **income** | The phase where standing things yield. | upkeep, production phase, resolution |
 | **sight** | A unit's stat and the player's city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |

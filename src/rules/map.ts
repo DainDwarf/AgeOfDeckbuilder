@@ -235,6 +235,34 @@ export type Routes = {
 export type Stood = { readonly tile: TileCoords; readonly embarked: boolean };
 
 /**
+ * What a walk does at a tile: crosses it and may end on it, ends on it and goes no further, or keeps
+ * off it.
+ */
+export type Passage = 'open' | 'end' | 'shut';
+
+/** Whether a walk may end on a tile of that passage. */
+export function landable(passage: Passage): boolean {
+  switch (passage) {
+    case 'open':
+    case 'end':
+      return true;
+    case 'shut':
+      return false;
+  }
+}
+
+/** Whether a walk goes on beyond a tile of that passage. */
+function crossable(passage: Passage): boolean {
+  switch (passage) {
+    case 'open':
+      return true;
+    case 'end':
+    case 'shut':
+      return false;
+  }
+}
+
+/**
  * A walk over the whole map toward a tile: what the cheapest route to it weighs from every tile,
  * and `next`, the tiles a cheapest route from a tile, standing embarked or ashore, steps onto first.
  */
@@ -323,7 +351,7 @@ function weighs(catalogue: MapContent, moves: Moves, toward: boolean): Spends {
 
 /**
  * What the cheapest route to each tile costs from a start, ashore and embarked apart: `embarks` lets
- * a step embark or disembark.
+ * a step embark or disembark, and `passage` says which tiles a route ends on or keeps off.
  */
 function cheapestRoutes(
   ground: Ground,
@@ -331,7 +359,7 @@ function cheapestRoutes(
   embarked: boolean,
   embarks: boolean,
   spending: Spends,
-  shut: (coord: TileCoords) => boolean,
+  passage: (coord: TileCoords) => Passage,
 ): Routes {
   const spent = { ashore: new Map<string, number>(), embarked: new Map<string, number>() };
   const reachedBy = (standsEmbarked: boolean): Map<string, number> =>
@@ -346,7 +374,8 @@ function cheapestRoutes(
       if (reachedBy(atEmbarked).get(tileKey(at)) !== paid) continue;
       const here = ground.at(at);
       for (const coord of neighbours(at)) {
-        if (shut(coord)) continue;
+        const way = passage(coord);
+        if (!landable(way)) continue;
         const key = tileKey(coord);
         const onto = ground.at(coord);
         const river = ground.river(at, coord);
@@ -357,7 +386,7 @@ function cheapestRoutes(
           const before = reached.get(key);
           if (before !== undefined && before <= total) continue;
           reached.set(key, total);
-          next.push([coord, embarked, total]);
+          if (crossable(way)) next.push([coord, embarked, total]);
         }
       }
     }
@@ -368,8 +397,8 @@ function cheapestRoutes(
 
 /**
  * What the cheapest route to each tile costs a unit from a start, on the move points it has left,
- * the start nothing and a tile no route reaches absent: `shut` keeps a route off tiles for the
- * mover's own reasons.
+ * the start nothing and a tile no route reaches absent: `passage` says which tiles a route ends on
+ * or keeps off.
  */
 export function pathCosts(
   catalogue: MapContent,
@@ -377,17 +406,18 @@ export function pathCosts(
   rivers: readonly River[],
   from: TileCoords,
   walk: Walk,
-  shut: (coord: TileCoords) => boolean,
+  passage: (coord: TileCoords) => Passage,
 ): ReadonlyMap<string, number> {
   const ground = groundOf(catalogue, tiles, rivers);
-  const routes = cheapestRoutes(ground, from, walk.embarked, false, spends(catalogue, walk), shut);
+  const spending = spends(catalogue, walk);
+  const routes = cheapestRoutes(ground, from, walk.embarked, false, spending, passage);
   return walk.embarked ? routes.embarked : routes.ashore;
 }
 
 /**
  * What the cheapest route to each tile weighs from a start, ashore and embarked apart, on a walk over
  * the whole map with these moves: it embarks where the ground ends and disembarks where it begins,
- * wherever the moves name both. `shut` keeps the walk off tiles for the walker's own reasons.
+ * wherever the moves name both. `passage` says which tiles the walk ends on or keeps off.
  */
 export function routesFrom(
   catalogue: MapContent,
@@ -396,16 +426,16 @@ export function routesFrom(
   from: TileCoords,
   embarked: boolean,
   moves: Moves,
-  shut: (coord: TileCoords) => boolean,
+  passage: (coord: TileCoords) => Passage,
 ): Routes {
   const ground = groundOf(catalogue, tiles, rivers);
-  return cheapestRoutes(ground, from, embarked, true, weighs(catalogue, moves, false), shut);
+  return cheapestRoutes(ground, from, embarked, true, weighs(catalogue, moves, false), passage);
 }
 
 /**
  * What the cheapest route from each tile to a tile reached embarked or ashore weighs, on a walk over
- * the whole map with these moves, and the steps a cheapest route takes first. `shut` keeps the walk
- * off tiles for the walker's own reasons.
+ * the whole map with these moves, and the steps a cheapest route takes first. `passage` says which
+ * tiles the walk ends on or keeps off.
  */
 export function routesToward(
   catalogue: MapContent,
@@ -414,11 +444,11 @@ export function routesToward(
   to: TileCoords,
   embarked: boolean,
   moves: Moves,
-  shut: (coord: TileCoords) => boolean,
+  passage: (coord: TileCoords) => Passage,
 ): Toward {
   const ground = groundOf(catalogue, tiles, rivers);
   const spending = weighs(catalogue, moves, true);
-  const routes = cheapestRoutes(ground, to, embarked, true, spending, shut);
+  const routes = cheapestRoutes(ground, to, embarked, true, spending, passage);
   const reachedBy = (standsEmbarked: boolean): ReadonlyMap<string, number> =>
     standsEmbarked ? routes.embarked : routes.ashore;
   const next = (tile: TileCoords, standsEmbarked: boolean): Stood[] => {
@@ -457,7 +487,7 @@ export function groundRunsTo(
     to,
     false,
     { ashore: MOVE_POINT },
-    () => false,
+    () => 'open',
   );
   return new Set(reached.ashore.keys());
 }
@@ -470,7 +500,7 @@ export function groundAndWaterRunTo(
   to: TileCoords,
 ): ReadonlySet<string> {
   const moves = { ashore: MOVE_POINT, embarked: MOVE_POINT };
-  const reached = routesFrom(catalogue, tiles, rivers, to, false, moves, () => false);
+  const reached = routesFrom(catalogue, tiles, rivers, to, false, moves, () => 'open');
   return new Set([...reached.ashore.keys(), ...reached.embarked.keys()]);
 }
 

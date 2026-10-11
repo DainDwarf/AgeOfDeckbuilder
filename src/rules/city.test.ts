@@ -792,7 +792,7 @@ test('an assign waits while one population is idle and the city holds a tile nob
   expect(assignWaiting(spent)).toBe(false);
 });
 
-test('a chronicle launched on a region dealing the neutral’s city opens with it standing on its building’s tile, that tile held with one population on it and every stock at nought; one on a region dealing none opens with no neutral', () => {
+test('a chronicle launched on a region dealing the neutral’s city opens with it standing on its building’s tile, that tile held with one population on it, every stock at nought and at peace with the player; one on a region dealing none opens with no neutral', () => {
   for (const seed of [0, 1234]) {
     const { chronicle } = launched(CATALOGUE, AGE, CLEARING, seed, CIVILIZATION, []);
     const [city, ...others] = chronicle.tiles
@@ -806,6 +806,7 @@ test('a chronicle launched on a region dealing the neutral’s city opens with i
       population: 1,
       assigned: [city],
       resources: together(),
+      relations: 'peace',
     });
     expect(
       launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).chronicle.neutral,

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { Command } from '../rules/chronicle';
 import { saveFileName } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
 import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design-space';
@@ -30,6 +31,16 @@ type Standing = { readonly which: MenuWindow; readonly laid: Opened };
 /** What the menu says on the game's emitter as the first of its scrims rises and the last falls. */
 const COVERED = 'menu-covered';
 
+/** The presses that may declare war: a unit's step, its attack, and a card's play. */
+type WarPress = Extract<Command['type'], 'move' | 'attack' | 'play'>;
+
+/** The warning each press raises where it declares war. */
+const WAR_WARNINGS: Record<WarPress, Warning> = {
+  move: 'move-warning',
+  attack: 'attack-warning',
+  play: 'play-warning',
+};
+
 /**
  * The menu and the window a refused save raises over it, on a scene of their own: started after the
  * console and before every screen, so the console takes a key ahead of it and it takes one ahead of
@@ -41,6 +52,9 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
 
   /** The launch warning raised over the launch screen, listing what is reached; going through launches. */
   warnOfLaunch!: (reached: readonly string[], launch: () => void) => void;
+
+  /** The warning that a press declares war, raised over the chronicle screen; going through lands it. */
+  warnOfWar!: (press: WarPress, declare: () => void) => void;
 
   /** The whole menu taken down, the scrim with it; the refused-save window stays. */
   close!: () => void;
@@ -220,6 +234,12 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     this.warnOfLaunch = (reached, launch) => {
       warn('launch-warning', launch, { listed: { heading: 'launch.unpaid', lines: reached } });
     };
+    this.warnOfWar = (press, declare) => {
+      warn(WAR_WARNINGS[press], () => {
+        close();
+        declare();
+      });
+    };
     this.close = close;
     this.covered = () => covered;
   }
@@ -262,6 +282,15 @@ export function warnOfLaunch(
   launch: () => void,
 ): void {
   scene.game.scene.getScene<MenuScene>('menu').warnOfLaunch(reached, launch);
+}
+
+/** The warning that the command declares war raised over the chronicle screen; going through lands it. */
+export function warnOfWar(
+  scene: Phaser.Scene,
+  command: Extract<Command, { readonly type: WarPress }>,
+  declare: () => void,
+): void {
+  scene.game.scene.getScene<MenuScene>('menu').warnOfWar(command.type, declare);
 }
 
 /**

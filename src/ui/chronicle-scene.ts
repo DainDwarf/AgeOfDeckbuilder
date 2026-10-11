@@ -8,8 +8,10 @@ import {
   apply,
   type Command,
   chartedAndRead,
+  declaresWar,
   launched,
   outcome,
+  type PlayCommand,
   refusalOf,
   type UnitCommand,
 } from '../rules/chronicle';
@@ -48,7 +50,7 @@ import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
 import { createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
-import { type LeavesChronicles, raiseMenu, resetMenu } from './menu-scene';
+import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
 import { createPiles, TAB_EDGE } from './piles';
@@ -390,7 +392,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         CATALOGUE,
         face.tile,
         face.asStands ? this.current.units : [],
-        this.current.city,
+        this.current,
         this.current.rivers,
         (coord) => view.drawnAs(coord)?.tile,
       );
@@ -413,6 +415,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       }
       if (!(await playOut(command))) return;
       select(view.pressedOn(found.tile));
+    };
+
+    /** The press landed, or, where it declares war, the warning raised that lands it gone through. */
+    const warnedOrLanded = (command: UnitCommand | PlayCommand, land: () => void): void => {
+      if (declaresWar(CATALOGUE, this.current, command)) warnOfWar(this, command, land);
+      else land();
     };
 
     const commandUnit = async (command: UnitCommand): Promise<void> => {
@@ -450,7 +458,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         note.rescale();
       },
       (command) => {
-        void commandUnit(command);
+        warnedOrLanded(command, () => {
+          void commandUnit(command);
+        });
       },
       (command) => {
         void reassign(command);
@@ -485,7 +495,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     const hand = createHand(this, ui, faces, CATALOGUE, {
       play: (index, aimed) => {
-        void playOut({ type: 'play', index, ...aimed });
+        const command: PlayCommand = { type: 'play', index, ...aimed };
+        warnedOrLanded(command, () => {
+          void playOut(command);
+        });
       },
       dismiss,
       aimTile: (index, card, released, retargeted) => {
@@ -506,8 +519,17 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
                 note.overTile(refusedAim(block), view.faceOf(tile));
                 return;
               }
-              hand.unselect();
-              void playOut({ type: 'play', index, aim: 'tile', tile: played, through: tile });
+              const command: PlayCommand = {
+                type: 'play',
+                index,
+                aim: 'tile',
+                tile: played,
+                through: tile,
+              };
+              warnedOrLanded(command, () => {
+                hand.unselect();
+                void playOut(command);
+              });
             },
             (found) => {
               const block = throughRefusal(CATALOGUE, this.current, card, at, found.tile);
@@ -533,8 +555,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
               retargeted('unit');
               return;
             }
-            hand.unselect();
-            void playOut({ type: 'play', index, aim: card.aim, tile });
+            const command: PlayCommand = { type: 'play', index, aim: card.aim, tile };
+            warnedOrLanded(command, () => {
+              hand.unselect();
+              void playOut(command);
+            });
           },
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);
@@ -556,7 +581,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           this.current,
           this.current.hand[index].id,
           (card) => {
-            void playOut({ type: 'play', index, aim: 'discard-pile', card });
+            const command: PlayCommand = { type: 'play', index, aim: 'discard-pile', card };
+            warnedOrLanded(command, () => {
+              void playOut(command);
+            });
           },
           closed,
         );

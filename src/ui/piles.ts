@@ -203,6 +203,7 @@ export function createPiles(
       case 'ended':
       case 'tallied':
       case 'reached':
+      case 'relations':
       case 'runtime-error':
         return undefined;
     }

@@ -93,6 +93,7 @@ type PlainChange =
   | 'ended'
   | 'tallied'
   | 'reached'
+  | 'relations'
   | 'runtime-error';
 
 type PlacedChange = 'discarded' | 'exhausted' | 'recalled' | 'banished';

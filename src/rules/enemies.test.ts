@@ -9,7 +9,7 @@ import {
   type Wave,
 } from './catalogue';
 import { apply, outcome } from './chronicle';
-import { cityCommand, claimable } from './city';
+import { cityCommand, claimable, warDeclared } from './city';
 import { attackOrNone, enteredAround, enteredOnCamp, raided } from './enemies';
 import {
   aimedAt,
@@ -51,6 +51,7 @@ import {
   opening,
   plains,
   pointsOf,
+  preparedOnTheCity,
   preparing,
   QUIET,
   RAIDER_ROW,
@@ -86,7 +87,7 @@ import { RESOURCES } from './resources';
 import { nextRng, seedRng } from './rng';
 import { type Stage, walked } from './stages';
 import type { Chronicle } from './state';
-import { attackable, type Unit, unitAt } from './units';
+import { attackable, relationsOf, type Unit, unitAt } from './units';
 
 /** An age and a timeline dealing the raid on the second turn, and no other deal. */
 const RAID_ON_SECOND = dealing({ turn: 2, event: 'PH_Hardship' });
@@ -1260,7 +1261,7 @@ function enemyPhaseOf(chronicle: Chronicle, catalogue: Catalogue): string[] {
 
 test('an enemy attacks only a unit its own sight reaches: one its script names behind a forest from the plain is a runtime-error and no attack, and from the hills the attack lands', () => {
   const blind = naming((_catalogue, chronicle, enemy) =>
-    attackOrNone(attackable(chronicle.units, enemy)[0]),
+    attackOrNone(attackable(chronicle.units, enemy, relationsOf(chronicle))[0]),
   );
   const archerOn = (terrain: Terrain): Chronicle =>
     cityOf(['urban'], {
@@ -1544,6 +1545,22 @@ test('a tile an enemy occupies yields nothing at income', () => {
   }
 });
 
+test('hostile, a unit of the neutral’s occupies the tile of the player’s it stands on, which yields nothing at income, and the tile of its own city it stands on yields', () => {
+  const standingOn = withUnits(besideTheNeutral(), [
+    neutralStanding(CITY, { stats: { move: 0 } }),
+    neutralStanding(NEUTRAL_TILE, { stats: { move: 0 } }),
+  ]);
+  const yielded = (chronicle: Chronicle): string[] =>
+    heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'income').flatMap((stage) =>
+      stage.kind === 'change' && stage.name === 'stock' && stage.tile !== undefined
+        ? [tileKey(stage.tile)]
+        : [],
+    );
+
+  expect(yielded(standingOn)).toEqual([tileKey(CITY), tileKey(NEUTRAL_TILE)]);
+  expect(yielded(warDeclared(standingOn).chronicle)).toEqual([tileKey(NEUTRAL_TILE)]);
+});
+
 test('an enemy that reaches the city’s tile stands there, and captures the city the turn after', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
@@ -1695,6 +1712,30 @@ test('a unit of the neutral’s at peace attacks no unit of the player’s: its 
   ]);
 });
 
+test('hostile, a unit of the neutral’s attacks a unit of the player’s in its reach', () => {
+  const beset = withUnits(besideTheNeutral(), [
+    standing('player', { q: 2, r: 0 }, { health: 4 }),
+    neutralStanding(NEUTRAL_TILE, { stats: { move: 0 } }),
+  ]);
+
+  expect(attacksOf(beset)).toEqual([]);
+  expect(attacksOf(warDeclared(beset).chronicle)).toEqual([['1,0', '2,0']]);
+});
+
+test('hostile, a unit of the neutral’s on the city’s tile prepares there at the enemy phase and captures the city as the next begins, which is defeat by capture', () => {
+  const prepared = preparedOnTheCity();
+
+  const stages = apply(CATALOGUE, prepared, { type: 'end-turn' });
+
+  expect(unitAt(prepared.units, CITY)).toMatchObject({ faction: 'neutral', prepared: true });
+  expect(namesOf(heldBy(stages, 'enemy-phase'))).toEqual(['ended']);
+  expect(outcome(stages).ending).toEqual({
+    outcome: 'defeat',
+    cause: 'capture',
+    turn: prepared.turn,
+  });
+});
+
 test('a unit of the neutral’s embarks as an enemy does through no card, onto no tile the player holds: a step onto one is a runtime error and no step', () => {
   const shore = { q: 4, r: 0 };
   const coast = { q: 4, r: -1 };
@@ -1710,7 +1751,7 @@ test('a unit of the neutral’s embarks as an enemy does through no card, onto n
   expect(enemyPhaseOf(holding([coast]), rowing)).toEqual(['runtime-error']);
 });
 
-test('the neutral whose guards standing ashore are as many as its wave gathers sends as many as it sends under its wave’s script after the camps’ waves, the one on its city’s tile last; no enemy under its guard’s script counts', () => {
+test('the neutral whose guards standing ashore are as many as its wave gathers sends as many as it sends under its wave’s script after the camps’ waves, the one on its city’s tile last; no enemy under its guard’s script counts, and hostile it sends none', () => {
   const neutral = neutralOf(CATALOGUE, QUIET);
   const { wave } = neutral;
   if (wave === undefined) throw new Error('the fixture’s neutral sends no wave');
@@ -1748,6 +1789,9 @@ test('the neutral whose guards standing ashore are as many as its wave gathers s
     ),
   );
   expect(tilesStaged('wave-sent', short, content)).toEqual([]);
+  expect(tilesStaged('wave-sent', warDeclared(gathered).chronicle, content)).toEqual([
+    tileKey(camp),
+  ]);
 });
 
 test('an entry handed a table holding no row, or a row at a weight not above nought, is refused where it lands', () => {

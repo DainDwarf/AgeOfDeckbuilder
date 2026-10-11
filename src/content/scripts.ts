@@ -32,7 +32,15 @@ import { RESOURCES } from '../rules/resources';
 import { nextRng, type Rng } from '../rules/rng';
 import { inOwnSight } from '../rules/sight';
 import type { CardId, Chronicle } from '../rules/state';
-import { canAttack, type Landing, reachable, shutTo, type Unit, unitAt } from '../rules/units';
+import {
+  canAttack,
+  type Landing,
+  passageFor,
+  reachable,
+  relationsOf,
+  type Unit,
+  unitAt,
+} from '../rules/units';
 
 export const RAIDER: UnitScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit) {
@@ -92,10 +100,11 @@ export function guarding(radius: number): UnitScript {
 
       const inside = landings.filter((landing) => distance(landing.tile, camp) <= radius);
       if (inside.length === 0) return kept(nearestTo(chronicle, landings, camp));
+      const relations = relationsOf(chronicle);
       // The tile inside the radius nearest a unit stands the unit's distance from the camp less the
       // radius away from it, and none for a unit inside the radius.
       const targets = chronicle.units.filter((unit) =>
-        canAttack(enemy, unit, Math.max(0, distance(unit.tile, camp) - radius)),
+        canAttack(enemy, unit, Math.max(0, distance(unit.tile, camp) - radius), relations),
       );
       const attacking = landingsWithTarget(catalogue, chronicle, enemy, inside, targets);
       if (attacking.length > 0) return kept(nearestTo(chronicle, attacking, camp));
@@ -116,12 +125,13 @@ export function guarding(radius: number): UnitScript {
 }
 
 /**
- * The neutral's guard, keeping the tiles its city holds: it lands where it can attack from inside
- * them, nearest its city, else nearest a unit it sees and could attack, else wanders inside them,
- * resting on its city's tile only while no other tile it holds is free; outside them it walks back.
+ * The neutral's guard, raiding while hostile and at peace keeping the tiles its city holds: landing
+ * where it attacks from inside them, else nearest a unit it sees, else wandering inside them, off
+ * its city's tile while another is free; outside them it walks back.
  */
 export const NEUTRAL_GUARD: UnitScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, unit: Unit) {
+    if (relationsOf(chronicle) === 'hostile') return RAIDER.moveTo(catalogue, chronicle, unit);
     const kept = (landing: Landing) => ({ landing, rng: chronicle.rng });
     const stay: Landing = { tile: unit.tile, cost: 0 };
     const { neutral } = chronicle;
@@ -136,7 +146,8 @@ export const NEUTRAL_GUARD: UnitScript = {
     if (attacking.length > 0) return kept(nearestTo(chronicle, attacking, city));
     const seen = chronicle.units.filter(
       (other) =>
-        canAttack(unit, other, 0) && inOwnSight(catalogue, chronicle.tiles, unit, other.tile),
+        canAttack(unit, other, 0, relationsOf(chronicle)) &&
+        inOwnSight(catalogue, chronicle.tiles, unit, other.tile),
     );
     if (seen.length > 0) {
       return kept(nearestTo(chronicle, inside, nearestTo(chronicle, seen, unit.tile).tile));
@@ -158,23 +169,30 @@ export const NEUTRAL_GUARD: UnitScript = {
     return wanderedTo(chronicle, resting);
   },
 
-  acts: weakest,
+  acts: raidingWhileHostile,
 };
 
 /**
  * The neutral's wave, going for the nearest camp by its own walk, crossing the water on its way and
- * attacking what it can; with no camp to go for it stands where it is.
+ * attacking what it can; with no camp to go for it stands where it is. Hostile, it raids.
  */
 export const NEUTRAL_WAVE: UnitScript = {
   moveTo(catalogue: Catalogue, chronicle: Chronicle, unit: Unit) {
+    if (relationsOf(chronicle) === 'hostile') return RAIDER.moveTo(catalogue, chronicle, unit);
     const { building } = ageOf(catalogue, chronicle.age).camp;
     const camp = nearestByWalk(catalogue, chronicle, unit, (tile) => tile.building === building);
     if (camp === undefined) return { landing: { tile: unit.tile, cost: 0 }, rng: chronicle.rng };
     return { ...walkedTo(catalogue, chronicle, unit, camp), rng: chronicle.rng };
   },
 
-  acts: weakest,
+  acts: raidingWhileHostile,
 };
+
+/** What a unit of the neutral's does with an action: the raider's while hostile, else the weakest it can attack. */
+function raidingWhileHostile(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): ScriptAct {
+  if (relationsOf(chronicle) === 'hostile') return RAIDER.acts(catalogue, chronicle, unit);
+  return weakest(catalogue, chronicle, unit);
+}
 
 /**
  * The villager, claiming the tile that yields most in every resource together, the nearest to its
@@ -256,7 +274,7 @@ function nearestByWalk(
     walker.tile,
     walker.embarked,
     moves,
-    shutTo(chronicle, walker.faction),
+    passageFor(chronicle, walker.faction),
   );
   let chosen: TileCoords | undefined;
   let least = Number.POSITIVE_INFINITY;
@@ -309,7 +327,7 @@ function walkedTo(
     to,
     false,
     moves,
-    shutTo(chronicle, walker.faction),
+    passageFor(chronicle, walker.faction),
   );
   const landing = cheapestToward(chronicle, walker, landings, toward);
   return { landing, step: stepToward(catalogue, chronicle, walker, landing, toward) };
@@ -323,22 +341,16 @@ function landingsWithTarget(
   landings: readonly Landing[],
   units: readonly Unit[],
 ): Landing[] {
-  return landings.filter(
-    (landing) =>
-      targetsInOwnSight(catalogue, chronicle.tiles, units, { ...attacker, tile: landing.tile })
-        .length > 0,
-  );
+  return landings.filter((landing) => {
+    const landed = { ...attacker, tile: landing.tile };
+    return targetsInOwnSight(catalogue, chronicle, units, landed).length > 0;
+  });
 }
 
 /** An attack on the unit it can attack holding the least health, ties in tile order; nothing for none. */
 function weakest(catalogue: Catalogue, chronicle: Chronicle, attacker: Unit): ScriptAct {
   return attackOrNone(
-    leastHealth(
-      catalogue,
-      chronicle.tiles,
-      inTileOrder(chronicle.tiles, chronicle.units),
-      attacker,
-    ),
+    leastHealth(catalogue, chronicle, inTileOrder(chronicle.tiles, chronicle.units), attacker),
   );
 }
 

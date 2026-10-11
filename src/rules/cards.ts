@@ -15,7 +15,7 @@ import {
   type UnitEntry,
   unitKind,
 } from './catalogue';
-import { claimable, populationTaken } from './city';
+import { claimable, declaredByLanding, populationTaken } from './city';
 import {
   distance,
   type FeatureId,
@@ -354,8 +354,8 @@ function stepped(
 }
 
 /**
- * A unit embarking or disembarking onto a tile beside it, whatever took it there: one of its action
- * spent, then the `move` change, after which it stands there embarked or ashore and moves on `move`.
+ * A unit embarking or disembarking onto a tile beside it, whatever took it there: what its landing
+ * declares, one of its action spent, then the `move` change, leaving it embarked or ashore on `move`.
  */
 export function steppedOnto(
   paid: Chronicle,
@@ -365,21 +365,24 @@ export function steppedOnto(
   move: number,
 ): Landed {
   const tile = { q: to.q, r: to.r };
-  return followed(actionSpent(paid, stepping.tile), (left) =>
-    landedAs({
-      kind: 'change',
-      name: 'move',
-      from: stepping.tile,
-      to: tile,
-      chronicle: {
-        ...left,
-        units: left.units.map((unit) =>
-          unit.id === stepping.id
-            ? { ...unit, embarked: embarking, stats: { ...unit.stats, move }, tile }
-            : unit,
-        ),
-      },
-    }),
+  const declared = declaredByLanding(paid, stepping, tile);
+  return followed(
+    followed(declared, (left) => actionSpent(left, stepping.tile)),
+    (left) =>
+      landedAs({
+        kind: 'change',
+        name: 'move',
+        from: stepping.tile,
+        to: tile,
+        chronicle: {
+          ...left,
+          units: left.units.map((unit) =>
+            unit.id === stepping.id
+              ? { ...unit, embarked: embarking, stats: { ...unit.stats, move }, tile }
+              : unit,
+          ),
+        },
+      }),
   );
 }
 

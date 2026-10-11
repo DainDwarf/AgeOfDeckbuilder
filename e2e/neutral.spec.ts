@@ -1,31 +1,46 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, neutralOf, technologyOf } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
-import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { ageOf, neutralOf, technologyOf, unitKind } from '../src/rules/catalogue';
+import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
+import { movementCost, neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
-import { unitAt } from '../src/rules/units';
+import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
-import { buildingName, unitName } from '../src/ui/text';
+import { buildingName, text, unitName } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
+  admits,
+  aimed,
+  aimLine,
   budget,
+  campaignWith,
   campBeside,
   chronicleOf,
+  click,
   consoleKey,
+  disembarkingAt,
+  dragOut,
+  EMBARK,
   endedTurn,
   enter,
+  firstSeed,
+  idsOf,
   inside,
+  litTiles,
   mapFrame,
   marksIn,
+  onScreen,
   openSaved,
+  paidFor,
+  playedOn,
   playedOut,
   readings,
   rested,
+  ringedTile,
   settledOn,
   shownCard,
   sitesOf,
@@ -34,8 +49,12 @@ import {
   textOf,
   tileOnScreen,
   unitEntered,
+  WARRIOR,
   watch,
 } from './chronicle-screen';
+
+/** The warning a step onto a tile the neutral holds raises at peace. */
+const WARNING = 'move-warning';
 
 /** The age whose content names the neutral. */
 const AGE = (() => {
@@ -254,6 +273,183 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
       ...neutral.held.map((): CityFaction => 'neutral'),
     ]),
   );
+  expect(problems).toEqual([]);
+});
+
+/**
+ * Seed 1's turn 1 with a warrior of the player's entered on the first tile beside the neutral's city
+ * that its move lands it on the city's tile from, and the command that lands it there.
+ */
+function besideTheNeutralCity(): { chronicle: Chronicle; move: UnitCommand; from: TileCoords } {
+  const opened = settledOn(1, [], CAMPAIGN);
+  const { neutral } = opened;
+  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
+  for (const from of neighbours(neutral.city)) {
+    if (tileAt(opened.tiles, from) === undefined || unitAt(opened.units, from) !== undefined) {
+      continue;
+    }
+    if (holderOf(opened, from) !== undefined) continue;
+    const chronicle = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: from });
+    const unit = unitAt(chronicle.units, from);
+    if (unit === undefined) continue;
+    const landsOn = byHand(CATALOGUE, chronicle, unit).landings.some(
+      ({ tile }) => tileKey(tile) === tileKey(neutral.city),
+    );
+    if (landsOn) {
+      return { chronicle, move: { type: 'move', unit: unit.id, tile: neutral.city }, from };
+    }
+  }
+  throw new Error('no warrior of the player’s beside the neutral’s city on seed 1 lands on it');
+}
+
+test('a unit of the player’s pressed onto the neutral’s city at peace raises the Declare War warning over the map; Back, the back key and a press on the scrim each take it down with nothing moved, the unit selected and lit as it was, and the press gone through lands the unit there with the neutral hostile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, move, from } = besideTheNeutralCity();
+  const landed = outcome(apply(CATALOGUE, chronicle, move));
+  const city = tileKey(move.tile);
+  expect(declaresWar(CATALOGUE, chronicle, move)).toBe(true);
+  expect(relationsOf(landed)).toBe('hostile');
+  expect(unitAt(landed.units, move.tile)?.id).toBe(move.unit);
+
+  await openSaved(page, chronicle, CAMPAIGN);
+  await broughtIn(page, move.tile);
+  const unit = await tileOnScreen(page, from);
+  await page.mouse.click(unit.x, unit.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(from));
+  const lit = await litTiles(page);
+  expect(lit).toContain(city);
+
+  const pressed = async (): Promise<void> => {
+    await rested(page);
+    const at = await tileOnScreen(page, move.tile);
+    await page.mouse.click(at.x, at.y);
+    await expect.poll(() => standing(page, WARNING)).toBe(true);
+    await rested(page);
+  };
+
+  await pressed();
+  const seen = await readings(page, [
+    `${WARNING}-title`,
+    'declare-war.warning',
+    `${WARNING}-through-label`,
+    `${WARNING}-back-label`,
+  ]);
+  expect(seen(`${WARNING}-title`).text).toBe(text('declare-war.title'));
+  expect(seen('declare-war.warning').text).toBe(text('declare-war.warning'));
+  expect(seen(`${WARNING}-through-label`).text).toBe(text('declare-war.move'));
+  expect(seen(`${WARNING}-back-label`).text).toBe(text('control.back'));
+
+  const takenDown = async (): Promise<void> => {
+    await expect.poll(() => standing(page, WARNING)).toBe(false);
+    expect(await chronicleOf(page)).toEqual(chronicle);
+    expect(await ringedTile(page)).toBe(tileKey(from));
+    expect(await litTiles(page)).toEqual(lit);
+  };
+
+  await click(page, `${WARNING}-back`);
+  await takenDown();
+
+  await pressed();
+  await page.keyboard.press('Escape');
+  await takenDown();
+
+  await pressed();
+  // The Menu button stands under the scrim, clear of the window's box.
+  const scrim = await onScreen(page, 'menu-button');
+  await page.mouse.click(scrim.x, scrim.y);
+  await takenDown();
+
+  await pressed();
+  await click(page, `${WARNING}-through`);
+  await playedOut(page);
+  expect(await standing(page, WARNING)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(landed);
+
+  expect(problems).toEqual([]);
+});
+
+/** A new campaign whose deck holds Embark. */
+const SAILING = campaignWith([EMBARK]);
+
+/**
+ * The first seed's turn with a warrior of the player's embarked by Embark beside the neutral's city,
+ * Disembark in hand and paid for, admitting the city's tile; where Disembark lies, and the city's tile.
+ */
+function offTheNeutralCity(): { chronicle: Chronicle; index: number; city: TileCoords } {
+  const warrior = unitKind(CATALOGUE, WARRIOR);
+  return firstSeed(`opens on ${EMBARK} in hand beside water beside the neutral’s city`, (seed) => {
+    const opened = settledOn(seed, [], SAILING);
+    const { neutral } = opened;
+    if (neutral === undefined || !idsOf(opened.hand).includes(EMBARK)) return undefined;
+    const free = (coord: TileCoords): boolean =>
+      unitAt(opened.units, coord) === undefined && holderOf(opened, coord) === undefined;
+    for (const water of neighbours(neutral.city)) {
+      if (
+        !free(water) ||
+        movementCost(CATALOGUE, tileAt(opened.tiles, water), true) === undefined
+      ) {
+        continue;
+      }
+      for (const bank of neighbours(water)) {
+        if (!free(bank) || !standsOn(CATALOGUE, warrior, false, tileAt(opened.tiles, bank))) {
+          continue;
+        }
+        const manned = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: bank });
+        const paid = paidFor(manned, EMBARK);
+        if (!admits(paid.chronicle, paid.index, water)) continue;
+        const disembarking = disembarkingAt(paid, water, neutral.city, SAILING);
+        if (disembarking !== undefined) return { ...disembarking, city: neutral.city };
+      }
+    }
+    return undefined;
+  });
+}
+
+test('a card played at peace that lands a unit of the player’s on the neutral’s city raises the Declare War warning, reading Play; Back leaves the card being aimed with nothing paid, and the press gone through plays it, the unit landed there and the neutral hostile', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, index, city } = offTheNeutralCity();
+  const play = { type: 'play', index, aim: 'tile', tile: city } as const;
+  const landed = playedOn(chronicle, index, city);
+  const warning = 'play-warning';
+  expect(declaresWar(CATALOGUE, chronicle, play)).toBe(true);
+  expect(relationsOf(landed)).toBe('hostile');
+  expect(unitAt(landed.units, city)?.faction).toBe('player');
+
+  await openSaved(page, chronicle, SAILING);
+  await broughtIn(page, city);
+  await dragOut(page, index);
+  await aimed(page);
+  const line = await aimLine(page);
+  expect(line).toBeDefined();
+
+  const pressed = async (): Promise<void> => {
+    await aimed(page);
+    const at = await tileOnScreen(page, city);
+    await page.mouse.click(at.x, at.y);
+    await expect.poll(() => standing(page, warning)).toBe(true);
+    await rested(page);
+  };
+
+  await pressed();
+  const seen = await readings(page, [`${warning}-title`, `${warning}-through-label`]);
+  expect(seen(`${warning}-title`).text).toBe(text('declare-war.title'));
+  expect(seen(`${warning}-through-label`).text).toBe(text('declare-war.play'));
+
+  await click(page, `${warning}-back`);
+  await expect.poll(() => standing(page, warning)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(chronicle);
+  expect(await aimLine(page)).toBe(line);
+
+  await pressed();
+  await click(page, `${warning}-through`);
+  await playedOut(page);
+  expect(await standing(page, warning)).toBe(false);
+  expect(await chronicleOf(page)).toEqual(landed);
+
   expect(problems).toEqual([]);
 });
 

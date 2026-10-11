@@ -1202,6 +1202,6 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
         camp: entering.camp,
       });
     case 'neutral':
-      return dealt({ ...carried, faction: 'neutral', script: entering.script });
+      return dealt({ ...carried, faction: 'neutral', script: entering.script, prepared: false });
   }
 }

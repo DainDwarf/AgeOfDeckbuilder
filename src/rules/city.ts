@@ -28,7 +28,30 @@ import {
   unaffordable,
   withCityRows,
 } from './state';
-import { occupied, unitAt } from './units';
+import { actsAsEnemy, type Relations, relationsOf, type Unit, unitAt } from './units';
+
+/**
+ * The neutral turned hostile, for the rest of the chronicle: the one `relations` change, and nothing
+ * where it is hostile already or the chronicle holds no neutral.
+ */
+export function warDeclared(chronicle: Chronicle): Landed {
+  const { neutral } = chronicle;
+  if (neutral === undefined || neutral.relations === 'hostile') return unchanged(chronicle);
+  return landedAs(
+    change('relations', { ...chronicle, neutral: { ...neutral, relations: 'hostile' } }),
+  );
+}
+
+/**
+ * What a unit landing on a tile raises ahead of the landing, however it lands: the declaration of war
+ * where a unit of the player's lands on a tile the neutral holds, and nothing for any other.
+ */
+export function declaredByLanding(chronicle: Chronicle, unit: Unit, to: TileCoords): Landed {
+  if (unit.faction !== 'player' || holderOf(chronicle, to) !== 'neutral') {
+    return unchanged(chronicle);
+  }
+  return warDeclared(chronicle);
+}
 
 /** One idle population put on a tile the city holds, or the one standing on that tile taken off. */
 type AssignCommand = { readonly type: 'assign'; readonly tile: TileCoords };
@@ -48,20 +71,41 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
 /**
- * Income of the faction's city: an assigned tile no enemy occupies yields, the city's own tile no
+ * Income of the faction's city: an assigned tile nobody occupies yields, the city's own tile no
  * exception, tile by tile in tile order.
  */
 export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined) return unchanged(chronicle);
   const assigned = new Set(city.assigned.map(tileKey));
+  const relations = relationsOf(chronicle);
   let yielding = unchanged(chronicle);
   for (const { q, r } of chronicle.tiles) {
     if (!assigned.has(tileKey({ q, r }))) continue;
-    if (occupied(chronicle.units, { q, r })) continue;
+    if (occupied(chronicle.units, { q, r }, whose, relations)) continue;
     yielding = followed(yielding, (left) => yielded(catalogue, left, whose, { q, r }));
   }
   return yielding;
+}
+
+/**
+ * Whether a tile of the faction's city is occupied, so it yields nothing: one of the player's by a
+ * unit acting as an enemy, one of the neutral's by an enemy.
+ */
+function occupied(
+  units: readonly Unit[],
+  coord: TileCoords,
+  whose: CityFaction,
+  relations: Relations,
+): boolean {
+  const there = unitAt(units, coord);
+  if (there === undefined) return false;
+  switch (whose) {
+    case 'player':
+      return actsAsEnemy(there, relations);
+    case 'neutral':
+      return there.faction === 'enemy';
+  }
 }
 
 /**

@@ -63,7 +63,7 @@ import {
   playsOn,
   terrainsPlayedOn,
 } from './chronicle';
-import { arrived, bordered, populationKilled, populationTaken, yielded } from './city';
+import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
 import {
   attackOrNone,
   enemyEntering,
@@ -390,7 +390,7 @@ const EVENTS: Catalogue['events'] = {
 
 /** What the fixture's scripts do with an action: attack the unit of the least health they can. */
 function struckAt(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): ScriptAct {
-  return attackOrNone(leastHealth(catalogue, chronicle.tiles, chronicle.units, unit));
+  return attackOrNone(leastHealth(catalogue, chronicle, chronicle.units, unit));
 }
 
 /**
@@ -1189,7 +1189,7 @@ export type Standing = {
   readonly stats: UnitStats;
   readonly movePoints: number;
   readonly action: number;
-  /** Whether an enemy has prepared on the tile it stands on. */
+  /** Whether a unit acting by a script has prepared on the tile it stands on. */
   readonly prepared?: true;
 };
 
@@ -1204,9 +1204,9 @@ export function withUnits(chronicle: Chronicle, units: readonly Standing[]): Chr
     const last = dealt.units[dealt.units.length - 1];
     const state = { stats: unit.stats, movePoints: unit.movePoints, action: unit.action };
     const authored: Unit =
-      last.faction === 'enemy'
-        ? { ...last, ...state, prepared: unit.prepared === true }
-        : { ...last, ...state };
+      last.faction === 'player'
+        ? { ...last, ...state }
+        : { ...last, ...state, prepared: unit.prepared === true };
     stood = { ...dealt, units: [...dealt.units.slice(0, -1), authored] };
   }
   return charted(CATALOGUE, stood);
@@ -1400,6 +1400,15 @@ export function besideTheNeutral(named: Opening = {}, ground: Tile[] = plains(3)
   const { catalogue = CATALOGUE } = named;
   const opened = opening(builtOn(ground, NEUTRAL, [NEUTRAL_TILE]), named);
   return outcome(apply(catalogue, settledOn(opened, CITY, catalogue), { type: 'end-turn' }));
+}
+
+/**
+ * Turn 2 of `besideTheNeutral` with the neutral hostile, a unit of its under `SCRIPT` having
+ * prepared on the city's tile.
+ */
+export function preparedOnTheCity(): Chronicle {
+  const onCity = withUnits(besideTheNeutral(), [neutralStanding(CITY, { script: SCRIPT })]);
+  return endedTurn(warDeclared(onCity).chronicle);
 }
 
 /** A city in the first age, carrying the achievements a launch with these technologies learned names. */

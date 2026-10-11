@@ -1,34 +1,40 @@
 import { expect, test } from 'vitest';
 import { improvementPlaced } from './cards';
 import { apply, byHand, type Command, outcome } from './chronicle';
+import { warDeclared } from './city';
 import {
   actionOf,
   aimedAt,
   attackOn,
   attacksOf,
+  besideTheNeutral,
   CATALOGUE,
   CITY,
   cityOf,
+  deepBut,
   EMBARKED_MOVE,
   FOOD,
   field,
   madeOf,
+  NEUTRAL_TILE,
   namesOf,
   neutralStanding,
   only,
+  plains,
   pointsOf,
   riverBetween,
   type Standing,
   stagedBy,
   standing,
   unitNamed,
+  withUnits,
   worker,
 } from './fixtures';
 import { type ImprovementId, MOVE_POINT, type TileCoords, tileKey } from './map';
 import { charted } from './sight';
 import { walked } from './stages';
 import type { Chronicle } from './state';
-import { attackable } from './units';
+import { attackable, relationsOf } from './units';
 
 /** The chronicle with the improvement placed on each of the named tiles, and the map charted of it. */
 function withImprovement(
@@ -212,7 +218,7 @@ test('a worker entered by its card holds an action and attacks nothing beside it
   const entered = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 
   expect(actionOf(entered, 2)).toBeGreaterThan(0);
-  expect(attackable(entered.units, unitNamed(entered, 2))).toEqual([]);
+  expect(attackable(entered.units, unitNamed(entered, 2), relationsOf(entered))).toEqual([]);
   expect(stagedBy(entered, attackOn(2, { q: 1, r: 0 }))).toEqual(['refused']);
 });
 
@@ -226,7 +232,7 @@ test('a worker with range and damage attacks nothing all the same', () => {
   });
 
   expect(actionOf(city, 1)).toBeGreaterThan(0);
-  expect(attackable(city.units, unitNamed(city, 1))).toEqual([]);
+  expect(attackable(city.units, unitNamed(city, 1), relationsOf(city))).toEqual([]);
   expect(stagedBy(city, attackOn(1, { q: 2, r: 0 }))).toEqual(['refused']);
 });
 
@@ -696,6 +702,85 @@ test('a unit of the neutral’s neither lands on nor crosses a tile the player h
   expect(landed(standing('enemy', from, stats))).toEqual(['-2,0', '-1,0', '0,0', '1,0']);
 });
 
+/**
+ * `besideTheNeutral` on one line of plain, west of the city to east of the neutral's city, with the
+ * unit standing on it.
+ */
+function onTheLine(unit: Standing): Chronicle {
+  const line = [{ q: -1, r: 0 }, CITY, NEUTRAL_TILE, { q: 2, r: 0 }];
+  return withUnits(besideTheNeutral({}, deepBut(plains(3), line)), [unit]);
+}
+
+/** The tiles the chronicle's one unit lands on by hand. */
+function landingsOf(chronicle: Chronicle): string[] {
+  const [unit] = chronicle.units;
+  return byHand(CATALOGUE, chronicle, unit).landings.map(({ tile }) => tileKey(tile));
+}
+
+test('at peace a unit of the player’s lands on a tile the neutral holds and crosses none to the tile beyond it; hostile, it crosses it', () => {
+  const opened = onTheLine(standing('player', { q: -1, r: 0 }, { move: 4 * MOVE_POINT }));
+
+  expect(landingsOf(opened)).toEqual(['0,0', '1,0']);
+  expect(landingsOf(warDeclared(opened).chronicle)).toEqual(['0,0', '1,0', '2,0']);
+});
+
+test('hostile, a unit of the neutral’s lands on and crosses a tile the player holds', () => {
+  const opened = onTheLine(neutralStanding({ q: 2, r: 0 }, { stats: { move: 4 * MOVE_POINT } }));
+
+  expect(landingsOf(opened)).toEqual(['1,0']);
+  expect(landingsOf(warDeclared(opened).chronicle)).toEqual(['-1,0', '0,0', '1,0']);
+});
+
+test('a unit of the player’s landing on a tile the neutral holds, its city’s own, declares war: one relations change ahead of the move, the neutral hostile from it; a landing elsewhere declares nothing, nor one once hostile', () => {
+  const opened = onTheLine(standing('player', CITY, { move: 2 * MOVE_POINT }));
+  const [unit] = opened.units;
+  const hostile = warDeclared(opened).chronicle;
+
+  const declared = apply(CATALOGUE, opened, moveTo(unit.id, NEUTRAL_TILE));
+
+  expect(namesOf(declared)).toEqual(['relations', 'move']);
+  expect(relationsOf(declared[0].chronicle)).toBe('hostile');
+  expect(unitNamed(outcome(declared), unit.id).tile).toEqual(NEUTRAL_TILE);
+  expect(stagedBy(opened, moveTo(unit.id, { q: -1, r: 0 }))).toEqual(['move']);
+  expect(relationsOf(outcome(apply(CATALOGUE, opened, moveTo(unit.id, { q: -1, r: 0 }))))).toBe(
+    'peace',
+  );
+  expect(stagedBy(hostile, moveTo(unit.id, NEUTRAL_TILE))).toEqual(['move']);
+});
+
+test('an attack of the player’s on a unit of the neutral’s declares war, the one that kills it included: one relations change first in the attack, the neutral hostile from it; an attack on an enemy declares nothing', () => {
+  const beside = (target: Standing, damage: number): Chronicle =>
+    withUnits(besideTheNeutral(), [standing('player', CITY, { damage }), target]);
+  const struck = beside(neutralStanding(NEUTRAL_TILE, { stats: { health: 4 } }), 1);
+  const killed = beside(neutralStanding(NEUTRAL_TILE, { stats: { health: 4 } }), 4);
+  const raided = beside(standing('enemy', NEUTRAL_TILE, { health: 4 }), 1);
+  const [attacker] = struck.units;
+
+  expect(stagedBy(struck, attackOn(attacker.id, NEUTRAL_TILE))).toEqual([
+    'attack',
+    'relations',
+    'action-spent',
+    'damaged',
+  ]);
+  expect(relationsOf(outcome(apply(CATALOGUE, struck, attackOn(attacker.id, NEUTRAL_TILE))))).toBe(
+    'hostile',
+  );
+  expect(stagedBy(killed, attackOn(attacker.id, NEUTRAL_TILE))).toEqual([
+    'attack',
+    'relations',
+    'action-spent',
+    'killed',
+  ]);
+  expect(stagedBy(raided, attackOn(attacker.id, NEUTRAL_TILE))).toEqual([
+    'attack',
+    'action-spent',
+    'damaged',
+  ]);
+  expect(relationsOf(outcome(apply(CATALOGUE, raided, attackOn(attacker.id, NEUTRAL_TILE))))).toBe(
+    'peace',
+  );
+});
+
 test('a move of a unit that is not the player’s, or of no unit at all, is refused', () => {
   const city = cityOf(['urban'], {
     tiles: field(2),
@@ -773,7 +858,7 @@ test('an embarked unit attacks nothing, whatever its range and damage', () => {
   const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
 
   expect(actionOf(ticked, 1)).toBeGreaterThan(0);
-  expect(attackable(ticked.units, unitNamed(ticked, 1))).toEqual([]);
+  expect(attackable(ticked.units, unitNamed(ticked, 1), relationsOf(ticked))).toEqual([]);
   expect(stagedBy(ticked, attackOn(1, { q: 2, r: 0 }))).toEqual(['refused']);
 });
 

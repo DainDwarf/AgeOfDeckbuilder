@@ -24,7 +24,16 @@ import {
   civilizationOf,
   unitKind,
 } from './catalogue';
-import { admitted, apply, byHand, type Command, outcome, refusalOf } from './chronicle';
+import {
+  admitted,
+  apply,
+  byHand,
+  type Command,
+  declaresWar,
+  outcome,
+  refusalOf,
+} from './chronicle';
+import { warDeclared } from './city';
 import {
   AGE,
   actionOf,
@@ -93,7 +102,7 @@ import { buildingKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { plays, walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock, withCityRows } from './state';
-import { standsOn } from './units';
+import { relationsOf, standsOn } from './units';
 
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
 function aimedAtPile(card: number): Command {
@@ -2189,6 +2198,35 @@ test('a card embarks a unit of the player’s ashore beside a charted, free tile
   });
   expect(refusedFor(embarked, 'PH_Embark', coast)).toBe('unit-standing');
   expect(refusedFor(embarked, 'PH_Embark', onward)).toBe('no-unit-beside');
+});
+
+test('a card’s step that lands a unit of the player’s on a tile the neutral holds declares war: one relations change ahead of the step, inside the play; once hostile it declares nothing', () => {
+  const coast = { q: 1, r: -1 };
+  const { neutral } = besideTheNeutral();
+  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
+  const opened = cityOf(['urban'], {
+    tiles: field(3, [coast]),
+    hand: ['PH_Embark'],
+    units: [standing('player', CITY)],
+    neutral,
+  });
+  const city = withCityRows(opened, 'neutral', { held: [...neutral.held, coast] });
+  const hostile = warDeclared(city).chronicle;
+
+  const stages = apply(CATALOGUE, city, aimedAt(coast));
+
+  expect(refusedFor(city, 'PH_Embark', coast)).toBeUndefined();
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'relations', 'action-spent', 'move']);
+  expect(relationsOf(outcome(stages))).toBe('hostile');
+  expect(unitNamed(outcome(stages), 1).tile).toEqual(coast);
+  expect(declaresWar(CATALOGUE, city, aimedAt(coast))).toBe(true);
+  expect(stagedBy(hostile, aimedAt(coast))).toEqual([
+    'played',
+    'discarded',
+    'action-spent',
+    'move',
+  ]);
+  expect(declaresWar(CATALOGUE, hostile, aimedAt(coast))).toBe(false);
 });
 
 test('a card disembarks an embarked unit of the player’s beside a charted, free tile it stands on ashore, spending its action: refused for each of those in that order, and the unit’s move is its own again, its damage, range and health as they were', () => {

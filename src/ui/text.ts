@@ -103,6 +103,7 @@ const TEXT = {
   'unit-state.raft': 'Raft',
   'unit-state.pillaging': 'Pillaging',
   'unit-state.capturing': 'Capturing',
+  'unit-state.hostile': 'Hostile',
   'unit-state.joined': '{one} · {other}',
   'card.settle': 'Settlement', // glossary exception: settlement
   'rules.settle': 'Place the [building:{building}]',
@@ -301,7 +302,7 @@ const TEXT = {
   'key.mouse-3': 'Mouse 4',
   'key.mouse-4': 'Mouse 5',
   'defeat.title': 'Defeat',
-  'defeat.capture': 'An enemy captured your city on turn {turn}.',
+  'defeat.capture': 'Your city was captured on turn {turn}.',
   'defeat.population': "Your city's population reached zero on turn {turn}.",
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
@@ -371,6 +372,12 @@ const TEXT = {
   'launch.warning':
     'Launching ends the chronicle in progress, and its achievements are not paid. This cannot be undone.',
   'launch.unpaid': 'Achievement you will lose:',
+  'declare-war.title': 'Declare War',
+  'declare-war.warning':
+    'Are you sure you want to declare war? Their band will answer in kind: its warriors will hunt yours and come for your city, and there will be no peace again.',
+  'declare-war.move': 'Move',
+  'declare-war.attack': 'Attack',
+  'declare-war.play': 'Play',
   'pile.counts': 'Cards: {cards}\nSettle: {settle}',
   'collection.collection': 'Collection',
   'collection.civilizations': 'Civilizations',

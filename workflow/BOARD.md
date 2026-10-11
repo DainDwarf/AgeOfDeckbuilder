@@ -13,7 +13,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral's stance** — the neutral's relations with the player are at peace or hostile: a unit of the player's landing on a tile the neutral holds or attacking a unit of its declares war, through the Declare War warning while at peace, and at peace crosses no tile it holds; hostile for the rest of the chronicle, its units attack the player's, read the whole map and capture the player's city as enemies do, and its unit card reads Hostile. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`, `docs/ages/STONE.md`, `docs/CHRONICLE-SCREEN.md`, `DOGMAS.md`. [board/neutral-stance.md](board/neutral-stance.md)
 - **The neutral's fall** — the player destroys it: its city captured by standing on it through the enemy phase, its tiles nobody's from then on and its units of no city; what the capture deals is this line's question.
 - **The neutral's population** — its script decides how to assign, reassign and unassign its population, moving it to more fertile tiles as they are claimed, since a city that does not start on plain never grows for want of that; it may need to balance population against more units.
 - **The neutral's workers** — its script enters workers and plays improvement and building cards through them on the tiles it holds, where its stocks pay the cards' costs; and the neutral opens with one free worker of its own, since a city settled on anything but plain never grows a population to spare.

@@ -406,6 +406,7 @@ test('a snapshot keeps the city whose border its tile stands inside: taken again
     population: 1,
     assigned: [neutralCity],
     resources: culture(0),
+    relations: 'peace',
   });
   const fogged = left[left.length - 1];
   const ticked = outcome(apply(CATALOGUE, fogged, { type: 'end-turn' }));

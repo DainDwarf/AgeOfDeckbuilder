@@ -1526,6 +1526,38 @@ export const TRAPPING = 'trapping';
 /** The card that removes a tile's feature. */
 export const HUNT = 'hunt';
 
+/** The card that embarks a unit. */
+export const EMBARK = 'embark';
+
+/** The card a card becomes; one that becomes none throws. */
+export function becomes(card: CardId): CardId {
+  const named = cardOf(CATALOGUE, card).becomes;
+  if (named === undefined) throw new Error(`${card} becomes no card`);
+  return named;
+}
+
+/**
+ * Embark, in hand and paid for, played at the water, then turns ended until the card it becomes is in
+ * hand, paid for and admitting the tile: that chronicle and where the card lies, and nothing where no
+ * turn within as many as the campaign's deck holds cards does.
+ */
+export function disembarkingAt(
+  paid: { readonly chronicle: Chronicle; readonly index: number },
+  water: TileCoords,
+  at: TileCoords,
+  campaign: Campaign,
+): { readonly chronicle: Chronicle; readonly index: number } | undefined {
+  const { cards } = civilizationOpened(campaign);
+  // The deck cycles back to the card Embark lay as well within as many turns as it holds cards.
+  let embarked = playedOn(paid.chronicle, paid.index, water);
+  for (let turn = 0; turn < cards.length && embarked.ending === undefined; turn++) {
+    embarked = endedTurn(embarked);
+    const disembarking = paidFor(embarked, becomes(EMBARK));
+    if (admits(disembarking.chronicle, disembarking.index, at)) return disembarking;
+  }
+  return undefined;
+}
+
 /** The technology that unlocks the card; a card no technology unlocks throws. */
 function unlockerOf(card: CardId): string {
   const found = Object.keys(CATALOGUE.technologies).find((technology) =>

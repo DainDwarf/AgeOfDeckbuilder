@@ -51,7 +51,14 @@ import type {
   SnapshotUnit,
   Timeline,
 } from './state';
-import { type Faction, FIRST_UNIT_NUMBER, LEAST_STATS, type Unit, type UnitStats } from './units';
+import {
+  type Faction,
+  FIRST_UNIT_NUMBER,
+  LEAST_STATS,
+  type Relations,
+  type Unit,
+  type UnitStats,
+} from './units';
 
 /** A chronicle's save: the chronicle, the region of its age it was launched on, by id, and the campaign's civilization, by name. */
 export type ChronicleSave = {
@@ -519,10 +526,14 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
       count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
     ),
     deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item)),
-    neutral: optional(field('neutral'), (item) => ({
-      city: onMap(catalogue, record(catalogue, item)('city'), tiles),
-      ...cityRowsOf(catalogue, item, tiles),
-    })),
+    neutral: optional(field('neutral'), (item) => {
+      const city = record(catalogue, item);
+      return {
+        city: onMap(catalogue, city('city'), tiles),
+        ...cityRowsOf(catalogue, item, tiles),
+        relations: relationsIn(catalogue, city('relations')),
+      };
+    }),
     units: units.map(({ unit }) => unit),
     nextUnit,
     drawPile: list(catalogue, field('drawPile'), card),
@@ -705,6 +716,17 @@ function cityFactionOf(catalogue: Catalogue, slot: Slot): CityFaction {
   return refused(catalogue, slot, `names no city ${unlisted}`);
 }
 
+function relationsIn(catalogue: Catalogue, slot: Slot): Relations {
+  const relations = string(catalogue, slot) as Relations;
+  switch (relations) {
+    case 'peace':
+    case 'hostile':
+      return relations;
+  }
+  const unlisted: never = relations;
+  return refused(catalogue, slot, `names no relations ${unlisted}`);
+}
+
 function unitOf(catalogue: Catalogue, slot: Slot): Unit {
   const field = record(catalogue, slot);
   const standing = {
@@ -739,7 +761,12 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
         camp: optional(field('camp'), (item) => coordsIn(catalogue, record(catalogue, item))),
       };
     case 'neutral':
-      return { ...standing, faction, script: id(catalogue, field('script'), unitScript) };
+      return {
+        ...standing,
+        faction,
+        script: id(catalogue, field('script'), unitScript),
+        prepared: flag(catalogue, field('prepared')),
+      };
   }
 }
 

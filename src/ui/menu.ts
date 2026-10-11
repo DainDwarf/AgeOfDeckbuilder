@@ -27,7 +27,13 @@ import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
 /** A warning: a window of its own, whose first button is the press it warns of, going through. */
-export type Warning = 'import-warning' | 'clear-warning' | 'launch-warning';
+export type Warning =
+  | 'import-warning'
+  | 'clear-warning'
+  | 'launch-warning'
+  | 'move-warning'
+  | 'attack-warning'
+  | 'play-warning';
 
 /** Every window the menu opens. */
 export type MenuWindow = 'menu' | 'settings' | 'controls' | 'manage-save' | Warning;
@@ -66,6 +72,9 @@ const THROUGH: Record<Warning, TextKey> = {
   'import-warning': 'manage-save.import',
   'clear-warning': 'manage-save.clear',
   'launch-warning': 'launch.button',
+  'move-warning': 'declare-war.move',
+  'attack-warning': 'declare-war.attack',
+  'play-warning': 'declare-war.play',
 };
 
 /**
@@ -104,6 +113,21 @@ const WINDOWS: Record<
     from: 'manage-save',
   },
   'launch-warning': { title: 'navbar.chronicle', lines: ['launch.warning'], buttons: ['back'] },
+  'move-warning': {
+    title: 'declare-war.title',
+    lines: ['declare-war.warning'],
+    buttons: ['back'],
+  },
+  'attack-warning': {
+    title: 'declare-war.title',
+    lines: ['declare-war.warning'],
+    buttons: ['back'],
+  },
+  'play-warning': {
+    title: 'declare-war.title',
+    lines: ['declare-war.warning'],
+    buttons: ['back'],
+  },
 };
 
 /** Lines stacked tight under the line heading them. */

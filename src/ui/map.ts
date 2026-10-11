@@ -615,7 +615,7 @@ export function createMapView(
 
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Container>();
-  /** The hue drawn under each enemy the map shows that has prepared, by the number it is named by. */
+  /** The hue drawn under each unit the map shows that has prepared, by the number it is named by. */
   let hued = new Map<number, Phaser.GameObjects.Polygon>();
   /** The mark drawn on each tile the population stands on while city mode is on, by its tile's key. */
   let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
@@ -1235,11 +1235,14 @@ export function createMapView(
     }
   };
 
-  /** The tile an enemy has prepared on wearing the enemy's colour, as the target glow wears it. */
+  /** The tile a unit has prepared on wearing its faction's colour, as the target glow wears it. */
   const paintHue = (unit: Unit): Phaser.GameObjects.Polygon => {
-    const hue = glowTile(scene, unit.tile, FACTION_COLOURS.enemy, LOOK.preparedGlow).setName(
-      `prepared-${tileKey(unit.tile)}`,
-    );
+    const hue = glowTile(
+      scene,
+      unit.tile,
+      FACTION_COLOURS[unit.faction],
+      LOOK.preparedGlow,
+    ).setName(`prepared-${tileKey(unit.tile)}`);
     hues.add(hue);
     hued.set(unit.id, hue);
     return hue;
@@ -1445,7 +1448,7 @@ export function createMapView(
     return shrink(withHue(coord, marker), 200).then(() => settle(token, chronicle));
   };
 
-  /** A tile's hue coming as the enemy on it prepares, and going as what it prepared lands. */
+  /** A tile's hue coming as the unit on it prepares, and going as what it prepared lands. */
   const preparedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
     const standing = unitAt(chronicle.units, coord);
     const worn = hueOn(coord);
@@ -1665,6 +1668,7 @@ export function createMapView(
       case 'ended':
       case 'tallied':
       case 'reached':
+      case 'relations':
       case 'runtime-error':
         return undefined;
     }
@@ -1806,7 +1810,7 @@ export function createMapView(
             if (landed !== undefined && shown !== undefined) {
               switch (holding.kind) {
                 case 'unit':
-                  if (commandUnitOn(holding.unit, landed)) return;
+                  commandUnitOn(holding.unit, landed);
                   break;
                 case 'assigned': {
                   const command = cityDrag(shown, holding.tile, landed);

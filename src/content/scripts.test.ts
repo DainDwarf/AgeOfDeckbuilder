@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { type Catalogue, catalogued, type ScriptAct } from '../rules/catalogue';
 import { apply, outcome } from '../rules/chronicle';
-import { claimable } from '../rules/city';
+import { claimable, warDeclared } from '../rules/city';
 import {
   aimedAt,
   attacksOf,
@@ -684,6 +684,25 @@ test('the neutral’s guard rests on its city’s tile only while no other tile 
   }
 });
 
+/**
+ * What a unit of the neutral's under `SCRIPT` does hostile, the script being the content's: the move
+ * it makes from beside its city with the city's tile free and in reach, and whether it stands
+ * prepared after an enemy phase begun on the city's tile.
+ */
+function raidedBy(content: Catalogue): { moves: string[][]; prepared: boolean } {
+  const hostile = (unit: Standing): Chronicle => warDeclared(neutralAround([], [unit])).chronicle;
+  const after = outcome(apply(content, hostile(scripted(CITY)), { type: 'end-turn' }));
+  const standing = after.units.find((unit) => tileKey(unit.tile) === tileKey(CITY));
+  return {
+    moves: movesOf(hostile(scripted({ q: 2, r: 0 })), content),
+    prepared: standing?.faction === 'neutral' && standing.prepared,
+  };
+}
+
+test('hostile, the neutral’s guard walks and acts as the raider: onto the city’s tile free and in reach, and preparing the capture there', () => {
+  expect(raidedBy(KEEPING)).toEqual({ moves: [['2,0', '0,0']], prepared: true });
+});
+
 test('the neutral’s guard outside the border walks back toward its city, and never embarks to', () => {
   const island = { q: 4, r: 0 };
   const coast = { q: 3, r: 0 };
@@ -789,6 +808,10 @@ test('the neutral’s wave walks the long way round the tiles the player holds t
   expect(movesOf(walking(standing('enemy', from)), SENDING)).toEqual([
     [tileKey(from), tileKey(camp)],
   ]);
+});
+
+test('hostile, the neutral’s wave walks and acts as the raider: onto the city’s tile free and in reach, and preparing the capture there', () => {
+  expect(raidedBy(SENDING)).toEqual({ moves: [['2,0', '0,0']], prepared: true });
 });
 
 test('the neutral’s wave embarks where the ground ends to cross toward its camp', () => {

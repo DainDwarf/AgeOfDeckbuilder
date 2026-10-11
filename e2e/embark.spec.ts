@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { cardOf, unitKind } from '../src/rules/catalogue';
+import { unitKind } from '../src/rules/catalogue';
 import {
   distance,
   movementCost,
@@ -9,21 +9,22 @@ import {
   tileAt,
   tileKey,
 } from '../src/rules/map';
-import type { CardId, Chronicle } from '../src/rules/state';
+import type { Chronicle } from '../src/rules/state';
 import { standsOn, unitAt } from '../src/rules/units';
 import { cardName, text } from '../src/ui/text';
 import {
   admits,
   aimed,
   aimLine,
+  becomes,
   campaignWith,
   cardOnFace,
   chronicleOf,
   cityTileOf,
-  civilizationOpened,
   click,
+  disembarkingAt,
   dragOut,
-  endedTurn,
+  EMBARK,
   firstSeed,
   idsOf,
   openSaved,
@@ -36,17 +37,10 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The card that embarks a unit, and the card it becomes. */
-const EMBARK = 'embark';
+/** The card Embark becomes. */
 const DISEMBARK = becomes(EMBARK);
 
 const CAMPAIGN = campaignWith([EMBARK]);
-
-function becomes(card: CardId): CardId {
-  const named = cardOf(CATALOGUE, card).becomes;
-  if (named === undefined) throw new Error(`${card} becomes no card`);
-  return named;
-}
 
 /**
  * A turn 1 with Embark in hand, a tile embarked units enter, free, and two free tiles beside it a
@@ -151,18 +145,11 @@ test('Disembark played at a tile beside an embarked unit puts it ashore there as
   page,
 }) => {
   const problems = watch(page);
-  const { cards } = civilizationOpened(CAMPAIGN);
   const ground = onShore(({ opened, water, banks: [bank] }) => {
     const paid = paidFor(manned(opened, [bank]), EMBARK);
     if (!admits(paid.chronicle, paid.index, water)) return undefined;
-    // The deck cycles back to the card Embark lay as well within as many turns as it holds cards.
-    let embarked = playedOn(paid.chronicle, paid.index, water);
-    for (let turn = 0; turn < cards.length && embarked.ending === undefined; turn++) {
-      embarked = endedTurn(embarked);
-      const { chronicle, index } = paidFor(embarked, DISEMBARK);
-      if (admits(chronicle, index, bank)) return { chronicle, index, bank };
-    }
-    return undefined;
+    const disembarking = disembarkingAt(paid, water, bank, CAMPAIGN);
+    return disembarking === undefined ? undefined : { ...disembarking, bank };
   });
   const ashore = playedOn(ground.chronicle, ground.index, ground.bank);
 

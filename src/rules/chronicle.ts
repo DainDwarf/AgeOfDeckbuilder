@@ -35,11 +35,13 @@ import {
   cityCommand,
   claim,
   costPaid,
+  declaredByLanding,
   grow,
   income,
   neutralClaims,
   neutralEntered,
   reassign,
+  warDeclared,
 } from './city';
 import { enteredAround, enteredOnCamp, pillaged, preparedAs, stepMove, wavesSent } from './enemies';
 import {
@@ -104,6 +106,7 @@ import {
   unaffordable,
 } from './state';
 import {
+  actsAsEnemy,
   attackable,
   canAttack,
   type Faction,
@@ -112,6 +115,7 @@ import {
   reachable,
   refreshedAction,
   refreshedMovePoints,
+  relationsOf,
   type Unit,
   unitAt,
   unitOf,
@@ -133,7 +137,7 @@ export type Command =
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
 /** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit, the discard pile or the hand. */
-type PlayCommand = Extract<Command, { readonly type: 'play' }>;
+export type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
 const HAND_SIZE = 5;
@@ -186,6 +190,7 @@ export function beginChronicle(
       population: 1,
       assigned: [neutralAt],
       resources: nought,
+      relations: 'peace',
     },
     units: [],
     nextUnit: FIRST_UNIT_NUMBER,
@@ -704,6 +709,7 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'ended':
     case 'tallied':
     case 'reached':
+    case 'relations':
     case 'runtime-error':
       return undefined;
   }
@@ -719,9 +725,9 @@ function stagesOf(catalogue: Catalogue, chronicle: Chronicle, command: Command):
     case 'play':
       return play(catalogue, chronicle, command);
     case 'move':
-      return move(catalogue, chronicle, command.unit, command.tile);
+      return move(catalogue, chronicle, command);
     case 'attack':
-      return attack(catalogue, chronicle, command.unit, command.tile);
+      return attack(catalogue, chronicle, command);
     case 'assign':
       return acted(chronicle, 'assign', assign(catalogue, chronicle, command.tile));
     case 'reassign':
@@ -1074,78 +1080,86 @@ export function byHand(
 ): { readonly landings: Landing[]; readonly targets: Unit[] } {
   if (onSettlePhase(chronicle)) return { landings: [], targets: [] };
   const seen = inSight(catalogue, chronicle);
+  const targets = attackable(chronicle.units, unit, relationsOf(chronicle));
   return {
     landings: reachable(catalogue, chronicle, unit),
-    targets: attackable(chronicle.units, unit).filter((target) => seen.has(tileKey(target.tile))),
+    targets: targets.filter((target) => seen.has(tileKey(target.tile))),
   };
 }
 
-/** One unit crossing to a landing, spending what the crossing costs: the one `move` change. */
-function crossed(chronicle: Chronicle, unit: Unit, landing: Landing): Landed {
-  return landedAs({
-    kind: 'change',
-    name: 'move',
-    from: unit.tile,
-    to: landing.tile,
-    chronicle: {
-      ...chronicle,
-      units: chronicle.units.map((other) =>
-        other.id === unit.id
-          ? { ...other, tile: landing.tile, movePoints: other.movePoints - landing.cost }
-          : other,
-      ),
-    },
-  });
+/** Whether a command declares war: whether what it resolves as raises the neutral's `relations`. */
+export function declaresWar(catalogue: Catalogue, chronicle: Chronicle, command: Command): boolean {
+  return [...walked(resolved(catalogue, chronicle, command))].some(
+    (stage) => stage.name === 'relations',
+  );
 }
 
 /**
- * One unit of the player's crossing to a tile its move points reach, in as many steps as the player
- * likes: the cheapest route there is spent, and the crossing is the same `move` change the enemy
- * phase raises. A unit that is not the player's, a move on the settle phase, or a tile it cannot
- * land on — an uncharted one among them — is `refused`.
+ * One unit crossing to a landing, spending what the crossing costs: what its landing declares, then
+ * the one `move` change.
  */
-function move(catalogue: Catalogue, chronicle: Chronicle, mover: number, to: TileCoords): Sequence {
-  const unit = unitOf(chronicle.units, mover);
+function crossed(chronicle: Chronicle, unit: Unit, landing: Landing): Landed {
+  return followed(declaredByLanding(chronicle, unit, landing.tile), (left) =>
+    landedAs({
+      kind: 'change',
+      name: 'move',
+      from: unit.tile,
+      to: landing.tile,
+      chronicle: {
+        ...left,
+        units: left.units.map((other) =>
+          other.id === unit.id
+            ? { ...other, tile: landing.tile, movePoints: other.movePoints - landing.cost }
+            : other,
+        ),
+      },
+    }),
+  );
+}
+
+/**
+ * One unit of the player's crossing to a tile its move points reach at the cheapest route there;
+ * any other unit's, or a move `byHand` does not offer, is `refused`.
+ */
+function move(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand): Sequence {
+  const unit = unitOf(chronicle.units, command.unit);
   if (unit === undefined || unit.faction !== 'player') return refused(chronicle);
 
   const landing = byHand(catalogue, chronicle, unit).landings.find(
-    (reached) => tileKey(reached.tile) === tileKey(to),
+    (reached) => tileKey(reached.tile) === tileKey(command.tile),
   );
   if (landing === undefined) return refused(chronicle);
   return crossed(chronicle, unit, landing);
 }
 
 /**
- * One unit of the player's attacking what stands on a tile its range reaches, as the one `attack`
- * group the enemy phase raises too. A unit that is not the player's, a worker, one with no action
- * left, an attack on the settle phase, a tile no unit of another faction within range stands on, and
- * a tile out of sight are `refused`.
+ * One unit of the player's attacking what stands on a tile, the declaration of war the attack may
+ * raise first in its `attack` group; any other unit's, or an attack `byHand` does not offer, is
+ * `refused`.
  */
-function attack(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  attacker: number,
-  at: TileCoords,
-): Sequence {
-  const unit = unitOf(chronicle.units, attacker);
+function attack(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand): Sequence {
+  const unit = unitOf(chronicle.units, command.unit);
   if (unit === undefined || unit.faction !== 'player') return refused(chronicle);
 
   const target = byHand(catalogue, chronicle, unit).targets.find(
-    (other) => tileKey(other.tile) === tileKey(at),
+    (other) => tileKey(other.tile) === tileKey(command.tile),
   );
   if (target === undefined) return refused(chronicle);
-  return blow(chronicle, unit, target);
+  const opening = target.faction === 'neutral' ? warDeclared(chronicle) : unchanged(chronicle);
+  return blow(opening, unit, target);
 }
 
 /**
- * One attack, whoever makes it: the `attack` group carrying both tiles, over the attacker's action
- * spent and then the target losing the attacker's damage or killed by it. Nobody moves.
+ * One attack, whoever makes it, on what `opening` raised: the `attack` group carrying both tiles,
+ * over those, the attacker's action spent and then the target losing the attacker's damage or killed
+ * by it. Nobody moves.
  */
-function blow(chronicle: Chronicle, attacker: Unit, target: Unit): Sequence<Group> {
+function blow(opening: Landed, attacker: Unit, target: Unit): Sequence<Group> {
   return grouped(
     { name: 'attack', attacker: attacker.tile, target: target.tile },
-    followed(actionSpent(chronicle, attacker.tile), (left) =>
-      unitDamaged(left, target.tile, attacker.stats.damage),
+    followed(
+      followed(opening, (left) => actionSpent(left, attacker.tile)),
+      (left) => unitDamaged(left, target.tile, attacker.stats.damage),
     ),
   );
 }
@@ -1199,8 +1213,8 @@ function enemyPhase(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group>
 }
 
 /**
- * Every enemy still carrying a prepare landing it: an enemy prepared on the city's tile captures the
- * city ahead of every pillage, and otherwise each pillages its tile in unit order, its prepare gone.
+ * Every unit still carrying a prepare landing it: one prepared on the city's tile captures the city
+ * ahead of every pillage, and otherwise each pillages its tile in unit order, its prepare gone.
  */
 function preparesLanded(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const preparing = chronicle.units.filter((unit) => preparedAs(chronicle, unit) !== undefined);
@@ -1219,16 +1233,27 @@ function preparesLanded(catalogue: Catalogue, chronicle: Chronicle): Landed {
   return landing;
 }
 
-/** Whether the enemy carries a prepare, set as named: the one `prepare` change. */
-function carriedPrepare(chronicle: Chronicle, enemy: Unit, prepared: boolean): Landed {
+/** Whether the unit carries a prepare, set as named: the one `prepare` change. */
+function carriedPrepare(chronicle: Chronicle, preparing: Unit, prepared: boolean): Landed {
   return landedAs(
-    changeOn('prepare', enemy.tile, {
+    changeOn('prepare', preparing.tile, {
       ...chronicle,
       units: chronicle.units.map((unit) =>
-        unit.id === enemy.id && unit.faction === 'enemy' ? { ...unit, prepared } : unit,
+        unit.id === preparing.id ? withPrepare(unit, prepared) : unit,
       ),
     }),
   );
+}
+
+/** The unit carrying a prepare as named, and a unit of the player's, which prepares nothing, as it stands. */
+function withPrepare(unit: Unit, prepared: boolean): Unit {
+  switch (unit.faction) {
+    case 'player':
+      return unit;
+    case 'enemy':
+    case 'neutral':
+      return { ...unit, prepared };
+  }
 }
 
 /** The factions whose units act by a script. */
@@ -1281,13 +1306,14 @@ function scriptedActs(
         return prepared(catalogue, standing, acting);
       case 'attack': {
         const { target } = act;
+        const away = distance(acting.tile, target.tile);
         if (
-          !canAttack(acting, target, distance(acting.tile, target.tile)) ||
+          !canAttack(acting, target, away, relationsOf(standing)) ||
           !inOwnSight(catalogue, standing.tiles, acting, target.tile)
         ) {
           return landedAs(change('runtime-error', standing));
         }
-        return followed<Stage>(blow(standing, acting, target), acts);
+        return followed<Stage>(blow(unchanged(standing), acting, target), acts);
       }
     }
   };
@@ -1296,15 +1322,15 @@ function scriptedActs(
 
 /**
  * A unit preparing on the tile it stands on, its action spent as an attack spends it and then its
- * prepare carried; a unit no enemy, one embarked, or one on a tile with neither the city nor anything
- * built on it, is a `runtime-error` and no prepare.
+ * prepare carried; a unit acting as no enemy, one embarked, or one on a tile with neither the city
+ * nor anything built on it, is a `runtime-error` and no prepare.
  */
 function prepared(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): Landed {
   const tile = tileAt(chronicle.tiles, unit.tile);
   const { city } = chronicle;
   const onCity = city !== undefined && tileKey(city) === tileKey(unit.tile);
   if (
-    unit.faction !== 'enemy' ||
+    !actsAsEnemy(unit, relationsOf(chronicle)) ||
     unit.embarked ||
     tile === undefined ||
     !(onCity || pillaged(catalogue, chronicle, tile) !== undefined)

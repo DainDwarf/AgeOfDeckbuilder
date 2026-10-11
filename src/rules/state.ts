@@ -1,7 +1,7 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
 import { RESOURCES, type Resource, type Resources } from './resources';
 import type { Rng } from './rng';
-import type { Faction, Unit } from './units';
+import type { Faction, Relations, Unit } from './units';
 
 /** What took the city: an enemy captured it, or it was left without population. */
 export type DefeatCause = 'capture' | 'population';
@@ -98,8 +98,8 @@ export type CityRows = {
   readonly resources: Resources;
 };
 
-/** The neutral's city: the tile it stands on, and its rows. */
-export type NeutralCity = CityRows & { readonly city: TileCoords };
+/** The neutral's city: the tile it stands on, its rows, and its relations with the player. */
+export type NeutralCity = CityRows & { readonly city: TileCoords; readonly relations: Relations };
 
 /** Everything one city's story is made of, and the generator every later draw comes from. */
 export type Chronicle = {

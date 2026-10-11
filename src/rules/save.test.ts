@@ -31,6 +31,7 @@ import {
   HOARD,
   hoardedVictory,
   NO_DEALS,
+  preparedOnTheCity,
   QUIET,
   REGION,
   SITE,
@@ -155,6 +156,24 @@ test('a chronicle saved with an enemy prepared reads back with it prepared', () 
 
   expect(prepared.units[0]).toMatchObject({ faction: 'enemy', prepared: true });
   expect(read.chronicle).toEqual(save);
+});
+
+test('a chronicle saved with the neutral hostile and a unit of its prepared reads back with both, and one whose neutral names no relations is dropped', () => {
+  const prepared = preparedOnTheCity();
+  const save = { chronicle: prepared, region: CLEARING, civilization: CIVILIZATION_ID };
+  const { neutral } = prepared;
+  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(neutral.relations).toBe('hostile');
+  expect(prepared.units[0]).toMatchObject({ faction: 'neutral', prepared: true });
+  expect(read.chronicle).toEqual(save);
+  expect(
+    chronicleDropped(
+      tampered(save, (chronicle) => ({ ...chronicle, neutral: { ...neutral, relations: 'war' } })),
+    ),
+  ).toEqual(["fixture: the save's chronicle.neutral.relations names no relations war"]);
 });
 
 test('a chronicle saved with a card on its exhaust pile reads back with it there', () => {

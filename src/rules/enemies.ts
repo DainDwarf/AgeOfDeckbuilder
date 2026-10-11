@@ -14,6 +14,7 @@ import {
 import {
   CENTRE,
   distance,
+  landable,
   type Moves,
   routesFrom,
   type Tile,
@@ -26,7 +27,15 @@ import { nextRng, pickWeighted } from './rng';
 import { inOwnSight } from './sight';
 import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
 import type { Chronicle } from './state';
-import { canAttack, shutTo, standsOn, type Unit, type UnitStats, unitAt } from './units';
+import {
+  canAttack,
+  passageFor,
+  relationsOf,
+  standsOn,
+  type Unit,
+  type UnitStats,
+  unitAt,
+} from './units';
 
 /**
  * Of the units handed in, every one a unit can attack from the tile it stands on, action aside: one
@@ -34,14 +43,15 @@ import { canAttack, shutTo, standsOn, type Unit, type UnitStats, unitAt } from '
  */
 export function targetsInOwnSight(
   catalogue: MapContent,
-  tiles: readonly Tile[],
+  chronicle: Pick<Chronicle, 'tiles' | 'neutral'>,
   units: readonly Unit[],
   attacker: Unit,
 ): Unit[] {
+  const relations = relationsOf(chronicle);
   return units.filter(
     (other) =>
-      canAttack(attacker, other, distance(other.tile, attacker.tile)) &&
-      inOwnSight(catalogue, tiles, attacker, other.tile),
+      canAttack(attacker, other, distance(other.tile, attacker.tile), relations) &&
+      inOwnSight(catalogue, chronicle.tiles, attacker, other.tile),
   );
 }
 
@@ -51,12 +61,12 @@ export function targetsInOwnSight(
  */
 export function leastHealth(
   catalogue: MapContent,
-  tiles: readonly Tile[],
+  chronicle: Pick<Chronicle, 'tiles' | 'neutral'>,
   units: readonly Unit[],
   attacker: Unit,
 ): Unit | undefined {
   let target: Unit | undefined;
-  for (const other of targetsInOwnSight(catalogue, tiles, units, attacker)) {
+  for (const other of targetsInOwnSight(catalogue, chronicle, units, attacker)) {
     if (target === undefined || other.stats.health < target.stats.health) target = other;
   }
   return target;
@@ -84,14 +94,14 @@ export function pillaged(catalogue: Catalogue, chronicle: Chronicle, tile: Tile)
 }
 
 /**
- * What an enemy's prepare lands as at the next enemy phase: the city's capture on the city's tile, a
+ * What a unit's prepare lands as at the next enemy phase: the city's capture on the city's tile, a
  * pillage on any other; nothing for a unit that has prepared nothing.
  */
 export function preparedAs(
   chronicle: Pick<Chronicle, 'city'>,
   unit: Unit,
 ): 'capture' | 'pillage' | undefined {
-  if (unit.faction !== 'enemy' || !unit.prepared) return undefined;
+  if (unit.faction === 'player' || !unit.prepared) return undefined;
   const { city } = chronicle;
   return city !== undefined && tileKey(unit.tile) === tileKey(city) ? 'capture' : 'pillage';
 }
@@ -113,9 +123,9 @@ type WaveOwner = {
 };
 
 /**
- * The waves sent, the camps' in tile order then the neutral's, one `wave-sent` on each owner's tile:
- * where its guards ashore are as many as its wave gathers, as many as it sends take the wave's
- * script, those off its tile first in unit order and the one on it last.
+ * The waves sent, the camps' in tile order then the neutral's at peace, one `wave-sent` on each
+ * owner's tile: where its guards ashore are as many as its wave gathers, as many as it sends take
+ * the wave's script, those off its tile first in unit order and the one on it last.
  */
 export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
   const { camp, neutral } = ageOf(catalogue, chronicle.age);
@@ -136,7 +146,11 @@ export function wavesSent(catalogue: Catalogue, chronicle: Chronicle): Landed {
       });
     }
   }
-  if (neutral?.wave !== undefined && chronicle.neutral !== undefined) {
+  if (
+    neutral?.wave !== undefined &&
+    chronicle.neutral !== undefined &&
+    chronicle.neutral.relations === 'peace'
+  ) {
     owners.push({
       at: chronicle.neutral.city,
       guards: (unit) => unit.faction === 'neutral' && unit.script === neutral.scripts.guard,
@@ -196,7 +210,7 @@ export function stepMove(
 ): number | undefined {
   const move = steppedMove(catalogue, chronicle, unit);
   if (move === undefined || unit.action <= 0 || distance(unit.tile, to) !== 1) return undefined;
-  if (shutTo(chronicle, unit.faction)(to)) return undefined;
+  if (!landable(passageFor(chronicle, unit.faction)(to))) return undefined;
   const there = unitAt(chronicle.units, to);
   if (there !== undefined && there.id !== unit.id) return undefined;
   const tile = tileAt(chronicle.tiles, to);
@@ -308,8 +322,8 @@ function reached(
     [city, ...(chronicle.neutral === undefined ? [] : [chronicle.neutral.city])].map(tileKey),
   );
   const { tiles, rivers } = chronicle;
-  const shut = shutTo(chronicle, 'enemy');
-  const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves, shut);
+  const passage = passageFor(chronicle, 'enemy');
+  const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves, passage);
   return tiles.filter(
     (tile) =>
       !cities.has(tileKey(tile)) &&
