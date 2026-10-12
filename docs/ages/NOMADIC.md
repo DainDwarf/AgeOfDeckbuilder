@@ -70,7 +70,7 @@ Lean season is food against a raid, a rival band is a raid now against a camp la
 
 ## The achievement ✅
 
-The age's one achievement is its victory. Its technology is **Settlement**, which unlocks the Stone Age and the **village**, the player's city's building in place of the hearth, and it pays influence.
+The age's one achievement is its victory. Its technology is **Settlement**, which unlocks the Stone Age and the **village**, the player's city's building in place of the hearth, and it pays influence. The age deals no influence card, so a chronicle replayed pays nothing beyond that one achievement, once: the Nomadic Age is the tutorial.
 
 ## The camps ✅
 

@@ -25,7 +25,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **unknown technology** | A technology that needs one not learned; the player is told only that it is there. | mystery, locked, secret |
 | **pin** | To hold an available technology in view: while a chronicle reads its achievement, the chronicle screen shows it. | track (for an achievement), follow (for an achievement), watch (for an achievement), bookmark |
 | **achievement** | A goal a chronicle can reach; its technology is learned by reaching it. | mission, objective, quest, milestone |
-| **influence** | The meta-currency every chronicle pays, scaled by how the player's city fared. | gold, XP |
+| **influence** | The meta-currency a chronicle pays at its ending, for its achievements and the influence cards still in it. | gold, XP |
 | **price** | The influence one more copy of a card is bought for. | fee, rate, value (for a card) |
 | **base price** | The price of a card owned once, which the card's age sets for all its cards. | base cost, starting price, flat price |
 | **buy** | To pay a card's price in influence and add one more copy of it to the collection. | purchase, acquire |
@@ -57,8 +57,8 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **killed** | What befalls a unit or a population: the unit leaves the map, the population its city. | destroyed, slain, dead, lost |
 | **event** | One entry of the age's schedule: a problem the chronicle throws at the player's city, dealt with its answers. | disaster, threat, crisis, encounter |
 | **answer** | One of the cards an event deals: a way out of its problem with a cost of its own, of which the player chooses one. | option, response, reply, solution |
-| **capstone** | The age's final trial; passing it is victory. | boss, finale, objective |
-| **schedule** | An age's events and capstone, with their odds and tempo; what a timeline is rolled from. | calendar |
+| **capstone** | The age's final trial, drawn at the opening among the region's; passing it is victory. | boss, finale, objective |
+| **schedule** | A region's events and capstones, with their odds and tempo; what a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |
 | **camp** | Where enemies enter the map from. | lair, nest, spawn point, spawner |
 | **site** | A place on the map that is nobody's and pays once, taken as a camp is captured. | ruin, landmark, point of interest, goody hut, location (for a site) |
@@ -137,3 +137,6 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything built on it is removed. | raze, loot, sack |
 | **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |
 | **reward** | What a capture deals: cards, of which the player chooses one, added in the copies it names. | gift, prize, bounty |
+| **influence card** | A card carrying influence, paid into the campaign when the chronicle ends with the card still in it. | victory card, score card, point card |
+| **feat** | A capture whose rewards hold an influence card, paid on any ending. | accomplishment, exploit, stunt |
+| **challenge** | An event's answer that deals an influence card on top of its harm, paid on victory alone. | dare, gamble, wager |

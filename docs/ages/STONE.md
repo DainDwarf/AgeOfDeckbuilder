@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land, its city, its neutral, its technologies, its units and its cards. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
+> What the Stone Age is made of: its land, its city, its neutral, its technologies, its units, its cards, its events, its capstones, its achievement and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
 
 ## The land ✅
 
@@ -73,6 +73,18 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 - **Food trade**, an instant costing money, aimed at nothing: the player's city gains food.
 - **Goods trade**, an instant costing money, aimed at nothing: the player's city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built. A trade choosing its good when it is played was rejected: it leaves the deck's building nothing to choose.
 - **Fishery**, a building built through an embarked worker for production on a coast tile. It gives food to its own tile and to every coast tile beside it, once however many stand around a tile, so it pays by the coast the player's city works around it.
+
+## The events 🔧
+
+The temperate region's schedule opens on the Nomadic events, which weigh less as the turns pass while the age's own weigh nothing early and take over: Lean season, scaled for a larger city, A rival band, Wildfire and The herd, and Departure, this age's for good, culture being its answer's price. The age's own events are the settled city's problems: what the river, the farms, the crowd, the herds nearby and the neutral's peace can do to it, and a fortunate one. The capture of a camp, of a site and of the neutral's city each deal an influence card among their rewards, and an event may deal one as a challenge. The archipelago's schedule copies what suits it and holds its own.
+
+## The capstones 🔧
+
+The region names three trials and the opening draws one: a long winter, a monument raised, a siege endured. Each is hard to impossible on the deck the age opens with and beatable once its tree is climbed, on a chronicle longer than the Nomadic one.
+
+## The achievement 🔧
+
+The age's victory is its achievement beside the technologies'; its technology unlocks the Bronze Age.
 
 ## The camps 🔧
 
