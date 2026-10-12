@@ -15,7 +15,7 @@ import {
   slotFree,
   throughWorker,
 } from '../rules/cards';
-import type { Age, Slice, Tables } from '../rules/catalogue';
+import type { Age, Schedule, Slice, Tables } from '../rules/catalogue';
 import { arrived, populationTaken, yielded } from '../rules/city';
 import { enteredAround, raided } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
@@ -366,6 +366,18 @@ const TABLES: Tables = {
   improvements: {},
 };
 
+export const NOMADIC_SCHEDULE: Schedule = {
+  spacing: [6, 9],
+  window: [12, 18],
+  capstones: ['first-shelter'],
+  entries: {
+    'lean-season': () => 1,
+    'rival-band': (turn) => (turn >= 10 ? 1 : 0),
+    wildfire: (turn) => (turn >= 10 ? 1 : 0),
+    herd: () => 1 / 3,
+  },
+};
+
 const REGIONS: Age['regions'] = {
   temperate: {
     radius: 10,
@@ -402,6 +414,7 @@ const REGIONS: Age['regions'] = {
       leastEdges: 6,
       draws: 60,
     },
+    schedule: NOMADIC_SCHEDULE,
   },
 };
 
@@ -410,16 +423,6 @@ export const NOMADIC: Slice = {
   id: 'nomadic',
   owns: {
     basePrice: 1,
-    schedule: {
-      spacing: [6, 9],
-      capstone: { id: 'first-shelter', window: [12, 18] },
-      entries: {
-        'lean-season': () => 1,
-        'rival-band': (turn) => (turn >= 10 ? 1 : 0),
-        wildfire: (turn) => (turn >= 10 ? 1 : 0),
-        herd: () => 1 / 3,
-      },
-    },
     camp: {
       opening: [{ kind: 'warrior', script: 'guard', weight: 1 }],
       roll: [{ kind: 'warrior', script: 'guard', weight: 1 }],

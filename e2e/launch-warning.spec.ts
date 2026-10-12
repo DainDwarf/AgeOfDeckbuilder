@@ -123,7 +123,7 @@ test('Launch over a saved chronicle that has reached an achievement raises the w
   expect(chronicle).toEqual(launchedAs(chronicle.seed, campaign, choices));
   await expect
     .poll(async () => (await heldSave(page)).chronicle)
-    .toEqual({ chronicle, region: choices.region, civilization: choices.civilization });
+    .toEqual({ chronicle, civilization: choices.civilization });
   expect(await standing(page, WARNING)).toBe(false);
 
   expect(problems).toEqual([]);

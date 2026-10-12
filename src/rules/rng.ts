@@ -48,6 +48,12 @@ export function pickWeighted<T>(
   return { rng: step.rng, picked };
 }
 
+/** The one draw at equal odds: one roll among the items given. */
+export function pickUniform<T>(rng: Rng, items: readonly T[]): { rng: Rng; picked: T } {
+  const step = nextRng(rng);
+  return { rng: step.rng, picked: items[Math.floor(step.value * items.length)] };
+}
+
 /** Fisher-Yates, in a copy: the same generator and the same items always give the same order. */
 export function shuffle<T>(initial: Rng, items: readonly T[]): { rng: Rng; items: T[] } {
   let rng = initial;

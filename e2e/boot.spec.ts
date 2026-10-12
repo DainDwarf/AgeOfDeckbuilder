@@ -1,6 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf } from '../src/rules/catalogue';
 import { capstoneLore } from '../src/ui/lore';
 import { text } from '../src/ui/text';
 import {
@@ -95,7 +93,7 @@ test('Launch opens the chronicle on the firsts under its capstone’s window, an
   expect(named(page)).toBe('');
   expect(launched).toEqual(launchedAs(launched.seed));
 
-  const capstone = ageOf(CATALOGUE, launched.age).schedule.capstone.id;
+  const capstone = launched.timeline.capstone.id;
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
   expect(await loreOf(page, 'capstone')).toBe(capstoneLore(capstone, 'opening'));

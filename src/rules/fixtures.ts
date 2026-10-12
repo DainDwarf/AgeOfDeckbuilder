@@ -88,7 +88,7 @@ import {
   tileAt,
   tileKey,
 } from './map';
-import type { Region } from './map-kinds';
+import type { MapRegion } from './map-kinds';
 import type { Resources } from './resources';
 import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
@@ -234,7 +234,7 @@ function raidOf(table: UnitEntryTable): Answer {
   };
 }
 
-/** The events every fixture age's schedule deals from, each one also an age of its own through `dealing`. */
+/** The events every fixture schedule deals from, each one also an age of its own through `dealing`. */
 const EVENTS: Catalogue['events'] = {
   PH_Hardship: {
     answers: {
@@ -842,8 +842,8 @@ export const SITE = 'PH_Cairn';
 /** The site every fixture age owns. */
 export const SITES: Age['sites'] = { [SITE]: { building: SITE, rewards: { PH_Relic: 2 } } };
 
-/** The regions table every fixture age holds. */
-export const REGIONS: Readonly<Record<string, Region>> = {
+/** The maps every fixture age's regions deal, by the region's key. */
+export const REGIONS: Readonly<Record<string, MapRegion>> = {
   disc: {
     radius: 8,
     centre: 3,
@@ -926,30 +926,36 @@ export const CLEARING = 'clearing';
 /** The first age of the fixture's ages table: the one its tests launch chronicles in. */
 export const AGE = 'age';
 
-/** The age of the fixture's chronicles that name no other: its schedule deals nothing before `FAR`. */
+/**
+ * The age of the fixture's chronicles that name no other: its regions' schedule deals nothing
+ * before `FAR`, and names two capstones.
+ */
 export const QUIET = 'quiet';
 
 /**
- * The age whose schedule deals the hardship and the spoilage alike, the spoilage only once the
- * city's cards hold the hunger.
+ * The age whose regions' schedule deals the hardship and the spoilage alike, the spoilage only once
+ * the city's cards hold the hunger.
  */
 export const WARY = 'wary';
 
-/** Each fixture age's schedule, by the age's id, in the order of the ages table. */
+/** The schedule every region of a fixture age deals, by the age's id, in the order of the ages table. */
 const SCHEDULES: Readonly<Record<string, Schedule>> = {
   [AGE]: {
     spacing: [3, 7],
-    capstone: { id: 'PH_Siege', window: [27, 33] },
+    window: [27, 33],
+    capstones: ['PH_Siege'],
     entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
   },
   [QUIET]: {
     spacing: [3, 7],
-    capstone: { id: 'PH_Tillage', window: [27, 33] },
+    window: [27, 33],
+    capstones: ['PH_Siege', 'PH_Tillage'],
     entries: { PH_Hardship: (turn) => (turn >= FAR ? 1 : 0) },
   },
   [WARY]: {
     spacing: [3, 7],
-    capstone: { id: 'PH_Siege', window: [27, 33] },
+    window: [27, 33],
+    capstones: ['PH_Siege'],
     entries: { PH_Hardship: () => 1, PH_Spoilage: () => 1 },
   },
   ...Object.fromEntries(
@@ -957,7 +963,8 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
       event,
       {
         spacing: [FAR, FAR],
-        capstone: { id: 'PH_Siege', window: [FAR, FAR] },
+        window: [FAR, FAR],
+        capstones: ['PH_Siege'],
         entries: { [event]: () => 1 },
       },
     ]),
@@ -1092,23 +1099,24 @@ const TECHNOLOGIES: Tables['technologies'] = {
 };
 
 /**
- * Every fixture age, each owning its own schedule and achievements over the camp and the regions
- * handed in, the fixture's neutral, and the fixture's site.
+ * Every fixture age, each owning its own achievements and the maps handed in, each region dealing the
+ * age's own schedule, over the camp handed in, the fixture's neutral, and the fixture's site.
  */
 export function agesOver(
   camp: Camp,
-  regions: Readonly<Record<string, Region>>,
+  maps: Readonly<Record<string, MapRegion>>,
 ): Readonly<Record<string, Age>> {
   return Object.fromEntries(
     Object.entries(SCHEDULES).map(([id, schedule], at) => [
       id,
       {
         basePrice: 3 + at,
-        schedule,
         camp,
         neutral: FIXTURE_NEUTRAL,
         sites: SITES,
-        regions,
+        regions: Object.fromEntries(
+          Object.entries(maps).map(([region, map]) => [region, { ...map, schedule }]),
+        ),
         achievements: achievementsOf(id),
       },
     ]),
@@ -1183,6 +1191,21 @@ export function aged(owns: Partial<Age>): Catalogue {
 }
 
 /**
+ * The fixture's content with the schedule of every region of an age, its first unless the test
+ * names another, changed as the test lays it over.
+ */
+export function rescheduled(schedule: Partial<Schedule>, age = AGE): Catalogue {
+  const owned = ageOf(CATALOGUE, age);
+  const regions = Object.fromEntries(
+    Object.entries(owned.regions).map(([id, region]) => [
+      id,
+      { ...region, schedule: { ...region.schedule, ...schedule } },
+    ]),
+  );
+  return changed({ ages: { ...CATALOGUE.ages, [age]: { ...owned, regions } } });
+}
+
+/**
  * The fixture's content with its first age's neutral keeping workers beside its warriors, entered
  * through the worker card under `WORKER_SCRIPT` and playing the farm and the mine.
  */
@@ -1212,15 +1235,15 @@ export const NO_DEALS: Timeline = {
 };
 
 /**
- * A chronicle's age and timeline due on this turn: the age whose schedule deals this event alone,
- * and a timeline whose next due turn after this one is past any a test ends, its capstone as
- * `NO_DEALS` has it.
+ * A chronicle's age, region and timeline due on this turn: the age whose regions' schedule deals
+ * this event alone, and a timeline whose next due turn after this one is past any a test ends, its
+ * capstone as `NO_DEALS` has it.
  */
 export function dealing(deal: {
   readonly turn: number;
   readonly event: string;
-}): Pick<Chronicle, 'age' | 'timeline'> {
-  return { age: deal.event, timeline: { ...NO_DEALS, next: deal.turn } };
+}): Pick<Chronicle, 'age' | 'region' | 'timeline'> {
+  return { age: deal.event, region: REGION, timeline: { ...NO_DEALS, next: deal.turn } };
 }
 
 export const CITY: TileCoords = { q: 0, r: 0 };
@@ -1295,6 +1318,7 @@ export function cityOf(
   const city: Chronicle = {
     content: catalogue.version,
     age: QUIET,
+    region: REGION,
     seed: 7,
     rng: seedRng(7),
     timeline: NO_DEALS,
@@ -1360,13 +1384,14 @@ export function plains(radius: number): Tile[] {
 }
 
 /**
- * What a fixture opening names: the content, the civilization, the age and the timeline, and how far
- * the centre part reaches.
+ * What a fixture opening names: the content, the civilization, the age, the region and the
+ * timeline, and how far the centre part reaches.
  */
 type Opening = {
   readonly catalogue?: Catalogue;
   readonly civilization?: Civilization;
   readonly age?: string;
+  readonly region?: string;
   readonly timeline?: Timeline;
   readonly reach?: number;
 };
@@ -1374,7 +1399,7 @@ type Opening = {
 /**
  * The opening on these tiles through the rules, on the settle phase with the city nowhere: its centre
  * part every tile within `reach` of the centre, two unless named, on the fixture's content and
- * civilization in the quiet age dealing nothing, unless the fixture names others.
+ * civilization in the quiet age's first region dealing nothing, unless the fixture names others.
  */
 export function begunOn(
   tiles: Tile[],
@@ -1382,6 +1407,7 @@ export function begunOn(
     catalogue = CATALOGUE,
     civilization = CIVILIZATION,
     age = QUIET,
+    region = REGION,
     timeline = NO_DEALS,
     reach = 2,
   }: Opening = {},
@@ -1392,6 +1418,7 @@ export function begunOn(
   return beginChronicle(
     catalogue,
     age,
+    region,
     7,
     civilization,
     { tiles, rivers: [], centre },
@@ -1415,8 +1442,8 @@ export function settledOn(
 }
 
 /**
- * Turn 1 as the end of the settle phase leaves it, standing on a deal where the age's schedule deals
- * one — and a chronicle waiting on a deal refuses every other command.
+ * Turn 1 as the end of the settle phase leaves it, standing on a deal where the region's schedule
+ * deals one — and a chronicle waiting on a deal refuses every other command.
  */
 export function settledLaunch(
   catalogue: Catalogue,
@@ -1527,7 +1554,7 @@ export function achievementIn(chronicle: Chronicle, id: string): ChronicleAchiev
 export function chronicleSaved(): ChronicleSave {
   let chronicle = settledLaunch(CATALOGUE, AGE, REGION, 4242, CIVILIZATION, []);
   for (let turn = 1; turn < 3; turn++) chronicle = endedTurn(chronicle);
-  return { chronicle, region: REGION, civilization: CIVILIZATION_ID };
+  return { chronicle, civilization: CIVILIZATION_ID };
 }
 
 /** The same disc with every tile but the named ones under water: what leaves a fixture one corridor. */

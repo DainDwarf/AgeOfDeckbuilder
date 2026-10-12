@@ -13,7 +13,6 @@ import {
   achievementOf,
   ageOf,
   type Catalogue,
-  capstoneOf,
   cardMade,
   cardOf,
   checkContent,
@@ -22,6 +21,7 @@ import {
   firstCivilization,
   heldByNoDeck,
   misfitIn,
+  scheduleOf,
   unitKind,
   unitScript,
 } from './catalogue';
@@ -32,7 +32,6 @@ import {
   improvementKind,
   refusal,
   refuse,
-  regionOf,
   terrainKind,
 } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
@@ -61,10 +60,9 @@ import {
   type UnitStats,
 } from './units';
 
-/** A chronicle's save: the chronicle, the region of its age it was launched on, by id, and the campaign's civilization, by name. */
+/** A chronicle's save: the chronicle, and the campaign's civilization it was launched on, by name. */
 export type ChronicleSave = {
   readonly chronicle: Chronicle;
-  readonly region: string;
   readonly civilization: string;
 };
 
@@ -93,12 +91,7 @@ export function writeSave(
   const text = JSON.stringify(
     progress === undefined
       ? { campaign }
-      : {
-          campaign,
-          chronicle: progress.chronicle,
-          region: progress.region,
-          civilization: progress.civilization,
-        },
+      : { campaign, chronicle: progress.chronicle, civilization: progress.civilization },
   );
   const [reason] = readSave(catalogue, text).dropped;
   if (reason !== undefined) throw new Error(reason);
@@ -185,8 +178,6 @@ function chronicleSaveOf(
 ): ChronicleSave {
   const chronicle = chronicleOf(catalogue, slot);
   if (chronicle.ending !== undefined) refused(catalogue, slot, 'has ended');
-  const age = ageOf(catalogue, chronicle.age);
-  const region = id(catalogue, field('region'), (held, named) => regionOf(held, age, named));
   const civilizationSlot = field('civilization');
   const civilization = string(catalogue, civilizationSlot);
   if (!Object.hasOwn(campaign.civilizations, civilization)) {
@@ -196,7 +187,7 @@ function chronicleSaveOf(
       `names no civilization of the campaign named ${civilization}`,
     );
   }
-  return { chronicle, region, civilization };
+  return { chronicle, civilization };
 }
 
 /** One value of the parsed text, and where in the save it stands. */
@@ -488,6 +479,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   const card = (item: Slot): ChronicleCard => cardIn(catalogue, item);
   const coords = (item: Slot): TileCoords => coordsIn(catalogue, record(catalogue, item));
   const age = id(catalogue, field('age'), ageOf);
+  const region = id(catalogue, field('region'), (read, named) => scheduleOf(read, age, named));
   const units = list(catalogue, field('units'), (item) => ({
     slot: item,
     unit: unitOf(catalogue, item),
@@ -510,6 +502,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   return {
     content,
     age,
+    region,
     seed: integer(catalogue, field('seed')),
     rng: rngOf(catalogue, field('rng')),
     tiles,
@@ -522,7 +515,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     city: optional(field('city'), (item) => onMap(catalogue, item, tiles)),
     ...cityRowsOf(catalogue, slot, tiles),
     turn: count(catalogue, field('turn'), slot, (turn) => `stands on turn ${turn}`),
-    timeline: timelineOf(catalogue, field('timeline')),
+    timeline: timelineOf(catalogue, field('timeline'), age, region),
     shownTurn: optional(field('shownTurn'), (item) =>
       count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
     ),
@@ -641,7 +634,9 @@ function snapshotOf(catalogue: Catalogue, slot: Slot): Snapshot {
   };
 }
 
-function timelineOf(catalogue: Catalogue, slot: Slot): Timeline {
+/** A timeline of the region's schedule: a capstone the schedule does not name is refused. */
+function timelineOf(catalogue: Catalogue, slot: Slot, age: string, region: string): Timeline {
+  const { capstones } = scheduleOf(catalogue, age, region);
   const field = record(catalogue, slot);
   const capstoneSlot = field('capstone');
   const capstone = record(catalogue, capstoneSlot);
@@ -649,7 +644,11 @@ function timelineOf(catalogue: Catalogue, slot: Slot): Timeline {
     rng: rngOf(catalogue, field('rng')),
     next: count(catalogue, field('next'), slot, (turn) => `deals next on turn ${turn}`),
     capstone: {
-      id: id(catalogue, capstone('id'), capstoneOf),
+      id: id(catalogue, capstone('id'), (read, named) => {
+        if (!capstones.includes(named)) {
+          refuse(read, `no capstone of the region ${region} is named ${named}`);
+        }
+      }),
       turn: count(catalogue, capstone('turn'), capstoneSlot, (turn) => `lands on turn ${turn}`),
     },
   };

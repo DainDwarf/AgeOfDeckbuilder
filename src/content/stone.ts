@@ -12,7 +12,7 @@ import {
   inside,
   placesImprovement,
 } from '../rules/cards';
-import type { Age, Slice } from '../rules/catalogue';
+import type { Age, Schedule, Slice } from '../rules/catalogue';
 import {
   drawPileEmptied,
   gainedFrom,
@@ -26,10 +26,10 @@ import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { NOMADIC } from './nomadic';
+import { NOMADIC, NOMADIC_SCHEDULE } from './nomadic';
 import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
 
-const { basePrice, schedule, camp } = NOMADIC.owns;
+const { basePrice, camp } = NOMADIC.owns;
 
 const NOMADIC_BIOMES = NOMADIC.brings.biomes;
 if (NOMADIC_BIOMES === undefined) throw new Error('the Nomadic Age brings no biome');
@@ -46,6 +46,13 @@ const RIVERS: RiverFlow = {
   edgesPerTile: 4,
   leastEdges: 6,
   draws: 60,
+};
+
+const SCHEDULE: Schedule = {
+  spacing: [6, 9],
+  window: [26, 34],
+  capstones: NOMADIC_SCHEDULE.capstones,
+  entries: { ...NOMADIC_SCHEDULE.entries, departure: () => 1 },
 };
 
 const REGIONS: Age['regions'] = {
@@ -76,6 +83,7 @@ const REGIONS: Age['regions'] = {
     sitesApart: 4,
     neutralFromCentre: { least: 7, most: 9 },
     rivers: RIVERS,
+    schedule: SCHEDULE,
   },
   archipelago: {
     radius: 12,
@@ -101,6 +109,7 @@ const REGIONS: Age['regions'] = {
     sitesApart: 4,
     neutralFromCentre: { least: 5, most: 8 },
     rivers: RIVERS,
+    schedule: SCHEDULE,
   },
 };
 
@@ -117,11 +126,6 @@ export const STONE: Slice = {
   id: 'stone',
   owns: {
     basePrice,
-    schedule: {
-      spacing: [6, 9],
-      capstone: { id: schedule.capstone.id, window: [26, 34] },
-      entries: { ...schedule.entries, departure: () => 1 },
-    },
     camp: {
       ...camp,
       building: 'stone-camp',

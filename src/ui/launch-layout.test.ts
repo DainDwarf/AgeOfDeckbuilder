@@ -1,6 +1,13 @@
 import { expect, test } from 'vitest';
 import { newCampaign, paidInto } from '../rules/campaign';
-import { achievementOf, firstRegion, merged, technologyOf } from '../rules/catalogue';
+import {
+  achievementOf,
+  ageOf,
+  firstRegion,
+  merged,
+  type Region,
+  technologyOf,
+} from '../rules/catalogue';
 import {
   AGE,
   CATALOGUE,
@@ -15,13 +22,12 @@ import {
   SLICES,
   victoryOf,
 } from '../rules/fixtures';
-import type { Region } from '../rules/map-kinds';
 import { clustersOf, openingChoices, RING, ringOf, withAge } from './launch-layout';
 
 /** A fixture region whose shares are these, in this order. */
 function sharing(...shares: [string, number][]): Region {
   return {
-    ...REGIONS[REGION],
+    ...ageOf(CATALOGUE, AGE).regions[REGION],
     biomeShares: shares.map(([biome, share]) => ({ biome, share })),
   };
 }
@@ -75,11 +81,12 @@ test('selecting another age keeps the region where that age holds one of its nam
 
 test('selecting another age takes the first region of it the campaign has reached where it holds none of the selected one’s name', () => {
   const [first, second] = SLICES;
+  const { regions } = second.owns;
   const slices = [
     first,
     {
       ...second,
-      owns: { ...second.owns, regions: { glen: REGIONS[REGION], dell: REGIONS[CLEARING] } },
+      owns: { ...second.owns, regions: { glen: regions[REGION], dell: regions[CLEARING] } },
     },
     ...SLICES.slice(2),
   ];

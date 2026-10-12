@@ -177,9 +177,11 @@ test('every rules entry and every goal of the catalogue lays out, and every name
       ),
     );
     const chronicle = settledIn(age);
-    for (const event of Object.keys(ageOf(CATALOGUE, age).schedule.entries)) {
-      for (const name of Object.keys(eventOf(CATALOGUE, event).answers)) {
-        entries.push(answerFace(CATALOGUE, chronicle, event, name).rules);
+    for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
+      for (const event of Object.keys(schedule.entries)) {
+        for (const name of Object.keys(eventOf(CATALOGUE, event).answers)) {
+          entries.push(answerFace(CATALOGUE, chronicle, event, name).rules);
+        }
       }
     }
   }
@@ -430,29 +432,34 @@ test('every age’s neutral naming workers opens with one on its city’s tile, 
   }
 });
 
-test('every age’s schedule rolls a timeline', () => {
+test('every region’s schedule rolls a timeline', () => {
   for (const age of AGES) {
-    expect(() => timelineOf(CATALOGUE, age, seedRng(1))).not.toThrow();
+    for (const region of Object.keys(ageOf(CATALOGUE, age).regions)) {
+      expect(() => timelineOf(CATALOGUE, age, region, seedRng(1))).not.toThrow();
+    }
   }
 });
 
-test('every answer of every event of an age’s schedule costs, lands and reads a rules entry on the numbers it reads, and the age’s capstone lands, continues and is not passed, on a chronicle launched and settled in that age', () => {
+test('every answer of every event of a region’s schedule costs, lands and reads a rules entry on the numbers it reads, and every capstone of its schedule lands, continues and is not passed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
-    const { schedule } = ageOf(CATALOGUE, age);
     const chronicle = settledIn(age);
-    for (const id of Object.keys(schedule.entries)) {
-      expect(() => eventOf(CATALOGUE, id).needs?.(CATALOGUE, chronicle)).not.toThrow();
-      for (const [name, answer] of Object.entries(eventOf(CATALOGUE, id).answers)) {
-        expect(() => answerCost(CATALOGUE, chronicle, answer)).not.toThrow();
-        expect(() => answer.reads(CATALOGUE, chronicle)).not.toThrow();
-        expect(() => answerFace(CATALOGUE, chronicle, id, name)).not.toThrow();
-        expect(() => answer.lands(CATALOGUE, chronicle)).not.toThrow();
+    for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
+      for (const id of Object.keys(schedule.entries)) {
+        expect(() => eventOf(CATALOGUE, id).needs?.(CATALOGUE, chronicle)).not.toThrow();
+        for (const [name, answer] of Object.entries(eventOf(CATALOGUE, id).answers)) {
+          expect(() => answerCost(CATALOGUE, chronicle, answer)).not.toThrow();
+          expect(() => answer.reads(CATALOGUE, chronicle)).not.toThrow();
+          expect(() => answerFace(CATALOGUE, chronicle, id, name)).not.toThrow();
+          expect(() => answer.lands(CATALOGUE, chronicle)).not.toThrow();
+        }
+      }
+      for (const id of schedule.capstones) {
+        const capstone = capstoneOf(CATALOGUE, id);
+        expect(() => capstone.lands(CATALOGUE, chronicle)).not.toThrow();
+        expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
+        expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
       }
     }
-    const capstone = capstoneOf(CATALOGUE, schedule.capstone.id);
-    expect(() => capstone.lands(CATALOGUE, chronicle)).not.toThrow();
-    expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
-    expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
   }
 });
 

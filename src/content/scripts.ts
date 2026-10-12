@@ -33,7 +33,7 @@ import {
   tileYield,
 } from '../rules/map';
 import { RESOURCES, type Resources } from '../rules/resources';
-import { nextRng, type Rng } from '../rules/rng';
+import { pickUniform, type Rng } from '../rules/rng';
 import { inOwnSight } from '../rules/sight';
 import {
   type CardId,
@@ -445,9 +445,8 @@ function wanderedTo(
   chronicle: Chronicle,
   landings: readonly Landing[],
 ): { readonly landing: Landing; readonly rng: Rng } {
-  const wandering = inTileOrder(chronicle.tiles, landings);
-  const step = nextRng(chronicle.rng);
-  return { landing: wandering[Math.floor(step.value * wandering.length)], rng: step.rng };
+  const { picked, rng } = pickUniform(chronicle.rng, inTileOrder(chronicle.tiles, landings));
+  return { landing: picked, rng };
 }
 
 /**

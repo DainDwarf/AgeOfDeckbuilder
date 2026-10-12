@@ -56,14 +56,14 @@ export function savedOpening(): Saved | undefined {
   return read().opening;
 }
 
-function openingOf({ chronicle, region, civilization }: ChronicleSave): Saved {
-  return { age: chronicle.age, region, civilization, resumed: chronicle };
+function openingOf({ chronicle, civilization }: ChronicleSave): Saved {
+  return { age: chronicle.age, region: chronicle.region, civilization, resumed: chronicle };
 }
 
 function progressOf(opening: Saved | undefined): ChronicleSave | undefined {
   return opening === undefined
     ? undefined
-    : { chronicle: opening.resumed, region: opening.region, civilization: opening.civilization };
+    : { chronicle: opening.resumed, civilization: opening.civilization };
 }
 
 /** The save held from now on, whole, and the browser's entry written with it. */
@@ -82,10 +82,10 @@ export function keepCampaign(campaign: Campaign): void {
  * paid into, and the payment is answered.
  */
 export function keepChronicle(
-  { region, civilization }: Choices,
+  { civilization }: Choices,
   chronicle: Chronicle,
 ): Payment | undefined {
-  const after = keptAfter(CATALOGUE, read().campaign, { chronicle, region, civilization });
+  const after = keptAfter(CATALOGUE, read().campaign, { chronicle, civilization });
   keepSave(after);
   return after.payment;
 }

@@ -38,6 +38,7 @@ import {
   plains,
   QUIET,
   REGION,
+  rescheduled,
   ringed,
   type Standing,
   settledOn,
@@ -312,7 +313,7 @@ test('a due turn deals its one event, and the turn ends there', () => {
   expect(staged).not.toContain('drawn');
 });
 
-/** A timeline of that age's schedule from a seed due on the second turn, and the hunger among the cards or not. */
+/** A timeline of that age's regions' schedule from a seed due on the second turn, and the hunger among the cards or not. */
 function spoiling(age: string, seed: number, hungry: boolean): Carrying {
   return {
     age,
@@ -375,17 +376,9 @@ test('a due turn is one deal group over the next due turn rolled and the event d
 });
 
 test('a due turn weighing no entry above nought is a deal over the roll and a runtime error, and play goes on to the next due turn, which deals as any', () => {
-  const quiet = ageOf(CATALOGUE, QUIET);
-  const late: Catalogue = catalogued({
-    ...CATALOGUE,
-    ages: {
-      ...CATALOGUE.ages,
-      [QUIET]: {
-        ...quiet,
-        schedule: { ...quiet.schedule, entries: { PH_Hardship: (turn) => (turn >= 3 ? 1 : 0) } },
-      },
-    },
-  });
+  const late = catalogued(
+    rescheduled({ entries: { PH_Hardship: (turn) => (turn >= 3 ? 1 : 0) } }, QUIET),
+  );
   const city = awaiting(2, {
     drawPile: [...fullDraw(), ...fullDraw()],
     age: QUIET,
@@ -1290,6 +1283,23 @@ test('the capstone’s landing is a stage of its own on its turn, even where it 
     'rolled',
     'drawn',
   ]);
+});
+
+test('a schedule naming two capstones draws each of them at the launch, and the one drawn is the one that lands on its turn', () => {
+  const drawn = SEEDS.map(
+    (seed) => launched(CATALOGUE, QUIET, REGION, seed, CIVILIZATION, []).chronicle.timeline,
+  );
+  const besieged = drawn.map(
+    (timeline) =>
+      campsOf(
+        endedTurn(awaitingCapstone({ age: QUIET, timeline, turn: timeline.capstone.turn - 1 })),
+      ).length > 0,
+  );
+
+  expect(new Set(drawn.map(({ capstone }) => capstone.id))).toEqual(
+    new Set(['PH_Siege', 'PH_Tillage']),
+  );
+  expect(besieged).toEqual(drawn.map(({ capstone }) => capstone.id === 'PH_Siege'));
 });
 
 test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on its landing and the draw', () => {

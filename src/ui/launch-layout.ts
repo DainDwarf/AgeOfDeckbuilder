@@ -2,7 +2,7 @@
 
 import { agesReached, type Campaign, regionsReached } from '../rules/campaign';
 import { ageOf, type Catalogue } from '../rules/catalogue';
-import type { Region } from '../rules/map-kinds';
+import type { MapRegion } from '../rules/map-kinds';
 import type { Choices } from './save-entry';
 
 /** How many hexagons stand around a region's middle one. */
@@ -66,7 +66,7 @@ export function clustersOf(
  * by side in the shares' order: one to each biome they name, the six largest at most, the rest one by
  * one to the largest share per hexagon it would hold, a tie to the larger share, then the first named.
  */
-export function ringOf(region: Region): string[] {
+export function ringOf(region: MapRegion): string[] {
   const shares: { biome: string; share: number }[] = [];
   for (const { biome, share } of region.biomeShares) {
     const named = shares.find((held) => held.biome === biome);

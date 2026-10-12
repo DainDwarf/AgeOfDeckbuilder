@@ -6,8 +6,8 @@ import {
   featureKind,
   type LayerKind,
   type MapContent,
+  type MapRegion,
   neutralBuilding,
-  type Region,
   refuse,
   terrainKind,
 } from './map-kinds';
@@ -358,15 +358,19 @@ export type Wave = {
 export type Span = readonly [number, number];
 
 /**
- * An age's schedule: how far apart its deals are due, its capstone with the window its turn is
- * rolled from, and every entry a deal is drawn from with what it weighs on a turn — nothing at all
- * on a turn it may not be dealt on.
+ * A region's schedule: how far apart its deals are due, the window its capstone's turn is rolled
+ * from, its capstones by id, and every entry a deal is drawn from with what it weighs on a turn —
+ * nothing at all on a turn it may not be dealt on.
  */
 export type Schedule = {
   readonly spacing: Span;
-  readonly capstone: { readonly id: string; readonly window: Span };
+  readonly window: Span;
+  readonly capstones: readonly string[];
   readonly entries: Readonly<Record<string, (turn: number) => number>>;
 };
+
+/** A region of an age: the map it deals, and its schedule. */
+export type Region = MapRegion & { readonly schedule: Schedule };
 
 /**
  * A civilization: its city section, and its deck in two sections, its settle cards, in hand on the
@@ -441,12 +445,11 @@ export type Technology = {
 };
 
 /**
- * What an age owns: its schedule, its camp, its neutral where it names one, its sites by key, its
- * regions by key, its achievements by key in order, and the base price of its cards.
+ * What an age owns: its camp, its neutral where it names one, its sites by key, its regions by key,
+ * its achievements by key in order, and the base price of its cards.
  */
 export type Age = {
   readonly basePrice: number;
-  readonly schedule: Schedule;
   readonly camp: Camp;
   readonly neutral?: Neutral;
   readonly sites: Readonly<Record<string, Site>>;
@@ -677,26 +680,37 @@ export function unitEntryTableHeld(content: Catalogue, table: UnitEntryTable, ow
   }
 }
 
-/** What one age owns, checked against the tables of the catalogue holding it. */
-function ageHeld(content: Catalogue, id: string, age: Age): void {
-  const { basePrice, schedule, camp, neutral, sites, regions } = age;
-  if (!Number.isInteger(basePrice) || basePrice < 1) {
-    refuse(content, `the age ${id} sets a base price of ${basePrice}`);
+/** A region's schedule, checked against the tables of the catalogue holding it. */
+function scheduleHeld(content: Catalogue, region: string, schedule: Schedule): void {
+  const { spacing, window, capstones, entries } = schedule;
+  if (Object.keys(entries).length === 0) {
+    refuse(content, `the region ${region}'s schedule deals no event`);
   }
-  if (Object.keys(schedule.entries).length === 0) {
-    refuse(content, `the age ${id}'s schedule deals no event`);
-  }
-  for (const entry of Object.keys(schedule.entries)) {
+  for (const entry of Object.keys(entries)) {
     const answers = Object.keys(eventOf(content, entry).answers).length;
     if (answers < 2) {
-      refuse(content, `the age ${id}'s schedule deals ${entry}, which deals ${answers}`);
+      refuse(content, `the region ${region}'s schedule deals ${entry}, which deals ${answers}`);
     }
   }
-  capstoneOf(content, schedule.capstone.id);
-  for (const [least, most] of [schedule.spacing, schedule.capstone.window]) {
-    if (least < 1 || most < least) {
-      refuse(content, `the age ${id}'s schedule rolls a span from ${least} to ${most}`);
+  if (capstones.length === 0) refuse(content, `the region ${region}'s schedule names no capstone`);
+  for (const [at, capstone] of capstones.entries()) {
+    capstoneOf(content, capstone);
+    if (capstones.indexOf(capstone) !== at) {
+      refuse(content, `the region ${region}'s schedule names the capstone ${capstone} twice`);
     }
+  }
+  for (const [least, most] of [spacing, window]) {
+    if (least < 1 || most < least) {
+      refuse(content, `the region ${region}'s schedule rolls a span from ${least} to ${most}`);
+    }
+  }
+}
+
+/** What one age owns, checked against the tables of the catalogue holding it. */
+function ageHeld(content: Catalogue, id: string, age: Age): void {
+  const { basePrice, camp, neutral, sites, regions } = age;
+  if (!Number.isInteger(basePrice) || basePrice < 1) {
+    refuse(content, `the age ${id} sets a base price of ${basePrice}`);
   }
 
   unitEntryTableHeld(content, camp.opening, `the age ${id}'s camp's opening`);
@@ -810,6 +824,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
   const held = Object.entries(regions);
   if (held.length === 0) refuse(content, `the age ${id} holds no region`);
   for (const [name, region] of held) {
+    scheduleHeld(content, name, region.schedule);
     biomeKind(content, region.centreBiome);
     biomeKind(content, region.rivers.source);
     for (const { biome, keepsAwayFrom = [] } of region.biomeShares) {
@@ -1126,6 +1141,11 @@ export function firstAge(catalogue: Catalogue): string {
 /** The region the age lists first; an age the catalogue does not hold, or one listing none, is refused. */
 export function firstRegion(catalogue: Catalogue, age: string): string {
   return firstListed(catalogue, ageOf(catalogue, age).regions, 'region');
+}
+
+/** The schedule a region of the age deals; an age or a region the catalogue does not hold is refused. */
+export function scheduleOf(catalogue: Catalogue, age: string, region: string): Schedule {
+  return entryOf(catalogue, ageOf(catalogue, age).regions, region, 'region').schedule;
 }
 
 function firstListed(

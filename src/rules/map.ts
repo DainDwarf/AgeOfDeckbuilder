@@ -8,14 +8,14 @@ import {
   type LayerKind,
   type MapAge,
   type MapContent,
+  type MapRegion,
   neutralBuilding,
-  type Region,
   type RiverFlow,
   regionOf,
   terrainKind,
 } from './map-kinds';
 import type { Resource, Resources } from './resources';
-import { nextRng, pickWeighted, type Rng, shuffle } from './rng';
+import { nextRng, pickUniform, pickWeighted, type Rng, shuffle } from './rng';
 
 export type Terrain = string;
 export type Biome = string;
@@ -632,7 +632,7 @@ export function discTiles(radius: number): number {
 }
 
 /** How many biomes a map of the region is cut into, the centre's own among them. */
-function biomeCount({ radius, tilesPerBiome }: Region): number {
+function biomeCount({ radius, tilesPerBiome }: MapRegion): number {
   return Math.round(discTiles(radius) / tilesPerBiome);
 }
 
@@ -641,7 +641,7 @@ function biomeCount({ radius, tilesPerBiome }: Region): number {
  * share is worth, dealt as quotas rather than diced one by one, because independent dice deal a map
  * with no sea at all.
  */
-export function sharedBiomes(region: Region): BiomeShare[] {
+export function sharedBiomes(region: MapRegion): BiomeShare[] {
   const count = biomeCount(region);
   const dealt: BiomeShare[] = [];
   for (const share of region.biomeShares) {
@@ -655,7 +655,7 @@ export function sharedBiomes(region: Region): BiomeShare[] {
  * Which biomes a map of the region is dealt, the centre's own aside: what its shares deal, and the
  * centre's kind for whatever they leave over.
  */
-export function dealtBiomes(region: Region): Biome[] {
+export function dealtBiomes(region: MapRegion): Biome[] {
   const dealt = sharedBiomes(region).map(({ biome }) => biome);
   while (dealt.length < biomeCount(region) - 1) dealt.push(region.centreBiome);
   return dealt;
@@ -866,9 +866,9 @@ function placedOn(
     );
     if (candidates.length === 0) break;
 
-    const step = nextRng(rng);
+    const step = pickUniform(rng, candidates);
     rng = step.rng;
-    placed.push({ ...candidates[Math.floor(step.value * candidates.length)], building });
+    placed.push({ ...step.picked, building });
   }
 
   const built = new Map(placed.map((tile) => [tileKey(tile), tile]));
@@ -926,7 +926,7 @@ export function generateMap(
 function dealMap(
   catalogue: MapContent,
   age: MapAge,
-  region: Region,
+  region: MapRegion,
   neutral: NeutralDealt | undefined,
   initial: Rng,
 ): { rng: Rng; tiles: Tile[]; rivers: River[]; centre: TileCoords[]; placed: number } {

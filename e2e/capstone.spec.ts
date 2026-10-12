@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, firstAge } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
 import { capstoneLore } from '../src/ui/lore';
@@ -23,9 +22,6 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The capstone the first age's schedule names. */
-const CAPSTONE = ageOf(CATALOGUE, firstAge(CATALOGUE)).schedule.capstone.id;
-
 /** Seed 1's bare turn 1 with its turns ended headlessly up to the turn before the capstone lands. */
 function beforeTheCapstone(): Chronicle {
   let chronicle = settledOn(1);
@@ -44,6 +40,7 @@ test('the capstone’s landing holds the end of turn on its window, and the end 
   const problems = watch(page);
   test.setTimeout(budget(1));
   const before = beforeTheCapstone();
+  const capstone = before.timeline.capstone.id;
   const landed = outcome(apply(CATALOGUE, before, { type: 'end-turn' }));
 
   await openSaved(page, before);
@@ -52,8 +49,8 @@ test('the capstone’s landing holds the end of turn on its window, and the end 
   await stoppedTurn(page);
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
-  expect(await loreOf(page, 'capstone')).toBe(capstoneLore(CAPSTONE, 'landing'));
-  expect(await cardOnFace(page, 'capstone-card-0')).toBe(CAPSTONE);
+  expect(await loreOf(page, 'capstone')).toBe(capstoneLore(capstone, 'landing'));
+  expect(await cardOnFace(page, 'capstone-card-0')).toBe(capstone);
   expect((await chronicleOf(page)).hand).toEqual([]);
   expect(await standing(page, 'hand-0')).toBe(false);
 

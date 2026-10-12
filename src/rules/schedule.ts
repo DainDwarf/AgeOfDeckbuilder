@@ -9,11 +9,12 @@ import {
   eventOf,
   type Schedule,
   type Span,
+  scheduleOf,
 } from './catalogue';
 import { costPaid, populationKilled } from './city';
 import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
 import { buildingKind, entryOf, featureKind, refuse } from './map-kinds';
-import { nextRng, pickWeighted, type Rng } from './rng';
+import { nextRng, pickUniform, pickWeighted, type Rng } from './rng';
 import {
   change,
   changeOn,
@@ -41,16 +42,17 @@ import {
 import { damaged, unitAt } from './units';
 
 /**
- * An age's schedule rolled into the timeline a chronicle opens on, the generator handed in its own
- * from then on: the capstone's turn from the window, then the first due turn rolled as from a landing
- * on turn 0. An age the catalogue does not hold is refused.
+ * A region's schedule rolled into the timeline a chronicle opens on, the generator handed in its own
+ * from then on: the capstone drawn among the schedule's, its turn from the window, then the first due
+ * turn rolled as from a landing on turn 0. An age or a region the catalogue does not hold is refused.
  */
-export function timelineOf(catalogue: Catalogue, age: string, rng: Rng): Timeline {
-  const { schedule } = ageOf(catalogue, age);
-  const capstone = withinSpan(rng, schedule.capstone.window);
+export function timelineOf(catalogue: Catalogue, age: string, region: string, rng: Rng): Timeline {
+  const schedule = scheduleOf(catalogue, age, region);
+  const capstone = pickUniform(rng, schedule.capstones);
+  const landing = withinSpan(capstone.rng, schedule.window);
   return rolledFrom(
     schedule,
-    { rng: capstone.rng, capstone: { id: schedule.capstone.id, turn: capstone.turns } },
+    { rng: landing.rng, capstone: { id: capstone.picked, turn: landing.turns } },
     0,
   );
 }
@@ -105,7 +107,7 @@ export function spanEnded(chronicle: Chronicle, turns: number): boolean {
  */
 export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { timeline, turn } = chronicle;
-  const { schedule } = ageOf(catalogue, chronicle.age);
+  const schedule = scheduleOf(catalogue, chronicle.age, chronicle.region);
   if (turn === timeline.capstone.turn) {
     const rolled = landedAs(
       change('rolled', { ...chronicle, timeline: rolledFrom(schedule, timeline, turn) }),
@@ -290,12 +292,11 @@ function fireDrawn(
 ): { readonly burning: readonly TileCoords[]; readonly rng: Rng } {
   const candidates = fireStarts(chronicle, fire);
   if (candidates.length === 0) return { burning: [], rng: chronicle.rng };
-  const step = nextRng(chronicle.rng);
-  const start = candidates[Math.floor(step.value * candidates.length)];
+  const { picked: start, rng } = pickUniform(chronicle.rng, candidates);
   const burning = chronicle.tiles
     .filter((tile) => tile.terrain === fire.burns && distance(tile, start) <= fire.around)
     .map(({ q, r }) => ({ q, r }));
-  return { burning, rng: step.rng };
+  return { burning, rng };
 }
 
 /**
@@ -371,10 +372,9 @@ export function featureDealt(
 ): Landed & { readonly at?: TileCoords } {
   const candidates = featureTiles(catalogue, chronicle, feature, fromCity);
   if (candidates.length === 0) return unchanged(chronicle);
-  const step = nextRng(chronicle.rng);
-  const dealt = candidates[Math.floor(step.value * candidates.length)];
-  const at = { q: dealt.q, r: dealt.r };
-  return { ...featurePlaced(catalogue, { ...chronicle, rng: step.rng }, at, feature), at };
+  const { picked, rng } = pickUniform(chronicle.rng, candidates);
+  const at = { q: picked.q, r: picked.r };
+  return { ...featurePlaced(catalogue, { ...chronicle, rng }, at, feature), at };
 }
 
 /**
@@ -464,9 +464,9 @@ export function campsPlaced(
     const candidates = campTiles(catalogue, chronicle, fromCity, apart, standing);
     if (candidates.length === 0) break;
 
-    const step = nextRng(rng);
+    const step = pickUniform(rng, candidates);
     rng = step.rng;
-    const chosen = candidates[Math.floor(step.value * candidates.length)];
+    const chosen = step.picked;
     standing.push(chosen);
     placings.push({ tile: { q: chosen.q, r: chosen.r }, rng });
   }

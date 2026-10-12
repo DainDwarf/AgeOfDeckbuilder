@@ -606,9 +606,11 @@ export async function plantSaved(
   campaign = freshCampaign(CATALOGUE),
   choices = openingChoices(CATALOGUE, campaign),
 ): Promise<void> {
-  const { region, civilization } = choices;
   await readNames(page);
-  await kept(page, writeSave(CATALOGUE, campaign, { chronicle, region, civilization }));
+  await kept(
+    page,
+    writeSave(CATALOGUE, campaign, { chronicle, civilization: choices.civilization }),
+  );
 }
 
 /**

@@ -15,6 +15,7 @@ import {
   opening,
   plains,
   QUIET,
+  REGION,
   SCRIPT,
   settledOn,
 } from './fixtures';
@@ -95,6 +96,7 @@ function cityOn(
   return charted(CATALOGUE, {
     content: CATALOGUE.version,
     age: QUIET,
+    region: REGION,
     seed: 7,
     rng: seedRng(7),
     timeline: NO_DEALS,

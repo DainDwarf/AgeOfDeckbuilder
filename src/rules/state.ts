@@ -36,8 +36,8 @@ export type CitySection = {
 };
 
 /**
- * One chronicle's roll of its age's schedule, from a generator of its own that nothing the player
- * does steps: the turn the next deal is due on, and the capstone by its id with the turn it lands on.
+ * One chronicle's roll of its region's schedule, from a generator of its own that nothing the player
+ * does steps: the turn the next deal is due on, and the capstone drawn by its id with the turn it lands on.
  */
 export type Timeline = {
   readonly rng: Rng;
@@ -110,6 +110,8 @@ export type Chronicle = {
   readonly content: string;
   /** The age the chronicle is played in, set at the opening: what it owns is read through it. */
   readonly age: string;
+  /** The region of its age the chronicle was launched on, set at the opening: its schedule is read through it. */
+  readonly region: string;
   readonly seed: number;
   readonly rng: Rng;
   readonly tiles: Tile[];

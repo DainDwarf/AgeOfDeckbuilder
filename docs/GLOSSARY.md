@@ -42,7 +42,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **select** | To make one thing the selection: the one held, among those offered with it. | pick, highlight, focus, arm, target (for a tile or a card) |
 | **inspect** | To show a tile's cards in the infopanel, one at a time, to show a card large, or to open a pile's browse. | read (a tile), examine, view, look at, zoom (for a card) |
 | **tile** | One hexagon of the map, of one terrain. | hex, cell, square, territory |
-| **region** | The launch choice that biases map generation; the difficulty dial. | location, start |
+| **region** | The launch choice that deals the map and the schedule; the difficulty dial. | location, start |
 | **unit** | A mobile piece on the map, the player's or not. | army, troop, piece, token |
 | **military unit** | A unit that attacks. | combat unit, soldier, fighter |
 | **faction** | Who a unit acts for: the player, the enemies, or the neutral. | side, team, owner, allegiance |
@@ -55,7 +55,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **declare war** | To turn a neutral faction hostile. | provoke, aggress, turn against |
 | **enemy** | A unit of the faction that enters from camps and in raids, and attacks. | barbarian, raider, invader, foe |
 | **killed** | What befalls a unit or a population: the unit leaves the map, the population its city. | destroyed, slain, dead, lost |
-| **event** | One entry of the age's schedule: a problem the chronicle throws at the player's city, dealt with its answers. | disaster, threat, crisis, encounter |
+| **event** | One entry of the region's schedule: a problem the chronicle throws at the player's city, dealt with its answers. | disaster, threat, crisis, encounter |
 | **answer** | One of the cards an event deals: a way out of its problem with a cost of its own, of which the player chooses one. | option, response, reply, solution |
 | **capstone** | The age's final trial, drawn at the opening among the region's; passing it is victory. | boss, finale, objective |
 | **schedule** | A region's events and capstones, with their odds and tempo; what a timeline is rolled from. | calendar |

@@ -161,6 +161,7 @@ const HAND_SIZE = 5;
 export function beginChronicle(
   catalogue: Catalogue,
   age: string,
+  region: string,
   seed: number,
   civilization: Civilization,
   map: HexMap,
@@ -186,6 +187,7 @@ export function beginChronicle(
   const begun: Chronicle = {
     content: catalogue.version,
     age,
+    region,
     seed,
     rng: shuffled.rng,
     timeline,
@@ -253,7 +255,7 @@ function achievementsOfAvailableTechnologies(
 
 /**
  * A chronicle launched in an age, on one of its regions: the seed deals the region's map, the
- * timeline rolled from the age's schedule takes the generator the map left as its own, and the
+ * timeline rolled from the region's schedule takes the generator the map left as its own, and the
  * opening takes both from the same seed. The one place a map, a timeline and a chronicle share one.
  */
 export function launched(
@@ -265,11 +267,12 @@ export function launched(
   learned: readonly string[],
 ): Sequence {
   const map = generateMap(catalogue, ageOf(catalogue, age), region, seedRng(seed));
-  const timeline = timelineOf(catalogue, age, map.rng);
+  const timeline = timelineOf(catalogue, age, region, map.rng);
   const { tiles, rivers, centre } = map;
   return beginChronicle(
     catalogue,
     age,
+    region,
     seed,
     civilization,
     { tiles, rivers, centre },

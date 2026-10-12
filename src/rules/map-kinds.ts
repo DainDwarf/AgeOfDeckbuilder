@@ -89,12 +89,12 @@ export type BiomeShare = {
 };
 
 /**
- * One composition of the map: the disc's radius, how many biomes it is cut into and which kinds are
- * dealt in what shares, the share of each feature, how many camps and sites and how far each keeps
- * from the disc's centre and from every one of its kind already placed, how far the centre part
- * reaches from the disc's centre, and how the river layer runs.
+ * The part of a region the map is dealt from: the disc's radius, how many biomes it is cut into and
+ * which kinds are dealt in what shares, the share of each feature, how many camps and sites and how
+ * far each keeps from the disc's centre and from every one of its kind already placed, how far the
+ * centre part reaches from the disc's centre, and how the river layer runs.
  */
-export type Region = {
+export type MapRegion = {
   readonly radius: number;
   readonly centre: number;
   readonly tilesPerBiome: number;
@@ -135,7 +135,7 @@ export type MapContent = {
  * each of its sites is, by the site's key.
  */
 export type MapAge = {
-  readonly regions: Readonly<Record<string, Region>>;
+  readonly regions: Readonly<Record<string, MapRegion>>;
   readonly camp: { readonly building: string; readonly acrossWater?: boolean };
   readonly neutral?: { readonly building: string };
   readonly sites: Readonly<Record<string, { readonly building: string }>>;
@@ -167,7 +167,7 @@ export function improvementKind(catalogue: MapContent, id: string): LayerKind {
 }
 
 /** The composition a map of that region is dealt from; a region the age does not hold is refused. */
-export function regionOf(catalogue: MapContent, age: MapAge, id: string): Region {
+export function regionOf(catalogue: MapContent, age: MapAge, id: string): MapRegion {
   return entryOf(catalogue, age.regions, id, 'region');
 }
 

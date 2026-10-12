@@ -21,7 +21,6 @@ import {
   CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
-  CLEARING,
   chronicleSaved,
   cityOf,
   endedTurn,
@@ -123,7 +122,7 @@ test('a chronicle saved and read back is the chronicle, and plays the next comma
 test('a chronicle saved and read back keeps every achievement’s tally, and counts on from it', () => {
   const [plain, , forest] = SURVEYED;
   const surveyed = outcome(apply(CATALOGUE, surveying(), aimedAt(plain)));
-  const save = { chronicle: surveyed, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: surveyed, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -142,7 +141,7 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
     units: [standing('player', CITY)],
   });
   const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
-  const save = { chronicle: embarked, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: embarked, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -153,7 +152,7 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
 test('a chronicle saved with an enemy prepared reads back with it prepared', () => {
   const city = cityOf(['urban'], { tiles: field(2), units: [standing('enemy', CITY)] });
   const prepared = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  const save = { chronicle: prepared, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: prepared, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -163,7 +162,7 @@ test('a chronicle saved with an enemy prepared reads back with it prepared', () 
 
 test('a chronicle saved with the neutral hostile and a unit of its prepared reads back with both, and one naming no relations it knows is dropped', () => {
   const prepared = preparedOnTheCity();
-  const save = { chronicle: prepared, region: CLEARING, civilization: CIVILIZATION_ID };
+  const save = { chronicle: prepared, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -178,7 +177,7 @@ test('a chronicle saved with the neutral hostile and a unit of its prepared read
 test('a chronicle saved with a card on its exhaust pile reads back with it there', () => {
   const city = cityOf(['urban'], { hand: ['PH_Sow'] });
   const sown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
-  const save = { chronicle: sown, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: sown, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -192,7 +191,7 @@ test('a chronicle saved with a turn shown reads back with it shown', () => {
     hand: ['PH_Almanac', 'PH_Almanac'],
   });
   const shown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
-  const save = { chronicle: shown, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: shown, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -211,7 +210,7 @@ test('a chronicle saved waiting on a capture’s rewards reads back with the dea
     units: [standing('player', site)],
   });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  const save = { chronicle: dealt, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: dealt, civilization: CIVILIZATION_ID };
   const take: Command = { type: 'take', at: 0 };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
@@ -234,7 +233,7 @@ test('a chronicle saved waiting on a capture’s rewards reads back with the dea
 
 test('a chronicle saved once the neutral’s city has fallen reads back without it, its relations hostile', () => {
   const fallen = endedTurn(onTheNeutralCity());
-  const save = { chronicle: fallen, region: CLEARING, civilization: CIVILIZATION_ID };
+  const save = { chronicle: fallen, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -327,7 +326,7 @@ test('a chronicle that is not a chronicle’s shape is dropped', () => {
 
 test('a chronicle saved with a unit of the neutral’s reads back with its script, and one whose unit of the neutral’s names a script the catalogue does not hold is dropped', () => {
   const city = cityOf(['urban'], { tiles: field(2), units: [standing('neutral', { q: 1, r: 0 })] });
-  const save = { chronicle: city, region: REGION, civilization: CIVILIZATION_ID };
+  const save = { chronicle: city, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
@@ -344,7 +343,7 @@ test('a chronicle saved with a unit of the neutral’s reads back with its scrip
 
 test('a chronicle saved with the worker of the neutral’s it opened with reads back with it', () => {
   const opened = besideTheNeutral({ catalogue: WORKING, age: AGE });
-  const save = { chronicle: opened, region: CLEARING, civilization: CIVILIZATION_ID };
+  const save = { chronicle: opened, civilization: CIVILIZATION_ID };
 
   const read = readSave(WORKING, writeSave(WORKING, campaign(), save));
 
@@ -480,6 +479,24 @@ test('a save whose chronicle names no age, or an age the catalogue does not hold
   ).toEqual(['fixture: no age is named PH_Unheld']);
 });
 
+test('a save whose chronicle names no region, a region its age does not hold, or a capstone its region’s schedule does not name, drops it', () => {
+  const save = chronicleSaved();
+  const capstoned = (id: string) => (chronicle: Chronicle) => ({
+    ...chronicle,
+    timeline: { ...chronicle.timeline, capstone: { ...chronicle.timeline.capstone, id } },
+  });
+
+  expect(
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, region: undefined }))),
+  ).toEqual(["fixture: the save's chronicle.region is not a string"]);
+  expect(
+    chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, region: 'PH_Unheld' }))),
+  ).toEqual(['fixture: no region is named PH_Unheld']);
+  expect(chronicleDropped(tampered(save, capstoned('PH_Tillage')))).toEqual([
+    `fixture: no capstone of the region ${REGION} is named PH_Tillage`,
+  ]);
+});
+
 test('a save whose chronicle carries no city section, or one naming a building or a card the catalogue does not hold, drops it', () => {
   const save = chronicleSaved();
   const reading = (citySection: object | undefined): readonly string[] =>
@@ -526,7 +543,6 @@ test('a save whose chronicle carries no achievements, one its age does not own, 
 test('a chronicle saved with the neutral’s city reads back with it, and one whose neutral names a tile the map does not hold, a population below nought or an assigned tile it does not hold is dropped', () => {
   const save = {
     chronicle: endedTurn(besideTheNeutral()),
-    region: CLEARING,
     civilization: CIVILIZATION_ID,
   };
   const { neutral } = save.chronicle;
@@ -554,7 +570,6 @@ test('a chronicle saved with the neutral’s city reads back with it, and one wh
 test('a chronicle saved with snapshots inside either city’s border reads back with each inside it, and one whose snapshot names no city is dropped', () => {
   const save = {
     chronicle: endedTurn(besideTheNeutral()),
-    region: CLEARING,
     civilization: CIVILIZATION_ID,
   };
   const holders = save.chronicle.snapshots.map(({ holder }) => holder);

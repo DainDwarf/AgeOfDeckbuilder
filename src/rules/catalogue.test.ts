@@ -17,7 +17,7 @@ import {
   type Neutral,
   type NeutralWorkers,
   neutralOf,
-  type Schedule,
+  type Region,
   type Slice,
   type Technology,
   technologyOf,
@@ -45,8 +45,8 @@ import {
   NO_DEALS,
   QUIET,
   REGION,
-  REGIONS,
   regionsUnlocked,
+  rescheduled,
   SITE,
   SITES,
   SLICES,
@@ -57,16 +57,14 @@ import {
   WORKER_SCRIPT,
 } from './fixtures';
 import { discTiles, generateMap, tileKey } from './map';
-import { buildingKind, type LayerKind, type Region } from './map-kinds';
+import { buildingKind, type LayerKind } from './map-kinds';
 import { seedRng } from './rng';
 import { timelineOf } from './schedule';
 import { unchanged } from './stages';
 import { LEAST_STATS } from './units';
 
-/** The fixture's content with its first age's schedule changed as the test lays it over. */
-function rescheduled(schedule: Partial<Schedule>): Catalogue {
-  return aged({ schedule: { ...ageOf(CATALOGUE, AGE).schedule, ...schedule } });
-}
+/** The fixture's first age's regions. */
+const AGE_REGIONS = ageOf(CATALOGUE, AGE).regions;
 
 /** The fixture's content with its first age's camp changed as the test lays it over. */
 function encamped(camp: Partial<Camp>): Catalogue {
@@ -410,7 +408,7 @@ test('a catalogue whose biome grows at a growth weight of nought or to a size of
 
 test('a catalogue whose region deals sized biomes, its centre’s and those by share, as large as its disc together is refused', () => {
   const { clearing } = CATALOGUE.biomes;
-  const disc = REGIONS[CLEARING];
+  const disc = AGE_REGIONS[CLEARING];
   const sized = (size: number): Catalogue =>
     changed({
       version: 'sized',
@@ -434,7 +432,7 @@ test('a catalogue whose region deals sized biomes, its centre’s and those by s
 });
 
 test('a catalogue whose region leaves biomes over its shares to a centre kind dealt to a size is refused', () => {
-  const disc = REGIONS[CLEARING];
+  const disc = AGE_REGIONS[CLEARING];
   const landing = (share: number): Catalogue =>
     changed({
       version: 'landing',
@@ -455,7 +453,7 @@ test('a catalogue whose region leaves biomes over its shares to a centre kind de
 });
 
 test('a catalogue whose region deals a share of a biome that rounds to no biome is refused', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const content = changed(
     regioned({
       [REGION]: {
@@ -490,7 +488,7 @@ test('a catalogue whose building gives to a terrain it does not hold is refused'
 });
 
 test('a catalogue whose region names a biome or a feature it does not hold is refused', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const tundra = changed(regioned({ [REGION]: { ...disc, centreBiome: 'tundra' } }));
   const ruins = changed(
     regioned({ [REGION]: { ...disc, featureShares: [{ feature: 'PH_Ruins', share: 1 }] } }),
@@ -510,7 +508,7 @@ test('a catalogue whose region names a biome or a feature it does not hold is re
 });
 
 test('a catalogue whose region keeps a biome away from its own kind is refused', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const keeping = (kind: string): Catalogue =>
     changed({
       version: 'keeping',
@@ -799,7 +797,7 @@ test('a catalogue whose neutral keeps a worker kind and names no workers, names 
 });
 
 test('a catalogue whose region keeps the neutral’s city nearer the centre than the first steps’ edge, keeps it to less than it keeps it from, or deals it in an age naming no neutral, is refused, and one keeping it from that edge on is not', () => {
-  const disc = REGIONS[CLEARING];
+  const disc = AGE_REGIONS[CLEARING];
   const reach = disc.centre + FIRST_STEPS;
   const banded = (least: number, most: number): Catalogue =>
     changed(regioned({ [CLEARING]: { ...disc, neutralFromCentre: { least, most } } }));
@@ -833,7 +831,7 @@ test('a catalogue whose site deals a reward it does not hold, a reward in copies
 });
 
 test('a catalogue whose region deals a site its age does not own is refused', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const content = changed(regioned({ [REGION]: { ...disc, sites: [...disc.sites, 'PH_Barrow'] } }));
 
   expect(() => catalogued(content)).toThrow(
@@ -842,7 +840,7 @@ test('a catalogue whose region deals a site its age does not own is refused', ()
 });
 
 test('a catalogue whose region deals one site twice is refused', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const content = changed(regioned({ [REGION]: { ...disc, sites: [SITE, SITE] } }));
 
   expect(() => catalogued(content)).toThrow(
@@ -1003,7 +1001,7 @@ test('a catalogue whose deck holds a settle card among its cards is refused', ()
 });
 
 test('a catalogue whose region’s camps keep within the centre part’s reach plus the first steps is refused, whatever the city sees', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const reach = disc.centre + FIRST_STEPS;
   const near = changed(regioned({ [REGION]: { ...disc, campFromCentre: reach } }));
   const far = changed({
@@ -1079,38 +1077,44 @@ test('a catalogue whose event deals no answer costing no stock is refused, an an
   expect(() => catalogued(blighted(() => ({})))).toThrow(/^blighted: /);
 });
 
-test('a catalogue whose schedule deals an event it does not hold is refused', () => {
-  const { entries } = ageOf(CATALOGUE, AGE).schedule;
+test('a catalogue whose region’s schedule deals an event it does not hold is refused', () => {
+  const { entries } = AGE_REGIONS[REGION].schedule;
 
   expect(() => catalogued(rescheduled({ entries: { ...entries, PH_Plague: () => 1 } }))).toThrow(
     /^fixture: /,
   );
 });
 
-test('a catalogue whose schedule deals no event is refused', () => {
+test('a catalogue whose region’s schedule deals no event is refused', () => {
   expect(() => catalogued(rescheduled({ entries: {} }))).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose schedule names a capstone it does not hold is refused', () => {
-  const { capstone } = ageOf(CATALOGUE, AGE).schedule;
-  const flood = rescheduled({ capstone: { ...capstone, id: 'PH_Flood' } });
-  const event = rescheduled({ capstone: { ...capstone, id: 'PH_Hardship' } });
+test('a catalogue whose region’s schedule names a capstone it does not hold is refused', () => {
+  const { capstones } = AGE_REGIONS[REGION].schedule;
+  const flood = rescheduled({ capstones: [...capstones, 'PH_Flood'] });
+  const event = rescheduled({ capstones: ['PH_Hardship'] });
 
   expect(() => catalogued(flood)).toThrow(/^fixture: /);
   expect(() => catalogued(event)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose schedule rolls a span from below one, or to less than its least, is refused', () => {
-  const { capstone } = ageOf(CATALOGUE, AGE).schedule;
-
-  expect(() => catalogued(rescheduled({ spacing: [0, 7] }))).toThrow(/^fixture: /);
-  expect(() => catalogued(rescheduled({ capstone: { ...capstone, window: [33, 27] } }))).toThrow(
-    /^fixture: /,
+test('a catalogue whose region’s schedule names no capstone, or one capstone twice, is refused', () => {
+  expect(() => catalogued(rescheduled({ capstones: [] }))).toThrow(
+    `fixture: the region ${REGION}'s schedule names no capstone`,
+  );
+  expect(() => catalogued(rescheduled({ capstones: ['PH_Siege', 'PH_Siege'] }))).toThrow(
+    `fixture: the region ${REGION}'s schedule names the capstone PH_Siege twice`,
   );
 });
 
-test('a timeline of an age the catalogue does not hold is refused', () => {
-  expect(() => timelineOf(CATALOGUE, 'seasons', seedRng(1))).toThrow(/^fixture: /);
+test('a catalogue whose region’s schedule rolls a span from below one, or to less than its least, is refused', () => {
+  expect(() => catalogued(rescheduled({ spacing: [0, 7] }))).toThrow(/^fixture: /);
+  expect(() => catalogued(rescheduled({ window: [33, 27] }))).toThrow(/^fixture: /);
+});
+
+test('a timeline of an age the catalogue does not hold, or of a region its age does not hold, is refused', () => {
+  expect(() => timelineOf(CATALOGUE, 'seasons', REGION, seedRng(1))).toThrow(/^fixture: /);
+  expect(() => timelineOf(CATALOGUE, AGE, 'tundra', seedRng(1))).toThrow(/^fixture: /);
 });
 
 test('a catalogue that holds together builds', () => {
@@ -1172,13 +1176,13 @@ test('the opening on a map whose centre part names a tile the map does not hold 
   const holed = field(2).filter((tile) => tileKey(tile) !== tileKey(CITY));
   const map = { tiles: holed, rivers: [], centre: [CITY] };
 
-  expect(() => beginChronicle(CATALOGUE, AGE, 1, CIVILIZATION, map, NO_DEALS, [])).toThrow(
+  expect(() => beginChronicle(CATALOGUE, AGE, REGION, 1, CIVILIZATION, map, NO_DEALS, [])).toThrow(
     /^fixture: /,
   );
 });
 
 test('a catalogue whose region’s rivers rise in a biome it does not hold is refused', () => {
-  const disc = REGIONS[REGION];
+  const disc = AGE_REGIONS[REGION];
   const content = changed(
     regioned({ [REGION]: { ...disc, rivers: { ...disc.rivers, source: 'glacier' } } }),
   );

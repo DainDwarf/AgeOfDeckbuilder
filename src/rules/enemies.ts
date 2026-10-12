@@ -23,7 +23,7 @@ import {
   tileKey,
 } from './map';
 import { type MapContent, refuse } from './map-kinds';
-import { nextRng, pickWeighted } from './rng';
+import { nextRng, pickUniform, pickWeighted } from './rng';
 import { inOwnSight } from './sight';
 import { change, changeOn, followed, type Landed, landedAs, unchanged } from './stages';
 import { type Chronicle, type CityFaction, cityOn } from './state';
@@ -402,8 +402,8 @@ function enteredAs(
     const nearest = Math.min(...free.map((stood) => distance(stood, around)));
     const equal = free.filter((stood) => distance(stood, around) === nearest);
 
-    const drawn = equal.length === 1 ? undefined : nextRng(standing.rng);
-    const { q, r } = drawn === undefined ? equal[0] : equal[Math.floor(drawn.value * equal.length)];
+    const drawn = equal.length === 1 ? undefined : pickUniform(standing.rng, equal);
+    const { q, r } = drawn === undefined ? equal[0] : drawn.picked;
     landing = followed(landing, (left) =>
       entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
         ...enemyEntering(row.kind, row.script, { q, r }),
@@ -484,8 +484,8 @@ function raidEntry(
   const side = nextRng(chronicle.rng);
   const drawn = side.value < camp.raidCampOdds ? camps : ring;
   const entries = drawn.length > 0 ? drawn : drawn === camps ? ring : camps;
-  const which = nextRng(side.rng);
-  const { q, r } = entries[Math.floor(which.value * entries.length)];
+  const which = pickUniform(side.rng, entries);
+  const { q, r } = which.picked;
   return { entry: { q, r }, chronicle: { ...chronicle, rng: which.rng } };
 }
 
