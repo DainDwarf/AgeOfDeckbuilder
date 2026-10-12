@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The sites' trophies** — a site's find that pays once is a trophy: the Stone sites' Cave paintings, Honour the dead, Dig the graves and Bone carvings become trophies gaining influence, the Nomadic sites' three finds trophies gaining none, and Old stories and Bone tools stay the instants they are. Done when the catalogue holds those seven cards as trophies at that influence, the catalogue coherence test passing, and the pages say so. Doc-impact: `docs/ages/STONE.md`, `docs/ages/NOMADIC.md`, `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/sites-trophies.md](board/sites-trophies.md)
 - **The transition** — the temperate schedule's own spacing and window, the Nomadic events it keeps and how they fade as the age's own take over, Lean season scaled for the age, and Departure among them.
 - **Flood** — the river rises along the city's banks and takes what stands on the river tiles; dealt only where a river runs near the city.
 - **Blight** — the farms sicken; dealt only where a Farm stands.

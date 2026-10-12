@@ -138,5 +138,5 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |
 | **reward** | What a capture deals: cards, of which the player chooses one, added in the copies it names. | gift, prize, bounty |
 | **influence card** | A card carrying influence, paid into the campaign when the chronicle ends with the card still in it: a trophy or a challenge. | victory card, score card, point card |
-| **trophy** | The kind a capture's rewards are: played, its effect lands and it is banished; kept to the ending, it gains its influence on any ending. | prize, loot, relic, keepsake |
+| **trophy** | A kind a capture deals: played, its effect lands and it is banished; kept to the ending, it gains its influence on any ending. | prize, loot, relic, keepsake |
 | **challenge** | The kind an event's answer may deal on top of its harm: played by nothing, it gains its influence on victory alone. | dare, gamble, wager |
