@@ -6,7 +6,7 @@ import {
   type CampaignCivilization,
   influenceCardsIn,
 } from '../rules/campaign';
-import type { Catalogue } from '../rules/catalogue';
+import { achievementOf, type Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { standBrowse } from './browse';
@@ -97,6 +97,15 @@ function unpaidOf(catalogue: Catalogue, chronicle: Chronicle): CountedLine[] {
     ended: false as const,
   }));
   return ledgerRowsOf(catalogue, chronicle.age, reached, held);
+}
+
+/** Whether an achievement the chronicle has reached or an influence card it holds gains influence. */
+function gainsInfluence(catalogue: Catalogue, chronicle: Chronicle): boolean {
+  return (
+    chronicle.achievements.some(
+      ({ id, reached }) => reached && achievementOf(catalogue, chronicle.age, id).influence > 0,
+    ) || influenceCardsIn(catalogue, chronicle).some(({ card }) => card.influence > 0)
+  );
 }
 
 /** What Continue reads under its label: where the chronicle stands, then what it would pay. */
@@ -411,9 +420,8 @@ function buttonsOf(
   answersPress(launch);
   onClick(launch, () => {
     const held = savedOpening();
-    const unpaid = held === undefined ? [] : unpaidOf(catalogue, held.resumed);
-    if (unpaid.length === 0) open(choices());
-    else warnOfLaunch(scene, unpaid, () => open(choices()));
+    if (held === undefined || !gainsInfluence(catalogue, held.resumed)) open(choices());
+    else warnOfLaunch(scene, unpaidOf(catalogue, held.resumed), () => open(choices()));
   });
   const launchLabel = addText(scene, middle, launchY, text('launch.button'), LABEL_STYLE)
     .setOrigin(0.5)

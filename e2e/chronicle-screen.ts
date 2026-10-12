@@ -111,6 +111,15 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
   return chronicle.city;
 }
 
+/** The first trophy of the catalogue whose influence `gains` holds of. */
+export function trophyGaining(gains: (influence: number) => boolean): CardId {
+  const found = Object.entries(CATALOGUE.cards).find(
+    ([, card]) => card.kind === 'trophy' && gains(card.influence),
+  );
+  if (found === undefined) throw new Error('the catalogue holds no such trophy');
+  return found[0];
+}
+
 /** The technology whose achievement counts what the city holds, which claims alone reach. */
 export const HOLDING = 'agriculture';
 

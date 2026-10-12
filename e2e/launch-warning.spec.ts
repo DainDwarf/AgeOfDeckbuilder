@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { achievementOf, firstAge } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
+import { addedToDrawPileTop } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { openingChoices, withAge } from '../src/ui/launch-layout';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
@@ -21,6 +22,7 @@ import {
   settledOn,
   standing,
   storedUnder,
+  trophyGaining,
   watch,
   wonCampaign,
 } from './chronicle-screen';
@@ -129,12 +131,16 @@ test('Launch over a saved chronicle that has reached an achievement raises the w
   expect(problems).toEqual([]);
 });
 
-test('Launch over a saved chronicle that has reached no achievement opens the new chronicle at once', async ({
+test('Launch over a saved chronicle that has reached no achievement and holds only a trophy that gains none opens the new chronicle at once', async ({
   page,
 }) => {
   const problems = watch(page);
   const campaign = freshCampaign(CATALOGUE);
-  const saved = settledOn(1);
+  const saved = addedToDrawPileTop(
+    CATALOGUE,
+    settledOn(1),
+    trophyGaining((influence) => influence === 0),
+  ).chronicle;
   expect(reachedIn(saved)).toEqual([]);
 
   await launchScreenOver(page, saved, campaign);

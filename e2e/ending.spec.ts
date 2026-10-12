@@ -6,7 +6,7 @@ import { achievementOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop } from '../src/rules/schedule';
-import type { CardId, Chronicle } from '../src/rules/state';
+import type { Chronicle } from '../src/rules/state';
 import { inCollectionOrder } from '../src/ui/collection-layout';
 import { cardName, technologyName, text } from '../src/ui/text';
 import {
@@ -26,6 +26,7 @@ import {
   readings,
   rested,
   textOf,
+  trophyGaining,
   victoryShown,
   watch,
 } from './chronicle-screen';
@@ -51,15 +52,6 @@ function victoryAlpha(page: Page): Promise<number | undefined> {
   return page.evaluate(
     () => (window.named?.('victory')?.object as Phaser.GameObjects.Container | undefined)?.alpha,
   );
-}
-
-/** The first trophy of the catalogue whose influence `gains` holds of. */
-function trophyGaining(gains: (influence: number) => boolean): CardId {
-  const found = Object.entries(CATALOGUE.cards).find(
-    ([, card]) => card.kind === 'trophy' && gains(card.influence),
-  );
-  if (found === undefined) throw new Error('the catalogue holds no such trophy');
-  return found[0];
 }
 
 test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, its achievements then the trophies it kept, the save holds the campaign paid into and no chronicle, and the campaign screen its End chronicle opens reads the influence paid', async ({
