@@ -12,9 +12,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Influence cards** — a card carrying influence, paid into the campaign when the chronicle ends with the card still in it, a feat's on any ending and a challenge's on victory alone, the ending screen's ledger reading both; the Stone camp's card riding inside as the first feat, an instant that, played, pays its gain and is banished; whether the challenge's card, played by nothing, is a kind of its own is this line's question.
-- **The sites' influence cards** — each Stone site deals an influence card beside its two rewards.
-- **The neutral's influence card** — the neutral's fall deals an influence card beside its three rewards.
+- **Influence cards** — the trophy and the challenge, two kinds no deck holds, each declaring the influence it gains at the ending, a trophy's on any ending and a challenge's on victory alone; the camp's and the neutral's rewards of both ages promoted to trophies, the Nomadic ones gaining none; the ending ledger, the launch warning and Continue reading the cards kept. Doc-impact: `docs/CHRONICLE.md`, `docs/META.md`, `docs/DESIGN.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/META-SCREENS.md`, `docs/GLOSSARY.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/influence-cards.md](board/influence-cards.md)
+- **The sites' trophies** — which of the Stone sites' rewards become trophies, and whether the rewards change for it.
 - **The transition** — the temperate schedule's own spacing and window, the Nomadic events it keeps and how they fade as the age's own take over, Lean season scaled for the age, and Departure among them.
 - **Flood** — the river rises along the city's banks and takes what stands on the river tiles; dealt only where a river runs near the city.
 - **Blight** — the farms sicken; dealt only where a Farm stands.
