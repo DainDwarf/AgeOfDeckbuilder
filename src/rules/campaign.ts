@@ -9,11 +9,13 @@ import {
   civilizationOf,
   earningOf,
   firstAge,
+  type InfluenceCard,
+  influenceCardOf,
   type Technology,
   technologyOf,
 } from './catalogue';
 import { refuse } from './map-kinds';
-import type { CardId, Chronicle, CitySection } from './state';
+import type { CardId, Chronicle, CitySection, Ending } from './state';
 
 /**
  * A card the campaign owns: the number it was dealt, which no other card of the campaign ever takes,
@@ -260,6 +262,8 @@ function sectionOf(catalogue: Catalogue, card: CardId): 'settle' | 'cards' {
     case 'action':
     case 'instant':
     case 'hazard':
+    case 'trophy':
+    case 'challenge':
       return 'cards';
   }
 }
@@ -367,6 +371,41 @@ function rebuilt(
   );
 }
 
+/** A card a chronicle holds, and how many copies of it it holds in all its piles together. */
+export type HeldCopies = { readonly id: CardId; readonly copies: number };
+
+/**
+ * The influence cards the chronicle holds in any pile, the draw pile, the hand, the discard pile and
+ * the exhaust pile, each once with its content and its copies, in the order first met there.
+ */
+export function influenceCardsIn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): (HeldCopies & { readonly card: InfluenceCard })[] {
+  const held = new Map<CardId, { card: InfluenceCard; copies: number }>();
+  for (const { id } of [
+    ...chronicle.drawPile,
+    ...chronicle.hand,
+    ...chronicle.discardPile,
+    ...chronicle.exhaustPile,
+  ]) {
+    const card = influenceCardOf(cardOf(catalogue, id));
+    if (card === undefined) continue;
+    held.set(id, { card, copies: (held.get(id)?.copies ?? 0) + 1 });
+  }
+  return [...held].map(([id, { card, copies }]) => ({ id, card, copies }));
+}
+
+/** Whether an influence card kept to the ending pays on that outcome: a challenge on victory alone. */
+function paysOn(card: InfluenceCard, outcome: Ending['outcome']): boolean {
+  switch (card.kind) {
+    case 'trophy':
+      return true;
+    case 'challenge':
+      return outcome === 'victory';
+  }
+}
+
 /** What an ended chronicle paid into the campaign, and the campaign it left. */
 export type Payment = {
   readonly campaign: Campaign;
@@ -374,17 +413,19 @@ export type Payment = {
   readonly achievements: readonly string[];
   readonly technologies: readonly string[];
   readonly entered: readonly CampaignCard[];
+  /** Every influence card it kept, with its copies, whether this ending paid it, and what they paid. */
+  readonly cards: readonly (HeldCopies & { readonly paid: boolean; readonly influence: number })[];
 };
 
 /**
  * An ended chronicle paid into the campaign, the technology of each achievement it reached learned in
- * the chronicle's order. A chronicle that has not ended, and an achievement reached whose technology
- * is not available, are refused.
+ * the chronicle's order, then the influence of the influence cards it kept. A chronicle that has not
+ * ended, and an achievement reached whose technology is not available, are refused.
  */
 export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Chronicle): Payment {
   checkContent(catalogue, chronicle);
-  if (chronicle.ending === undefined)
-    refuse(catalogue, 'a chronicle that has not ended pays nothing');
+  const { ending } = chronicle;
+  if (ending === undefined) refuse(catalogue, 'a chronicle that has not ended pays nothing');
   let paid = campaign;
   const achievements: string[] = [];
   const learned: string[] = [];
@@ -398,11 +439,17 @@ export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Ch
     achievements.push(id);
     learned.push(technology);
   }
+  const cards = influenceCardsIn(catalogue, chronicle).map(({ id, card, copies }) => {
+    const paysHere = paysOn(card, ending.outcome);
+    return { id, copies, paid: paysHere, influence: paysHere ? copies * card.influence : 0 };
+  });
+  const fromCards = cards.reduce((sum, { influence }) => sum + influence, 0);
   return {
-    campaign: paid,
-    influence: paid.influence - campaign.influence,
+    campaign: { ...paid, influence: paid.influence + fromCards },
+    influence: paid.influence + fromCards - campaign.influence,
     achievements,
     technologies: learned,
     entered: paid.collection.slice(campaign.collection.length),
+    cards,
   };
 }

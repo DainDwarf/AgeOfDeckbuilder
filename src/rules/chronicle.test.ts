@@ -215,14 +215,14 @@ test('a card played goes to the discard pile, then pays its cost as one stock, t
 });
 
 test('a free card played raises no stock for its cost, and a card carrying banish is in no pile once played', () => {
-  const city = cityOf(['urban'], { hand: ['PH_Cache'] });
+  const city = cityOf(['urban'], { hand: ['PH_Idol'] });
 
   const [banished, gained, ...rest] = playedOver(city, PLAYED);
 
   expect([banished, gained].map(({ name }) => name)).toEqual(['banished', 'stock']);
   expect(rest).toEqual([]);
   expect(everyCard(banished.chronicle)).toEqual([]);
-  expect(gained.chronicle.resources.food).toBe(city.resources.food + 5);
+  expect(gained.chronicle.resources.culture).toBe(city.resources.culture + 3);
 });
 
 test('a card carrying exhaust, played, lies on the exhaust pile from its place in the hand and never comes around; discarded unplayed, it comes around', () => {

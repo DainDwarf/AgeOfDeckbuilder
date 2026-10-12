@@ -5,8 +5,10 @@ import { paidInto } from '../src/rules/campaign';
 import { achievementOf } from '../src/rules/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
-import type { Chronicle } from '../src/rules/state';
-import { technologyName, text } from '../src/ui/text';
+import { addedToDrawPileTop } from '../src/rules/schedule';
+import type { CardId, Chronicle } from '../src/rules/state';
+import { inCollectionOrder } from '../src/ui/collection-layout';
+import { cardName, technologyName, text } from '../src/ui/text';
 import {
   aimed,
   budget,
@@ -19,7 +21,9 @@ import {
   landed,
   onScreen,
   openSaved,
+  playedOn,
   playedOut,
+  readings,
   rested,
   textOf,
   victoryShown,
@@ -49,13 +53,31 @@ function victoryAlpha(page: Page): Promise<number | undefined> {
   );
 }
 
-test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, the save holds the campaign paid into and no chronicle, and the campaign screen its End chronicle opens reads the influence paid', async ({
+/** The first trophy of the catalogue whose influence `gains` holds of. */
+function trophyGaining(gains: (influence: number) => boolean): CardId {
+  const found = Object.entries(CATALOGUE.cards).find(
+    ([, card]) => card.kind === 'trophy' && gains(card.influence),
+  );
+  if (found === undefined) throw new Error('the catalogue holds no such trophy');
+  return found[0];
+}
+
+test('the play that ends the chronicle pays it into the campaign: the ending screen reads what it paid, its achievements then the trophies it kept, the save holds the campaign paid into and no chronicle, and the campaign screen its End chronicle opens reads the influence paid', async ({
   page,
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, index, tile, won } = landed();
+  const landing = landed();
+  const { index, tile } = landing;
+  const gaining = trophyGaining((influence) => influence > 0);
+  const none = trophyGaining((influence) => influence === 0);
+  let chronicle = landing.chronicle;
+  for (const id of [gaining, gaining, none]) {
+    chronicle = addedToDrawPileTop(CATALOGUE, chronicle, id).chronicle;
+  }
+  const won = playedOn(chronicle, index, tile);
   const paid = paidInto(CATALOGUE, freshCampaign(CATALOGUE), won);
+  const kept = inCollectionOrder(CATALOGUE, paid.cards, cardName);
 
   await playTheWin(page, chronicle, index, tile);
   await playedOut(page);
@@ -63,6 +85,7 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
 
   expect(paid.achievements.length).toBeGreaterThan(0);
   expect(paid.influence).toBeGreaterThan(0);
+  expect(kept.map(({ id }) => id).sort()).toEqual([gaining, none].sort());
   for (const [at, id] of paid.achievements.entries()) {
     const { technology, influence } = achievementOf(CATALOGUE, won.age, id);
     expect(await textOf(page, `ending-row-${at}`)).toBe(
@@ -72,7 +95,21 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
       influence > 0 ? String(influence) : undefined,
     );
   }
-  expect(await textOf(page, `ending-row-${paid.achievements.length}`)).toBeUndefined();
+  const rows = kept.map((_, at) => `ending-row-${paid.achievements.length + at}`);
+  const seen = await readings(page, [
+    ...rows.flatMap((row) => [row, `${row}-copies`, `${row}-influence`]),
+    `ending-row-${paid.achievements.length + kept.length}`,
+  ]);
+  expect(
+    rows.map((row) => [seen(row).text, seen(`${row}-copies`).text, seen(`${row}-influence`).text]),
+  ).toEqual(
+    kept.map(({ id, copies, influence }) => [
+      cardName(id),
+      copies > 1 ? text('collection.row-copies', { copies }) : undefined,
+      influence > 0 ? String(influence) : undefined,
+    ]),
+  );
+  expect(seen(`ending-row-${paid.achievements.length + kept.length}`).standing).toBe(false);
   expect(await textOf(page, 'ending-total-label')).toBe(text('label.influence'));
   expect(await textOf(page, 'ending-total')).toBe(String(paid.influence));
 

@@ -11,7 +11,7 @@ import {
 } from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { standBrowse } from './browse';
-import { createCardFace, createKindBubble, metricsOf } from './card-face';
+import { createCardFace, createFootBubble, metricsOf } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
   type CollectionStack,
@@ -583,7 +583,7 @@ export class CollectionScreen extends Phaser.Scene {
     const laying = layingOf(this, CATALOGUE, {
       on: bubbles,
       smallOn: bubbles,
-      kinds: createKindBubble(tooltip),
+      footBubble: createFootBubble(tooltip),
       large,
       rising: () => {
         for (const panel of laid?.panels ?? []) panel.holdStill();

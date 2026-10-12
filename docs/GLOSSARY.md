@@ -84,7 +84,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **become** | A keyword on a card: played, it goes to its pile as the card it names. | flip, transform (for a card), toggle |
 | **exhaust** | A keyword on a card, and a building card's own once played: played, it goes to the exhaust pile instead of the discard pile. | single use, one-use, consume, consumed, exile, remove (for a card played), spend (for a card) |
 | **exhaust pile** | The cards exhausted this chronicle, out of the cycle and kept in view. | removed pile, used pile, exile pile, void |
-| **banish** | To take a card out of the chronicle for good: a keyword on a card, and a settle card's own once played and a hazard's once paid. | gone (for a card), vanish, purge, burn, destroy (for a card) |
+| **banish** | To take a card out of the chronicle for good: a keyword on a card, and a settle card's own once played, a trophy's once played and a hazard's once paid. | gone (for a card), vanish, purge, burn, destroy (for a card) |
 | **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, charge, variable |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
@@ -137,6 +137,6 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **pillage** | What an enemy that prepared on a tile does to it at the next enemy phase: everything built on it is removed. | raze, loot, sack |
 | **capture** | To take a city, a camp or a site by standing on its tile. | conquer, seize, sack |
 | **reward** | What a capture deals: cards, of which the player chooses one, added in the copies it names. | gift, prize, bounty |
-| **influence card** | A card carrying influence, paid into the campaign when the chronicle ends with the card still in it. | victory card, score card, point card |
-| **feat** | A capture whose rewards hold an influence card, paid on any ending. | accomplishment, exploit, stunt |
-| **challenge** | An event's answer that deals an influence card on top of its harm, paid on victory alone. | dare, gamble, wager |
+| **influence card** | A card carrying influence, paid into the campaign when the chronicle ends with the card still in it: a trophy or a challenge. | victory card, score card, point card |
+| **trophy** | The kind a capture's rewards are: played, its effect lands and it is banished; kept to the ending, it gains its influence on any ending. | prize, loot, relic, keepsake |
+| **challenge** | The kind an event's answer may deal on top of its harm: played by nothing, it gains its influence on victory alone. | dare, gamble, wager |

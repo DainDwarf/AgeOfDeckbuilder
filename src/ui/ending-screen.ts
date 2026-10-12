@@ -1,14 +1,15 @@
 import type Phaser from 'phaser';
-import type { Payment } from '../rules/campaign';
+import type { HeldCopies, Payment } from '../rules/campaign';
 import { achievementOf, type Catalogue } from '../rules/catalogue';
 import type { Chronicle, Ending } from '../rules/state';
 import type { Browser } from './browse';
 import { EASE, ended, stopMotion } from './card-motion';
+import { inCollectionOrder } from './collection-layout';
 import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, TITLE_INK, UI_FONT } from './design-space';
-import { LOOK } from './look';
-import { BUTTON_HEIGHT, createButton } from './menu';
+import { css, LOOK } from './look';
+import { BUTTON_HEIGHT, type CountedLine, createButton, laidLine } from './menu';
 import { chipAt } from './resource-bar';
-import { technologyName, text, victoryLine } from './text';
+import { cardName, technologyName, text, victoryLine } from './text';
 
 /** What the ending screen is handed: what the chronicle paid once it has ended, and the way out. */
 export type EndingOf = {
@@ -152,10 +153,49 @@ function drawEnding(
   return { screen, button: button.face };
 }
 
+/** One row of the ledger: what it reads, the influence it paid, and whether it reads greyed. */
+export type LedgerRow = CountedLine & { readonly influence: number; readonly greyed: boolean };
+
 /**
- * The ledger of what the chronicle paid, from `top` down: a row per achievement reached, the
- * influence it paid at the row's end where it paid any, then the influence paid in all, under a rule where
- * a row stands over it.
+ * An influence card a ledger row reads: its copies, and, on a chronicle that has ended, whether that
+ * ending paid it and what its copies paid.
+ */
+export type LedgerCard = HeldCopies &
+  (
+    | { readonly ended: false }
+    | { readonly ended: true; readonly paid: boolean; readonly influence: number }
+  );
+
+/**
+ * The ledger's rows: one per achievement of the age reached, then one per influence card kept in
+ * the collection's order, one an ending did not pay greyed.
+ */
+export function ledgerRowsOf(
+  catalogue: Catalogue,
+  age: string,
+  achievements: readonly string[],
+  cards: readonly LedgerCard[],
+): LedgerRow[] {
+  const reached = achievements.map((id): LedgerRow => {
+    const { technology, influence } = achievementOf(catalogue, age, id);
+    const achievement = technologyName(technology);
+    return { reads: text('achievement.reached', { achievement }), influence, greyed: false };
+  });
+  const kept = inCollectionOrder(catalogue, cards, cardName).map(
+    (card): LedgerRow => ({
+      reads: cardName(card.id),
+      copies: card.copies,
+      influence: card.ended ? card.influence : 0,
+      greyed: card.ended && !card.paid,
+    }),
+  );
+  return [...reached, ...kept];
+}
+
+/**
+ * The ledger of what the chronicle paid, from `top` down: its rows, each with the influence it paid
+ * at its end where it paid any, then the influence paid in all, under a rule where a row stands over
+ * it.
  */
 function ledgerOf(
   scene: Phaser.Scene,
@@ -163,7 +203,12 @@ function ledgerOf(
   on: Ended,
   top: number,
 ): { parts: Part[]; bottom: number } {
-  const reached = on.payment.achievements.map((id) => achievementOf(catalogue, on.age, id));
+  const rows = ledgerRowsOf(
+    catalogue,
+    on.age,
+    on.payment.achievements,
+    on.payment.cards.map((card) => ({ ...card, ended: true as const })),
+  );
   const width = 340;
   const pitch = 34;
   const left = (DESIGN_WIDTH - width) / 2;
@@ -172,22 +217,21 @@ function ledgerOf(
     chipAt(scene, { x, y }, LOOK.influence);
   const parts: Part[] = [];
   let y = top + pitch / 2;
-  reached.forEach(({ technology, influence }, at) => {
-    const achievement = technologyName(technology);
-    parts.push(
-      addText(scene, left, y, text('achievement.reached', { achievement }), style(false))
-        .setOrigin(0, 0.5)
-        .setName(`ending-row-${at}`),
-    );
+  rows.forEach((row, at) => {
+    const ink = row.greyed ? { ...style(false), color: css(LOOK.unpaidInk) } : style(false);
+    const line = laidLine(scene, row, ink, `ending-row-${at}`);
+    line.place(left, y - line.height / 2);
+    parts.push(...line.parts);
+    const { influence } = row;
     if (influence > 0) {
-      const number = addText(scene, right, y, String(influence), style(false))
+      const number = addText(scene, right, y, String(influence), ink)
         .setOrigin(1, 0.5)
         .setName(`ending-row-${at}-influence`);
       parts.push(diamond(number.x - number.width - 18, y), number);
     }
     y += pitch;
   });
-  if (reached.length > 0) {
+  if (rows.length > 0) {
     parts.push(
       scene.add.rectangle(left, y - pitch / 2 + 4, width, 1, LOOK.panelEdge).setOrigin(0, 0),
     );

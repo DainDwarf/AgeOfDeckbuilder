@@ -3,7 +3,7 @@ import { type Campaign, civilizationIn } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import type { Refusal } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
-import { CARD_WIDTH, createKindBubble, metricsOf } from './card-face';
+import { CARD_WIDTH, createFootBubble, metricsOf } from './card-face';
 import { ended, stopMotion } from './card-motion';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, type StackedCards, spanOf, stackedCardsOf } from './collection-stack';
@@ -225,7 +225,7 @@ export function standBrowser(
   });
   on.layer.add(scrim);
   const tooltip = createTooltip(overlay, overlay.strata.tooltip);
-  const kinds = createKindBubble(tooltip);
+  const footBubble = createFootBubble(tooltip);
   /** Whether the scrim stands, from the raise to the close. */
   let up = false;
   let panel: Panel | undefined;
@@ -233,7 +233,7 @@ export function standBrowser(
 
   // The overlay holds one taker and this is it: whatever stands hears a key only through `takes`.
   const large = standLarge(overlay, catalogue, screen.covering, {
-    kinds,
+    footBubble,
     get standing() {
       return up;
     },
@@ -242,7 +242,7 @@ export function standBrowser(
   const { inspecting } = layingOf(overlay, catalogue, {
     on,
     smallOn: overlay.strata.smallCard,
-    kinds,
+    footBubble,
     large,
     rising: () => {
       panel?.holdStill();

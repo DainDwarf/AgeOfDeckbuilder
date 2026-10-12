@@ -6,6 +6,7 @@ import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design
 import { readsKeys, takesMouseKeys } from './keys';
 import {
   behind,
+  type CountedLine,
   createMenuButton,
   createRefusedSaveWindow,
   createWarning,
@@ -50,8 +51,8 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
   /** The menu raised on its first window, over whatever stands. */
   raise!: () => void;
 
-  /** The launch warning raised over the launch screen, listing what is reached; going through launches. */
-  warnOfLaunch!: (reached: readonly string[], launch: () => void) => void;
+  /** The launch warning raised over the launch screen, listing what goes unpaid; going through launches. */
+  warnOfLaunch!: (unpaid: readonly CountedLine[], launch: () => void) => void;
 
   /** The warning that a press declares war, raised over the chronicle screen; going through lands it. */
   warnOfWar!: (press: WarPress, declare: () => void) => void;
@@ -231,8 +232,8 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
     });
 
     this.raise = () => raise('menu');
-    this.warnOfLaunch = (reached, launch) => {
-      warn('launch-warning', launch, { listed: { heading: 'launch.unpaid', lines: reached } });
+    this.warnOfLaunch = (unpaid, launch) => {
+      warn('launch-warning', launch, { listed: { heading: 'launch.unpaid', lines: unpaid } });
     };
     this.warnOfWar = (press, declare) => {
       warn(WAR_WARNINGS[press], () => {
@@ -278,10 +279,10 @@ export function raiseMenu(scene: Phaser.Scene): void {
 /** The launch warning raised over the launch screen, for the scene standing it. */
 export function warnOfLaunch(
   scene: Phaser.Scene,
-  reached: readonly string[],
+  unpaid: readonly CountedLine[],
   launch: () => void,
 ): void {
-  scene.game.scene.getScene<MenuScene>('menu').warnOfLaunch(reached, launch);
+  scene.game.scene.getScene<MenuScene>('menu').warnOfLaunch(unpaid, launch);
 }
 
 /** The warning that the command declares war raised over the chronicle screen; going through lands it. */

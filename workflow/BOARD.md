@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Influence cards** — the trophy and the challenge, two kinds no deck holds, each declaring the influence it gains at the ending, a trophy's on any ending and a challenge's on victory alone; the camp's and the neutral's rewards of both ages promoted to trophies, the Nomadic ones gaining none; the ending ledger, the launch warning and Continue reading the cards kept. Doc-impact: `docs/CHRONICLE.md`, `docs/META.md`, `docs/DESIGN.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/META-SCREENS.md`, `docs/GLOSSARY.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/influence-cards.md](board/influence-cards.md)
 - **The sites' trophies** — which of the Stone sites' rewards become trophies, and whether the rewards change for it.
 - **The transition** — the temperate schedule's own spacing and window, the Nomadic events it keeps and how they fade as the age's own take over, Lean season scaled for the age, and Departure among them.
 - **Flood** — the river rises along the city's banks and takes what stands on the river tiles; dealt only where a river runs near the city.

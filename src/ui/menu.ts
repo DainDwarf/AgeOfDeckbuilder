@@ -130,8 +130,45 @@ const WINDOWS: Record<
   },
 };
 
+/** A line read, and the copies of a card it names, read after it where they are several. */
+export type CountedLine = { readonly reads: string; readonly copies?: number };
+
+/** A counted line laid: its texts, how wide and how tall it stands, and where its top left stands. */
+export type LaidLine = {
+  readonly parts: readonly Phaser.GameObjects.Text[];
+  readonly width: number;
+  readonly height: number;
+  place(left: number, top: number): void;
+};
+
+/** The line laid, named `name`, and its copies, where several, `${name}-copies`. */
+export function laidLine(
+  scene: Phaser.Scene,
+  { reads, copies }: CountedLine,
+  style: Phaser.Types.GameObjects.Text.TextStyle,
+  name: string,
+): LaidLine {
+  const gap = 8;
+  const read = addText(scene, 0, 0, reads, style).setName(name);
+  const after =
+    copies !== undefined && copies > 1
+      ? addText(scene, 0, 0, text('collection.row-copies', { copies }), style).setName(
+          `${name}-copies`,
+        )
+      : undefined;
+  return {
+    parts: after === undefined ? [read] : [read, after],
+    width: read.width + (after === undefined ? 0 : gap + after.width),
+    height: read.height,
+    place(left, top) {
+      read.setPosition(left, top);
+      after?.setPosition(left + read.width + gap, top);
+    },
+  };
+}
+
 /** Lines stacked tight under the line heading them. */
-export type Listed = { readonly heading: TextKey; readonly lines: readonly string[] };
+export type Listed = { readonly heading: TextKey; readonly lines: readonly CountedLine[] };
 
 /**
  * What a window reads besides what it always does: a line after its own, a list after that, and a
@@ -461,19 +498,14 @@ function layWindow(
   const over = [...(shape.lines ?? []), ...(said.over === undefined ? [] : [said.over])].map(
     (key) => lineOf(scene, key),
   );
-  const list =
-    said.listed === undefined
-      ? []
-      : [
-          lineOf(scene, said.listed.heading),
-          ...said.listed.lines.map((reads, index) =>
-            addText(scene, 0, 0, reads, LINE_STYLE)
-              .setOrigin(0.5, 0)
-              .setName(`${which}-listed-${index}`),
-          ),
-        ];
+  const heading = said.listed === undefined ? undefined : lineOf(scene, said.listed.heading);
+  const list = (said.listed?.lines ?? []).map((line, index) =>
+    laidLine(scene, line, LINE_STYLE, `${which}-listed-${index}`),
+  );
   const listHeight =
-    list.length === 0 ? 0 : PADDING + list.reduce((sum, line) => sum + line.height, 0);
+    heading === undefined
+      ? 0
+      : PADDING + heading.height + list.reduce((sum, line) => sum + line.height, 0);
   const under = said.under === undefined ? [] : [lineOf(scene, said.under)];
 
   const height =
@@ -496,9 +528,12 @@ function layWindow(
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
   }
-  if (list.length > 0) y += PADDING;
+  if (heading !== undefined) {
+    heading.setPosition(middle, y + PADDING);
+    y += PADDING + heading.height;
+  }
   for (const line of list) {
-    line.setPosition(middle, y);
+    line.place(middle - line.width / 2, y);
     y += line.height;
   }
   const body = y + PADDING;
@@ -508,7 +543,16 @@ function layWindow(
     y += PADDING + line.height;
   }
 
-  const root = scene.add.container(0, 0, [box, title, ...over, ...list, ...under]).setName(which);
+  const root = scene.add
+    .container(0, 0, [
+      box,
+      title,
+      ...over,
+      ...(heading === undefined ? [] : [heading]),
+      ...list.flatMap(({ parts }) => parts),
+      ...under,
+    ])
+    .setName(which);
   buttons.forEach(({ name, reads, pressed }, index) => {
     const { face, label } = createButton(
       scene,

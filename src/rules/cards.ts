@@ -66,13 +66,23 @@ import {
 import { refreshedMovePoints, spentAction, standsOn, type Unit, unitAt } from './units';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
-export const CARD_KINDS = ['settle', 'unit', 'building', 'action', 'instant', 'hazard'] as const;
+export const CARD_KINDS = [
+  'settle',
+  'unit',
+  'building',
+  'action',
+  'instant',
+  'hazard',
+  'trophy',
+  'challenge',
+] as const;
 
 export type CardKind = (typeof CARD_KINDS)[number];
 
 /**
  * How a card is played, whatever its kind: what it is aimed at, and what it does with what it was
- * aimed at. A hazard is aimed at nothing and does nothing when it is played.
+ * aimed at. A hazard is aimed at nothing and does nothing when it is played; a challenge is aimed at
+ * nothing and always blocked.
  */
 export function aimOf(card: Card): Aim {
   switch (card.kind) {
@@ -87,9 +97,16 @@ export function aimOf(card: Card): Aim {
     case 'building':
     case 'action':
     case 'instant':
+    case 'trophy':
       return card;
     case 'hazard':
       return { aim: 'none', effect: (_catalogue, paid) => unchanged(paid) };
+    case 'challenge':
+      return {
+        aim: 'none',
+        blocked: () => ['played-by-nothing'],
+        effect: (_catalogue, paid) => unchanged(paid),
+      };
   }
 }
 
@@ -126,6 +143,8 @@ export function goesTo(card: Card): 'discard-pile' | 'exhaust-pile' | 'nowhere' 
       return 'exhaust-pile';
     case 'settle':
     case 'hazard':
+    case 'trophy':
+    case 'challenge':
       return 'nowhere';
     case 'unit':
     case 'action':
@@ -155,6 +174,8 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
       case 'building':
       case 'action':
       case 'instant':
+      case 'trophy':
+      case 'challenge':
         break;
       case 'hazard':
         strikes = followed(strikes, (left) =>

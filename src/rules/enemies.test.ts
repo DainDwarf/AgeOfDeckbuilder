@@ -162,7 +162,7 @@ test('a site’s tile is claimed like any other, and a unit of the player’s st
     units: [standing('player', site)],
   });
   const { rewards } = SITES[SITE];
-  const [[relic, copies]] = Object.entries(rewards);
+  const [[reward, copies]] = Object.entries(rewards);
 
   const dealt = outcome(apply(CATALOGUE, sited, { type: 'end-turn' }));
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
@@ -172,7 +172,7 @@ test('a site’s tile is claimed like any other, and a unit of the player’s st
   expect(tilesStaged('capture', sited)).toEqual([tileKey(site)]);
   expect(buildingAt(dealt, site)).toBeUndefined();
   expect(dealt.deals).toEqual([{ of: 'capture', building: SITE, rewards }]);
-  expect(idsOf(taken.discardPile)).toEqual(Array.from({ length: copies }, () => relic));
+  expect(idsOf(taken.discardPile)).toEqual(Array.from({ length: copies }, () => reward));
 });
 
 test('a unit of the player’s standing on a camp when the turn ends captures it', () => {
@@ -1181,7 +1181,7 @@ test('two camps captured the turn before an event is due deal two deals of rewar
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
 });
 
-test('the camp’s reward carries banish: played, it gains and is banished', () => {
+test('the camp’s reward is a trophy: played, its effect lands and it is banished', () => {
   const city = cityOf(['urban'], { hand: ['PH_Spoils'] });
 
   const played = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));

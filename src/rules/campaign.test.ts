@@ -22,19 +22,24 @@ import {
   ageOf,
   type Civilization,
   cardAge,
+  cardOf,
   catalogued,
+  influenceOf,
   technologyOf,
 } from './catalogue';
 import { apply, outcome } from './chronicle';
 import {
   AGE,
   CATALOGUE,
+  type Carrying,
   CENSUS,
+  type ChroniclePile,
   CIVILIZATION,
   CIVILIZATION_ID,
   CLEARING,
   changed,
   cityOf,
+  everyCard,
   field,
   GRANARY,
   HOARD,
@@ -48,7 +53,7 @@ import {
   victoryOf,
 } from './fixtures';
 import { readSave, writeSave } from './save';
-import type { CardId } from './state';
+import type { CardId, Chronicle } from './state';
 
 function numbersOf(cards: readonly CampaignCard[]): number[] {
   return cards.map(({ number }) => number);
@@ -153,15 +158,24 @@ test('a card a technology unlocks that the collection already owns enters as new
   expect(new Set(numbersOf(campaign.collection)).size).toBe(campaign.collection.length);
 });
 
-test('a defeat pays as a victory does: the achievements it reached', () => {
+/**
+ * A first-age chronicle of no population that reaches `HOARD` by the card it plays and falls on the
+ * play, keeping the cards `kept` lays in its piles besides, the hand's after the card played.
+ */
+function hoardedDefeat(kept: Pick<Carrying, ChroniclePile> = {}): Chronicle {
   const empty = reaching([], {
+    ...kept,
     tiles: field(2),
     population: 0,
     assigned: [],
-    hand: ['PH_Harvest'],
+    hand: ['PH_Harvest', ...(kept.hand ?? [])],
     resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
-  const fallen = outcome(apply(CATALOGUE, empty, { type: 'play', index: 0, aim: 'none' }));
+  return outcome(apply(CATALOGUE, empty, { type: 'play', index: 0, aim: 'none' }));
+}
+
+test('a defeat pays as a victory does: the achievements it reached', () => {
+  const fallen = hoardedDefeat();
   const hoard = achievementOf(CATALOGUE, AGE, HOARD);
 
   const paid = paidInto(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID), fallen);
@@ -170,6 +184,64 @@ test('a defeat pays as a victory does: the achievements it reached', () => {
   expect(paid.achievements).toEqual([HOARD]);
   expect(paid.technologies).toEqual([hoard.technology]);
   expect(paid.influence).toBe(hoard.influence);
+});
+
+/** The trophies and the challenge laid in every pile of a chronicle, the trophies in several copies. */
+const KEPT = {
+  drawPile: ['PH_Spoils', 'PH_Ordeal'],
+  hand: ['PH_Spoils'],
+  discardPile: ['PH_Ordeal', 'PH_Spoils'],
+  exhaustPile: ['PH_Cache'],
+};
+
+/** What a card of either influence kind gains a copy. */
+function gainOf(id: CardId): number {
+  const gain = influenceOf(cardOf(CATALOGUE, id));
+  if (gain === undefined) throw new Error(`${id} is of no influence kind`);
+  return gain;
+}
+
+test('an ended chronicle pays the influence of every trophy it kept in any pile, every copy, on a victory and on a defeat alike, and of every challenge it kept on a victory alone, after its achievements; a trophy played pays none', () => {
+  const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
+  const won = hoardedVictory(KEPT);
+  const fallen = hoardedDefeat(KEPT);
+  const bare = {
+    victory: paidInto(CATALOGUE, opened, hoardedVictory()),
+    defeat: paidInto(CATALOGUE, opened, hoardedDefeat()),
+  };
+
+  const paidWon = paidInto(CATALOGUE, opened, won);
+  const paidFallen = paidInto(CATALOGUE, opened, fallen);
+
+  expect(cardOf(CATALOGUE, 'PH_Spoils').kind).toBe('trophy');
+  expect(cardOf(CATALOGUE, 'PH_Cache').kind).toBe('trophy');
+  expect(cardOf(CATALOGUE, 'PH_Ordeal').kind).toBe('challenge');
+  expect(everyCard(won)).toEqual(Object.values(KEPT).flat().sort());
+  expect(won.ending?.outcome).toBe('victory');
+  expect(fallen.ending?.outcome).toBe('defeat');
+  expect(paidWon.cards).toEqual([
+    { id: 'PH_Spoils', copies: 3, paid: true, influence: 3 * gainOf('PH_Spoils') },
+    { id: 'PH_Ordeal', copies: 2, paid: true, influence: 2 * gainOf('PH_Ordeal') },
+    { id: 'PH_Cache', copies: 1, paid: true, influence: gainOf('PH_Cache') },
+  ]);
+  expect(paidFallen.cards).toEqual([
+    { id: 'PH_Spoils', copies: 3, paid: true, influence: 3 * gainOf('PH_Spoils') },
+    { id: 'PH_Ordeal', copies: 2, paid: false, influence: 0 },
+    { id: 'PH_Cache', copies: 1, paid: true, influence: gainOf('PH_Cache') },
+  ]);
+  for (const [paid, without] of [
+    [paidWon, bare.victory],
+    [paidFallen, bare.defeat],
+  ] as const) {
+    const fromCards = paid.cards.reduce((sum, { influence }) => sum + influence, 0);
+    expect(paid.achievements).toEqual(without.achievements);
+    expect(paid.influence).toBe(without.influence + fromCards);
+    expect(paid.campaign).toEqual({
+      ...without.campaign,
+      influence: without.campaign.influence + fromCards,
+    });
+  }
+  expect(bare.victory.cards).toEqual([]);
 });
 
 test('a chronicle that ends having reached no achievement pays nothing', () => {
@@ -186,6 +258,7 @@ test('a chronicle that ends having reached no achievement pays nothing', () => {
     achievements: [],
     technologies: [],
     entered: [],
+    cards: [],
   });
 });
 

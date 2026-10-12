@@ -10,7 +10,8 @@ import {
   createCardBack,
   createCardFace,
   createEmptySlot,
-  type KindBubble,
+  type FootBubble,
+  type FootLabel,
   type Name,
 } from './card-face';
 import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
@@ -79,10 +80,10 @@ export function createPiles(
   scene: Phaser.Scene,
   on: { readonly resting: Stratum; readonly flight: Stratum },
   catalogue: Catalogue,
-  { kinds, small }: { readonly kinds: KindBubble; readonly small: SmallCards },
+  { footBubble, small }: { readonly footBubble: FootBubble; readonly small: SmallCards },
   presses: PilePresses,
 ): Piles {
-  const answers = { small, kinds, presses };
+  const answers = { small, footBubble, presses };
   const drawn = createPile(scene, on.resting, 'draw-pile', answers);
   const discarded = createPile(scene, on.resting, 'discard-pile', answers);
   const exhausted = createTab(scene, on.resting, presses);
@@ -258,8 +259,8 @@ type Pile = {
 
 /**
  * One pile: a right click on it raises its browse, a name on its top card excepted, which answers
- * the rest and the right click as a name does anywhere, and the top card's kind label answers the
- * rest.
+ * the rest and the right click as a name does anywhere, and the labels of the top card's foot answer
+ * the rest.
  */
 function createPile(
   scene: Phaser.Scene,
@@ -267,9 +268,13 @@ function createPile(
   pile: PileKind,
   {
     small,
-    kinds,
+    footBubble,
     presses,
-  }: { readonly small: SmallCards; readonly kinds: KindBubble; readonly presses: PilePresses },
+  }: {
+    readonly small: SmallCards;
+    readonly footBubble: FootBubble;
+    readonly presses: PilePresses;
+  },
 ): Pile {
   const { x, y } = PILE_PLACE[pile];
   const pill = scene.add.graphics();
@@ -295,12 +300,15 @@ function createPile(
     const at = on.at(pointer.x, pointer.y);
     return shown?.face?.nameAt(at.x, at.y);
   };
-  const onKind = (pointer: Phaser.Input.Pointer): boolean => {
+  const onFoot = (pointer: Phaser.Input.Pointer): FootLabel | undefined => {
     const at = on.at(pointer.x, pointer.y);
-    return shown?.face?.kindAt(at.x, at.y) === true;
+    return shown?.face?.footAt(at.x, at.y);
   };
 
-  answersPress(press, (pointer) => nameUnder(pointer) !== undefined || onKind(pointer));
+  answersPress(
+    press,
+    (pointer) => nameUnder(pointer) !== undefined || onFoot(pointer) !== undefined,
+  );
   press.on('pointermove', (pointer: Phaser.Input.Pointer) => {
     const face = shown?.face;
     if (face === undefined) return;
@@ -315,14 +323,14 @@ function createPile(
             },
           },
     );
-    kinds.over(face, onKind(pointer));
+    footBubble.over(face, onFoot(pointer));
   });
   onHover(
     press,
     () => {},
     () => {
       small.over(undefined);
-      if (shown?.face !== undefined) kinds.over(shown.face, false);
+      if (shown?.face !== undefined) footBubble.over(shown.face, undefined);
     },
   );
   onClick(
@@ -335,11 +343,11 @@ function createPile(
     'right',
   );
 
-  /** What the top card's names and its label raised, taken down as the card leaves the top. */
+  /** What the top card's names and its foot raised, taken down as the card leaves the top. */
   const letGo = (): void => {
     if (shown?.face === undefined) return;
     if (chained) small.down();
-    kinds.over(shown.face, false);
+    footBubble.over(shown.face, undefined);
   };
 
   return {

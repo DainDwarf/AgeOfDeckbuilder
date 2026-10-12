@@ -171,8 +171,7 @@ test('a catalogue whose technology unlocks a card it does not hold, a card by fe
   }
 });
 
-test('a catalogue whose technology unlocks a hazard or a camp’s reward is refused', () => {
-  const [reward] = Object.keys(CAMP.rewards);
+test('a catalogue whose technology unlocks a hazard, a trophy or a challenge is refused', () => {
   const unlocking = (card: string): Catalogue =>
     withTechnologies({
       [GRANARY]: {
@@ -181,13 +180,31 @@ test('a catalogue whose technology unlocks a hazard or a camp’s reward is refu
       },
     });
 
-  expect(cardOf(CATALOGUE, 'PH_Hunger').kind).toBe('hazard');
-  expect(() => catalogued(unlocking('PH_Hunger'))).toThrow(
-    `fixture: the technology ${GRANARY} unlocks the hazard PH_Hunger`,
-  );
-  expect(() => catalogued(unlocking(reward))).toThrow(
-    `fixture: the technology ${GRANARY} unlocks the age ${AGE}'s camp's reward ${reward}`,
-  );
+  for (const [card, kind] of [
+    ['PH_Hunger', 'hazard'],
+    ['PH_Cache', 'trophy'],
+    ['PH_Ordeal', 'challenge'],
+  ] as const) {
+    expect(cardOf(CATALOGUE, card).kind).toBe(kind);
+    expect(() => catalogued(unlocking(card))).toThrow(
+      `fixture: the technology ${GRANARY} unlocks the ${kind} ${card}`,
+    );
+  }
+});
+
+test('a catalogue whose trophy or challenge gains influence that is not a whole number of nought or more is refused', () => {
+  for (const card of ['PH_Cache', 'PH_Ordeal']) {
+    const declared = cardOf(CATALOGUE, card);
+    const gaining = (influence: number): Catalogue =>
+      changed({ cards: { ...CATALOGUE.cards, [card]: { ...declared, influence } as Card } });
+
+    for (const influence of [-1, 1.5]) {
+      expect(() => catalogued(gaining(influence))).toThrow(
+        `fixture: the ${declared.kind} ${card} gains ${influence} influence`,
+      );
+    }
+    expect(() => catalogued(gaining(0))).not.toThrow();
+  }
 });
 
 test('a catalogue whose age but the first is unlocked by no technology or by two, or whose first age is unlocked by one, is refused', () => {
@@ -821,8 +838,8 @@ test('a catalogue whose site deals a reward it does not hold, a reward in copies
     catalogued(sited({ [SITE]: { ...site, rewards: { ...site.rewards, PH_Loot: 1 } } })),
   ).toThrow('fixture: no card is named PH_Loot');
   for (const copies of [0, 1.5]) {
-    expect(() => catalogued(sited({ [SITE]: { ...site, rewards: { PH_Relic: copies } } }))).toThrow(
-      `fixture: the age ${AGE}'s site ${SITE} deals ${copies} copies of PH_Relic`,
+    expect(() => catalogued(sited({ [SITE]: { ...site, rewards: { PH_Idol: copies } } }))).toThrow(
+      `fixture: the age ${AGE}'s site ${SITE} deals ${copies} copies of PH_Idol`,
     );
   }
   expect(() => catalogued(sited({ [SITE]: { ...site, rewards: {} } }))).toThrow(
@@ -895,20 +912,23 @@ test('a catalogue whose deck names a card it does not hold is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose deck holds a hazard in either section is refused', () => {
-  const cards = changed({
-    civilizations: {
-      civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, 'PH_Hunger'] },
-    },
-  });
-  const settle = changed({
-    civilizations: {
-      civilization: { ...CIVILIZATION, settle: [...CIVILIZATION.settle, 'PH_Hunger'] },
-    },
-  });
+test('a catalogue whose deck holds a hazard, a trophy or a challenge in either section is refused', () => {
+  for (const card of ['PH_Hunger', 'PH_Cache', 'PH_Ordeal']) {
+    const { kind } = cardOf(CATALOGUE, card);
+    const cards = changed({
+      civilizations: { civilization: { ...CIVILIZATION, cards: [...CIVILIZATION.cards, card] } },
+    });
+    const settle = changed({
+      civilizations: { civilization: { ...CIVILIZATION, settle: [...CIVILIZATION.settle, card] } },
+    });
 
-  expect(() => catalogued(cards)).toThrow(/^fixture: /);
-  expect(() => catalogued(settle)).toThrow(/^fixture: /);
+    expect(() => catalogued(cards)).toThrow(
+      `fixture: the civilization civilization holds the ${kind} ${card}`,
+    );
+    expect(() => catalogued(settle)).toThrow(
+      `fixture: the civilization civilization holds the ${kind} ${card}`,
+    );
+  }
 });
 
 test('a catalogue whose deck holds any of the camp’s rewards in either section is refused', () => {

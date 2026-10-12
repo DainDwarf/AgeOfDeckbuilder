@@ -20,7 +20,8 @@ import {
   type CardFace,
   createCardBack,
   createCardFace,
-  type KindBubble,
+  type FootBubble,
+  type FootLabel,
   type Name,
 } from './card-face';
 import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
@@ -131,7 +132,7 @@ export function createHand(
     readonly aimLine: Stratum;
     readonly note: Stratum;
   },
-  { kinds, small }: { readonly kinds: KindBubble; readonly small: SmallCards },
+  { footBubble, small }: { readonly footBubble: FootBubble; readonly small: SmallCards },
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
@@ -159,7 +160,7 @@ export function createHand(
     taking = on;
     if (on) return;
     for (const slot of slots) {
-      kinds.over(slot.face, false);
+      footBubble.over(slot.face, undefined);
       if (slot.hover.hovered) small.over(undefined);
     }
   };
@@ -381,10 +382,10 @@ export function createHand(
     };
   };
 
-  /** Whether the pointer is on this card's kind label. */
-  const onKind = (slot: Slot, pointer: Phaser.Input.Pointer): boolean => {
+  /** The label of this card's foot the pointer is on, and nothing where it is on none. */
+  const onFoot = (slot: Slot, pointer: Phaser.Input.Pointer): FootLabel | undefined => {
     const at = on.resting.at(pointer.x, pointer.y);
-    return slot.face.kindAt(at.x, at.y);
+    return slot.face.footAt(at.x, at.y);
   };
 
   const render = (chronicle: Chronicle): void => {
@@ -432,7 +433,7 @@ export function createHand(
           },
           () => {
             small.over(undefined);
-            kinds.over(face, false);
+            footBubble.over(face, undefined);
             if (dragged !== undefined || !taking) return;
             slot.hovered = false;
             settle(slot, 120);
@@ -455,7 +456,7 @@ export function createHand(
         })
         .on('dragstart', (pointer: Phaser.Input.Pointer) => {
           if (!taking) return;
-          kinds.over(slot.face, false);
+          footBubble.over(slot.face, undefined);
           unselect();
           slot.hovered = true;
           settle(slot, 0);
@@ -468,7 +469,7 @@ export function createHand(
         .on('pointermove', (pointer: Phaser.Input.Pointer) => {
           const answering = taking && dragged === undefined;
           small.over(answering ? nameUnder(slot, pointer) : undefined);
-          kinds.over(slot.face, answering && onKind(slot, pointer));
+          footBubble.over(slot.face, answering ? onFoot(slot, pointer) : undefined);
         });
 
       answersPress(slot.face.root, () => taking);

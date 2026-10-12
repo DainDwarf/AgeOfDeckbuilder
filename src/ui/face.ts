@@ -8,6 +8,7 @@ import {
   cardMade,
   cardOf,
   costOf,
+  influenceOf,
 } from '../rules/catalogue';
 import { answerOf } from '../rules/schedule';
 import type { CardId, Chronicle, ChronicleCard, Cost } from '../rules/state';
@@ -44,6 +45,8 @@ export function labelledKind(card: Card): FaceKind {
     case 'building':
     case 'instant':
     case 'hazard':
+    case 'trophy':
+    case 'challenge':
       return card.kind;
   }
 }
@@ -64,8 +67,8 @@ export type AnswerReading = Readonly<Record<string, number>>;
 
 /**
  * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
- * name; the kind it is labelled by; its rules entry; and what it costs, in the order the resource
- * bar reads the resources.
+ * name; the kind it is labelled by; its rules entry; what it costs, in the order the resource bar
+ * reads the resources; and the influence it gains, none on a face that gains none.
  */
 export type Face = {
   readonly id: string;
@@ -75,6 +78,7 @@ export type Face = {
   readonly costs: readonly Cost[];
   /** What a card named on it is made at: an answer's reading, and nothing on any other face. */
   readonly reading: AnswerReading;
+  readonly influence: number;
 };
 
 /**
@@ -86,13 +90,15 @@ export function cardFace(
   card: ChronicleCard,
   city: string | undefined,
 ): Face {
+  const content = cardOf(catalogue, card.id);
   return {
     id: card.id,
     name: cardName(card.id),
-    kind: labelledKind(cardOf(catalogue, card.id)),
+    kind: labelledKind(content),
     rules: cardRules(card, city),
     costs: costOf(catalogue, card.id),
     reading: {},
+    influence: influenceOf(content) ?? 0,
   };
 }
 
@@ -134,6 +140,7 @@ export function capstoneFace(id: string): Face {
     rules: capstoneRules(id),
     costs: [],
     reading: {},
+    influence: 0,
   };
 }
 
@@ -158,5 +165,6 @@ export function answerFace(
     rules: answerRules(id, { ...reading, building, camp }),
     costs: [],
     reading,
+    influence: 0,
   };
 }

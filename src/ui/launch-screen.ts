@@ -1,11 +1,16 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { agesReached, type Campaign, type CampaignCivilization } from '../rules/campaign';
-import { achievementOf, type Catalogue } from '../rules/catalogue';
+import {
+  agesReached,
+  type Campaign,
+  type CampaignCivilization,
+  influenceCardsIn,
+} from '../rules/campaign';
+import type { Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { standBrowse } from './browse';
-import { createKindBubble } from './card-face';
+import { createFootBubble } from './card-face';
 import { openChronicle } from './chronicle-scene';
 import { createPile } from './civilization-pile';
 import { offerEntries } from './debug-console';
@@ -22,15 +27,17 @@ import {
   onClick,
   UI_FONT,
 } from './design-space';
+import { ledgerRowsOf } from './ending-screen';
 import { clustersOf, openingChoices, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
+import { type CountedLine, laidLine } from './menu';
 import { backRaisesMenu, resetMenu, warnOfLaunch } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
 import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
 import { inspectedThrough, type Laying, layingOf } from './stack';
-import { ageName, regionName, type TextKey, technologyName, text } from './text';
+import { ageName, regionName, type TextKey, text } from './text';
 
 const LEFT = ROOM.x + MARGIN;
 const RIGHT = DESIGN_WIDTH - MARGIN;
@@ -77,22 +84,30 @@ type Option = {
   readonly hits: readonly Phaser.GameObjects.GameObject[];
 };
 
-/** Each achievement the chronicle has reached, read under its technology's name. */
-function reachedOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
-  const named = (id: string): string =>
-    technologyName(achievementOf(catalogue, chronicle.age, id).technology);
-  return chronicle.achievements
-    .filter(({ reached }) => reached)
-    .map(({ id }) => text('achievement.reached', { achievement: named(id) }));
+/**
+ * What the chronicle would pay at its ending, read as its ending screen's ledger reads it without
+ * the influence: each achievement it has reached under its technology's name, then each influence
+ * card it holds in the collection's order.
+ */
+function unpaidOf(catalogue: Catalogue, chronicle: Chronicle): CountedLine[] {
+  const reached = chronicle.achievements.filter(({ reached }) => reached).map(({ id }) => id);
+  const held = influenceCardsIn(catalogue, chronicle).map(({ id, copies }) => ({
+    id,
+    copies,
+    ended: false as const,
+  }));
+  return ledgerRowsOf(catalogue, chronicle.age, reached, held);
 }
 
-/** What Continue reads under its label: where the chronicle stands, then what it has reached. */
-function readingsOf(catalogue: Catalogue, chronicle: Chronicle): string[] {
+/** What Continue reads under its label: where the chronicle stands, then what it would pay. */
+function readingsOf(catalogue: Catalogue, chronicle: Chronicle): CountedLine[] {
   return [
-    onSettlePhase(chronicle)
-      ? text('launch.settle-phase')
-      : text('launch.turn', { turn: chronicle.turn }),
-    ...reachedOf(catalogue, chronicle),
+    {
+      reads: onSettlePhase(chronicle)
+        ? text('launch.settle-phase')
+        : text('launch.turn', { turn: chronicle.turn }),
+    },
+    ...unpaidOf(catalogue, chronicle),
   ];
 }
 
@@ -284,7 +299,7 @@ export class LaunchScreen extends Phaser.Scene {
     const laying = layingOf(this, CATALOGUE, {
       on: bubbles,
       smallOn: bubbles,
-      kinds: createKindBubble(tooltip),
+      footBubble: createFootBubble(tooltip),
       large,
     });
     const campaign = campaignHeld();
@@ -379,7 +394,7 @@ export class LaunchScreen extends Phaser.Scene {
 
 /**
  * Continue over Launch at the room's bottom right, Launch opening the chronicle on the choices as
- * they stand, through the launch warning where the saved chronicle has reached an achievement;
+ * they stand, through the launch warning where the saved chronicle has something it would pay;
  * Continue greyed and answering no press while the save holds no chronicle.
  */
 function buttonsOf(
@@ -396,9 +411,9 @@ function buttonsOf(
   answersPress(launch);
   onClick(launch, () => {
     const held = savedOpening();
-    const reached = held === undefined ? [] : reachedOf(catalogue, held.resumed);
-    if (reached.length === 0) open(choices());
-    else warnOfLaunch(scene, reached, () => open(choices()));
+    const unpaid = held === undefined ? [] : unpaidOf(catalogue, held.resumed);
+    if (unpaid.length === 0) open(choices());
+    else warnOfLaunch(scene, unpaid, () => open(choices()));
   });
   const launchLabel = addText(scene, middle, launchY, text('launch.button'), LABEL_STYLE)
     .setOrigin(0.5)
@@ -415,10 +430,7 @@ function buttonsOf(
     .setOrigin(0.5, 0)
     .setName('launch-continue-label');
   const lines = (saved === undefined ? [] : readingsOf(catalogue, saved.resumed)).map(
-    (reading, index) =>
-      addText(scene, middle, 0, reading, LINE_STYLE)
-        .setOrigin(0.5, 0)
-        .setName(`launch-continue-line-${index}`),
+    (reading, index) => laidLine(scene, reading, LINE_STYLE, `launch-continue-line-${index}`),
   );
   const height = BUTTON_HEIGHT + lines.reduce((sum, line) => sum + line.height, 0);
   const top = LAUNCH_BOTTOM - BUTTON_HEIGHT - BUTTON_GAP - height;
@@ -437,9 +449,11 @@ function buttonsOf(
     onClick(face, () => open(saved));
   }
   let y = top + (BUTTON_HEIGHT - label.height) / 2;
-  for (const line of [label, ...lines]) {
-    line.setY(y);
+  label.setY(y);
+  y += label.height;
+  for (const line of lines) {
+    line.place(middle - line.width / 2, y);
     y += line.height;
   }
-  return [launch, launchLabel, face, label, ...lines];
+  return [launch, launchLabel, face, label, ...lines.flatMap(({ parts }) => parts)];
 }

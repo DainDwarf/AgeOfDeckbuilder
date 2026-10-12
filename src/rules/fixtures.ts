@@ -618,21 +618,22 @@ const TABLES: Omit<Tables, 'technologies'> = {
     },
     PH_Almanac: { kind: 'instant', cost: {}, ...showsNextLanding() },
     PH_Spoils: {
-      kind: 'instant',
+      kind: 'trophy',
       cost: {},
-      banish: true,
+      influence: 2,
       aim: 'none',
       effect: (_catalogue, paid) =>
         gained(paid, { food: 10, production: 10, military: 10, money: 10, science: 10 }),
     },
     PH_Cache: {
-      kind: 'instant',
+      kind: 'trophy',
       cost: {},
-      banish: true,
+      influence: 1,
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 5 }),
     },
-    PH_Relic: {
+    PH_Ordeal: { kind: 'challenge', cost: {}, influence: 3 },
+    PH_Idol: {
       kind: 'instant',
       cost: {},
       banish: true,
@@ -840,7 +841,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
 export const SITE = 'PH_Cairn';
 
 /** The site every fixture age owns. */
-export const SITES: Age['sites'] = { [SITE]: { building: SITE, rewards: { PH_Relic: 2 } } };
+export const SITES: Age['sites'] = { [SITE]: { building: SITE, rewards: { PH_Idol: 2 } } };
 
 /** The maps every fixture age's regions deal, by the region's key. */
 export const REGIONS: Readonly<Record<string, MapRegion>> = {
@@ -1285,15 +1286,16 @@ export function preparing(enemy: Standing): Standing {
   return { ...enemy, prepared: true };
 }
 
-type Pile = 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile';
+/** A pile of a chronicle, by the field it stands under. */
+export type ChroniclePile = 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile';
 
 /**
  * What a fixture authors on the chronicle it asks for: its state, the units standing on it, and the
  * cards of each pile by id.
  */
-export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit' | Pile>> & {
+export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit' | ChroniclePile>> & {
   readonly units?: readonly Standing[];
-} & Partial<Record<Pile, readonly CardId[]>>;
+} & Partial<Record<ChroniclePile, readonly CardId[]>>;
 
 /**
  * A city on `inside`, tile by tile, with one plain lying outside the border and no cards and no
@@ -1500,13 +1502,15 @@ export function reaching(learned: readonly string[], carrying: Carrying): Chroni
 
 /**
  * A first-age chronicle launched with nothing learned, `HOARD` reached and then won on the tillage:
- * a victory with two achievements reached.
+ * a victory with two achievements reached, keeping the cards `kept` lays in its piles, the hand's
+ * after the card played.
  */
-export function hoardedVictory(): Chronicle {
+export function hoardedVictory(kept: Pick<Carrying, ChroniclePile> = {}): Chronicle {
   const city = reaching([], {
+    ...kept,
     tiles: builtOn(field(2), TILLAGE, [{ q: 1, r: 0 }]),
     timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } },
-    hand: ['PH_Cache'],
+    hand: ['PH_Cache', ...(kept.hand ?? [])],
     resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
   return outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));

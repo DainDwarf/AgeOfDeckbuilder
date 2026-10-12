@@ -14,7 +14,7 @@ import {
 } from './design-space';
 import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
 import { css, LOOK, type Paper, worn } from './look';
-import { referenceName } from './text';
+import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
 
@@ -97,14 +97,18 @@ export type Name = {
 /** Where a name stands on the surface its face is drawn on: its middle, and its line's two edges. */
 export type Spot = { readonly x: number; readonly top: number; readonly bottom: number };
 
+/** What stands at a face's foot and raises a tooltip: the kind label, and the influence it gains. */
+export type FootLabel = 'kind' | 'influence';
+
 /**
  * What a face handed these lays a zone over every name for: the pointer on it or off it, and the
- * right click. Handed `kind`, it lays one over its kind label too, which answers no press.
+ * right click. Handed `footOver`, it lays one over each label of its foot too, which answers no
+ * press.
  */
 export type NamePresses = {
   over(name: Name | undefined): void;
   inspect(name: Name): void;
-  kind?(over: boolean): void;
+  footOver?(label: FootLabel | undefined): void;
 };
 
 export type CardFace = {
@@ -117,12 +121,18 @@ export type CardFace = {
   nameAt(x: number, y: number): Name | undefined;
   /** Where one of the face's names stands on the surface the face is drawn on. */
   spotOf(name: Name): Spot;
-  /** Whether the kind label lies under a point of the surface the face is drawn on. */
-  kindAt(x: number, y: number): boolean;
+  /**
+   * The label of the foot lying under a point of the surface the face is drawn on, and nothing where
+   * none does.
+   */
+  footAt(x: number, y: number): FootLabel | undefined;
   /** Whether the card lies under a point of the surface the face is drawn on. */
   cardAt(x: number, y: number): boolean;
-  /** The kind's tooltip raised on the bubble, beside the label as it stands when the bubble is painted. */
-  explainKind(tooltip: Tooltip): void;
+  /**
+   * The label's tooltip raised on the bubble, beside the label as it stands when the bubble is
+   * painted.
+   */
+  explainFoot(tooltip: Tooltip, label: FootLabel): void;
 };
 
 /**
@@ -198,6 +208,30 @@ export function createCardFace(
     .setName('kind-label');
   const kindMiddle = kind.y - kind.height / 2;
 
+  const gains = (():
+    | { number: Phaser.GameObjects.Text; diamond: Phaser.GameObjects.Rectangle; left: number }
+    | undefined => {
+    if (face.influence === 0) return undefined;
+    const number = addText(scene, right, kindMiddle, String(face.influence), {
+      fontFamily: UI_FONT,
+      fontSize: `${0.65 * em}px`,
+      fontStyle: 'bold',
+      color: css(tone(palette.ink)),
+    })
+      .setOrigin(1, 0.5)
+      .setName('influence-label');
+    const diamond = scene.add
+      .rectangle(
+        number.x - number.width - 0.3 * em,
+        kindMiddle,
+        0.55 * em,
+        0.55 * em,
+        tone(LOOK.influence),
+      )
+      .setAngle(45);
+    return { number, diamond, left: diamond.x - 0.4 * em };
+  })();
+
   const size = 0.62 * em;
   const span = (2 / 3) * size;
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
@@ -260,17 +294,21 @@ export function createCardFace(
           onClick(zone, () => presses.inspect(name), 'right');
           return zone;
         });
-  if (presses?.kind !== undefined) {
-    const over = presses.kind;
-    const zone = answersPress(
-      scene.add.zone(0, kindMiddle, kind.width, kind.height).setInteractive(),
-    );
-    onHover(
-      zone,
-      () => over(true),
-      () => over(false),
-    );
-    zones.push(zone);
+  if (presses?.footOver !== undefined) {
+    const at = presses.footOver;
+    const footZone = (label: FootLabel, x: number, width: number): Phaser.GameObjects.Zone => {
+      const zone = answersPress(scene.add.zone(x, kindMiddle, width, kind.height).setInteractive());
+      onHover(
+        zone,
+        () => at(label),
+        () => at(undefined),
+      );
+      return zone;
+    };
+    zones.push(footZone('kind', 0, kind.width));
+    if (gains !== undefined) {
+      zones.push(footZone('influence', (gains.left + right) / 2, right - gains.left));
+    }
   }
 
   const artTop = middle + 1.15 * em;
@@ -296,7 +334,16 @@ export function createCardFace(
     );
   }
 
-  root.add([art, name, kind, rules, ...glyphs, ring, ...zones]);
+  root.add([
+    art,
+    name,
+    kind,
+    ...(gains === undefined ? [] : [gains.diamond, gains.number]),
+    rules,
+    ...glyphs,
+    ring,
+    ...zones,
+  ]);
 
   /** The point while the card is being aimed, and nothing at all on the card while it is not. */
   let point: Phaser.GameObjects.Polygon | undefined;
@@ -333,37 +380,52 @@ export function createCardFace(
       const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
       return { x: middle.x, top: middle.y - name.height / 2, bottom: middle.y + name.height / 2 };
     },
-    kindAt(x: number, y: number): boolean {
+    footAt(x: number, y: number): FootLabel | undefined {
       const local = root.getLocalPoint(x, y);
-      return (
-        Math.abs(local.x) <= kind.width / 2 && Math.abs(local.y - kindMiddle) <= kind.height / 2
-      );
+      if (Math.abs(local.y - kindMiddle) > kind.height / 2) return undefined;
+      if (Math.abs(local.x) <= kind.width / 2) return 'kind';
+      if (gains !== undefined && local.x >= gains.left && local.x <= right) return 'influence';
+      return undefined;
     },
     cardAt(x: number, y: number): boolean {
       const local = root.getLocalPoint(x, y);
       return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
-    explainKind(tooltip: Tooltip): void {
-      tooltip.beside(kindTooltip(face.kind), () => {
-        const ownKind = ownBoxOf(kind);
-        return root.getWorldTransformMatrix().transformPoint(ownKind.x + ownKind.width, kindMiddle);
-      });
+    explainFoot(tooltip: Tooltip, label: FootLabel): void {
+      const besideOf = (part: Phaser.GameObjects.Text, reads: string): void => {
+        tooltip.beside(reads, () => {
+          const own = ownBoxOf(part);
+          return root.getWorldTransformMatrix().transformPoint(own.x + own.width, kindMiddle);
+        });
+      };
+      switch (label) {
+        case 'kind':
+          besideOf(kind, kindTooltip(face.kind));
+          return;
+        case 'influence':
+          if (gains !== undefined) besideOf(gains.number, text('tooltip.influence'));
+          return;
+      }
+      const unlisted: never = label;
+      throw new Error(`no label of the foot is ${JSON.stringify(unlisted)}`);
     },
   };
 }
 
-/** Which face's kind label has raised the surface's one bubble. */
-export type KindBubble = {
-  /** The pointer is on this face, on its kind label or off it. */
-  over(face: CardFace, onLabel: boolean): void;
+/** Which label of which face's foot has raised the surface's one bubble. */
+export type FootBubble = {
+  /** The pointer is on this face, on a label of its foot or off them. */
+  over(face: CardFace, label: FootLabel | undefined): void;
 };
 
 /**
- * The kind labels of one surface's faces over the bubble they raise: it goes down as the pointer
- * leaves the label, and with the face it stands beside.
+ * The labels of the feet of one surface's faces over the bubble they raise: it goes down as the
+ * pointer leaves the label, and with the face it stands beside.
  */
-export function createKindBubble(tooltip: Tooltip): KindBubble {
-  let raised: { readonly face: CardFace; readonly gone: () => void } | undefined;
+export function createFootBubble(tooltip: Tooltip): FootBubble {
+  let raised:
+    | { readonly face: CardFace; readonly label: FootLabel; readonly gone: () => void }
+    | undefined;
 
   const down = (): void => {
     if (raised === undefined) return;
@@ -373,20 +435,20 @@ export function createKindBubble(tooltip: Tooltip): KindBubble {
   };
 
   return {
-    over(face: CardFace, onLabel: boolean): void {
-      if (!onLabel) {
+    over(face: CardFace, label: FootLabel | undefined): void {
+      if (label === undefined) {
         if (raised?.face === face) down();
         return;
       }
-      if (raised?.face === face) return;
+      if (raised?.face === face && raised.label === label) return;
       down();
       const gone = (): void => {
         raised = undefined;
         tooltip.hide();
       };
       face.root.once('destroy', gone);
-      raised = { face, gone };
-      face.explainKind(tooltip);
+      raised = { face, label, gone };
+      face.explainFoot(tooltip, label);
     },
   };
 }

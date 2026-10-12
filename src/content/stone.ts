@@ -12,7 +12,7 @@ import {
   inside,
   placesImprovement,
 } from '../rules/cards';
-import type { Age, Schedule, Slice } from '../rules/catalogue';
+import type { Age, Card, Schedule, Slice } from '../rules/catalogue';
 import {
   drawPileEmptied,
   gainedFrom,
@@ -34,6 +34,13 @@ const { basePrice, camp } = NOMADIC.owns;
 const NOMADIC_BIOMES = NOMADIC.brings.biomes;
 if (NOMADIC_BIOMES === undefined) throw new Error('the Nomadic Age brings no biome');
 const { land, sea } = NOMADIC_BIOMES;
+
+/** The Nomadic Age's trophy of that id. */
+function nomadicTrophy(id: string): Extract<Card, { readonly kind: 'trophy' }> {
+  const card = NOMADIC.brings.cards?.[id];
+  if (card?.kind !== 'trophy') throw new Error(`the Nomadic Age brings no trophy ${id}`);
+  return card;
+}
 
 const RIVERS: RiverFlow = {
   source: 'mountain',
@@ -135,6 +142,7 @@ export const STONE: Slice = {
         { kind: 'warrior', script: 'guard', weight: 3 },
         { kind: 'warrior', script: 'pillager', weight: 1 },
       ],
+      rewards: { 'stone-stores': 1, 'stone-band-joins': 1 },
       odds: 0.08,
       acrossWater: true,
       embarkedMove: EMBARKED_MOVE,
@@ -154,7 +162,7 @@ export const STONE: Slice = {
         script: 'neutral-worker',
         cards: ['farm', 'clay-pit', 'irrigation', 'pasture', 'trapping'],
       },
-      rewards: { 'band-joins': 3, 'their-land': 3, 'their-stores': 3 },
+      rewards: { 'stone-band-joins': 3, 'their-land': 3, 'their-stores': 3 },
     },
     sites: {
       'painted-cave': {
@@ -392,18 +400,20 @@ export const STONE: Slice = {
         aim: 'none',
         effect: (_catalogue, paid) => gained(paid, { production: 2 }),
       },
+      'stone-stores': { ...nomadicTrophy('stores'), influence: 1 },
+      'stone-band-joins': { ...nomadicTrophy('band-joins'), influence: 1 },
       'their-land': {
-        kind: 'instant',
+        kind: 'trophy',
         cost: {},
-        banish: true,
+        influence: 1,
         aim: 'tile',
         refuses: claimableTile,
         effect: (_catalogue, paid, at) => bordered(paid, 'player', at),
       },
       'their-stores': {
-        kind: 'instant',
+        kind: 'trophy',
         cost: {},
-        banish: true,
+        influence: 1,
         aim: 'none',
         effect: (_catalogue, paid) =>
           gained(paid, { food: 2, production: 2, military: 2, money: 2, science: 2 }),

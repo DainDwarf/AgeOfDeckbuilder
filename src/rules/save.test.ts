@@ -225,10 +225,10 @@ test('a chronicle saved waiting on a capture’s rewards reads back with the dea
     chronicleDropped(
       tampered(save, (chronicle) => ({
         ...chronicle,
-        deals: [{ of: 'capture', building: SITE, rewards: { PH_Relic: 0 } }],
+        deals: [{ of: 'capture', building: SITE, rewards: { PH_Idol: 0 } }],
       })),
     ),
-  ).toEqual(["fixture: the save's chronicle.deals[0].rewards deals 0 copies of PH_Relic"]);
+  ).toEqual(["fixture: the save's chronicle.deals[0].rewards deals 0 copies of PH_Idol"]);
 });
 
 test('a chronicle saved once the neutral’s city has fallen reads back without it, its relations hostile', () => {
@@ -961,7 +961,7 @@ test('a copy of a hazard or of a camp’s reward is dropped from the collection,
     campaign: { ...held, nextCard },
     dropped: [
       `fixture: the save's campaign.collection[${at}] names the hazard PH_Hunger`,
-      `fixture: the save's campaign.collection[${at + 1}] names the age ${AGE}'s camp's reward PH_Spoils`,
+      `fixture: the save's campaign.collection[${at + 1}] names the trophy PH_Spoils`,
       `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt}] names no card of the collection numbered ${held.nextCard}`,
       `fixture: the save's ${CIVILIZATION_AT}.cards[${cardsAt + 1}] names no card of the collection numbered ${held.nextCard + 1}`,
     ],

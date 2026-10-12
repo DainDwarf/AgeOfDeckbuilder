@@ -6,7 +6,7 @@ import {
   CARD_WIDTH,
   type CardFace,
   createCardFace,
-  type KindBubble,
+  type FootBubble,
   type Name,
   type Spot,
 } from './card-face';
@@ -68,7 +68,7 @@ export function createSmallCards(
   scene: Phaser.Scene,
   on: Stratum,
   catalogue: Catalogue,
-  kinds: KindBubble,
+  footBubble: FootBubble,
   inspect: (name: Name) => void,
 ): SmallCards {
   let chain: Link[] = [];
@@ -187,16 +187,16 @@ export function createSmallCards(
       },
       () => {
         link.onCard = false;
-        if (face !== undefined) kinds.over(face, false);
+        if (face !== undefined) footBubble.over(face, undefined);
         settle();
       },
     );
-    // A zone over the label would take the root's hover and its right click: the small card would go
+    // A zone over a label would take the root's hover and its right click: the small card would go
     // down under a pointer resting on its own label.
     if (face !== undefined) {
       root.on('pointermove', (pointer: Phaser.Input.Pointer) => {
         const at = on.at(pointer.x, pointer.y);
-        kinds.over(face, face.kindAt(at.x, at.y));
+        footBubble.over(face, face.footAt(at.x, at.y));
       });
     }
     on.layer.add(root);

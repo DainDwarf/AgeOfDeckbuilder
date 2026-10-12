@@ -29,7 +29,7 @@ A **chronicle** is one city's story, told once — the roguelite's unit of play,
 Three choices, each with one job:
 
 - **Age** — given by the campaign: the furthest age reached, the Nomadic Age for a new campaign. Earlier ages stay playable, for the influence and the achievements missed. The age is never a difficulty pick.
-- **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: each region has a schedule of its own, a harsh one holds more feats to earn influence by, and some achievements are reachable only from a region that has what they need. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
+- **Region** — a bias on map generation: temperate, desert, coast, mountains, polar, … The region is the **difficulty dial**, and honestly so: each region has a schedule of its own, a harsh one holds more trophies to earn influence by, and some achievements are reachable only from a region that has what they need. 🔧 A freely chosen region with no such stakes was rejected: every launch would take the easiest.
 - **Civilization** — who you are and what you play, one thing in two parts. Its **city section** holds what the player's city is — its building, how far it sees, the population it opens with — and the card that settles it, one tile-aim every civilization shares that puts the city section's city on the tile. Its **deck** is its cards, built in the meta from the shared collection, in two sections: its **settle cards**, played on the settle phase alone, and its **cards**, which the draw pile cycles. Its city is what leans a civilization one way, and the deck is what the player makes of it. A civilization is unlocked by the campaign, authored with its city section and the deck it opens with. The chronicle is dealt its cards from the deck at the launch, carries the city section as it stood then, and reads the player's city off it from the settle on. 🔧
 
 The three choices lead to the settle phase: the chronicle opens unsettled, and its first act is the settle.
@@ -39,7 +39,7 @@ The three choices lead to the settle phase: the chronicle opens unsettled, and i
 Two axes of progression:
 
 - **Depth is achievements.** A **technology** is learned by a goal reached during a chronicle: new cards, better buildings, better units. A victory in an age unlocks the next age.
-- **Breadth is influence**, the meta-currency a chronicle pays for the influence cards still in it at its ending, a feat's on victory or defeat, a challenge's on victory alone. It buys copies of owned cards, modifications to owned cards, and faster starts.
+- **Breadth is influence**, the meta-currency a chronicle pays for the influence cards still in it at its ending, a trophy's on victory or defeat, a challenge's on victory alone. It buys copies of owned cards, modifications to owned cards, and faster starts.
 
 ## Scope ✅
 

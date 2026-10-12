@@ -201,6 +201,8 @@ export type Card = {
       readonly kind: 'hazard';
       readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
     }
+  | ({ readonly kind: 'trophy'; readonly influence: number } & Aim)
+  | { readonly kind: 'challenge'; readonly influence: number }
 );
 
 /** What a unit card is past its cost: its keyword, and how it enters its unit for a city. */
@@ -231,8 +233,34 @@ export function keywordOf(card: Card): 'exhaust' | 'banish' | undefined {
     case 'settle':
     case 'building':
     case 'hazard':
+    case 'trophy':
+    case 'challenge':
       return undefined;
   }
+}
+
+/** A card of either influence kind. */
+export type InfluenceCard = Extract<Card, { readonly kind: 'trophy' | 'challenge' }>;
+
+/** The card as an influence card, and nothing for a card of any other kind. */
+export function influenceCardOf(card: Card): InfluenceCard | undefined {
+  switch (card.kind) {
+    case 'trophy':
+    case 'challenge':
+      return card;
+    case 'settle':
+    case 'unit':
+    case 'building':
+    case 'action':
+    case 'instant':
+    case 'hazard':
+      return undefined;
+  }
+}
+
+/** The influence a card of either influence kind gains at the ending, and nothing for any other card. */
+export function influenceOf(card: Card): number | undefined {
+  return influenceCardOf(card)?.influence;
 }
 
 /** A card's counters read by name. */
@@ -265,9 +293,11 @@ export function workerAim(card: Card): Extract<Aim, { readonly aim: 'tile' }> | 
     case 'building':
     case 'action':
     case 'instant':
+    case 'trophy':
       return card.aim === 'tile' && actionGoesTo(card) === 'worker' ? card : undefined;
     case 'unit':
     case 'hazard':
+    case 'challenge':
       return undefined;
   }
 }
@@ -286,6 +316,8 @@ function kindMisfit(card: Card): string | undefined {
     case 'unit':
     case 'building':
     case 'hazard':
+    case 'trophy':
+    case 'challenge':
       return undefined;
   }
 }
@@ -617,6 +649,10 @@ export function catalogued(content: Catalogue): Catalogue {
     ageOf(content, content.cardAges[id]);
     const misfit = kindMisfit(card);
     if (misfit !== undefined) refuse(content, `the card ${id} ${misfit}`);
+    const influence = influenceOf(card);
+    if (influence !== undefined && (!Number.isInteger(influence) || influence < 0)) {
+      refuse(content, `the ${card.kind} ${id} gains ${influence} influence`);
+    }
     if (keywordOf(card) === 'exhaust') {
       const unheld = heldByNoDeck(content, id);
       if (unheld !== undefined) refuse(content, `${unheld} carries exhaust`);
@@ -1162,11 +1198,13 @@ function firstListed(
 export type CivilizationSection = keyof Civilization;
 
 /**
- * A card no deck holds, named as what it is — a hazard, an age's camp's, site's or neutral's reward
- * — and nothing for a card a deck may hold. A card the catalogue does not hold is refused.
+ * A card no deck holds, named as what it is — a card of a kind no deck holds, or an age's camp's,
+ * site's or neutral's reward — and nothing for a card a deck may hold. A card the catalogue does not
+ * hold is refused.
  */
 export function heldByNoDeck(catalogue: Catalogue, card: CardId): string | undefined {
-  if (cardOf(catalogue, card).kind === 'hazard') return `the hazard ${card}`;
+  const { kind } = cardOf(catalogue, card);
+  if (kindHeldByNoDeck(kind)) return `the ${kind} ${card}`;
   for (const [age, { camp, neutral, sites }] of Object.entries(catalogue.ages)) {
     if (Object.hasOwn(camp.rewards, card)) return `the age ${age}'s camp's reward ${card}`;
     for (const [site, { rewards }] of Object.entries(sites)) {
@@ -1177,6 +1215,22 @@ export function heldByNoDeck(catalogue: Catalogue, card: CardId): string | undef
     }
   }
   return undefined;
+}
+
+/** Whether no deck holds a card of the kind, whatever the card. */
+function kindHeldByNoDeck(kind: Card['kind']): boolean {
+  switch (kind) {
+    case 'hazard':
+    case 'trophy':
+    case 'challenge':
+      return true;
+    case 'settle':
+    case 'unit':
+    case 'building':
+    case 'action':
+    case 'instant':
+      return false;
+  }
 }
 
 /** What a capture takes: a camp, a site, or the neutral's city. */

@@ -1,7 +1,4 @@
-/**
- * What is computed before cards stand in the collection's order: the collection screen's stacks, a
- * deck's rows, a civilization's browse and a chronicle pile's, and what a civilization counts.
- */
+/** What is computed before cards stand in the collection's order, and what a civilization counts. */
 
 import { type Campaign, type CampaignCivilization, civilizationIn } from '../rules/campaign';
 import { CARD_KINDS } from '../rules/cards';
@@ -39,6 +36,19 @@ function byPlace(a: Place, b: Place): number {
   return a.age - b.age || a.kind - b.kind || a.name.localeCompare(b.name) || a.listed - b.listed;
 }
 
+/** The items handed, each standing for a card by its id, in the collection's order of their cards. */
+export function inCollectionOrder<Item extends { readonly id: CardId }>(
+  catalogue: Catalogue,
+  items: readonly Item[],
+  nameOf: (card: CardId) => string,
+): Item[] {
+  const placeOf = placesOf(catalogue, nameOf);
+  return items
+    .map((item) => ({ item, place: placeOf(item.id) }))
+    .sort((a, b) => byPlace(a.place, b.place))
+    .map(({ item }) => item);
+}
+
 /** Every card of the cards handed once, with its copies, in the collection's order. */
 export function stacksOf(
   catalogue: Catalogue,
@@ -47,11 +57,11 @@ export function stacksOf(
 ): CollectionStack[] {
   const copies = new Map<CardId, number>();
   for (const { id } of collection) copies.set(id, (copies.get(id) ?? 0) + 1);
-  const placeOf = placesOf(catalogue, nameOf);
-  return [...copies]
-    .map(([id, held]) => ({ stack: { id, copies: held }, place: placeOf(id) }))
-    .sort((a, b) => byPlace(a.place, b.place))
-    .map(({ stack }) => stack);
+  return inCollectionOrder(
+    catalogue,
+    [...copies].map(([id, held]) => ({ id, copies: held })),
+    nameOf,
+  );
 }
 
 /** A card of a chronicle's pile standing once, and how many copies that read the same the pile holds. */

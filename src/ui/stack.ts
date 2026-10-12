@@ -5,9 +5,9 @@ import { type Bind, boundTo } from './bindings';
 import {
   type CardFace,
   createCardFace,
-  createKindBubble,
+  createFootBubble,
+  type FootBubble,
   heightOf,
-  type KindBubble,
   type Name,
 } from './card-face';
 import {
@@ -67,8 +67,8 @@ type Stack = {
 };
 
 /** The stack of cards shown large, on the overlay; the scrim it stands on is the caller's. */
-function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: KindBubble): Stack {
-  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, kinds, (name) => {
+function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: FootBubble): Stack {
+  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, footBubble, (name) => {
     named(name);
   });
   let cards: readonly Inspected[] = [];
@@ -97,8 +97,8 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, kinds: KindBubbl
                     inspect: (name) => {
                       named(name);
                     },
-                    kind: (over) => {
-                      kinds.over(face, over);
+                    footOver: (label) => {
+                      footBubble.over(face, label);
                     },
                   }
                 : undefined,
@@ -164,10 +164,10 @@ export type StandingLarge = ShownLarge & {
 
 /**
  * What a screen stands on the overlay under its cards shown large, its windows on the scrim stratum,
- * the overlay's one kind bubble shared with them.
+ * the overlay's one foot bubble shared with them.
  */
 export type Beneath = {
-  readonly kinds: KindBubble;
+  readonly footBubble: FootBubble;
   readonly standing: boolean;
   /** Whether it takes a key or a mouse key pressed while it stands and no card stands large. */
   takes(press: Bind): boolean;
@@ -183,7 +183,7 @@ export function standLarge(
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
   beneath: Beneath = {
-    kinds: createKindBubble(createTooltip(overlay, overlay.strata.tooltip)),
+    footBubble: createFootBubble(createTooltip(overlay, overlay.strata.tooltip)),
     standing: false,
     takes: () => false,
   },
@@ -192,7 +192,7 @@ export function standLarge(
     // Over the window beneath, whose pieces join this stratum later (docs/PHASER.md, Scenes and stacking).
     .setDepth(1);
   overlay.strata.scrim.layer.add(scrim);
-  const stack = createStack(overlay, catalogue, beneath.kinds);
+  const stack = createStack(overlay, catalogue, beneath.footBubble);
 
   const lower = (): void => {
     scrim.setVisible(false);
@@ -240,7 +240,7 @@ export type Inspecting = {
   /** The stratum the pointer is read on over the screen's faces. */
   readonly on: Stratum;
   readonly small: SmallCards;
-  readonly kinds: KindBubble;
+  readonly footBubble: FootBubble;
   readonly large: ShownLarge;
 };
 
@@ -262,24 +262,24 @@ export function layingOf(
   {
     on,
     smallOn,
-    kinds,
+    footBubble,
     large,
     rising,
   }: {
     readonly on: Stratum;
     readonly smallOn: Stratum;
-    readonly kinds: KindBubble;
+    readonly footBubble: FootBubble;
     readonly large: ShownLarge;
     readonly rising?: () => void;
   },
 ): Laying {
-  const small = createSmallCards(scene, smallOn, catalogue, kinds, (name) => {
+  const small = createSmallCards(scene, smallOn, catalogue, footBubble, (name) => {
     inspecting.large.named(name);
   });
   const inspecting: Inspecting = {
     on,
     small,
-    kinds,
+    footBubble,
     large: {
       show(face) {
         rising?.();
@@ -313,22 +313,22 @@ export type Answers = {
 };
 
 /**
- * The rest on a name raises its small card, and on the kind label the kind's bubble; the right click
- * on a name shows the named thing large, and on the rest of the card the face itself.
+ * The rest on a name raises its small card, and on a label of the foot that label's bubble; the
+ * right click on a name shows the named thing large, and on the rest of the card the face itself.
  */
 export function answersOf(
   card: CardFace,
   shown: Face,
-  { small, kinds, large }: Inspecting,
+  { small, footBubble, large }: Inspecting,
 ): Answers {
   return {
     point(at) {
       const named = at === undefined ? undefined : card.nameAt(at.x, at.y);
       small.over(named === undefined ? undefined : raiserOf(card, named));
-      kinds.over(card, at !== undefined && card.kindAt(at.x, at.y));
+      footBubble.over(card, at === undefined ? undefined : card.footAt(at.x, at.y));
     },
     rests(at) {
-      return card.nameAt(at.x, at.y) !== undefined || card.kindAt(at.x, at.y);
+      return card.nameAt(at.x, at.y) !== undefined || card.footAt(at.x, at.y) !== undefined;
     },
     inspect(at) {
       const named = card.nameAt(at.x, at.y);

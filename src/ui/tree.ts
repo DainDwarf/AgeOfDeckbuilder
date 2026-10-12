@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Campaign } from '../rules/campaign';
 import { type Catalogue, earningOf, technologyOf } from '../rules/catalogue';
 import { type Control, type Press, pressOf } from './bindings';
-import { createKindBubble, type Name } from './card-face';
+import { createFootBubble, type Name } from './card-face';
 import {
   addText,
   answersPress,
@@ -209,7 +209,7 @@ export function createTree(
   }
   root.add(links);
 
-  const small = createSmallCards(scene, bubbles, catalogue, createKindBubble(tooltip), inspect);
+  const small = createSmallCards(scene, bubbles, catalogue, createFootBubble(tooltip), inspect);
   /** The name the pointer is on, and whether the tree is being carried, which holds every rest off. */
   let hovered: Raiser | undefined;
   let carrying = false;

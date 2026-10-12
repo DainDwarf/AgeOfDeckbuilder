@@ -23,7 +23,7 @@ import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../r
 import { type Unit, unitOf } from '../rules/units';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
-import { CARD_BASELINE, CARD_HEIGHT, createKindBubble } from './card-face';
+import { CARD_BASELINE, CARD_HEIGHT, createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { offerEntries, resetConsole } from './debug-console';
 import {
@@ -226,10 +226,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
     // One of each for the surface's every face, the hand's and the piles': a second bubble would hide
     // the first's as its own goes down, and a second chain would stand a small card beside the first's.
-    const kinds = createKindBubble(tooltip.ui);
+    const footBubble = createFootBubble(tooltip.ui);
     const faces = {
-      kinds,
-      small: createSmallCards(this, ui.smallCard, CATALOGUE, kinds, (name) => {
+      footBubble,
+      small: createSmallCards(this, ui.smallCard, CATALOGUE, footBubble, (name) => {
         overlay.inspectNamed(name);
       }),
     };
