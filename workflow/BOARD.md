@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Departure leaves the Nomadic Age** — the Nomadic schedule deals four events and never Departure, the Stone schedule deals the four and Departure at today's weights and price, the event's name, answers and lore standing as they are; the catalogue's coherence test lands Departure's answers on a Stone chronicle alone, and the two age pages say so. Doc-impact: `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/departure-leaves-nomadic.md](board/departure-leaves-nomadic.md)
 - **The region's schedule** — a region names its schedule in the age's place, and the schedule names its capstones, the opening drawing one seeded; every region on the schedule it plays today, so nothing the player meets changes.
 - **Influence cards** — a card carrying influence, paid into the campaign when the chronicle ends with the card still in it, a feat's on any ending and a challenge's on victory alone, the ending screen's ledger reading both; the Stone camp's card riding inside as the first feat, an instant that, played, pays its gain and is banished; whether the challenge's card, played by nothing, is a kind of its own is this line's question.
 - **The sites' influence cards** — each Stone site deals an influence card beside its two rewards.

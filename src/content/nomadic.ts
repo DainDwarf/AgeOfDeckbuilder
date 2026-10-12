@@ -260,20 +260,6 @@ const TABLES: Tables = {
         },
       },
     },
-    departure: {
-      answers: {
-        'let-them-go': {
-          cost: {},
-          reads: () => ({}),
-          lands: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
-        },
-        'keep-them': {
-          cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),
-          reads: (_catalogue, chronicle) => ({ culture: chronicle.population }),
-          lands: (_catalogue, chronicle) => unchanged(chronicle),
-        },
-      },
-    },
     herd: {
       needs: (catalogue, chronicle) =>
         featureDealable(catalogue, chronicle, HERD.feature, HERD.fromCity),
@@ -431,7 +417,6 @@ export const NOMADIC: Slice = {
         'lean-season': () => 1,
         'rival-band': (turn) => (turn >= 10 ? 1 : 0),
         wildfire: (turn) => (turn >= 10 ? 1 : 0),
-        departure: () => 1,
         herd: () => 1 / 3,
       },
     },

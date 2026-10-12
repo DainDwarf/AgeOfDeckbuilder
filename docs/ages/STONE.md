@@ -78,6 +78,8 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 
 The temperate region's schedule opens on the Nomadic events, which weigh less as the turns pass while the age's own weigh nothing early and take over: Lean season, scaled for a larger city, A rival band, Wildfire and The herd, and Departure, this age's for good, culture being its answer's price. The age's own events are the settled city's problems: what the river, the farms, the crowd, the herds nearby and the neutral's peace can do to it, and a fortunate one. The capture of a camp, of a site and of the neutral's city each deal an influence card among their rewards, and an event may deal one as a challenge. The archipelago's schedule copies what suits it and holds its own.
 
+- **Departure.** _Let them go_: one population leaves the player's city, its last no exception. _Keep them_: culture paid, more the larger the player's city. The event is dearer the larger that city: the population that leaves dearer to grow back, the one kept dearer in culture. Departure is culture against population.
+
 ## The capstones 🔧
 
 The region names three trials and the opening draws one: a long winter, a monument raised, a siege endured. Each is hard to impossible on the deck the age opens with and beatable once its tree is climbed, on a chronicle longer than the Nomadic one.

@@ -21,11 +21,11 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from '../rules/chronicle';
-import { bordered } from '../rules/city';
+import { bordered, populationTaken } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
-import { followed } from '../rules/stages';
+import { followed, unchanged } from '../rules/stages';
 import { NOMADIC } from './nomadic';
 import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
 
@@ -120,7 +120,7 @@ export const STONE: Slice = {
     schedule: {
       spacing: [6, 9],
       capstone: { id: schedule.capstone.id, window: [26, 34] },
-      entries: schedule.entries,
+      entries: { ...schedule.entries, departure: () => 1 },
     },
     camp: {
       ...camp,
@@ -403,6 +403,22 @@ export const STONE: Slice = {
         aim: 'none',
         effect: (_catalogue, paid) =>
           gained(paid, { food: 2, production: 2, military: 2, money: 2, science: 2 }),
+      },
+    },
+    events: {
+      departure: {
+        answers: {
+          'let-them-go': {
+            cost: {},
+            reads: () => ({}),
+            lands: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
+          },
+          'keep-them': {
+            cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),
+            reads: (_catalogue, chronicle) => ({ culture: chronicle.population }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
       },
     },
     technologies: {
