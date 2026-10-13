@@ -88,9 +88,7 @@ export type Snapshot = TileCoords & {
 };
 
 /** Whose city: the player's, or the neutral's. */
-export const CITY_FACTIONS = ['player', 'neutral'] as const;
-
-export type CityFaction = (typeof CITY_FACTIONS)[number];
+export type CityFaction = 'player' | 'neutral';
 
 /**
  * What a city holds of the chronicle: the tiles inside its border, its population, the tiles that

@@ -3,14 +3,12 @@ import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import {
-  assigned,
   change,
   changeOn,
   followed,
   grouped,
   type Landed,
   landedAs,
-  populationLeaving,
   type Sequence,
   type Stage,
   unchanged,
@@ -164,6 +162,23 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
 }
 
 /**
+ * The population of the faction's city off the tile and then one fewer. The tile must be one its
+ * population works: `assigned` toggles, and on an unworked tile it would put one on.
+ */
+function populationLeaving(chronicle: Chronicle, whose: CityFaction, at: TileCoords): Landed {
+  return followed(assigned(chronicle, whose, at), (left) => populationFewer(left, whose));
+}
+
+/** The faction's city's population one fewer, and nothing where that city is none. */
+function populationFewer(chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
+  return landedAs(
+    change('population', withCityRows(chronicle, whose, { population: city.population - 1 })),
+  );
+}
+
+/**
  * The population working the tile killed: the tile unassigned and the city's population one fewer,
  * and nothing where nobody works it.
  */
@@ -172,6 +187,19 @@ export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
   const working = chronicle.assigned.find((coord) => tileKey(coord) === key);
   if (working === undefined) return unchanged(chronicle);
   return populationLeaving(chronicle, 'player', working);
+}
+
+/**
+ * One population of the faction's city taken, whichever it is: an idle one where one is idle, and
+ * where none is the last assigned tile unassigned first, the city's last no exception; the
+ * population one fewer. Nothing where that city has no population at all.
+ */
+export function populationTaken(chronicle: Chronicle, whose: CityFaction): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined || city.population <= 0) return unchanged(chronicle);
+  const last = city.assigned[city.assigned.length - 1];
+  if (idle(city) > 0 || last === undefined) return populationFewer(chronicle, whose);
+  return populationLeaving(chronicle, whose, last);
 }
 
 /**
@@ -338,6 +366,27 @@ export function reassign(
 ): Landed | undefined {
   if (cityDrag(chronicle, from, to) === undefined) return undefined;
   return followed(assigned(chronicle, 'player', from), (left) => assigned(left, 'player', to));
+}
+
+/**
+ * The faction's city's population on the tile taken off it, or an idle one put on it where none
+ * stands there, and nothing where that city is none.
+ */
+function assigned(chronicle: Chronicle, whose: CityFaction, tile: TileCoords): Landed {
+  const city = cityRows(chronicle, whose);
+  if (city === undefined) return unchanged(chronicle);
+  const at = { q: tile.q, r: tile.r };
+  const key = tileKey(at);
+  const off = city.assigned.filter((coord) => tileKey(coord) !== key);
+  return landedAs(
+    changeOn(
+      'assigned',
+      at,
+      withCityRows(chronicle, whose, {
+        assigned: off.length < city.assigned.length ? off : [...off, at],
+      }),
+    ),
+  );
 }
 
 /**

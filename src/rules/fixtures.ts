@@ -65,7 +65,7 @@ import {
   playsOn,
   terrainsPlayedOn,
 } from './chronicle';
-import { arrived, bordered, costPaid, populationKilled, warDeclared, yielded } from './city';
+import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
 import {
   attackOrNone,
   enemyEntering,
@@ -115,7 +115,6 @@ import {
   followed,
   type Group,
   type Landed,
-  populationTaken,
   type Sequence,
   type Stage,
   unchanged,
@@ -169,12 +168,6 @@ export const TILLAGE = 'PH_Farm';
 
 /** The food the fixture's hunger strikes off the stock. */
 export const HUNGER = 6;
-
-/**
- * What the fixture's rot takes off the city's food and its culture in one change, and its murrain off
- * the neutral's food.
- */
-export const ROT = 4;
 
 /** What the counter of the fixture's frost starts at: the food it strikes off the stock. */
 export const FROST = 2;
@@ -718,22 +711,6 @@ const TABLES: Omit<Tables, 'technologies'> = {
       kind: 'hazard',
       cost: { production: 3 },
       strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
-    },
-    PH_Rot: {
-      kind: 'instant',
-      cost: {},
-      aim: 'none',
-      effect: (_catalogue, paid) =>
-        costPaid(paid, 'player', [
-          { resource: 'food', amount: ROT },
-          { resource: 'culture', amount: ROT },
-        ]),
-    },
-    PH_Murrain: {
-      kind: 'instant',
-      cost: {},
-      aim: 'none',
-      effect: (_catalogue, paid) => costPaid(paid, 'neutral', [{ resource: 'food', amount: ROT }]),
     },
   },
   civilizations: {

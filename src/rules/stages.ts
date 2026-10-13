@@ -1,15 +1,5 @@
-import { type TileCoords, tileAt, tileKey } from './map';
-import { RESOURCES } from './resources';
-import {
-  type CardId,
-  type Chronicle,
-  CITY_FACTIONS,
-  type CityFaction,
-  cityRows,
-  type DefeatCause,
-  idle,
-  withCityRows,
-} from './state';
+import { type TileCoords, tileAt } from './map';
+import type { CardId, Chronicle, DefeatCause } from './state';
 
 /**
  * One row of the chronicle moved, and the chronicle it leaves. `stock` carries the tile if one
@@ -209,92 +199,15 @@ export function unchanged<S extends Stage = Change>(chronicle: Chronicle): Seque
 }
 
 /**
- * A landing that made the one change: the one place a change joins what a command resolves as. A
- * stock it leaves below nothing stands at nothing, one population of that city taken after it for
- * each such stock; where a standing city is left fallen, an `ended` last.
+ * A landing that made the one change: the one place a change joins what a command resolves as.
+ * Where it leaves a standing city fallen, an `ended` right after it.
  */
 export function landedAs(stage: Change): Landed {
-  const paying: CityFaction[] = [];
-  let { chronicle } = stage;
-  for (const whose of CITY_FACTIONS) {
-    const city = cityRows(chronicle, whose);
-    if (city === undefined) continue;
-    const below = RESOURCES.filter((resource) => city.resources[resource] < 0);
-    if (below.length === 0) continue;
-    const resources = { ...city.resources };
-    for (const resource of below) resources[resource] = 0;
-    chronicle = withCityRows(chronicle, whose, { resources });
-    paying.push(...below.map(() => whose));
-  }
-  let landed: Landed = {
-    stages: [paying.length === 0 ? stage : { ...stage, chronicle }],
-    chronicle,
-  };
-  for (const whose of paying) landed = followed(landed, (left) => populationTaken(left, whose));
-  return followed(landed, fallen);
-}
-
-/** An `ended` where the chronicle leaves a standing city fallen, and nothing where it stands. */
-function fallen(chronicle: Chronicle): Landed {
+  const { chronicle } = stage;
   const cause = fallsFor(chronicle);
-  if (cause === undefined) return unchanged(chronicle);
+  if (cause === undefined) return { stages: [stage], chronicle };
   const ended = change('ended', fall(chronicle, cause));
-  return { stages: [ended], chronicle: ended.chronicle };
-}
-
-/**
- * One population of the faction's city taken, whichever it is: an idle one where one is idle, and
- * where none is the last assigned tile unassigned first, the city's last no exception; the
- * population one fewer. Nothing where that city has no population at all.
- */
-export function populationTaken(chronicle: Chronicle, whose: CityFaction): Landed {
-  const city = cityRows(chronicle, whose);
-  if (city === undefined || city.population <= 0) return unchanged(chronicle);
-  const last = city.assigned[city.assigned.length - 1];
-  if (idle(city) > 0 || last === undefined) return populationFewer(chronicle, whose);
-  return populationLeaving(chronicle, whose, last);
-}
-
-/**
- * The population of the faction's city off the tile and then one fewer. The tile must be one its
- * population works: `assigned` toggles, and on an unworked tile it would put one on.
- */
-export function populationLeaving(
-  chronicle: Chronicle,
-  whose: CityFaction,
-  at: TileCoords,
-): Landed {
-  return followed(assigned(chronicle, whose, at), (left) => populationFewer(left, whose));
-}
-
-/** The faction's city's population one fewer, and nothing where that city is none. */
-function populationFewer(chronicle: Chronicle, whose: CityFaction): Landed {
-  const city = cityRows(chronicle, whose);
-  if (city === undefined) return unchanged(chronicle);
-  return landedAs(
-    change('population', withCityRows(chronicle, whose, { population: city.population - 1 })),
-  );
-}
-
-/**
- * The faction's city's population on the tile taken off it, or an idle one put on it where none
- * stands there, and nothing where that city is none.
- */
-export function assigned(chronicle: Chronicle, whose: CityFaction, tile: TileCoords): Landed {
-  const city = cityRows(chronicle, whose);
-  if (city === undefined) return unchanged(chronicle);
-  const at = { q: tile.q, r: tile.r };
-  const key = tileKey(at);
-  const off = city.assigned.filter((coord) => tileKey(coord) !== key);
-  return landedAs(
-    changeOn(
-      'assigned',
-      at,
-      withCityRows(chronicle, whose, {
-        assigned: off.length < city.assigned.length ? off : [...off, at],
-      }),
-    ),
-  );
+  return { stages: [stage, ended], chronicle: ended.chronicle };
 }
 
 /**

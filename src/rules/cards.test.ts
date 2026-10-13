@@ -72,11 +72,9 @@ import {
   NO_GROWTH,
   namesOf,
   opening,
-  PLAYED,
   plains,
   pointsOf,
   REGION,
-  ROT,
   ringed,
   riverBetween,
   SLOW_SLINGER,
@@ -104,15 +102,7 @@ import {
 import { buildingKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import { plays, walked } from './stages';
-import {
-  type CardId,
-  type Chronicle,
-  type CityRows,
-  idle,
-  playable,
-  type TileBlock,
-  withCityRows,
-} from './state';
+import { type CardId, type Chronicle, idle, playable, type TileBlock, withCityRows } from './state';
 import { relationsOf, standsOn } from './units';
 
 /** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
@@ -2203,75 +2193,14 @@ test('a strike taking the city’s last population falls on the strike, and no s
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: last.turn });
 });
 
-/** A city of three population on three tiles, with the rot in its hand and these stocks. */
-function rotting(resources: Resources): Chronicle {
-  return cityOf(['urban', 'plain', 'plain'], { hand: ['PH_Rot'], resources });
-}
+test('a strike on a stock already at nothing raises no stock stage, and takes one population', () => {
+  const empty = hungry(0);
 
-test('a change leaving several stocks below nothing stands each at nothing and takes one population for each, one after another', () => {
-  const city = rotting({ ...STOCKED, food: ROT - 1, culture: 0 });
+  const [strike] = strikesOf(empty);
 
-  const left = outcome(apply(CATALOGUE, city, PLAYED));
-
-  expect(stagedBy(city, PLAYED)).toEqual([
-    'played',
-    'discarded',
-    'stock',
-    'assigned',
-    'population',
-    'assigned',
-    'population',
-  ]);
-  expect(left.resources).toEqual({ ...STOCKED, food: 0, culture: 0 });
-  expect(left.population).toBe(city.population - 2);
-});
-
-/** Turn 1 beside the neutral, the murrain in the hand and the neutral's city carrying these rows. */
-function plagued(rows: Partial<CityRows>): Chronicle {
-  const opened = besideTheNeutral();
-  return {
-    ...withCityRows(opened, 'neutral', rows),
-    hand: [cardMade(CATALOGUE, 'PH_Murrain'), ...opened.hand],
-  };
-}
-
-test('a change leaving the neutral’s stock below nothing takes one of the neutral’s population, and a neutral with none left has the stock stand at nothing alone', () => {
-  const { neutral } = besideTheNeutral();
-  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
-  const resources = { ...neutral.resources, food: ROT - 1 };
-  const peopled = plagued({ resources });
-  const empty = plagued({ population: 0, assigned: [], resources });
-
-  const struck = outcome(apply(CATALOGUE, peopled, PLAYED));
-  const bare = outcome(apply(CATALOGUE, empty, PLAYED));
-
-  expect(neutral.population).toBeGreaterThan(0);
-  expect(struck.neutral?.resources).toEqual({ ...resources, food: 0 });
-  expect(struck.neutral?.population).toBe(neutral.population - 1);
-  expect(struck.population).toBe(peopled.population);
-  expect(stagedBy(empty, PLAYED)).toEqual(['played', 'discarded', 'stock']);
-  expect(bare.neutral?.resources).toEqual({ ...resources, food: 0 });
-  expect(bare.neutral?.population).toBe(0);
-});
-
-test('no stage carries a stock below nothing, whatever a change takes past the stock', () => {
-  const { neutral } = besideTheNeutral();
-  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
-  const runs = [
-    apply(CATALOGUE, rotting({ ...STOCKED, food: 0, culture: 0 }), PLAYED),
-    apply(CATALOGUE, hungry(HUNGER - 1), { type: 'end-turn' }),
-    apply(CATALOGUE, plagued({ resources: { ...neutral.resources, food: 0 } }), PLAYED),
-  ];
-
-  for (const stages of runs) {
-    for (const { chronicle } of walked(stages)) {
-      for (const city of [chronicle, chronicle.neutral]) {
-        for (const resource of RESOURCES) {
-          expect(city?.resources[resource] ?? 0).toBeGreaterThanOrEqual(0);
-        }
-      }
-    }
-  }
+  expect(strike.holds).toEqual(['population']);
+  expect(strike.left.resources.food).toBe(0);
+  expect(strike.left.population).toBe(empty.population - 1);
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {

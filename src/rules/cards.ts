@@ -17,7 +17,7 @@ import {
   type UnitEntry,
   unitKind,
 } from './catalogue';
-import { claimable, declaredByLanding } from './city';
+import { claimable, declaredByLanding, populationTaken } from './city';
 import {
   distance,
   type FeatureId,
@@ -47,7 +47,6 @@ import {
   grouped,
   type Landed,
   landedAs,
-  populationTaken,
   type Sequence,
   unchanged,
 } from './stages';
@@ -882,11 +881,21 @@ export function gained(paid: Chronicle, gain: Partial<Resources>): Landed {
   return landedAs(change('stock', { ...paid, resources }));
 }
 
-/** A resource shocked: the city's stock of it loses the amount; nothing where it stands where it did. */
+/**
+ * A resource shocked: the player's city's stock of it loses the amount, never below nothing, and
+ * where the stock does not cover it one population is taken besides, however far past it falls.
+ */
 export function shocked(chronicle: Chronicle, resource: Resource, amount: number): Landed {
-  const left = chronicle.resources[resource] - amount;
-  if (left === chronicle.resources[resource]) return unchanged(chronicle);
-  return landedAs(
-    change('stock', { ...chronicle, resources: { ...chronicle.resources, [resource]: left } }),
-  );
+  const stock = chronicle.resources[resource];
+  const left = Math.max(0, stock - amount);
+  const struck =
+    left === stock
+      ? unchanged(chronicle)
+      : landedAs(
+          change('stock', {
+            ...chronicle,
+            resources: { ...chronicle.resources, [resource]: left },
+          }),
+        );
+  return stock < amount ? followed(struck, (after) => populationTaken(after, 'player')) : struck;
 }
