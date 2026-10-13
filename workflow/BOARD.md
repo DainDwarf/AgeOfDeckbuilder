@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Strangers** — a band asks to be taken in: people now against trouble later.
+- **Strangers** — the Stone Age's strangers, dealt on every map, no need named: _Take them in_ gains population, one and one more for every ten turns, and adds the challenge **Misunderstandings** to the discard pile, which takes three culture at the end of every turn it stays in the hand and one population where the stock cannot cover it; _Refuse them_ does nothing. Done when the event stands on both Stone schedules, `npm test` is green with the coherence test among it, `e2e/strangers.spec.ts` passes, and the two pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/strangers.md](board/strangers.md)
 - **The game moves away** — the deer and the cattle near the city are gone.
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.
