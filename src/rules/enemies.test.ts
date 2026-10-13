@@ -120,7 +120,7 @@ test('a capture ends the end of turn on its own stage, with the ending set', () 
   const stages = apply(CATALOGUE, overrun, { type: 'end-turn' });
   const last = stages[stages.length - 1];
 
-  expect(namesOf(stages)).toEqual(['discarded', 'grow', 'income', 'enemy-phase', 'ended']);
+  expect(namesOf(stages)).toEqual(['grow', 'income', 'discarded', 'enemy-phase', 'ended']);
   expect(heldBy(stages, 'enemy-phase').map(({ name }) => name)).toEqual(['ended']);
   expect(last.chronicle.ending).toEqual({
     outcome: 'defeat',

@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Strikes after the harvest** — the end of turn runs growth, income, strikes, discard, enemy phase; a strike is measured against the stock the harvest left. Done when `npm test` is green with the end of turn's stage lists moved to the new order, and `docs/CHRONICLE.md` says so. Doc-impact: `docs/CHRONICLE.md`. [board/strikes-after-the-harvest.md](board/strikes-after-the-harvest.md)
 - **Paid in people** — a stock a harm leaves below nothing takes one population and stands at nothing again, born at the bottom of the rules beside the fall; Hunger's and Misunderstandings' own shortfall clauses go, and their texts shorten to what they take. Done when `npm test` is green with the shortfall's fixture tests moved onto the bottom rule, the two strikes reduced to their shock, the two card texts shortened, and the three pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/paid-in-people.md](board/paid-in-people.md)
 - **The end of turn's reading** — the resource bar reads what the end of turn leaves each stock at and the population it takes, the alert colour borrowed until the look.
 - **The game moves away** — the deer and the cattle near the city are gone.

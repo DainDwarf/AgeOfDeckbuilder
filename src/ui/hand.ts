@@ -39,6 +39,15 @@ import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import type { Raiser, SmallCards } from './small-card';
 
+function sameRefusal(one: Refusal, other: Refusal): boolean {
+  return (
+    one.unaffordable.length === other.unaffordable.length &&
+    one.unaffordable.every((resource, index) => resource === other.unaffordable[index]) &&
+    one.blocked.length === other.blocked.length &&
+    one.blocked.every((block, index) => block === other.blocked[index])
+  );
+}
+
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;
 const GAP = 12;
@@ -51,7 +60,7 @@ type Slot = {
   readonly face: CardFace;
   readonly card: ChronicleCard;
   readonly index: number;
-  readonly home: { x: number; y: number };
+  readonly home: { x: number; y: number; rotation: number };
   readonly refusal: Refusal;
   readonly playable: boolean;
   /** Where the pointer is on the card: its outline, and down to where it rests while it is hovered. */
@@ -142,6 +151,11 @@ export function createHand(
   const line = createAimLine(scene, on.aimLine);
 
   let slots: Slot[] = [];
+  /** The hand and the city the slots were laid out from. */
+  let laid: { readonly hand: readonly ChronicleCard[]; readonly city: string | undefined } = {
+    hand: [],
+    city: undefined,
+  };
   /** Whether the small cards standing were raised off a name of the hand's, and not the piles'. */
   let chained = false;
   /** What the hand has in the air and no slot holds; a render owns it and takes it down. */
@@ -158,7 +172,14 @@ export function createHand(
   // a bubble or a rest on a name the pointer on a card began is let go of here.
   const live = (on: boolean): void => {
     taking = on;
-    if (on) return;
+    if (on) {
+      // A card kept through a render while dead heard its enter ignored, and no other comes.
+      for (const slot of slots.filter((one) => one.hover.hovered && !one.hovered)) {
+        slot.hovered = true;
+        settle(slot, 120);
+      }
+      return;
+    }
     for (const slot of slots) {
       footBubble.over(slot.face, undefined);
       if (slot.hover.hovered) small.over(undefined);
@@ -388,17 +409,44 @@ export function createHand(
     return slot.face.footAt(at.x, at.y);
   };
 
+  /** A card kept through a render, standing as one laid anew: unringed, home, lifted by a live hover. */
+  const asLaid = (slot: Slot): void => {
+    slot.face.root.setVisible(true).setScale(1).setRotation(slot.home.rotation);
+    slot.face.select(false);
+    slot.hovered = taking && slot.hover.hovered;
+    settle(slot, 0);
+  };
+
   const render = (chronicle: Chronicle): void => {
     if (chained) small.down();
     note.hide();
     unselect();
-    for (const face of [...flying, ...slots.map((slot) => slot.face.root)]) {
+    for (const face of flying) {
       stopMotion(scene, face);
       face.destroy();
     }
     flying = [];
     dragged = undefined;
     letGo = undefined;
+
+    const refusals = chronicle.hand.map((card) => refusalOf(catalogue, chronicle, card.id));
+    // A card laid anew is hit-tested only from the next frame (docs/PHASER.md): rebuilt by a stage of
+    // a play-out it does not animate, a dead card would let a press through to the map under it.
+    if (
+      laid.hand === chronicle.hand &&
+      laid.city === chronicle.citySection.building &&
+      refusals.every((refusal, index) => sameRefusal(slots[index].refusal, refusal))
+    ) {
+      // A motion dropped mid-flight leaves its face wherever it stopped: a kept face is put back in
+      // full, everything the hand's motions write.
+      for (const slot of slots) asLaid(slot);
+      return;
+    }
+    for (const slot of slots) {
+      stopMotion(scene, slot.face.root);
+      slot.face.root.destroy();
+    }
+    laid = { hand: chronicle.hand, city: chronicle.citySection.building };
 
     const held = chronicle.hand.length;
     const advance =
@@ -407,7 +455,7 @@ export function createHand(
 
     slots = chronicle.hand.map((card, index) => {
       const off = index - (held - 1) / 2;
-      const refusal = refusalOf(catalogue, chronicle, card.id);
+      const refusal = refusals[index];
       const face = createCardFace(
         scene,
         cardFace(catalogue, card, chronicle.citySection.building),
@@ -420,6 +468,7 @@ export function createHand(
         home: {
           x: first + CARD_WIDTH / 2 + index * advance,
           y: CARD_BASELINE + off * off * FAN * 1.6,
+          rotation: Phaser.Math.DegToRad(off * FAN),
         },
         refusal,
         playable: playable(refusal),
@@ -447,7 +496,7 @@ export function createHand(
       slot.face.root
         .setName(`hand-${index}`)
         .setPosition(slot.home.x, slot.home.y)
-        .setRotation(Phaser.Math.DegToRad(off * FAN))
+        .setRotation(slot.home.rotation)
         .setDepth(index)
         .setInteractive({
           hitArea: slot.hitArea,
@@ -567,7 +616,7 @@ export function createHand(
 
     await Promise.all(
       slots.map((slot, index) => {
-        const home = { ...slot.home, rotation: slot.face.root.rotation };
+        const home = slot.home;
         const was = standing[index];
         if (was !== undefined) {
           slot.face.root.setPosition(was.x, was.y).setRotation(was.rotation);

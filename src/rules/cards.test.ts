@@ -1912,7 +1912,17 @@ test('a play aimed at a tile the aim refuses, or at nothing, lands nowhere', () 
   expect(outcome(nowhere)).toEqual(city);
 });
 
-test('a hazard strikes at the end of a turn it is still in the hand, before the income and the discard', () => {
+/** A city whose income brings no food, holding `hand`, and `food` in the stock its strikes are measured against. */
+function unfed(hand: CardId[], food: number, carrying: Carrying = {}): Chronicle {
+  return cityOf(['urban'], {
+    ...NO_GROWTH,
+    hand,
+    resources: { ...STOCKED, food },
+    ...carrying,
+  });
+}
+
+test('a hazard strikes at the end of a turn it is still in the hand, after the income and before the discard', () => {
   const stocked = cityOf(['urban', 'plain'], {
     ...NO_GROWTH,
     hand: ['PH_Hunger', 'PH_Harvest'],
@@ -1924,7 +1934,15 @@ test('a hazard strikes at the end of a turn it is still in the hand, before the 
   const ended = outcome(apply(CATALOGUE, stocked, { type: 'end-turn' }));
   const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
-  expect(stagedBy(stocked, { type: 'end-turn' })[0]).toBe('strike');
+  expect(stagedBy(stocked, { type: 'end-turn' }).slice(0, 7)).toEqual([
+    'grow',
+    'income',
+    'stock',
+    'stock',
+    'strike',
+    'stock',
+    'discarded',
+  ]);
   expect(yielded).toBeGreaterThan(0);
   expect(ended.resources.food).toBe(yielded);
   expect(idsOf(ended.hand)).toEqual(fullDraw());
@@ -1992,12 +2010,8 @@ test('a challenge in the hand is blocked by its own block, its play refused what
   expect(idsOf(cycled.hand)).toEqual(['PH_Ordeal']);
 });
 
-test('a challenge carrying a strike strikes as a hazard does at the end of a turn it is still in the hand, before the discard, and one carrying none strikes nothing', () => {
-  const city = cityOf(['urban', 'plain'], {
-    ...NO_GROWTH,
-    hand: ['PH_Ordeal', 'PH_Curse'],
-    resources: STOCKED,
-  });
+test('a challenge carrying a strike strikes as a hazard does at the end of a turn it is still in the hand, after the income and before the discard, and one carrying none strikes nothing', () => {
+  const city = unfed(['PH_Ordeal', 'PH_Curse'], STOCKED.food);
 
   const strikes = strikesOf(city);
 
@@ -2005,7 +2019,10 @@ test('a challenge carrying a strike strikes as a hazard does at the end of a tur
     { card: 'PH_Curse', holds: ['stock'] },
   ]);
   expect(strikes[0].left.resources.food).toBe(STOCKED.food - CURSE);
-  expect(stagedBy(city, { type: 'end-turn' }).slice(0, 3)).toEqual([
+  expect(stagedBy(city, { type: 'end-turn' }).slice(0, 6)).toEqual([
+    'grow',
+    'income',
+    'stock',
     'strike',
     'stock',
     'discarded',
@@ -2029,30 +2046,16 @@ test('a hazard strikes from the hand alone, and never from a pile', () => {
 });
 
 test('a hazard’s strike takes what it names off the stock, and a strike that outruns the stock leaves nothing', () => {
-  const stockOf = (food: number): Chronicle =>
-    cityOf(['urban', 'plain'], {
-      ...NO_GROWTH,
-      hand: ['PH_Hunger'],
-      resources: { ...STOCKED, food },
-    });
-  const bare = cityOf(['urban', 'plain'], NO_GROWTH);
+  const outrun = outcome(apply(CATALOGUE, unfed(['PH_Hunger'], HUNGER - 1), { type: 'end-turn' }));
+  const spared = outcome(apply(CATALOGUE, unfed(['PH_Hunger'], HUNGER + 1), { type: 'end-turn' }));
 
-  const outrun = outcome(apply(CATALOGUE, stockOf(HUNGER - 1), { type: 'end-turn' }));
-  const spared = outcome(apply(CATALOGUE, stockOf(HUNGER + 1), { type: 'end-turn' }));
-  const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
-
-  expect(outrun.resources.food).toBe(yielded);
-  expect(spared.resources.food).toBe(1 + yielded);
+  expect(outrun.resources.food).toBe(0);
+  expect(spared.resources.food).toBe(1);
 });
 
 /** Turn 2 of a city dealt the cold, `answer` taken: the frost it added drawn into the hand. */
 function chilled(answer: string): Chronicle {
-  const city = cityOf(['urban', 'plain'], {
-    ...NO_GROWTH,
-    resources: { ...STOCKED, food: 3 * FREEZE },
-    ...dealing({ turn: 2, event: 'PH_Cold' }),
-  });
-  return endedTurn(city, answer);
+  return endedTurn(unfed([], 3 * FREEZE, dealing({ turn: 2, event: 'PH_Cold' })), answer);
 }
 
 test('a card added with its counter set carries the value set, and its strike takes that value', () => {
@@ -2087,7 +2090,7 @@ test('a hazard whose strike reads a counter its card does not declare is refused
   );
 });
 
-/** The `strike` groups the end of turn opens on: the hazard each carries, and what it holds. */
+/** The `strike` groups the end of turn stages: the hazard each carries, and what it holds. */
 function strikesOf(city: Chronicle): { card: CardId; holds: string[]; left: Chronicle }[] {
   return apply(CATALOGUE, city, { type: 'end-turn' }).flatMap((stage) =>
     stage.kind === 'group' && stage.name === 'strike'
@@ -2097,11 +2100,7 @@ function strikesOf(city: Chronicle): { card: CardId; holds: string[]; left: Chro
 }
 
 test('every hazard in hand strikes as one strike of its own, in hand order, each on what the one before it left', () => {
-  const city = cityOf(['urban', 'plain'], {
-    ...NO_GROWTH,
-    hand: ['PH_Drought', 'PH_Warrior', 'PH_Hunger'],
-    resources: { ...STOCKED, food: HUNGER + DROUGHT },
-  });
+  const city = unfed(['PH_Drought', 'PH_Warrior', 'PH_Hunger'], HUNGER + DROUGHT);
 
   const strikes = strikesOf(city);
 
@@ -2110,7 +2109,10 @@ test('every hazard in hand strikes as one strike of its own, in hand order, each
     { card: 'PH_Hunger', holds: ['stock'] },
   ]);
   expect(strikes.map(({ left }) => left.resources.food)).toEqual([HUNGER, 0]);
-  expect(stagedBy(city, { type: 'end-turn' }).slice(0, 5)).toEqual([
+  expect(stagedBy(city, { type: 'end-turn' }).slice(0, 8)).toEqual([
+    'grow',
+    'income',
+    'stock',
     'strike',
     'stock',
     'strike',
@@ -2120,28 +2122,24 @@ test('every hazard in hand strikes as one strike of its own, in hand order, each
 });
 
 test('a hazard whose strike moves nothing still strikes, holding nothing', () => {
-  const bare = cityOf(['urban', 'plain'], {
-    ...NO_GROWTH,
-    hand: ['PH_Hunger'],
-    resources: { ...STOCKED, food: 0 },
-  });
+  const bare = unfed(['PH_Hunger'], 0, { assigned: [] });
 
   const [strike] = strikesOf(bare);
 
   expect(strike.card).toBe('PH_Hunger');
   expect(strike.holds).toEqual([]);
   expect(strike.left.resources).toEqual(bare.resources);
-  expect(stagedBy(bare, { type: 'end-turn' })[0]).toBe('strike');
+  expect(stagedBy(bare, { type: 'end-turn' }).slice(0, 4)).toEqual([
+    'grow',
+    'income',
+    'strike',
+    'discarded',
+  ]);
 });
 
 /** A city with the drought in its hand and that much food for it to strike. */
 function droughty(food: number, carrying: Carrying = {}): Chronicle {
-  return cityOf(['urban', 'plain'], {
-    ...NO_GROWTH,
-    hand: ['PH_Drought'],
-    resources: { ...STOCKED, food },
-    ...carrying,
-  });
+  return unfed(['PH_Drought'], food, carrying);
 }
 
 /** The chronicle the city's hazards left on striking at the end of its turn. A turn striking nothing throws. */
@@ -2171,18 +2169,24 @@ test('a strike the stock cannot cover empties the stock and takes one population
 });
 
 test('a strike taking the city’s last population falls on the strike, and no step of the end of turn follows it', () => {
-  const last = droughty(DROUGHT - 1, { population: 1, assigned: [CITY], drawPile: fullDraw() });
+  // Short of the growth threshold too: growth runs ahead of the strike.
+  const last = droughty(1, { population: 1, drawPile: fullDraw() });
   const ended = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
 
   expect(stagedBy(last, { type: 'end-turn' })).toEqual([
+    'grow',
+    'income',
+    'stock',
     'strike',
     'stock',
     'assigned',
     'population',
     'ended',
   ]);
-  const [strike] = apply(CATALOGUE, last, { type: 'end-turn' });
-  if (strike.kind !== 'group') throw new Error('the end of turn opens on no strike');
+  const strike = apply(CATALOGUE, last, { type: 'end-turn' }).find(
+    (stage) => stage.name === 'strike',
+  );
+  if (strike?.kind !== 'group') throw new Error('the end of turn strikes nothing');
   const fell = strike.stages[strike.stages.length - 1];
   expect(fell.chronicle.ending).toEqual(ended.ending);
   expect(strike.chronicle).toBe(fell.chronicle);

@@ -131,18 +131,6 @@ async function carriedTo(
   }
 }
 
-/**
- * The first seed's turn 1, settled bare, whose end of turn sends the hand off as its first stage, no
- * hazard striking ahead of it.
- */
-function leavingFirst(): Chronicle {
-  return firstSeed('ends its turn 1 on the hand leaving first', (seed) => {
-    const opened = settledOn(seed);
-    const [first] = apply(CATALOGUE, opened, { type: 'end-turn' });
-    return first?.name === 'discarded' ? opened : undefined;
-  });
-}
-
 /** A point on the resource bar's paper: between the bar's left end and its first reading, food. */
 async function onThePaper(page: Page): Promise<{ x: number; y: number }> {
   const seen = await readings(page, ['resource-bar', 'reading-food']);
@@ -753,7 +741,7 @@ test('a click on the top of a card of the hand while the end of turn plays out s
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const opened = leavingFirst();
+  const opened = settledOn(1);
 
   await openSaved(page, opened);
   const card = `hand-${Math.floor(opened.hand.length / 2)}`;
@@ -768,8 +756,8 @@ test('a click on the top of a card of the hand while the end of turn plays out s
   await page.mouse.move(button.x, button.y);
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
 
-  // The hand leaves at the end of turn's first stage and is out of its lane a frame later, so both
-  // clicks land in one task; the screen reads where a click landed only after it, hence the wait.
+  // Both clicks land in one task, before a frame of the play-out can move the hand out of its lane;
+  // the screen reads where a click landed only after it, hence the wait.
   const landedPlaying = await page.evaluate(
     async (points) => {
       const game = window.game;

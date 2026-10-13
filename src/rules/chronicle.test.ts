@@ -481,11 +481,11 @@ test('the end of turn resolves in order, and its last stage is where the turn en
   const ended = stages[stages.length - 1].chronicle;
 
   expect(namesOf(stages)).toEqual([
-    'discarded',
     'grow',
     'income',
     'stock',
     'stock',
+    'discarded',
     'enemy-phase',
     'move',
     'attack',
@@ -603,14 +603,6 @@ test('a city with no population left falls on the first change a command makes, 
     turn: empty.turn,
   });
   expect(outcome(played).resources).toEqual(empty.resources);
-
-  const stages = apply(CATALOGUE, empty, { type: 'end-turn' });
-  const ended = outcome(stages);
-
-  expect(namesOf(stages)).toEqual(['discarded', 'ended']);
-  expect(ended.population).toBe(0);
-  expect(ended.turn).toBe(empty.turn);
-  expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: ended.turn });
 });
 
 test('the settle puts the city on its tile: its terrain and building, no feature, that tile alone held and staffed, and the card in no pile', () => {

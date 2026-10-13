@@ -810,14 +810,14 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   if (chronicle.city === undefined) return refused(chronicle);
   if (onSettlePhase(chronicle)) return opened(catalogue, chronicle);
   return course(chronicle, [
-    (left) => struck(catalogue, left),
-    (left) => discarded(left, everyPlace(left.hand)),
     (left) => grouped({ name: 'grow' }, everyCity(left, grow)),
     (left) =>
       grouped(
         { name: 'income' },
         everyCity(left, (city, whose) => income(catalogue, city, whose)),
       ),
+    (left) => struck(catalogue, left),
+    (left) => discarded(left, everyPlace(left.hand)),
     (left) => enemyPhase(catalogue, left),
     (left) => captures(catalogue, left),
     (left) => (left.deals.length > 0 ? unchanged(left) : opened(catalogue, left)),
