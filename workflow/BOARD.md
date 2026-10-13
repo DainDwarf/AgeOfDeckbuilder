@@ -13,6 +13,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ## Lines
 
 - **The end of turn's reading** — the resource bar reads what the end of turn leaves each stock at and the population it takes, the alert colour borrowed until the look.
+- **The fall at its sources** — the population fall raised by `populationFewer` when it takes the last person, the removal fall by `retiled` when the city's tile loses its building; `landedAs` only records a change.
 - **The game moves away** — the deer and the cattle near the city are gone.
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.
