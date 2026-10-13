@@ -10,6 +10,7 @@ import {
   chronicleOf,
   click,
   endedTurn,
+  firstSeed,
   loreOf,
   onScreen,
   openSaved,
@@ -22,16 +23,19 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** Seed 1's bare turn 1 with its turns ended headlessly up to the turn before the capstone lands. */
+/**
+ * The first seed whose bare turn 1, its turns ended headlessly, stands on an open turn the turn
+ * before the capstone lands: that chronicle.
+ */
 function beforeTheCapstone(): Chronicle {
-  let chronicle = settledOn(1);
-  const landing = chronicle.timeline.capstone.turn;
-  while (chronicle.turn < landing - 1 && chronicle.ending === undefined) {
-    chronicle = endedTurn(chronicle);
-  }
-  if (chronicle.ending !== undefined || chronicle.deals.length > 0)
-    throw new Error(`seed 1 stands on no open turn before the capstone lands on turn ${landing}`);
-  return chronicle;
+  return firstSeed('stands on an open turn the turn before the capstone lands', (seed) => {
+    let chronicle = settledOn(seed);
+    const landing = chronicle.timeline.capstone.turn;
+    while (chronicle.turn < landing - 1 && chronicle.ending === undefined) {
+      chronicle = endedTurn(chronicle);
+    }
+    return chronicle.ending === undefined && chronicle.deals.length === 0 ? chronicle : undefined;
+  });
 }
 
 test('the capstone’s landing holds the end of turn on its window, and the end of turn goes on to draw the hand once it closes', async ({
