@@ -317,6 +317,7 @@ const TEXT = {
   'defeat.title': 'Defeat',
   'defeat.capture': 'Your city was captured on turn {turn}.',
   'defeat.population': "Your city's population reached zero on turn {turn}.",
+  'defeat.removal': 'Your city was removed on turn {turn}.',
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
   'ending.end-chronicle': 'End chronicle',
@@ -432,13 +433,92 @@ const TEXT = {
 
 export type TextKey = keyof typeof TEXT;
 
-/** The entry a key names, each `{name}` filled with its value; a placeholder handed no value is refused. */
+/** The entry a key names, filled as `filled` fills it. */
 export function text(key: TextKey, values: Record<string, string | number> = {}): string {
-  return TEXT[key].replace(/\{(\w+)\}/g, (_, name: string) => {
-    const value = values[name];
-    if (value === undefined) throw new Error(`no value fills {${name}} in ${key}`);
-    return String(value);
-  });
+  return filled(TEXT[key], values, key);
+}
+
+/** How a branch's items join: an English list, its last two joined by "and". */
+const LIST = new Intl.ListFormat('en-GB', { style: 'long', type: 'conjunction' });
+
+/**
+ * An entry filled: `{name}` reads its value; `{name|zero|one|other}` the form the value picks, `#` in
+ * it the value, a form left out the last one given; `{+item|item}` the items that read anything, as a
+ * list. A placeholder handed no value is refused, naming `key`.
+ */
+export function filled(
+  entry: string,
+  values: Record<string, string | number>,
+  key: string,
+): string {
+  return filledAs(entry, values, key, undefined);
+}
+
+/** An entry or one of its forms filled, `#` reading `hash` where a branch picked the form. */
+function filledAs(
+  entry: string,
+  values: Record<string, string | number>,
+  key: string,
+  hash: string | number | undefined,
+): string {
+  let read = '';
+  let at = 0;
+  for (let open = entry.indexOf('{'); open >= 0; open = entry.indexOf('{', at)) {
+    const close = closing(entry, open, key);
+    read += hashed(entry.slice(at, open), hash);
+    read += placeholder(entry.slice(open + 1, close), values, key, hash);
+    at = close + 1;
+  }
+  return read + hashed(entry.slice(at), hash);
+}
+
+function hashed(part: string, hash: string | number | undefined): string {
+  return hash === undefined ? part : part.replaceAll('#', String(hash));
+}
+
+/** Where the brace opened at `open` closes; an entry leaving it open is refused. */
+function closing(entry: string, open: number, key: string): number {
+  let depth = 0;
+  for (let at = open; at < entry.length; at++) {
+    if (entry[at] === '{') depth++;
+    if (entry[at] === '}') depth--;
+    if (depth === 0) return at;
+  }
+  throw new Error(`a brace of ${key} never closes`);
+}
+
+/** The parts of a placeholder, split at every `|` outside the braces it holds. */
+function parts(inner: string): string[] {
+  const split: string[] = [];
+  let depth = 0;
+  let from = 0;
+  for (let at = 0; at < inner.length; at++) {
+    if (inner[at] === '{') depth++;
+    if (inner[at] === '}') depth--;
+    if (inner[at] === '|' && depth === 0) {
+      split.push(inner.slice(from, at));
+      from = at + 1;
+    }
+  }
+  return [...split, inner.slice(from)];
+}
+
+function placeholder(
+  inner: string,
+  values: Record<string, string | number>,
+  key: string,
+  hash: string | number | undefined,
+): string {
+  if (inner.startsWith('+')) {
+    const items = parts(inner.slice(1)).map((item) => filledAs(item, values, key, hash));
+    return LIST.format(items.filter((item) => item !== ''));
+  }
+  const [name, ...forms] = parts(inner);
+  const value = values[name];
+  if (value === undefined) throw new Error(`no value fills {${name}} in ${key}`);
+  if (forms.length === 0) return String(value);
+  const picked = value === 0 ? 0 : value === 1 ? 1 : 2;
+  return filledAs(forms[Math.min(picked, forms.length - 1)], values, key, value);
 }
 
 /** What a unit kind is named on the screen; a kind no entry names is refused. */

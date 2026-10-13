@@ -1,4 +1,4 @@
-import type { TileCoords } from './map';
+import { type TileCoords, tileAt } from './map';
 import type { CardId, Chronicle, DefeatCause } from './state';
 
 /**
@@ -200,20 +200,26 @@ export function unchanged<S extends Stage = Change>(chronicle: Chronicle): Seque
 
 /**
  * A landing that made the one change: the one place a change joins what a command resolves as.
- * Where it leaves a standing city at no population the city falls on it, an `ended` right after it.
+ * Where it leaves a standing city fallen, an `ended` right after it.
  */
 export function landedAs(stage: Change): Landed {
   const { chronicle } = stage;
-  if (!falls(chronicle)) return { stages: [stage], chronicle };
-  const ended = change('ended', fall(chronicle, 'population'));
+  const cause = fallsFor(chronicle);
+  if (cause === undefined) return { stages: [stage], chronicle };
+  const ended = change('ended', fall(chronicle, cause));
   return { stages: [stage, ended], chronicle: ended.chronicle };
 }
 
-/** Whether the city falls for its population on this chronicle: it stands at none and has not ended. */
-export function falls(chronicle: Chronicle): boolean {
-  return (
-    chronicle.ending === undefined && chronicle.city !== undefined && chronicle.population <= 0
-  );
+/**
+ * What the player's city falls for on this chronicle, settled and not ended: no population left, or
+ * its building gone from its tile; nothing where it stands.
+ */
+export function fallsFor(chronicle: Chronicle): DefeatCause | undefined {
+  const { city, ending } = chronicle;
+  if (ending !== undefined || city === undefined) return undefined;
+  if (chronicle.population <= 0) return 'population';
+  const standing = tileAt(chronicle.tiles, city)?.building;
+  return standing === chronicle.citySection.building ? undefined : 'removal';
 }
 
 /**

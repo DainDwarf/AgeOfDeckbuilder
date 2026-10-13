@@ -3,8 +3,8 @@ import { RESOURCES, type Resource, type Resources } from './resources';
 import type { Rng } from './rng';
 import type { Faction, Relations, Unit } from './units';
 
-/** What took the city: an enemy captured it, or it was left without population. */
-export type DefeatCause = 'capture' | 'population';
+/** What took the city: an enemy captured it, it was left without population, or its building was removed. */
+export type DefeatCause = 'capture' | 'population' | 'removal';
 
 /**
  * How a chronicle ended and the turn it ended on: in victory, the capstone passed, or in defeat,

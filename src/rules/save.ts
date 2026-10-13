@@ -829,6 +829,7 @@ function causeOf(catalogue: Catalogue, slot: Slot): DefeatCause {
   switch (cause) {
     case 'capture':
     case 'population':
+    case 'removal':
       return cause;
   }
   const unlisted: never = cause;

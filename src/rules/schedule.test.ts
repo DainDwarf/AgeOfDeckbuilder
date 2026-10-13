@@ -18,6 +18,7 @@ import {
   CIVILIZATION,
   camped,
   cityOf,
+  DELUGE,
   dealing,
   ENCAMPED,
   EXPLOSION,
@@ -58,11 +59,11 @@ import {
   tileAt,
   tileKey,
 } from './map';
-import { nextRng, seedRng } from './rng';
+import { nextRng, type Rng, seedRng } from './rng';
 import { offered } from './schedule';
 import { chartedAt, inSight } from './sight';
 import { type Stage, walked as stagesWalked, unchanged } from './stages';
-import { type Chronicle, idle, type Snapshot, type Timeline, turnShown } from './state';
+import { type Chronicle, holds, idle, type Snapshot, type Timeline, turnShown } from './state';
 import { unitAt } from './units';
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
@@ -905,6 +906,169 @@ test('a wildfire is dealt with a forest tile within its distance of the city to 
   ]);
   expect(stagedBy(far, end)).toContain('rolled');
   expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
+});
+
+/** A tile beside the city that a `ringed` city holds. */
+const SOAKED: TileCoords = { q: 1, r: 0 };
+
+/** Another tile beside the city that a `ringed` city holds. */
+const BARN: TileCoords = { q: 0, r: 1 };
+
+/** A tile outside a `ringed` city's border. */
+const DRY: TileCoords = { q: 2, r: 0 };
+
+/** What a deluge fixture lays on a tile: its improvements, and the building in its slot. */
+type Laid = { readonly improvements?: readonly string[]; readonly building?: string };
+
+/**
+ * A `ringed` city on a disc of plain out to three, each tile named carrying what is laid beside it,
+ * dealt the fixture's deluge at the end of its turn.
+ */
+function flooding(
+  laid: readonly (readonly [TileCoords, Laid])[],
+  carrying: Carrying = {},
+): Chronicle {
+  const on = new Map(laid.map(([at, layers]) => [tileKey(at), layers]));
+  return ringed(3, {
+    ...dueOn(2, 'PH_Deluge'),
+    tiles: field(3).map((tile) => {
+      const { improvements = [], building = tile.building } = on.get(tileKey(tile)) ?? {};
+      return { ...tile, improvements: [...improvements], building };
+    }),
+    ...carrying,
+  });
+}
+
+/** The city one end of turn on with the deluge standing, what its card reads, and the stages its take resolves as. */
+function deluged(city: Chronicle): {
+  dealt: Chronicle;
+  read: Record<string, number>;
+  stages: Stage[];
+} {
+  const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  if (dealt.deals.length === 0) throw new Error('the deluge is not dealt');
+  const read = eventOf(CATALOGUE, 'PH_Deluge').answers.PH_Drown.reads(CATALOGUE, dealt);
+  return { dealt, read, stages: apply(CATALOGUE, dealt, { type: 'take', at: 0 }) };
+}
+
+/** The tiles the take's answer retiled, in the order it retiled them. */
+function retiledOn(stages: readonly Stage[]): string[] {
+  return [...stagesWalked(heldBy(stages, 'answer'))].flatMap((stage) =>
+    stage.kind === 'change' && stage.name === 'retiled' ? [tileKey(stage.tile)] : [],
+  );
+}
+
+/** Every improvement standing on the tiles named, each read with its tile. */
+function improvementsOn(chronicle: Chronicle, tiles: readonly TileCoords[]): string[] {
+  return tiles.flatMap((at) =>
+    (tileAt(chronicle.tiles, at)?.improvements ?? []).map((id) => `${tileKey(at)} ${id}`),
+  );
+}
+
+/** The generator after that many steps. */
+function steppedBy(rng: Rng, steps: number): Rng {
+  let stepped = rng;
+  for (let step = 0; step < steps; step++) stepped = nextRng(stepped).rng;
+  return stepped;
+}
+
+/** What lies outside the border the city of `dealt` holds: every tile it does not hold. */
+function outsideOf(dealt: Chronicle, chronicle: Chronicle): Tile[] {
+  return chronicle.tiles.filter((tile) => !holds(dealt, tile));
+}
+
+test('a removal takes improvements inside the border while they stand, each drawn once from the seeded generator among all standing there, the city’s own tile included and a tile carrying several counting each, and leaves the buildings and every tile outside the border', () => {
+  const inside: [TileCoords, Laid][] = [
+    [CITY, { improvements: ['PH_Road'] }],
+    [SOAKED, { improvements: ['PH_Road', 'PH_Trail'] }],
+  ];
+  const held = inside.map(([at]) => at);
+  const standing = improvementsOn(flooding(inside), held);
+  const leftOver = new Set<string>();
+
+  for (const seed of SEEDS) {
+    const city = flooding(
+      [
+        ...inside,
+        [BARN, { building: TILLAGE }],
+        [DRY, { improvements: ['PH_Road', 'PH_Rubble'], building: TILLAGE }],
+      ],
+      { rng: seedRng(seed) },
+    );
+    const { dealt, read, stages } = deluged(city);
+    const landed = landedOf(stages);
+    const left = improvementsOn(landed, held);
+
+    expect(read).toEqual({ improvements: DELUGE, buildings: 0, city: 0 });
+    expect(left).toHaveLength(standing.length - DELUGE);
+    expect(standing).toEqual(expect.arrayContaining(left));
+    expect(retiledOn(stages)).toHaveLength(DELUGE);
+    expect(landed.rng).toEqual(steppedBy(dealt.rng, DELUGE));
+    expect(buildingAt(landed, BARN)).toBe(TILLAGE);
+    expect(outsideOf(dealt, landed)).toEqual(outsideOf(dealt, dealt));
+    leftOver.add(left.join());
+  }
+  expect(leftOver.size).toBeGreaterThan(1);
+});
+
+test('once no improvement stands inside the border, a removal takes a building there in its place, drawn once from the seeded generator among all standing there, and the city’s own building stands', () => {
+  const takenFrom = new Set<string>();
+
+  for (const seed of SEEDS) {
+    const city = flooding(
+      [
+        [CITY, { improvements: ['PH_Road'] }],
+        [SOAKED, { building: TILLAGE }],
+        [BARN, { building: TILLAGE }],
+        [DRY, { building: TILLAGE }],
+      ],
+      { rng: seedRng(seed) },
+    );
+    const { dealt, read, stages } = deluged(city);
+    const landed = landedOf(stages);
+    const [first, second] = retiledOn(stages);
+    const razed = [SOAKED, BARN].filter((at) => buildingAt(landed, at) === undefined);
+
+    expect(read).toEqual({ improvements: 1, buildings: 1, city: 0 });
+    expect(first).toBe(tileKey(CITY));
+    expect(improvementsOn(landed, [CITY])).toEqual([]);
+    expect(razed.map(tileKey)).toEqual([second]);
+    expect(buildingAt(landed, CITY)).toBe(buildingAt(dealt, CITY));
+    expect(landed.ending).toBeUndefined();
+    expect(landed.rng).toEqual(steppedBy(dealt.rng, 2));
+    expect(outsideOf(dealt, landed)).toEqual(outsideOf(dealt, dealt));
+    takenFrom.add(second);
+  }
+  expect(takenFrom.size).toBeGreaterThan(1);
+});
+
+test('once nothing else stands inside the border, a removal takes the city’s own building, drawing nothing for it, and the city falls on the spot', () => {
+  const { dealt, read, stages } = deluged(
+    flooding([
+      [SOAKED, { building: TILLAGE }],
+      [DRY, { improvements: ['PH_Road'] }],
+    ]),
+  );
+  const fallen = outcome(stages);
+
+  expect(read).toEqual({ improvements: 0, buildings: 1, city: 1 });
+  expect(retiledOn(stages)).toEqual([tileKey(SOAKED), tileKey(CITY)]);
+  expect(buildingAt(fallen, SOAKED)).toBeUndefined();
+  expect(buildingAt(fallen, CITY)).toBeUndefined();
+  expect(fallen.rng).toEqual(steppedBy(dealt.rng, 1));
+  expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'removal', turn: dealt.turn });
+  expect(outsideOf(dealt, fallen)).toEqual(outsideOf(dealt, dealt));
+});
+
+test('the player’s city’s building removed ends the chronicle in defeat right on that change, and nothing of play resolves after it', () => {
+  const bare = cityOf(['urban'], { ...dueOn(2, 'PH_Deluge'), drawPile: fullDraw() });
+  const dealt = outcome(apply(CATALOGUE, bare, { type: 'end-turn' }));
+  const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
+  const fallen = outcome(stages);
+
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'retiled', 'ended']);
+  expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'removal', turn: dealt.turn });
+  expect(fallen.hand).toEqual([]);
 });
 
 /** The same tiles, with the named ones carrying the feature. */

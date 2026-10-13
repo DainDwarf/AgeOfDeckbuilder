@@ -93,7 +93,7 @@ import {
   changeFrom,
   changeOn,
   fall,
-  falls,
+  fallsFor,
   followed,
   type Group,
   grouped,
@@ -316,7 +316,10 @@ function conditionsRead(
   // started on that turn or after starts past the landing.
   let landed = started.turn >= turn;
   const passesNow = (chronicle: Chronicle): boolean =>
-    landed && chronicle.ending === undefined && !falls(chronicle) && passes(catalogue, chronicle);
+    landed &&
+    chronicle.ending === undefined &&
+    fallsFor(chronicle) === undefined &&
+    passes(catalogue, chronicle);
 
   // Every stage was built off the chronicle the command started on, so the record a `reached` makes
   // is carried onto every stage after it here.

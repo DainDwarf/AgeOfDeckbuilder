@@ -50,6 +50,7 @@ import {
   CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
+  CURSE,
   camped,
   changed,
   cityOf,
@@ -1989,6 +1990,26 @@ test('a challenge in the hand is blocked by its own block, its play refused what
   expect(namesOf(played)).toEqual(['refused']);
   expect(outcome(played)).toEqual(city);
   expect(idsOf(cycled.hand)).toEqual(['PH_Ordeal']);
+});
+
+test('a challenge carrying a strike strikes as a hazard does at the end of a turn it is still in the hand, before the discard, and one carrying none strikes nothing', () => {
+  const city = cityOf(['urban', 'plain'], {
+    ...NO_GROWTH,
+    hand: ['PH_Ordeal', 'PH_Curse'],
+    resources: STOCKED,
+  });
+
+  const strikes = strikesOf(city);
+
+  expect(strikes.map(({ card, holds }) => ({ card, holds }))).toEqual([
+    { card: 'PH_Curse', holds: ['stock'] },
+  ]);
+  expect(strikes[0].left.resources.food).toBe(STOCKED.food - CURSE);
+  expect(stagedBy(city, { type: 'end-turn' }).slice(0, 3)).toEqual([
+    'strike',
+    'stock',
+    'discarded',
+  ]);
 });
 
 test('a hazard strikes from the hand alone, and never from a pile', () => {

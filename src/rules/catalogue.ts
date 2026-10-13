@@ -197,13 +197,29 @@ export type Card = {
   | ({ readonly kind: 'settle' | 'building' } & Aim)
   | ({ readonly kind: 'action' | 'instant' } & Keyword & Aim)
   | UnitCard
-  | {
-      readonly kind: 'hazard';
-      readonly strikes: (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
-    }
+  | { readonly kind: 'hazard'; readonly strikes: Strike }
   | ({ readonly kind: 'trophy'; readonly influence: number } & Aim)
-  | { readonly kind: 'challenge'; readonly influence: number }
+  | { readonly kind: 'challenge'; readonly influence: number; readonly strikes?: Strike }
 );
+
+/** What a card does to the chronicle at the end of a turn it is still in the hand. */
+export type Strike = (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
+
+/** A card's strike, and nothing for a card carrying none or of a kind that never strikes. */
+export function strikeOf(card: Card): Strike | undefined {
+  switch (card.kind) {
+    case 'hazard':
+    case 'challenge':
+      return card.strikes;
+    case 'settle':
+    case 'unit':
+    case 'building':
+    case 'action':
+    case 'instant':
+    case 'trophy':
+      return undefined;
+  }
+}
 
 /** What a unit card is past its cost: its keyword, and how it enters its unit for a city. */
 export type UnitCard = { readonly kind: 'unit' } & Keyword & UnitEntry;

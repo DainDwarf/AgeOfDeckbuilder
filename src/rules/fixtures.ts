@@ -103,6 +103,8 @@ import {
   fireRead,
   fireStartable,
   offered,
+  removalInside,
+  removedInside,
   showsNextLanding,
   spanEnded,
   tileCharted,
@@ -175,6 +177,12 @@ export const FROST = 2;
 
 /** The counter the fixture's freeze sets on the frost it adds: the food that frost strikes off. */
 export const FREEZE = 5;
+
+/** The food the fixture's curse strikes off the stock: the one challenge of the fixture carrying a strike. */
+export const CURSE = 3;
+
+/** How many things inside the border the fixture's deluge removes. */
+export const DELUGE = 2;
 
 /** The production the fixture's explosion costs: the one answer of the fixture whose flat cost asks a stock. */
 export const EXPLOSION = 4;
@@ -375,6 +383,20 @@ const EVENTS: Catalogue['events'] = {
         reads: () => ({}),
         lands: (catalogue, chronicle) =>
           addedToDrawPileTop(catalogue, chronicle, 'PH_Frost', { thaw: 1 }),
+      },
+    },
+  },
+  PH_Deluge: {
+    answers: {
+      PH_Drown: {
+        cost: {},
+        reads: (_catalogue, chronicle) => removalInside(chronicle, DELUGE),
+        lands: (_catalogue, chronicle) => removedInside(chronicle, DELUGE),
+      },
+      PH_Wade: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
       },
     },
   },
@@ -633,6 +655,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
       effect: (_catalogue, paid) => gained(paid, { food: 5 }),
     },
     PH_Ordeal: { kind: 'challenge', cost: {}, influence: 3 },
+    PH_Curse: {
+      kind: 'challenge',
+      cost: {},
+      influence: 2,
+      strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', CURSE),
+    },
     PH_Idol: {
       kind: 'instant',
       cost: {},

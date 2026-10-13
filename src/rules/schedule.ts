@@ -1,4 +1,4 @@
-import { built, featurePlaced, terraformed } from './cards';
+import { built, featurePlaced, retiled, terraformed } from './cards';
 import {
   type Aim,
   type Answer,
@@ -31,6 +31,7 @@ import {
   type Chronicle,
   type Cost,
   type Counters,
+  cityOn,
   costsOf,
   type Deal,
   holds,
@@ -322,6 +323,81 @@ export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): 
     landing = followed(landing, (left) => unitDamaged(left, tile, fire.damage));
   }
   return landing.stages.length === 0 ? runtimeError(chronicle) : landing;
+}
+
+/**
+ * Every improvement standing inside the player's border, the city's own tile included, once for each
+ * tile it stands on, with that tile.
+ */
+function improvementsInside(
+  chronicle: Chronicle,
+): { readonly at: TileCoords; readonly improvement: string }[] {
+  return chronicle.tiles.flatMap((tile) =>
+    holds(chronicle, tile)
+      ? tile.improvements.map((improvement) => ({ at: { q: tile.q, r: tile.r }, improvement }))
+      : [],
+  );
+}
+
+/** The tiles inside the player's border a building stands on, the city's own tile aside. */
+function buildingsInside(chronicle: Chronicle): TileCoords[] {
+  return chronicle.tiles
+    .filter(
+      (tile) =>
+        tile.building !== undefined &&
+        holds(chronicle, tile) &&
+        cityOn(chronicle, tile) !== 'player',
+    )
+    .map(({ q, r }) => ({ q, r }));
+}
+
+/** What a removal inside the player's border takes: improvements, buildings, and the city, one or none. */
+export type Removal = {
+  readonly improvements: number;
+  readonly buildings: number;
+  readonly city: number;
+};
+
+/** What `removedInside` takes for that count, read before it lands. */
+export function removalInside(chronicle: Chronicle, count: number): Removal {
+  const improvements = Math.min(count, improvementsInside(chronicle).length);
+  const buildings = Math.min(count - improvements, buildingsInside(chronicle).length);
+  return { improvements, buildings, city: count > improvements + buildings ? 1 : 0 };
+}
+
+/**
+ * `count` things inside the player's border removed, one at a time: an improvement while one stands,
+ * then a building, each drawn in one step of the chronicle's generator among those standing, then the
+ * city's own building, which is its fall. One `retiled` each.
+ */
+export function removedInside(chronicle: Chronicle, count: number): Landed {
+  let landing = unchanged(chronicle);
+  for (let removed = 0; removed < count; removed++) {
+    landing = followed(landing, (left) => oneRemovedInside(left));
+  }
+  return landing;
+}
+
+/** The next thing inside the player's border `removedInside` takes. */
+function oneRemovedInside(chronicle: Chronicle): Landed {
+  const improvements = improvementsInside(chronicle);
+  if (improvements.length > 0) {
+    const { picked, rng } = pickUniform(chronicle.rng, improvements);
+    return retiled({ ...chronicle, rng }, picked.at, (tile) => ({
+      ...tile,
+      improvements: tile.improvements.filter((improvement) => improvement !== picked.improvement),
+    }));
+  }
+  const buildings = buildingsInside(chronicle);
+  const drawn =
+    buildings.length === 0
+      ? { picked: chronicle.city, rng: chronicle.rng }
+      : pickUniform(chronicle.rng, buildings);
+  if (drawn.picked === undefined) return runtimeError(chronicle);
+  return retiled({ ...chronicle, rng: drawn.rng }, drawn.picked, (tile) => ({
+    ...tile,
+    building: undefined,
+  }));
 }
 
 /**

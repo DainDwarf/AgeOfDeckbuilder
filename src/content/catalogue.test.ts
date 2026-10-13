@@ -13,6 +13,7 @@ import {
   firstCivilization,
   firstRegion,
   type Neutral,
+  strikeOf,
   unitCardOf,
   unitScript,
   workerAim,
@@ -506,15 +507,14 @@ test('every achievement of an age answers the tally a turn ended leaves it and i
   }
 });
 
-test('every hazard of the catalogue strikes at the counters it starts with, on a chronicle launched and settled in each age', () => {
+test('every card of the catalogue carrying a strike strikes at the counters it starts with, on a chronicle launched and settled in each age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     for (const id of Object.keys(CATALOGUE.cards)) {
-      const card = cardOf(CATALOGUE, id);
-      if (card.kind === 'hazard') {
-        const counter = counterOf(CATALOGUE, cardMade(CATALOGUE, id));
-        expect(() => card.strikes(CATALOGUE, chronicle, counter)).not.toThrow();
-      }
+      const strike = strikeOf(cardOf(CATALOGUE, id));
+      if (strike === undefined) continue;
+      const counter = counterOf(CATALOGUE, cardMade(CATALOGUE, id));
+      expect(() => strike(CATALOGUE, chronicle, counter)).not.toThrow();
     }
   }
 });

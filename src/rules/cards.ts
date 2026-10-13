@@ -13,6 +13,7 @@ import {
   keywordOf,
   neutralOf,
   neutralScriptOf,
+  strikeOf,
   type UnitEntry,
   unitKind,
 } from './catalogue';
@@ -161,31 +162,21 @@ export function goesTo(card: Card): 'discard-pile' | 'exhaust-pile' | 'nowhere' 
 }
 
 /**
- * The hazards of the hand striking, in hand order, each on the chronicle the one before it left: one
- * `strike` each, over what its strike raised, and none where the hand holds no hazard.
+ * The cards of the hand that carry a strike striking, in hand order, each on the chronicle the one
+ * before it left: one `strike` each, over what its strike raised, and none where the hand holds no
+ * such card.
  */
 export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   let strikes = unchanged<Group>(chronicle);
   for (const held of chronicle.hand) {
-    const card = cardOf(catalogue, held.id);
-    switch (card.kind) {
-      case 'settle':
-      case 'unit':
-      case 'building':
-      case 'action':
-      case 'instant':
-      case 'trophy':
-      case 'challenge':
-        break;
-      case 'hazard':
-        strikes = followed(strikes, (left) =>
-          grouped(
-            { name: 'strike', card: held.id },
-            card.strikes(catalogue, left, counterOf(catalogue, held)),
-          ),
-        );
-        break;
-    }
+    const strike = strikeOf(cardOf(catalogue, held.id));
+    if (strike === undefined) continue;
+    strikes = followed(strikes, (left) =>
+      grouped(
+        { name: 'strike', card: held.id },
+        strike(catalogue, left, counterOf(catalogue, held)),
+      ),
+    );
   }
   return strikes;
 }
