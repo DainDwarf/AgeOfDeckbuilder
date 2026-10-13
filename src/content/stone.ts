@@ -11,8 +11,9 @@ import {
   healthLost,
   inside,
   placesImprovement,
+  shocked,
 } from '../rules/cards';
-import type { Age, Card, Schedule, Slice } from '../rules/catalogue';
+import type { Age, Card, Catalogue, Schedule, Slice } from '../rules/catalogue';
 import {
   drawPileEmptied,
   gainedFrom,
@@ -21,7 +22,7 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from '../rules/chronicle';
-import { bordered, populationTaken } from '../rules/city';
+import { arrived, bordered, populationTaken } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import {
@@ -73,6 +74,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     departure: 1,
     flood: 1,
     'bad-air': 1,
+    strangers: 1,
   },
 };
 
@@ -87,6 +89,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     departure: 1,
     flood: 1,
     'bad-air': 1,
+    strangers: 1,
   },
 };
 
@@ -124,6 +127,21 @@ function buried(chronicle: Chronicle): Landed {
     landing = followed(landing, (left) => populationTaken(left, 'player'));
   }
   return landing;
+}
+
+/** How many population the strangers bring on this turn: one, and one more for every ten turns. */
+function strangersArrive(turn: number): number {
+  return 1 + Math.floor(turn / 10);
+}
+
+/** The strangers' population arrived idle one after another, then their challenge added. */
+function takenIn(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  const brought = strangersArrive(chronicle.turn);
+  let landing = unchanged(chronicle);
+  for (let arrival = 0; arrival < brought; arrival++) {
+    landing = followed(landing, (left) => arrived(left, 'player'));
+  }
+  return followed(landing, (left) => rewarded(catalogue, left, 'misunderstandings', 1));
 }
 
 const REGIONS: Age['regions'] = {
@@ -494,6 +512,17 @@ export const STONE: Slice = {
         influence: 3,
         strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
       },
+      misunderstandings: {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        strikes: (_catalogue, chronicle) => {
+          const shortened = shocked(chronicle, 'culture', 3);
+          return chronicle.resources.culture < 3
+            ? followed(shortened, (left) => populationTaken(left, 'player'))
+            : shortened;
+        },
+      },
     },
     events: {
       departure: {
@@ -545,6 +574,20 @@ export const STONE: Slice = {
           'help-the-healers': {
             cost: (_catalogue, chronicle) => ({ science: healers(chronicle) }),
             reads: (_catalogue, chronicle) => ({ science: healers(chronicle) }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
+      },
+      strangers: {
+        answers: {
+          'take-them-in': {
+            cost: {},
+            reads: (_catalogue, chronicle) => ({ population: strangersArrive(chronicle.turn) }),
+            lands: (catalogue, chronicle) => takenIn(catalogue, chronicle),
+          },
+          'refuse-them': {
+            cost: {},
+            reads: () => ({}),
             lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },
