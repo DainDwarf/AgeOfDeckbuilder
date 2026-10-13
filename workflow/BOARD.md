@@ -12,14 +12,15 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Flood** — the river rises along the city's banks and takes what stands on the river tiles; dealt only where a river runs near the city.
+- **Flood** — the Stone Age's event dealt on every map, no need named: _Lose the fields_ removes improvements inside the border, more on a later turn; _Settle the floodplain_ adds the challenge **Floodplain**, which strikes as a hazard does and removes one improvement inside the border each turn it stays in the hand; _Dig channels_ pays production for each improvement the flood would take. Done when the event stands on both Stone schedules, a challenge's strike and the flood's removal each have their fixture test, `npm test` and `e2e/flood.spec.ts` pass, and the pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`, `docs/ages/STONE.md`. [board/flood.md](board/flood.md)
 - **Blight** — the farms sicken; dealt only where a Farm stands.
 - **Sickness** — a crowded city loses population, worse the larger it is.
 - **Strangers** — a band asks to be taken in: people now against trouble later.
 - **The game moves away** — the deer and the cattle near the city are gone.
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.
-- **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; the first challenge, its harsher answer dealing an influence card.
+- **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; its harsher answer dealing a challenge.
+- **The Nomadic events' needs** — A rival band, Wildfire and The herd dealt on every map, as the chronicle page now asks of every event, and the need mechanism going with them.
 - **The long winter** — the first capstone: for a span the land outside the border gives nothing and hunger strikes every turn; what passes it is this line's question.
 - **The monument** — the second capstone: a building raised through a worker, the age ending the moment it stands, as the Shelter does.
 - **The siege** — the third capstone: raids every turn for a span, endured; the fixture's siege door walked by real content.
