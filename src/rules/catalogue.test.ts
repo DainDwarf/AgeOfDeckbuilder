@@ -1100,13 +1100,26 @@ test('a catalogue whose event deals no answer costing no stock is refused, an an
 test('a catalogue whose region’s schedule deals an event it does not hold is refused', () => {
   const { entries } = AGE_REGIONS[REGION].schedule;
 
-  expect(() => catalogued(rescheduled({ entries: { ...entries, PH_Plague: () => 1 } }))).toThrow(
+  expect(() => catalogued(rescheduled({ entries: { ...entries, PH_Plague: 1 } }))).toThrow(
     /^fixture: /,
   );
 });
 
 test('a catalogue whose region’s schedule deals no event is refused', () => {
   expect(() => catalogued(rescheduled({ entries: {} }))).toThrow(/^fixture: /);
+});
+
+test('a catalogue whose region’s schedule weighs an event at nought or below is refused', () => {
+  const { entries } = AGE_REGIONS[REGION].schedule;
+
+  for (const weight of [0, -1]) {
+    expect(() => catalogued(rescheduled({ entries: { ...entries, PH_Hardship: weight } }))).toThrow(
+      `fixture: the region ${REGION}'s schedule deals PH_Hardship at a weight of ${weight}`,
+    );
+  }
+  expect(() =>
+    catalogued(rescheduled({ entries: { ...entries, PH_Hardship: 0.5 } })),
+  ).not.toThrow();
 });
 
 test('a catalogue whose region’s schedule names a capstone it does not hold is refused', () => {

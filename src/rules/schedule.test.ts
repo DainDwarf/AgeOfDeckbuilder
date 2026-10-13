@@ -38,7 +38,6 @@ import {
   plains,
   QUIET,
   REGION,
-  rescheduled,
   ringed,
   type Standing,
   settledOn,
@@ -373,34 +372,6 @@ test('a due turn is one deal group over the next due turn rolled and the event d
   expect(dealt.chronicle.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(dealt.chronicle.timeline).toEqual(rolled.chronicle.timeline);
   expect(stagedBy(early, end)).not.toContain('deal');
-});
-
-test('a due turn weighing no entry above nought is a deal over the roll and a runtime error, and play goes on to the next due turn, which deals as any', () => {
-  const late = catalogued(
-    rescheduled({ entries: { PH_Hardship: (turn) => (turn >= 3 ? 1 : 0) } }, QUIET),
-  );
-  const city = awaiting(2, {
-    drawPile: [...fullDraw(), ...fullDraw()],
-    age: QUIET,
-    timeline: { ...NO_DEALS, next: 2 },
-  });
-
-  const stages = apply(late, city, { type: 'end-turn' });
-  const passed = outcome(stages);
-
-  expect(heldBy(stages, 'deal').map(({ name }) => name)).toEqual(['rolled', 'runtime-error']);
-  expect(passed.turn).toBe(2);
-  expect(passed.deals).toEqual([]);
-  expect(passed.hand).toHaveLength(5);
-  expect(passed.timeline.next).toBeGreaterThanOrEqual(2 + 3);
-  expect(passed.timeline.next).toBeLessThanOrEqual(2 + 7);
-
-  let walking = passed;
-  while (walking.turn < passed.timeline.next - 1) walking = endedTurn(walking, undefined, late);
-  const due = apply(late, walking, { type: 'end-turn' });
-
-  expect(heldBy(due, 'deal').map(({ name }) => name)).toEqual(['rolled', 'dealt']);
-  expect(outcome(due).deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
 });
 
 test('an answer taken is one answer group over the deal taken, its cost as one stock, and its landing', () => {

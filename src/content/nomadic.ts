@@ -366,15 +366,15 @@ const TABLES: Tables = {
   improvements: {},
 };
 
-export const NOMADIC_SCHEDULE: Schedule = {
+const NOMADIC_SCHEDULE: Schedule = {
   spacing: [6, 9],
   window: [12, 18],
   capstones: ['first-shelter'],
   entries: {
-    'lean-season': () => 1,
-    'rival-band': (turn) => (turn >= 10 ? 1 : 0),
-    wildfire: (turn) => (turn >= 10 ? 1 : 0),
-    herd: () => 1 / 3,
+    'lean-season': 1,
+    'rival-band': 1,
+    wildfire: 1,
+    herd: 1 / 3,
   },
 };
 

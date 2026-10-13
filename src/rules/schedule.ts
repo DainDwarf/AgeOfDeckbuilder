@@ -69,21 +69,15 @@ function rolledFrom(
 
 /**
  * The event drawn on the due turn, from the timeline's own generator, seeded and weighted among the
- * entries weighing anything on that turn whose need the chronicle meets; no event where none does.
- * Where no entry weighs anything on the turn it draws nothing.
+ * entries whose need the chronicle meets; no event where none does.
  */
 function eventDrawn(
   catalogue: Catalogue,
   schedule: Schedule,
   chronicle: Chronicle,
 ): { event?: string; rng: Rng } {
-  const { timeline, turn } = chronicle;
-  const weighing = Object.entries(schedule.entries)
-    .map(([entry, weight]): [string, number] => [entry, weight(turn)])
-    .filter(([, weight]) => weight > 0);
-  if (weighing.length === 0) return { rng: timeline.rng };
-
-  const dealable = weighing.filter(
+  const { timeline } = chronicle;
+  const dealable = Object.entries(schedule.entries).filter(
     ([entry]) => eventOf(catalogue, entry).needs?.(catalogue, chronicle) ?? true,
   );
   // The step is taken even where no need is met, or the turns a seed deals on would follow the play.

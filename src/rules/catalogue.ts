@@ -391,14 +391,13 @@ export type Span = readonly [number, number];
 
 /**
  * A region's schedule: how far apart its deals are due, the window its capstone's turn is rolled
- * from, its capstones by id, and every entry a deal is drawn from with what it weighs on a turn —
- * nothing at all on a turn it may not be dealt on.
+ * from, its capstones by id, and every entry a deal is drawn from with its weight.
  */
 export type Schedule = {
   readonly spacing: Span;
   readonly window: Span;
   readonly capstones: readonly string[];
-  readonly entries: Readonly<Record<string, (turn: number) => number>>;
+  readonly entries: Readonly<Record<string, number>>;
 };
 
 /** A region of an age: the map it deals, and its schedule. */
@@ -722,10 +721,13 @@ function scheduleHeld(content: Catalogue, region: string, schedule: Schedule): v
   if (Object.keys(entries).length === 0) {
     refuse(content, `the region ${region}'s schedule deals no event`);
   }
-  for (const entry of Object.keys(entries)) {
+  for (const [entry, weight] of Object.entries(entries)) {
     const answers = Object.keys(eventOf(content, entry).answers).length;
     if (answers < 2) {
       refuse(content, `the region ${region}'s schedule deals ${entry}, which deals ${answers}`);
+    }
+    if (!(weight > 0)) {
+      refuse(content, `the region ${region}'s schedule deals ${entry} at a weight of ${weight}`);
     }
   }
   if (capstones.length === 0) refuse(content, `the region ${region}'s schedule names no capstone`);

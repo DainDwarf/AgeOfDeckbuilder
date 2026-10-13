@@ -945,19 +945,19 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
     spacing: [3, 7],
     window: [27, 33],
     capstones: ['PH_Siege'],
-    entries: { PH_Hardship: () => 1, PH_Blight: () => 1 },
+    entries: { PH_Hardship: 1, PH_Blight: 1 },
   },
   [QUIET]: {
-    spacing: [3, 7],
+    spacing: [FAR, FAR],
     window: [27, 33],
     capstones: ['PH_Siege', 'PH_Tillage'],
-    entries: { PH_Hardship: (turn) => (turn >= FAR ? 1 : 0) },
+    entries: { PH_Hardship: 1 },
   },
   [WARY]: {
     spacing: [3, 7],
     window: [27, 33],
     capstones: ['PH_Siege'],
-    entries: { PH_Hardship: () => 1, PH_Spoilage: () => 1 },
+    entries: { PH_Hardship: 1, PH_Spoilage: 1 },
   },
   ...Object.fromEntries(
     Object.keys(EVENTS).map((event): [string, Schedule] => [
@@ -966,7 +966,7 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
         spacing: [FAR, FAR],
         window: [FAR, FAR],
         capstones: ['PH_Siege'],
-        entries: { [event]: () => 1 },
+        entries: { [event]: 1 },
       },
     ]),
   ),

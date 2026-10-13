@@ -26,7 +26,7 @@ import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { showsNextLanding } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { NOMADIC, NOMADIC_SCHEDULE } from './nomadic';
+import { NOMADIC } from './nomadic';
 import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
 
 const { basePrice, camp } = NOMADIC.owns;
@@ -55,11 +55,28 @@ const RIVERS: RiverFlow = {
   draws: 60,
 };
 
-const SCHEDULE: Schedule = {
-  spacing: [6, 9],
+const TEMPERATE_SCHEDULE: Schedule = {
+  spacing: [5, 8],
   window: [26, 34],
-  capstones: NOMADIC_SCHEDULE.capstones,
-  entries: { ...NOMADIC_SCHEDULE.entries, departure: () => 1 },
+  capstones: ['first-shelter'],
+  entries: {
+    'rival-band': 1,
+    wildfire: 1,
+    herd: 1 / 3,
+    departure: 1,
+  },
+};
+
+const ARCHIPELAGO_SCHEDULE: Schedule = {
+  spacing: [5, 8],
+  window: [26, 34],
+  capstones: ['first-shelter'],
+  entries: {
+    'rival-band': 1,
+    wildfire: 1,
+    herd: 1 / 3,
+    departure: 1,
+  },
 };
 
 const REGIONS: Age['regions'] = {
@@ -90,7 +107,7 @@ const REGIONS: Age['regions'] = {
     sitesApart: 4,
     neutralFromCentre: { least: 7, most: 9 },
     rivers: RIVERS,
-    schedule: SCHEDULE,
+    schedule: TEMPERATE_SCHEDULE,
   },
   archipelago: {
     radius: 12,
@@ -116,7 +133,7 @@ const REGIONS: Age['regions'] = {
     sitesApart: 4,
     neutralFromCentre: { least: 5, most: 8 },
     rivers: RIVERS,
-    schedule: SCHEDULE,
+    schedule: ARCHIPELAGO_SCHEDULE,
   },
 };
 

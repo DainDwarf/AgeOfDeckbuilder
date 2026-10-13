@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The transition** — every region's schedule is its own, every entry weighing one plain number on every turn: the Stone temperate schedule gets its own spacing and window and deals A rival band, Wildfire, The herd and Departure, Lean season staying the Nomadic Age's alone; the archipelago gets a schedule of its own that reads as the temperate's; the Nomadic schedule loses the turn its two harshest events waited for. Done when a schedule's entry is a number the catalogue refuses at nought or below, no region names another's schedule, `npm test` is green with the coherence test among it, and the pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`, `docs/ages/NOMADIC.md`. [board/transition.md](board/transition.md)
 - **Flood** — the river rises along the city's banks and takes what stands on the river tiles; dealt only where a river runs near the city.
 - **Blight** — the farms sicken; dealt only where a Farm stands.
 - **Sickness** — a crowded city loses population, worse the larger it is.
