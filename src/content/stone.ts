@@ -22,7 +22,7 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from '../rules/chronicle';
-import { arrived, bordered, populationTaken } from '../rules/city';
+import { arrived, bordered } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import {
@@ -32,7 +32,7 @@ import {
   rewarded,
   showsNextLanding,
 } from '../rules/schedule';
-import { followed, type Landed, unchanged } from '../rules/stages';
+import { followed, type Landed, populationTaken, unchanged } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import { NOMADIC } from './nomadic';
 import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
@@ -516,12 +516,7 @@ export const STONE: Slice = {
         kind: 'challenge',
         cost: {},
         influence: 3,
-        strikes: (_catalogue, chronicle) => {
-          const shortened = shocked(chronicle, 'culture', 3);
-          return chronicle.resources.culture < 3
-            ? followed(shortened, (left) => populationTaken(left, 'player'))
-            : shortened;
-        },
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'culture', 3),
       },
     },
     events: {

@@ -16,7 +16,7 @@ import {
   throughWorker,
 } from '../rules/cards';
 import type { Age, Schedule, Slice, Tables } from '../rules/catalogue';
-import { arrived, populationTaken, yielded } from '../rules/city';
+import { arrived, yielded } from '../rules/city';
 import { enteredAround, raided } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind } from '../rules/map-kinds';
@@ -130,13 +130,7 @@ const TABLES: Tables = {
       kind: 'hazard',
       cost: { production: 2 },
       counters: { food: hungerFood(0) },
-      strikes: (_catalogue, chronicle, counter) => {
-        const taken = counter('food');
-        const shortened = shocked(chronicle, 'food', taken);
-        return chronicle.resources.food < taken
-          ? followed(shortened, (left) => populationTaken(left, 'player'))
-          : shortened;
-      },
+      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('food')),
     },
     stores: {
       kind: 'trophy',

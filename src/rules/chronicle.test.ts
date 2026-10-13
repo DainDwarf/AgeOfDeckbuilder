@@ -47,6 +47,7 @@ import {
   NO_GROWTH,
   namesOf,
   opening,
+  PLAYED,
   plains,
   QUIET,
   REGION,
@@ -190,8 +191,6 @@ function playedOver(chronicle: Chronicle, command: Command): readonly Stage[] {
   expect(played.chronicle).toBe(played.stages[played.stages.length - 1].chronicle);
   return played.stages;
 }
-
-const PLAYED: Command = { type: 'play', index: 0, aim: 'none' };
 
 test('a card played goes to the discard pile, then pays its cost as one stock, then lands its effect', () => {
   const city = cityOf(['urban'], {

@@ -36,6 +36,7 @@ import {
   namesOf,
   only,
   opening,
+  PLAYED,
   plains,
   QUIET,
   REGION,
@@ -111,6 +112,14 @@ function walkedFrom(
   return { landings, turn: chronicle.turn, chronicle };
 }
 
+/**
+ * The chronicle with a food stock past what a walk's hungers take, so the walk reaches its end; the
+ * city grows every turn of it.
+ */
+function fed(chronicle: Chronicle): Chronicle {
+  return { ...chronicle, resources: { ...chronicle.resources, food: 100_000 } };
+}
+
 const walks = new Map<string, Walk>();
 
 /**
@@ -125,7 +134,7 @@ function walked(seed: number, wanted = 'PH_Famine'): Walk {
     launched(CATALOGUE, AGE, REGION, seed, CIVILIZATION, []).chronicle,
     CITY,
   );
-  const walk = walkedFrom(CATALOGUE, settled, 40, wanted);
+  const walk = walkedFrom(CATALOGUE, fed(settled), 40, wanted);
   walks.set(key, walk);
   return walk;
 }
@@ -430,9 +439,11 @@ test('a reward taken is one reward group over the deal taken and the card added'
 test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
   let differs = false;
   for (const seed of SEEDS.slice(0, 5)) {
-    const start = withUnits(
-      settledOn(launched(CATALOGUE, WARY, REGION, seed, CIVILIZATION, []).chronicle, CITY),
-      [standing('player', CITY, { type: 'PH_Worker', worker: true, health: 9999 })],
+    const start = fed(
+      withUnits(
+        settledOn(launched(CATALOGUE, WARY, REGION, seed, CIVILIZATION, []).chronicle, CITY),
+        [standing('player', CITY, { type: 'PH_Worker', worker: true, health: 9999 })],
+      ),
     );
     const starved = walkedFrom(CATALOGUE, start, 20, 'PH_Famine');
     const raided = walkedFrom(CATALOGUE, start, 20, 'PH_Raid');
@@ -1779,7 +1790,7 @@ test('a change that both leaves the city no population and meets a capstone’s 
     },
   };
   const city = cityOf(['urban'], {
-    hand: ['PH_Drought'],
+    hand: ['PH_Hunger'],
     timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } },
   });
   const stages = apply(emptied, city, { type: 'end-turn' });
@@ -1789,10 +1800,12 @@ test('a change that both leaves the city no population and meets a capstone’s 
 });
 
 test('the schedule keeps dealing past the landing of a capstone no span passes', () => {
-  const start = awaitingTillage({
-    age: AGE,
-    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
-  });
+  const start = fed(
+    awaitingTillage({
+      age: AGE,
+      timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: CAPSTONE } },
+    }),
+  );
   const { chronicle, landings } = walkedFrom(CATALOGUE, start, CAPSTONE + 40, 'PH_Famine');
   const dealt = landings.filter((landing) => landing.event !== undefined);
 
@@ -1801,9 +1814,6 @@ test('the schedule keeps dealing past the landing of a capstone no span passes',
   expect(dealt.length).toBeGreaterThan(4);
   expect(dealt[dealt.length - 1].turn).toBeGreaterThan(CAPSTONE + 30);
 });
-
-/** The first card of the hand played at nothing. */
-const PLAYED: Command = { type: 'play', index: 0, aim: 'none' };
 
 test('a card showing the turn of the next landing shows the next due turn, and is refused while that turn is shown and played again once it has come', () => {
   const city = cityOf(['urban'], {

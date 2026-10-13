@@ -65,7 +65,7 @@ import {
   playsOn,
   terrainsPlayedOn,
 } from './chronicle';
-import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
+import { arrived, bordered, costPaid, populationKilled, warDeclared, yielded } from './city';
 import {
   attackOrNone,
   enemyEntering,
@@ -115,6 +115,7 @@ import {
   followed,
   type Group,
   type Landed,
+  populationTaken,
   type Sequence,
   type Stage,
   unchanged,
@@ -169,8 +170,11 @@ export const TILLAGE = 'PH_Farm';
 /** The food the fixture's hunger strikes off the stock. */
 export const HUNGER = 6;
 
-/** The food the fixture's drought strikes off the stock, taking one population where it falls short. */
-export const DROUGHT = 4;
+/**
+ * What the fixture's rot takes off the city's food and its culture in one change, and its murrain off
+ * the neutral's food.
+ */
+export const ROT = 4;
 
 /** What the counter of the fixture's frost starts at: the food it strikes off the stock. */
 export const FROST = 2;
@@ -715,15 +719,21 @@ const TABLES: Omit<Tables, 'technologies'> = {
       cost: { production: 3 },
       strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
     },
-    PH_Drought: {
-      kind: 'hazard',
-      cost: { production: 3 },
-      strikes: (_catalogue, chronicle) => {
-        const shortened = shocked(chronicle, 'food', DROUGHT);
-        return chronicle.resources.food < DROUGHT
-          ? followed(shortened, (left) => populationTaken(left, 'player'))
-          : shortened;
-      },
+    PH_Rot: {
+      kind: 'instant',
+      cost: {},
+      aim: 'none',
+      effect: (_catalogue, paid) =>
+        costPaid(paid, 'player', [
+          { resource: 'food', amount: ROT },
+          { resource: 'culture', amount: ROT },
+        ]),
+    },
+    PH_Murrain: {
+      kind: 'instant',
+      cost: {},
+      aim: 'none',
+      effect: (_catalogue, paid) => costPaid(paid, 'neutral', [{ resource: 'food', amount: ROT }]),
     },
   },
   civilizations: {
@@ -1564,6 +1574,9 @@ export function surveying(carrying: Carrying = {}): Chronicle {
     ...carrying,
   });
 }
+
+/** The first card of the hand played at nothing. */
+export const PLAYED: Command = { type: 'play', index: 0, aim: 'none' };
 
 /** A card of the hand, the first unless the test names another, aimed at a tile, ready to hand to `apply`. */
 export function aimedAt(tile: TileCoords, index = 0): Command {

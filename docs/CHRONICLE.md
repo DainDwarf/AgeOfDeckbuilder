@@ -53,7 +53,7 @@ The map is hidden. The player's city and its units have **sight** over the tiles
 
 ## The city ✅
 
-A city holds a **stock** of each resource: income adds to them, and every cost is paid out of them.
+A city holds a **stock** of each resource: income adds to them, and every cost is paid out of them. A stock never stands below nothing: what a harm takes past the stock, the city pays in population, one for each stock left short and however short, the player's city's last no exception. A cost is never a harm: a card or an answer a city cannot pay for is refused, so only what is done to a city reaches its population.
 
 **Population** is a city's inhabitants. Each may be **assigned** to a tile inside the border, at most one to a tile, and only an assigned tile yields its income — the city's own tile no exception. One population assigned to no tile is **idle**: a unit card turns one idle population of the player's city into a unit, and is refused when none is idle, or when it would be that city's last. The settle puts one population on the tile the player's city stands on, and the rest the chronicle opens with are idle; how many idle is content. Assigning is free, instant and reversible, never a card: it is staffing, not a change to the map.
 
