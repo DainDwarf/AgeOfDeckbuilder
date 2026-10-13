@@ -201,6 +201,8 @@ const TEXT = {
   'card.floodplain': 'Floodplain',
   'rules.floodplain':
     'Removes one improvement inside your border, a building once none stands, your city last',
+  'card.sickness': 'Sickness',
+  'rules.sickness': 'Kills one population',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
@@ -232,6 +234,14 @@ const TEXT = {
     'Add [card:floodplain] to the discard pile. Each turn it stays in your hand, it removes one improvement inside your border, a building once none stands, your city last',
   'answer.dig-channels': 'Dig channels',
   'answer-rules.dig-channels': 'Pay {production}[production]',
+  'event.bad-air': 'Bad air and angry spirits',
+  'answer.bury-the-dead': 'Bury the dead', // glossary exception: dead
+  'answer-rules.bury-the-dead': 'Kills {population} population',
+  'answer.live-with-it': 'Live with it',
+  'answer-rules.live-with-it':
+    'Add [card:sickness] to the discard pile. Each turn it stays in your hand, it kills one population',
+  'answer.help-the-healers': 'Help the healers',
+  'answer-rules.help-the-healers': 'Pay {science}[science]',
   'event.herd': 'The herd',
   'answer.hunt-it': 'Hunt it',
   'answer-rules.hunt-it': 'Gain {food}[food]',

@@ -31,7 +31,7 @@ import {
   rewarded,
   showsNextLanding,
 } from '../rules/schedule';
-import { followed, unchanged } from '../rules/stages';
+import { followed, type Landed, unchanged } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import { NOMADIC } from './nomadic';
 import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
@@ -72,6 +72,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     herd: 1 / 3,
     departure: 1,
     flood: 1,
+    'bad-air': 1,
   },
 };
 
@@ -85,6 +86,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     herd: 1 / 3,
     departure: 1,
     flood: 1,
+    'bad-air': 1,
   },
 };
 
@@ -102,6 +104,26 @@ function floodTakes(chronicle: Chronicle): Removal {
 function channels(chronicle: Chronicle): number {
   const { improvements, buildings, city } = floodTakes(chronicle);
   return 3 * (improvements + buildings + city);
+}
+
+/** How many population the sickness kills on this turn: one, and one more for every ten turns. */
+function sicknessKills(turn: number): number {
+  return 1 + Math.floor(turn / 10);
+}
+
+/** The science helping the healers costs: two for each population the sickness would kill. */
+function healers(chronicle: Chronicle): number {
+  return 2 * sicknessKills(chronicle.turn);
+}
+
+/** The population the sickness kills on this turn taken from the player's city, one after another. */
+function buried(chronicle: Chronicle): Landed {
+  const kills = sicknessKills(chronicle.turn);
+  let landing = unchanged(chronicle);
+  for (let killed = 0; killed < kills; killed++) {
+    landing = followed(landing, (left) => populationTaken(left, 'player'));
+  }
+  return landing;
 }
 
 const REGIONS: Age['regions'] = {
@@ -466,6 +488,12 @@ export const STONE: Slice = {
         influence: 3,
         strikes: (_catalogue, chronicle) => removedInside(chronicle, 1),
       },
+      sickness: {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
+      },
     },
     events: {
       departure: {
@@ -498,6 +526,25 @@ export const STONE: Slice = {
           'dig-channels': {
             cost: (_catalogue, chronicle) => ({ production: channels(chronicle) }),
             reads: (_catalogue, chronicle) => ({ production: channels(chronicle) }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
+      },
+      'bad-air': {
+        answers: {
+          'bury-the-dead': {
+            cost: {},
+            reads: (_catalogue, chronicle) => ({ population: sicknessKills(chronicle.turn) }),
+            lands: (_catalogue, chronicle) => buried(chronicle),
+          },
+          'live-with-it': {
+            cost: {},
+            reads: () => ({}),
+            lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'sickness', 1),
+          },
+          'help-the-healers': {
+            cost: (_catalogue, chronicle) => ({ science: healers(chronicle) }),
+            reads: (_catalogue, chronicle) => ({ science: healers(chronicle) }),
             lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },
