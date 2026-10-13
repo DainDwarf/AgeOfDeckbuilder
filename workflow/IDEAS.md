@@ -29,7 +29,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **A tile that adds sight**: a layer of a tile, a building or an improvement, adding to the sight of the unit standing on it.
 - **A building that adds an entry point**: units enter the map on the city's tile alone; a keyword for a building that opens another door.
 - **More in sight on the settle phase**: a technology or a settle card that widens what the settle phase sees beyond the centre part.
-- **An in-game codex**: the rules by section, the card kinds and the keywords among them, read in the game; a right click on a card's kind label opens the codex on that kind, and a keyword standing in a card's text, Banish first, stands in brackets and opens on its own — today the label raises a one-line tooltip and the keyword is plain text.
+- **An in-game codex**: the rules by section, the card kinds and the keywords among them, read in the game; a right click on a card's kind label opens the codex on that kind, and a keyword standing in a card's text, Banish first, stands in brackets and opens on its own — today the label raises a one-line tooltip and the keyword is plain text. The rules a card's text leaves implied are read there and in the tutorial, a stock left short taking one population first: a card says what it takes, and no card text or kind tooltip says what a shortfall costs.
 - **Unit legibility**: a unit forgotten at the end of a turn feels like a slip, and the cure is a state shown, never a warning or a gate on End turn. Three readings, each its own line when taken:
   - a count of the units still holding a move, on the bar or by the end-turn button;
   - a key that jumps the camera to the next unit still holding a move;
