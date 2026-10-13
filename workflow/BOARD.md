@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Blight** — the farms sicken; dealt only where a Farm stands.
 - **Sickness** — a crowded city loses population, worse the larger it is.
 - **Strangers** — a band asks to be taken in: people now against trouble later.
 - **The game moves away** — the deer and the cattle near the city are gone.
