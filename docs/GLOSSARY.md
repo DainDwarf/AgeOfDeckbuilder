@@ -98,7 +98,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **uncharted** | A tile never yet in sight. | unexplored, unrevealed, black, hidden |
 | **instant** | A card with an immediate effect that no unit's action goes to. | spell, effect card |
 | **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
-| **strike** | What a hazard does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
+| **strike** | What a hazard or a challenge does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A unit that does not attack, that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
 | **population** | A city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |
 | **assign** | To put one population on a tile inside the border. | allocate |
@@ -139,4 +139,4 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **reward** | What a capture deals: cards, of which the player chooses one, added in the copies it names. | gift, prize, bounty |
 | **influence card** | A card carrying influence, paid into the campaign when the chronicle ends with the card still in it: a trophy or a challenge. | victory card, score card, point card |
 | **trophy** | A kind a capture deals: played, its effect lands and it is banished; kept to the ending, it gains its influence on any ending. | prize, loot, relic, keepsake |
-| **challenge** | The kind an event's answer may deal on top of its harm: played by nothing, it gains its influence on victory alone. | dare, gamble, wager |
+| **challenge** | The kind an event's answer may deal: played by nothing, it may strike while held, and it gains its influence on victory alone. | dare, gamble, wager |

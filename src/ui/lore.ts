@@ -8,6 +8,8 @@ const LORE = {
     'There is smoke over the forest, and the wind is up. Somewhere out there, a wildfire is running.',
   'event.departure':
     'Some of the tribe have grown unhappy here. They talk of leaving, and they mean it.',
+  'event.flood':
+    'The low fields are under water again this spring, and the elders say the river has not finished rising.',
   'event.herd':
     'One of the hunters came back with news: a new herd, not far from here. The tribe has been arguing all evening about what to do.',
   'capture.camp':

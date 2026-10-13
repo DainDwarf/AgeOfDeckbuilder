@@ -1384,25 +1384,34 @@ export function overflowingPiles(): Chronicle {
 }
 
 /**
- * The seed's turn 1 on the Nomadic content, settled bare, with its turns ended up to the one before
- * its timeline's first deal, and that end of turn applied: the chronicle stopped on the deal.
+ * The chronicle with its turns ended up to the one before its timeline's next deal, and that end of
+ * turn applied: the chronicle stopped on the deal.
  */
-export function firstDealt(seed: number): Chronicle {
-  let chronicle = settledOn(seed);
-  const due = chronicle.timeline.next;
-  while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
-    chronicle = endedTurn(chronicle);
+export function stoppedOnDeal(chronicle: Chronicle): Chronicle {
+  let turning = chronicle;
+  const due = turning.timeline.next;
+  while (turning.turn < due - 1 && turning.ending === undefined) {
+    turning = endedTurn(turning);
   }
-  return outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+  return outcome(apply(CATALOGUE, turning, { type: 'end-turn' }));
+}
+
+/** The seed's turn 1 on the Nomadic content, settled bare, stopped on its timeline's first deal. */
+export function firstDealt(seed: number): Chronicle {
+  return stoppedOnDeal(settledOn(seed));
+}
+
+/** Whether the chronicle stands on a deal of the event with no deal behind it. */
+export function dealtAlone(chronicle: Chronicle, event: string): boolean {
+  const [deal, ...behind] = chronicle.deals;
+  return deal?.of === 'event' && deal.event === event && behind.length === 0;
 }
 
 /** The chronicle of the first seed whose first deal is the lean season standing alone, stopped on it. */
 export function leanSeason(): Chronicle {
   return firstSeed('deals the lean season alone first', (seed) => {
     const dealt = firstDealt(seed);
-    const [deal, ...behind] = dealt.deals;
-    if (deal?.of !== 'event' || deal.event !== 'lean-season' || behind.length > 0) return undefined;
-    return dealt;
+    return dealtAlone(dealt, 'lean-season') ? dealt : undefined;
   });
 }
 

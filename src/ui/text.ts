@@ -97,7 +97,8 @@ const TEXT = {
   'kind-tooltip.instant': 'An immediate effect, needing no unit',
   'kind-tooltip.hazard': 'Strikes each turn it stays in your hand',
   'kind-tooltip.trophy': 'Played, it is banished. Kept to the ending, it gains its influence',
-  'kind-tooltip.challenge': 'Cannot be played. Gains its influence if you win the age',
+  'kind-tooltip.challenge':
+    'Cannot be played. Strikes each turn it stays in your hand. Gains its influence if you win the age',
   'kind-tooltip.event': 'Choose one answer',
   'kind-tooltip.capstone': "The age's trial. Pass it to win the age",
   'unit.worker': 'Worker',
@@ -197,6 +198,9 @@ const TEXT = {
   'card.megalith': 'Megalith',
   'rules.megalith':
     'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',
+  'card.floodplain': 'Floodplain',
+  'rules.floodplain':
+    'Removes one improvement inside your border, a building once none stands, your city last',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
@@ -219,6 +223,15 @@ const TEXT = {
   'answer-rules.let-them-go': 'Lose one population',
   'answer.keep-them': 'Keep them',
   'answer-rules.keep-them': 'Pay {culture}[culture]',
+  'event.flood': 'Flood',
+  'answer.lose-the-fields': 'Lose the fields',
+  'answer-rules.lose-the-fields':
+    'The flood removes {+{improvements||# improvement|# improvements}|{buildings||# building|# buildings}|{city||your city}}{city| inside your border|}',
+  'answer.settle-the-floodplain': 'Settle the floodplain',
+  'answer-rules.settle-the-floodplain':
+    'Add [card:floodplain] to the discard pile. Each turn it stays in your hand, it removes one improvement inside your border, a building once none stands, your city last',
+  'answer.dig-channels': 'Dig channels',
+  'answer-rules.dig-channels': 'Pay {production}[production]',
   'event.herd': 'The herd',
   'answer.hunt-it': 'Hunt it',
   'answer-rules.hunt-it': 'Gain {food}[food]',

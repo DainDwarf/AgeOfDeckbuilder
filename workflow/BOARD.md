@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Flood** — the Stone Age's event dealt on every map, no need named: _Lose the fields_ removes improvements inside the border, more on a later turn; _Settle the floodplain_ adds the challenge **Floodplain**, which strikes as a hazard does and removes one improvement inside the border each turn it stays in the hand; _Dig channels_ pays production for each improvement the flood would take. Done when the event stands on both Stone schedules, a challenge's strike and the flood's removal each have their fixture test, `npm test` and `e2e/flood.spec.ts` pass, and the pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`, `docs/ages/STONE.md`. [board/flood.md](board/flood.md)
 - **Blight** — the farms sicken; dealt only where a Farm stands.
 - **Sickness** — a crowded city loses population, worse the larger it is.
 - **Strangers** — a band asks to be taken in: people now against trouble later.

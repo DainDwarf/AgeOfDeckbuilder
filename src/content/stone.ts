@@ -24,8 +24,15 @@ import {
 import { bordered, populationTaken } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
-import { showsNextLanding } from '../rules/schedule';
+import {
+  type Removal,
+  removalInside,
+  removedInside,
+  rewarded,
+  showsNextLanding,
+} from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
+import type { Chronicle } from '../rules/state';
 import { NOMADIC } from './nomadic';
 import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
 
@@ -64,6 +71,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     wildfire: 1,
     herd: 1 / 3,
     departure: 1,
+    flood: 1,
   },
 };
 
@@ -76,8 +84,25 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     wildfire: 1,
     herd: 1 / 3,
     departure: 1,
+    flood: 1,
   },
 };
+
+/** How many things inside the border the flood removes on this turn: one, and one more for every ten turns. */
+function floodRemoves(turn: number): number {
+  return 1 + Math.floor(turn / 10);
+}
+
+/** What the flood would take on the chronicle as it stands. */
+function floodTakes(chronicle: Chronicle): Removal {
+  return removalInside(chronicle, floodRemoves(chronicle.turn));
+}
+
+/** The production digging channels costs: three for each thing the flood would take, the city counted. */
+function channels(chronicle: Chronicle): number {
+  const { improvements, buildings, city } = floodTakes(chronicle);
+  return 3 * (improvements + buildings + city);
+}
 
 const REGIONS: Age['regions'] = {
   temperate: {
@@ -435,6 +460,12 @@ export const STONE: Slice = {
         effect: (_catalogue, paid) =>
           gained(paid, { food: 2, production: 2, military: 2, money: 2, science: 2 }),
       },
+      floodplain: {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        strikes: (_catalogue, chronicle) => removedInside(chronicle, 1),
+      },
     },
     events: {
       departure: {
@@ -447,6 +478,26 @@ export const STONE: Slice = {
           'keep-them': {
             cost: (_catalogue, chronicle) => ({ culture: chronicle.population }),
             reads: (_catalogue, chronicle) => ({ culture: chronicle.population }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
+      },
+      flood: {
+        answers: {
+          'lose-the-fields': {
+            cost: {},
+            reads: (_catalogue, chronicle) => floodTakes(chronicle),
+            lands: (_catalogue, chronicle) =>
+              removedInside(chronicle, floodRemoves(chronicle.turn)),
+          },
+          'settle-the-floodplain': {
+            cost: {},
+            reads: () => ({}),
+            lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'floodplain', 1),
+          },
+          'dig-channels': {
+            cost: (_catalogue, chronicle) => ({ production: channels(chronicle) }),
+            reads: (_catalogue, chronicle) => ({ production: channels(chronicle) }),
             lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },

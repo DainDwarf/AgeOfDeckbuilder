@@ -269,6 +269,11 @@ function colouredBy(holders: readonly (CityFaction | undefined)[]): Record<numbe
 function neutralClaimed(chronicle: Chronicle): Chronicle {
   let claiming = chronicle;
   while ((claiming.neutral?.held.length ?? 0) < 2) {
+    if (claiming.ending !== undefined) {
+      throw new Error(
+        `the chronicle ends on turn ${claiming.turn} before the neutral claims a tile`,
+      );
+    }
     if (claiming.turn > 10) throw new Error('the neutral claims no tile by turn 10');
     claiming = endedTurn(claiming);
   }
