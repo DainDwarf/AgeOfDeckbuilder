@@ -12,6 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **Growth after the strikes** — the end of turn runs income, then the strikes, then growth on what they leave; `docs/CHRONICLE.md` says so and one fixture test holds it: a stock over the growth threshold that a strike leaves under it grows nobody, and one the income brings to it grows. Doc-impact: `docs/CHRONICLE.md`. [board/growth-after-the-strikes.md](board/growth-after-the-strikes.md)
 - **The end of turn's reading** — the resource bar reads what the end of turn leaves each stock at and the population it takes, the alert colour borrowed until the look.
 - **The fall at its sources** — the population fall raised by `populationFewer` when it takes the last person, the removal fall by `retiled` when the city's tile loses its building; `landedAs` only records a change.
 - **The game moves away** — the deer and the cattle near the city are gone.
