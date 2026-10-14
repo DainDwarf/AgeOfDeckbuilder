@@ -325,6 +325,11 @@ const EVENTS: Catalogue['events'] = {
       PH_Stay: {
         cost: {},
         reads: () => ({}),
+        cases: {
+          declared: ['PH_Fed', 'PH_Starved'],
+          names: (_catalogue, chronicle) =>
+            chronicle.resources.food > 0 ? 'PH_Fed' : 'PH_Starved',
+        },
         lands: (_catalogue, chronicle) => unchanged(chronicle),
       },
     },

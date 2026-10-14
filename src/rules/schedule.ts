@@ -185,6 +185,25 @@ export function answerCost(catalogue: Catalogue, chronicle: Chronicle, answer: A
   }
 }
 
+/**
+ * The case an answer of the event names on the chronicle as it stands, and nothing for one declaring
+ * none; a case it does not declare is refused.
+ */
+export function answerCase(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  event: string,
+  answer: string,
+): string | undefined {
+  const { cases } = answerOf(catalogue, event, answer);
+  if (cases === undefined) return undefined;
+  const named = cases.names(catalogue, chronicle);
+  if (!cases.declared.includes(named)) {
+    refuse(catalogue, `the answer ${answer} names the case ${named}, which it does not declare`);
+  }
+  return named;
+}
+
 /** Everything standing between the city and an answer of the event: what it cannot pay, and what blocks it. */
 export function answerRefusal(
   catalogue: Catalogue,

@@ -20,6 +20,7 @@ import {
   CULL_COST,
   camped,
   cityOf,
+  culture,
   DELUGE,
   dealing,
   ENCAMPED,
@@ -64,7 +65,7 @@ import {
   tileKey,
 } from './map';
 import { nextRng, type Rng, seedRng } from './rng';
-import { answerRefusal, offered } from './schedule';
+import { answerCase, answerRefusal, offered } from './schedule';
 import { chartedAt, inSight } from './sight';
 import { type Stage, walked as stagesWalked, unchanged } from './stages';
 import {
@@ -699,6 +700,24 @@ test('an answer taking the city’s last population falls on the take, and nothi
   expect(after.population).toBe(0);
   expect(after.hand).toEqual(dealt.hand);
   expect(after.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
+});
+
+test('an answer declaring cases names the one the chronicle it is dealt on meets, and an answer declaring none names none', () => {
+  const dealtWith = (food: number): Chronicle =>
+    outcome(
+      apply(
+        CATALOGUE,
+        cityOf(['urban'], { ...EXODUS_DUE, ...NO_GROWTH, resources: { ...culture(0), food } }),
+        { type: 'end-turn' },
+      ),
+    );
+  const fed = dealtWith(1);
+  const starved = dealtWith(0);
+
+  expect(fed.deals).toEqual([{ of: 'event', event: 'PH_Exodus' }]);
+  expect(answerCase(CATALOGUE, fed, 'PH_Exodus', 'PH_Stay')).toBe('PH_Fed');
+  expect(answerCase(CATALOGUE, starved, 'PH_Exodus', 'PH_Stay')).toBe('PH_Starved');
+  expect(answerCase(CATALOGUE, fed, 'PH_Exodus', 'PH_Leave')).toBeUndefined();
 });
 
 test('an answer placing a camp near the city places one, and its raid enters a warrior on the camp and the rest around it', () => {

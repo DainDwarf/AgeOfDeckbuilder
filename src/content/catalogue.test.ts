@@ -24,10 +24,10 @@ import { tileAt, tileKey } from '../rules/map';
 import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
-import { answerCost, answerRefusal, timelineOf } from '../rules/schedule';
+import { answerCost, answerOf, answerRefusal, timelineOf } from '../rules/schedule';
 import type { Landed } from '../rules/stages';
 import type { Chronicle, Rewards } from '../rules/state';
-import { answerFace } from '../ui/face';
+import { answerFace, answerFaceOfCase } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -165,6 +165,16 @@ test('every card of the catalogue has a name, and a rules entry read at the coun
   }
 });
 
+/**
+ * Every rules entry an answer's face reads on the chronicle: the entry of each case it declares, or
+ * its one entry where it declares none.
+ */
+function answerEntries(chronicle: Chronicle, event: string, answer: string): string[] {
+  const { cases } = answerOf(CATALOGUE, event, answer);
+  const named = cases === undefined ? [undefined] : cases.declared;
+  return named.map((which) => answerFaceOfCase(CATALOGUE, chronicle, event, answer, which).rules);
+}
+
 test('every rules entry and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
   const entries = [
     ...Object.keys(CATALOGUE.cards).flatMap(rulesAsDrawn),
@@ -180,7 +190,7 @@ test('every rules entry and every goal of the catalogue lays out, and every name
     for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
       for (const event of Object.keys(schedule.entries)) {
         for (const name of Object.keys(eventOf(CATALOGUE, event).answers)) {
-          entries.push(answerFace(CATALOGUE, chronicle, event, name).rules);
+          entries.push(...answerEntries(chronicle, event, name));
         }
       }
     }
@@ -440,7 +450,7 @@ test('every region’s schedule rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, and every capstone of its schedule lands, continues and is not passed, on a chronicle launched and settled in that region’s age', () => {
+test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues and is not passed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
@@ -451,6 +461,7 @@ test('every answer of every event of a region’s schedule costs, answers what b
           expect(() => answerRefusal(CATALOGUE, chronicle, id, name)).not.toThrow();
           expect(() => answer.reads(CATALOGUE, chronicle)).not.toThrow();
           expect(() => answerFace(CATALOGUE, chronicle, id, name)).not.toThrow();
+          expect(() => answerEntries(chronicle, id, name)).not.toThrow();
           expect(() => answer.lands(CATALOGUE, chronicle)).not.toThrow();
         }
       }

@@ -1098,6 +1098,26 @@ test('a catalogue whose event deals no answer costing no stock and blocked by no
   expect(() => catalogued(blighted({}, () => []))).toThrow(/^blighted: /);
 });
 
+test('a catalogue whose answer declares no case, or one case twice, is refused', () => {
+  const { PH_Exodus } = CATALOGUE.events;
+  const { PH_Stay } = PH_Exodus.answers;
+  const declaring = (declared: readonly string[]): Catalogue => {
+    if (PH_Stay.cases === undefined) throw new Error('the fixture’s stay declares no case');
+    const stay = { ...PH_Stay, cases: { ...PH_Stay.cases, declared } };
+    return changed({
+      events: {
+        ...CATALOGUE.events,
+        PH_Exodus: { ...PH_Exodus, answers: { ...PH_Exodus.answers, PH_Stay: stay } },
+      },
+    });
+  };
+
+  expect(() => catalogued(declaring([]))).toThrow('fixture: the answer PH_Stay declares no case');
+  expect(() => catalogued(declaring(['PH_Fed', 'PH_Starved', 'PH_Fed']))).toThrow(
+    'fixture: the answer PH_Stay declares the case PH_Fed twice',
+  );
+});
+
 test('a catalogue whose region’s schedule deals an event it does not hold is refused', () => {
   const { entries } = AGE_REGIONS[REGION].schedule;
 

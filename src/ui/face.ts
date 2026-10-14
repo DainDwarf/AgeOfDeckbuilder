@@ -10,7 +10,7 @@ import {
   costOf,
   influenceOf,
 } from '../rules/catalogue';
-import { answerOf } from '../rules/schedule';
+import { answerCase, answerOf } from '../rules/schedule';
 import type { CardId, Chronicle, ChronicleCard, Cost } from '../rules/state';
 import {
   answerName,
@@ -145,15 +145,32 @@ export function capstoneFace(id: string): Face {
 }
 
 /**
- * The face an answer of an event is drawn as: its rules entry, and the cards it names, read on the
- * chronicle it was dealt on, the entry naming that chronicle's city's building and its age's camp's.
- * What the answer costs reads in that entry, so the face wears no chip for it.
+ * The face an answer of an event is drawn as: its rules entry, of the case it names, and the cards it
+ * names, read on the chronicle it was dealt on, the entry naming that chronicle's city's building and
+ * its age's camp's. What the answer costs reads in that entry, so the face wears no chip for it.
  */
 export function answerFace(
   catalogue: Catalogue,
   chronicle: Chronicle,
   event: string,
   id: string,
+): Face {
+  return answerFaceOfCase(
+    catalogue,
+    chronicle,
+    event,
+    id,
+    answerCase(catalogue, chronicle, event, id),
+  );
+}
+
+/** The face `answerFace` draws, its rules entry the case handed's, or its one entry where none is. */
+export function answerFaceOfCase(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  event: string,
+  id: string,
+  which: string | undefined,
 ): Face {
   const reading = answerOf(catalogue, event, id).reads(catalogue, chronicle);
   const building = chronicle.citySection.building;
@@ -162,7 +179,7 @@ export function answerFace(
     id,
     name: answerName(id),
     kind: 'event',
-    rules: answerRules(id, { ...reading, building, camp }),
+    rules: answerRules(id, { ...reading, building, camp }, which),
     costs: [],
     reading,
     influence: 0,

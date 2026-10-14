@@ -572,9 +572,21 @@ export function answerName(answer: string): string {
   return named('answer', answer, 'the answer');
 }
 
-/** What an answer's rules entry reads on the screen, with its numbers; an answer no entry names is refused. */
-export function answerRules(answer: string, values: Record<string, string | number>): string {
-  return named('answer-rules', answer, 'the answer', values);
+/**
+ * What an answer's rules entry reads on the screen, with its numbers: the entry of the case handed,
+ * and its one entry where none is; an answer, or a case of it, no entry names is refused.
+ */
+export function answerRules(
+  answer: string,
+  values: Record<string, string | number>,
+  which: string | undefined,
+): string {
+  return named(
+    'answer-rules',
+    which === undefined ? answer : `${answer}.${which}`,
+    'the answer',
+    values,
+  );
 }
 
 /** What a capstone is named on the screen; a capstone no entry names is refused. */

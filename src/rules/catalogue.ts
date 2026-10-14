@@ -365,8 +365,8 @@ function unitActs(aim: Aim): boolean {
 
 /**
  * One answer an event deals: its cost, flat or read off the chronicle, what blocks it there where it
- * names that, what its rules entry reads, and what it does to the chronicle it lands on. A draw of
- * its own steps the generator that chronicle carries.
+ * names that, what its rules entry reads, its cases where it declares them, and what it does to the
+ * chronicle it lands on. A draw of its own steps the generator that chronicle carries.
  */
 export type Answer = {
   readonly cost:
@@ -374,7 +374,14 @@ export type Answer = {
     | ((catalogue: Catalogue, chronicle: Chronicle) => Partial<Resources>);
   readonly blocked?: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
   readonly reads: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
+  readonly cases?: AnswerCases;
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
+};
+
+/** The cases an answer declares, and the one of them it names on the chronicle as it stands. */
+export type AnswerCases = {
+  readonly declared: readonly string[];
+  readonly names: (catalogue: Catalogue, chronicle: Chronicle) => string;
 };
 
 /**
@@ -717,12 +724,19 @@ export function catalogued(content: Catalogue): Catalogue {
 
   const dealtBy = new Map<string, string>();
   for (const [id, event] of Object.entries(content.events)) {
-    for (const answer of Object.keys(event.answers)) {
+    for (const [answer, { cases }] of Object.entries(event.answers)) {
       const other = dealtBy.get(answer);
       if (other !== undefined) {
         refuse(content, `the answer ${answer} is dealt by both ${other} and ${id}`);
       }
       dealtBy.set(answer, id);
+      if (cases === undefined) continue;
+      if (cases.declared.length === 0) refuse(content, `the answer ${answer} declares no case`);
+      for (const [at, declared] of cases.declared.entries()) {
+        if (cases.declared.indexOf(declared) !== at) {
+          refuse(content, `the answer ${answer} declares the case ${declared} twice`);
+        }
+      }
     }
     const free = Object.values(event.answers).some(
       ({ cost, blocked }) => blocked === undefined && freeWhateverTheChronicle(cost),
