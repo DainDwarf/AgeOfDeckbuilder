@@ -120,7 +120,7 @@ test('a capture ends the end of turn on its own stage, with the ending set', () 
   const stages = apply(CATALOGUE, overrun, { type: 'end-turn' });
   const last = stages[stages.length - 1];
 
-  expect(namesOf(stages)).toEqual(['grow', 'income', 'discarded', 'enemy-phase', 'ended']);
+  expect(namesOf(stages)).toEqual(['income', 'discarded', 'grow', 'enemy-phase', 'ended']);
   expect(heldBy(stages, 'enemy-phase').map(({ name }) => name)).toEqual(['ended']);
   expect(last.chronicle.ending).toEqual({
     outcome: 'defeat',
@@ -187,9 +187,9 @@ test('a unit of the player’s standing on a camp when the turn ends captures it
   const taken = outcome(apply(CATALOGUE, besieging, { type: 'end-turn' }));
 
   expect(stagedBy(besieging, { type: 'end-turn' })).toEqual([
-    'grow',
     'income',
     'stock',
+    'grow',
     'enemy-phase',
     'capture',
     'retiled',
@@ -274,8 +274,8 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
   const fallen = outcome(apply(CATALOGUE, overrun, { type: 'end-turn' }));
 
   expect(stagedBy(overrun, { type: 'end-turn' })).toEqual([
-    'grow',
     'income',
+    'grow',
     'enemy-phase',
     'ended',
   ]);
@@ -418,9 +418,9 @@ test('at odds of one every camp enters a guard of its own once the enemies have 
   if (rolled === undefined) throw new Error('the enemy phase staged nothing');
 
   expect(namesOf(stages)).toEqual([
-    'grow',
     'income',
     'stock',
+    'grow',
     'enemy-phase',
     'attack',
     'action-spent',
@@ -1251,9 +1251,9 @@ test('an enemy moves within range of a unit and attacks it in the same enemy pha
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
-    'grow',
     'income',
     'stock',
+    'grow',
     'enemy-phase',
     'move',
     'attack',
@@ -1280,9 +1280,9 @@ test('an enemy its move leaves out of range attacks nothing', () => {
   const after = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
-    'grow',
     'income',
     'stock',
+    'grow',
     'enemy-phase',
     'move',
     'turn',
@@ -1567,9 +1567,9 @@ test('each enemy stages its own move and its own attacks, before the next enemy 
   });
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
-    'grow',
     'income',
     'stock',
+    'grow',
     'enemy-phase',
     'move',
     'attack',

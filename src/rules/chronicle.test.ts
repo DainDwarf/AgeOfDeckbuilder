@@ -123,7 +123,7 @@ test('ending the turn moves the chronicle on to the next one', () => {
   expect(outcome(apply(CATALOGUE, second, { type: 'end-turn' })).turn).toBe(3);
 });
 
-test('growth is staged on the food stock the turn ends with, before the income and before the enemy phase', () => {
+test('growth is staged on the food stock the income leaves, after the income and before the enemy phase', () => {
   const city = cityOf(['urban', 'plain'], {
     tiles: field(3),
     population: 2,
@@ -132,12 +132,12 @@ test('growth is staged on the food stock the turn ends with, before the income a
   });
 
   expect(stagedBy(city, { type: 'end-turn' })).toEqual([
-    'grow',
-    'stock',
-    'population',
     'income',
     'stock',
     'stock',
+    'grow',
+    'stock',
+    'population',
     'enemy-phase',
     'move',
     'attack',
@@ -480,11 +480,11 @@ test('the end of turn resolves in order, and its last stage is where the turn en
   const ended = stages[stages.length - 1].chronicle;
 
   expect(namesOf(stages)).toEqual([
-    'grow',
     'income',
     'stock',
     'stock',
     'discarded',
+    'grow',
     'enemy-phase',
     'move',
     'attack',
@@ -511,10 +511,10 @@ test('a phase the turn always has is staged every turn, empty or not, and an emp
   const stages = apply(CATALOGUE, quiet, { type: 'end-turn' });
 
   expect(namesOf(stages)).toEqual([
-    'grow',
     'income',
     'stock',
     'stock',
+    'grow',
     'enemy-phase',
     'turn',
     'turn',
@@ -558,7 +558,7 @@ test('a city whose food stock of nought would grow at no population falls on the
   const stages = apply(CATALOGUE, empty, { type: 'end-turn' });
   const ended = outcome(stages);
 
-  expect(namesOf(stages)).toEqual(['grow', 'stock', 'ended']);
+  expect(namesOf(stages)).toEqual(['income', 'grow', 'stock', 'ended']);
   expect(ended.population).toBe(0);
   expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: empty.turn });
 });
@@ -917,12 +917,13 @@ test('the fall’s ending is read as any change: a victory’s achievement is no
   });
 
   expect(namesOf(apply(CATALOGUE, empty, { type: 'end-turn' }))).toEqual([
+    'income',
     'grow',
     'stock',
     'ended',
   ]);
   const fallen = apply(anyEnding, empty, { type: 'end-turn' });
-  expect(namesOf(fallen)).toEqual(['grow', 'stock', 'ended', 'reached']);
+  expect(namesOf(fallen)).toEqual(['income', 'grow', 'stock', 'ended', 'reached']);
   expect(outcome(fallen).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 1 });
   expect(outcome(fallen).achievements).toEqual([
     { id: victoryOf(QUIET), reached: true, tally: {} },

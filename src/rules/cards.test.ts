@@ -34,7 +34,7 @@ import {
   outcome,
   refusalOf,
 } from './chronicle';
-import { warDeclared } from './city';
+import { growthThreshold, warDeclared } from './city';
 import {
   AGE,
   actionOf,
@@ -1935,13 +1935,13 @@ test('a hazard strikes at the end of a turn it is still in the hand, after the i
   const yielded = outcome(apply(CATALOGUE, bare, { type: 'end-turn' })).resources.food;
 
   expect(stagedBy(stocked, { type: 'end-turn' }).slice(0, 7)).toEqual([
-    'grow',
     'income',
     'stock',
     'stock',
     'strike',
     'stock',
     'discarded',
+    'grow',
   ]);
   expect(yielded).toBeGreaterThan(0);
   expect(ended.resources.food).toBe(yielded);
@@ -2020,12 +2020,12 @@ test('a challenge carrying a strike strikes as a hazard does at the end of a tur
   ]);
   expect(strikes[0].left.resources.food).toBe(STOCKED.food - CURSE);
   expect(stagedBy(city, { type: 'end-turn' }).slice(0, 6)).toEqual([
-    'grow',
     'income',
     'stock',
     'strike',
     'stock',
     'discarded',
+    'grow',
   ]);
 });
 
@@ -2102,7 +2102,6 @@ test('every hazard in hand strikes as one strike of its own, in hand order, each
   ]);
   expect(strikes.map(({ left }) => left.resources.food)).toEqual([HUNGER, 0]);
   expect(stagedBy(city, { type: 'end-turn' }).slice(0, 8)).toEqual([
-    'grow',
     'income',
     'stock',
     'strike',
@@ -2110,6 +2109,7 @@ test('every hazard in hand strikes as one strike of its own, in hand order, each
     'strike',
     'stock',
     'discarded',
+    'grow',
   ]);
 });
 
@@ -2125,10 +2125,10 @@ test('a hazard whose strike moves nothing still strikes, holding nothing', () =>
   expect(strike.holds).toEqual([]);
   expect(strike.left.resources).toEqual(bare.resources);
   expect(stagedBy(bare, { type: 'end-turn' }).slice(0, 4)).toEqual([
-    'grow',
     'income',
     'strike',
     'discarded',
+    'grow',
   ]);
 });
 
@@ -2166,12 +2166,10 @@ test('a strike the stock cannot cover empties the stock and takes one population
 });
 
 test('a strike taking the city’s last population falls on the strike, and no step of the end of turn follows it', () => {
-  // Short of the growth threshold too: growth runs ahead of the strike.
   const last = hungry(1, { population: 1, drawPile: fullDraw() });
   const ended = outcome(apply(CATALOGUE, last, { type: 'end-turn' }));
 
   expect(stagedBy(last, { type: 'end-turn' })).toEqual([
-    'grow',
     'income',
     'stock',
     'strike',
@@ -2201,6 +2199,31 @@ test('a strike on a stock already at nothing raises no stock stage, and takes on
   expect(strike.holds).toEqual(['population']);
   expect(strike.left.resources.food).toBe(0);
   expect(strike.left.population).toBe(empty.population - 1);
+});
+
+test('growth takes what the income and the strikes leave: a stock over the growth threshold a strike leaves under it grows nobody, and one the income brings to it grows', () => {
+  const crowded = { population: 3 };
+  const threshold = growthThreshold(hungry(0, crowded), 'player');
+  const struck = hungry(threshold + HUNGER - 1, crowded);
+  const fed = cityOf(['urban', 'plain'], {
+    ...crowded,
+    resources: { ...STOCKED, food: threshold - 1 },
+  });
+
+  const starved = outcome(apply(CATALOGUE, struck, { type: 'end-turn' }));
+  const growing = apply(CATALOGUE, fed, { type: 'end-turn' });
+  const income = growing.find((stage) => stage.name === 'income');
+  if (income === undefined) throw new Error('the end of turn stages no income');
+  const yielded = income.chronicle.resources.food - fed.resources.food;
+  const grown = outcome(growing);
+
+  expect(struck.resources.food).toBeGreaterThan(threshold);
+  expect(growthThreshold(fed, 'player')).toBe(threshold);
+  expect(yielded).toBeGreaterThan(0);
+  expect(starved.population).toBe(struck.population);
+  expect(starved.resources.food).toBe(threshold - 1);
+  expect(grown.population).toBe(fed.population + 1);
+  expect(grown.resources.food).toBe(threshold - 1 + yielded - threshold);
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {

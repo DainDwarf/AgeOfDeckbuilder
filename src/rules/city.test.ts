@@ -856,13 +856,18 @@ test('hostile, a unit of the player’s occupies the tile of the neutral’s it 
 });
 
 test('at the growth phase the neutral’s food at its growth threshold is spent on one idle population, after the player’s growth in the same grow group, its threshold counting no unit of the player’s', () => {
-  const fed = endedTurn(besideTheNeutral());
-  const threshold = growthThreshold(fed, 'neutral');
-  const growing = { ...fed, resources: { ...fed.resources, food: growthThreshold(fed, 'player') } };
-  const neutral = fed.neutral;
-  if (neutral === undefined) throw new Error('the chronicle holds no neutral');
+  const opened = besideTheNeutral();
+  const growing = {
+    ...opened,
+    resources: { ...opened.resources, food: growthThreshold(opened, 'player') },
+  };
 
-  const grow = heldBy(apply(CATALOGUE, growing, { type: 'end-turn' }), 'grow');
+  const stages = apply(CATALOGUE, growing, { type: 'end-turn' });
+  const fed = stages.find((stage) => stage.name === 'income')?.chronicle;
+  const neutral = fed?.neutral;
+  if (fed === undefined || neutral === undefined) throw new Error('the chronicle holds no neutral');
+  const threshold = growthThreshold(fed, 'neutral');
+  const grow = heldBy(stages, 'grow');
 
   expect(neutral.resources.food).toBeGreaterThanOrEqual(threshold);
   expect(growthThreshold(withUnits(fed, [worker(CITY)]), 'neutral')).toBe(threshold);
@@ -890,9 +895,13 @@ test('a tile the neutral holds is no claim of the city’s, though it touches th
 function neutralHolding(
   rows: Partial<CityRows>,
   named: Parameters<typeof besideTheNeutral>[0] = {},
+  ground?: Tile[],
 ): Chronicle {
-  return withCityRows(besideTheNeutral(named), 'neutral', rows);
+  return withCityRows(besideTheNeutral(named, ground), 'neutral', rows);
 }
+
+/** The neutral's city on a tile that yields no food. */
+const NO_NEUTRAL_GROWTH = madeOf(plains(3), 'hills', [NEUTRAL_TILE]);
 
 test('at the enemy phase, after the waves and before any enemy acts, the neutral’s city claims tile after tile while its culture pays the threshold as it then stands, each its own claim group taking the tile its script chooses, its idle population standing on the first and the second left with none', () => {
   const chronicle = withUnits(neutralHolding({ population: 2, resources: culture(5) }), [
@@ -975,18 +984,18 @@ test('the neutral enters a unit as the player’s city plays a unit card: the ca
 });
 
 test('the neutral enters nothing where it would take its last population, where none is idle, where a unit stands on its city’s tile or where its stocks fall short, and raises no stage', () => {
+  const holding = (rows: Partial<CityRows>): Chronicle =>
+    neutralHolding(rows, {}, NO_NEUTRAL_GROWTH);
   const blocked = [
-    neutralHolding({ population: 1, resources: military(2) }),
-    neutralHolding({
+    holding({ population: 1, resources: military(2) }),
+    holding({
       population: 2,
       held: [NEUTRAL_TILE, { q: 2, r: 0 }],
       assigned: [NEUTRAL_TILE, { q: 2, r: 0 }],
       resources: military(2),
     }),
-    withUnits(neutralHolding({ population: 2, resources: military(2) }), [
-      neutralStanding(NEUTRAL_TILE),
-    ]),
-    neutralHolding({ population: 2, resources: military(1) }),
+    withUnits(holding({ population: 2, resources: military(2) }), [neutralStanding(NEUTRAL_TILE)]),
+    holding({ population: 2, resources: military(1) }),
   ];
 
   for (const chronicle of blocked) {
@@ -1201,9 +1210,11 @@ test('a play answered with a card the neutral’s workers do not play, by an ene
   ).toEqual(['runtime-error']);
   expect(
     enemyPhaseOf(
-      workingBeside(rows, [
-        enemyStanding(plain, undefined, { script: WORKER_SCRIPT, stats: WORKER_STATS }),
-      ]),
+      workingBeside(
+        rows,
+        [enemyStanding(plain, undefined, { script: WORKER_SCRIPT, stats: WORKER_STATS })],
+        NO_NEUTRAL_GROWTH,
+      ),
       everyWorkerPlays('PH_Farm'),
     ),
   ).toEqual(['runtime-error']);
@@ -1243,6 +1254,7 @@ test('the neutral enters a unit of a worker kind under its workers’ script', (
   const chronicle = workingBeside(
     { population: 2, resources: { ...culture(0), ...cardOf(WORKING, 'PH_Worker').cost } },
     [],
+    NO_NEUTRAL_GROWTH,
   );
 
   const after = outcome(apply(entering, chronicle, { type: 'end-turn' }));
