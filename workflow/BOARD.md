@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Travellers** — the Stone Age's fortunate event, dealt on both Stone schedules: _Trade with them_ gains money, _Share stories_ gains culture, each more on a later turn, both costing nothing. Done when the event stands on both Stone schedules, `npm test` is green with the coherence test among it, `e2e/travellers.spec.ts` passes, and the Stone page says so. Doc-impact: `docs/ages/STONE.md`. [board/travellers.md](board/travellers.md)
 - **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; its harsher answer dealing a challenge.
 - **The Nomadic events' needs** — A rival band, Wildfire and The herd dealt on every map, as the chronicle page now asks of every event, and the need mechanism going with them; Wildfire reworked to the shape of the Stone Age's events.
 - **The long winter** — the first capstone: for a span the land outside the border gives nothing and hunger strikes every turn; what passes it is this line's question.

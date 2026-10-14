@@ -81,6 +81,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     strangers: 1,
     predators: 1,
     drought: 1,
+    travellers: 1 / 3,
   },
 };
 
@@ -98,6 +99,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     strangers: 1,
     predators: 1,
     drought: 1,
+    travellers: 1 / 3,
   },
 };
 
@@ -176,6 +178,16 @@ function droughtBites(turn: number): number {
 /** The food rationing costs, and the money buying grain costs: two for each the drought bites. */
 function shortfall(chronicle: Chronicle): number {
   return 2 * droughtBites(chronicle.turn);
+}
+
+/** How much the travellers give on this turn: two, and one more for every ten turns. */
+function travellersGive(turn: number): number {
+  return 2 + Math.floor(turn / 10);
+}
+
+/** The money trading with the travellers gains: two for each they give. */
+function traded(chronicle: Chronicle): number {
+  return 2 * travellersGive(chronicle.turn);
 }
 
 const REGIONS: Age['regions'] = {
@@ -683,6 +695,21 @@ export const STONE: Slice = {
             cost: (_catalogue, chronicle) => ({ money: shortfall(chronicle) }),
             reads: (_catalogue, chronicle) => ({ money: shortfall(chronicle) }),
             lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
+      },
+      travellers: {
+        answers: {
+          'trade-with-them': {
+            cost: {},
+            reads: (_catalogue, chronicle) => ({ money: traded(chronicle) }),
+            lands: (_catalogue, chronicle) => gained(chronicle, { money: traded(chronicle) }),
+          },
+          'share-stories': {
+            cost: {},
+            reads: (_catalogue, chronicle) => ({ culture: travellersGive(chronicle.turn) }),
+            lands: (_catalogue, chronicle) =>
+              gained(chronicle, { culture: travellersGive(chronicle.turn) }),
           },
         },
       },

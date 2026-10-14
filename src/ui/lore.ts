@@ -18,6 +18,8 @@ const LORE = {
     'Wolves have come down from the hills. The herders found two carcasses at first light and tracks all round the pens, and tonight nobody wants to go out.',
   'event.drought':
     'The rains have not come. The stream is a line of cracked mud, the fields have gone grey, and the elders have begun to talk of the old dances.',
+  'event.travellers':
+    'A band of travellers has made camp at the edge of your fields for the night, packs full and tongues loose. They move on at dawn, but tonight there is trading to do and tales to swap around the fire.',
   'event.herd':
     'One of the hunters came back with news: a new herd, not far from here. The tribe has been arguing all evening about what to do.',
   'capture.camp':
