@@ -86,6 +86,7 @@ type PlainChange =
   | 'added'
   | 'drawn'
   | 'shuffled'
+  | 'counters-set'
   | 'turn'
   | 'rolled'
   | 'shown'

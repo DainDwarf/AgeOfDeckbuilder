@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { newCampaign } from '../rules/campaign';
-import { aimOf, playedThrough } from '../rules/cards';
+import { aimOf, playedThrough, struck } from '../rules/cards';
 import {
   ageOf,
   capstoneOf,
@@ -8,7 +8,6 @@ import {
   cardOf,
   catalogued,
   civilizationOf,
-  counterOf,
   eventOf,
   firstCivilization,
   firstRegion,
@@ -508,14 +507,13 @@ test('every achievement of an age answers the tally a turn ended leaves it and i
   }
 });
 
-test('every card of the catalogue carrying a strike strikes at the counters it starts with, on a chronicle launched and settled in each age', () => {
+test('every card of the catalogue carrying a strike strikes at the counters it starts with, held alone in the hand of a chronicle launched and settled in each age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     for (const id of Object.keys(CATALOGUE.cards)) {
-      const strike = strikeOf(cardOf(CATALOGUE, id));
-      if (strike === undefined) continue;
-      const counter = counterOf(CATALOGUE, cardMade(CATALOGUE, id));
-      expect(() => strike(CATALOGUE, chronicle, counter)).not.toThrow();
+      if (strikeOf(cardOf(CATALOGUE, id)) === undefined) continue;
+      const holding = { ...chronicle, hand: [cardMade(CATALOGUE, id)] };
+      expect(() => struck(CATALOGUE, holding)).not.toThrow();
     }
   }
 });

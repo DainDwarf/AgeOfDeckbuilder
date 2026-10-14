@@ -196,6 +196,7 @@ export function createPiles(
       case 'added':
       case 'drawn':
       case 'recalled':
+      case 'counters-set':
       case 'banished':
       case 'turn':
       case 'rolled':

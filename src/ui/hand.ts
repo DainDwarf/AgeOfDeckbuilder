@@ -671,6 +671,7 @@ export function createHand(
       case 'added':
       case 'recalled':
       case 'shuffled':
+      case 'counters-set':
       case 'banished':
       case 'turn':
       case 'rolled':

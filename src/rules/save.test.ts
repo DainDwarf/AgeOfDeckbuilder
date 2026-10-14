@@ -41,6 +41,8 @@ import {
   SURVEYED,
   standing,
   surveying,
+  TITHE,
+  TITHE_RISE,
   victoryOf,
   WORKER_SCRIPT,
   WORKING,
@@ -184,6 +186,20 @@ test('a chronicle saved with a card on its exhaust pile reads back with it there
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
   expect(sown.exhaustPile).toHaveLength(1);
+  expect(read.chronicle).toEqual(save);
+});
+
+test('a chronicle saved after a strike set its card’s counters reads back with the card at the values set', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Tithe'],
+    resources: { food: TITHE, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+  });
+  const struck = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+  const save = { chronicle: struck, civilization: CIVILIZATION_ID };
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(struck.hand).toEqual([{ id: 'PH_Tithe', counters: { food: TITHE + TITHE_RISE } }]);
   expect(read.chronicle).toEqual(save);
 });
 

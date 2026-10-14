@@ -183,6 +183,12 @@ export const FREEZE = 5;
 /** The food the fixture's curse strikes off the stock. */
 export const CURSE = 3;
 
+/** What the counter of the fixture's tithe starts at: the food its first strike takes. */
+export const TITHE = 2;
+
+/** How much higher each strike of the fixture's tithe sets its counter. */
+export const TITHE_RISE = 3;
+
 /** How many tiles inside the border the fixture's sprawl terraforms into urban at each strike. */
 export const SPRAWL = 2;
 
@@ -700,6 +706,16 @@ const TABLES: Omit<Tables, 'technologies'> = {
       influence: 2,
       strikes: (catalogue, chronicle) =>
         terraformedInside(catalogue, chronicle, SPRAWLED, 'urban', SPRAWL),
+    },
+    PH_Tithe: {
+      kind: 'challenge',
+      cost: {},
+      influence: 2,
+      counters: { food: TITHE },
+      strikes: (_catalogue, chronicle, counter, set) =>
+        followed(shocked(chronicle, 'food', counter('food')), (left) =>
+          set(left, { food: counter('food') + TITHE_RISE }),
+        ),
     },
     PH_Idol: {
       kind: 'instant',

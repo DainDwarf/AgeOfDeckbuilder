@@ -202,8 +202,22 @@ export type Card = {
   | { readonly kind: 'challenge'; readonly influence: number; readonly strikes?: Strike }
 );
 
-/** What a card does to the chronicle at the end of a turn it is still in the hand. */
-export type Strike = (catalogue: Catalogue, chronicle: Chronicle, counter: Counter) => Landed;
+/**
+ * What a card does to the chronicle at the end of a turn it is still in the hand, reading its own
+ * counters and setting them through `set`.
+ */
+export type Strike = (
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  counter: Counter,
+  set: CountersSet,
+) => Landed;
+
+/**
+ * The striking card left in the hand carrying the values handed under the counters named, every
+ * other as it carries it; a counter its content does not declare is refused.
+ */
+export type CountersSet = (chronicle: Chronicle, set: Counters) => Landed;
 
 /** A card's strike, and nothing for a card carrying none or of a kind that never strikes. */
 export function strikeOf(card: Card): Strike | undefined {

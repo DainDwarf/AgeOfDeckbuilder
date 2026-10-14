@@ -83,6 +83,8 @@ import {
   settledLaunch,
   stagedBy,
   standing,
+  TITHE,
+  TITHE_RISE,
   UPHEAVAL,
   unitNamed,
   WORKER_STATS,
@@ -2133,6 +2135,23 @@ test('a hazard whose strike moves nothing still strikes, holding nothing', () =>
     'strike',
     'discarded',
     'grow',
+  ]);
+});
+
+test('a strike setting its own card’s counters leaves the card in the hand at the values set, and the next cycle strikes at them', () => {
+  const city = unfed(['PH_Tithe'], 2 * TITHE + TITHE_RISE);
+
+  const [first] = strikesOf(city);
+  const cycled = endedTurn(city);
+  const [second] = strikesOf(cycled);
+
+  expect(first.holds).toEqual(['stock', 'counters-set']);
+  expect(first.left.resources.food).toBe(city.resources.food - TITHE);
+  expect(first.left.hand).toEqual([{ id: 'PH_Tithe', counters: { food: TITHE + TITHE_RISE } }]);
+  expect(cycled.hand).toEqual(first.left.hand);
+  expect(second.left.resources.food).toBe(cycled.resources.food - TITHE - TITHE_RISE);
+  expect(second.left.hand).toEqual([
+    { id: 'PH_Tithe', counters: { food: TITHE + 2 * TITHE_RISE } },
   ]);
 });
 

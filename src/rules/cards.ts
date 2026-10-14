@@ -56,6 +56,7 @@ import {
   type Chronicle,
   type ChronicleCard,
   type CityFaction,
+  type Counters,
   cityOn,
   cityRows,
   cityTileOf,
@@ -164,22 +165,50 @@ export function goesTo(card: Card): 'discard-pile' | 'exhaust-pile' | 'nowhere' 
 
 /**
  * The cards of the hand that carry a strike striking, in hand order, each on the chronicle the one
- * before it left: one `strike` each, over what its strike raised, and none where the hand holds no
- * such card.
+ * before it left and setting its own counters where it sets them: one `strike` each, over what its
+ * strike raised, and none where the hand holds no such card.
  */
 export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   let strikes = unchanged<Group>(chronicle);
-  for (const held of chronicle.hand) {
+  chronicle.hand.forEach((held, at) => {
     const strike = strikeOf(cardOf(catalogue, held.id));
-    if (strike === undefined) continue;
+    if (strike === undefined) return;
     strikes = followed(strikes, (left) =>
       grouped(
         { name: 'strike', card: held.id },
-        strike(catalogue, left, counterOf(catalogue, held)),
+        strike(catalogue, left, counterOf(catalogue, held), (on, set) =>
+          countersSetAt(catalogue, on, at, set),
+        ),
       ),
     );
-  }
+  });
   return strikes;
+}
+
+/**
+ * The card at that place of the hand carrying the values handed under the counters named, every
+ * other as it carries it: one `counters-set`, and nothing where it already carries them. A counter
+ * its content does not declare is refused.
+ */
+function countersSetAt(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  at: number,
+  set: Counters,
+): Landed {
+  // `at` is the striking card's place in the hand `struck` began on: a strike that adds a card to the
+  // hand or takes one out of it, before or after this one, shifts the card set here.
+  const card = chronicle.hand[at];
+  const reset = cardMade(catalogue, card.id, { ...card.counters, ...set });
+  if (Object.entries(set).every(([counter, value]) => card.counters[counter] === value)) {
+    return unchanged(chronicle);
+  }
+  return landedAs(
+    change('counters-set', {
+      ...chronicle,
+      hand: chronicle.hand.map((held, place) => (place === at ? reset : held)),
+    }),
+  );
 }
 
 /**
