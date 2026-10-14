@@ -5,6 +5,7 @@ import {
   costOf,
   type NeutralScript,
   type ScriptAct,
+  type Span,
   type UnitScript,
   type UnitShare,
   workerAim,
@@ -12,9 +13,11 @@ import {
 import {
   attackOrNone,
   campAshore,
+  enteredAround,
   leastHealth,
   otherCityOn,
   pillaged,
+  raided,
   standsAs,
   stepMove,
   targetsInOwnSight,
@@ -34,7 +37,9 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resources } from '../rules/resources';
 import { pickUniform, type Rng } from '../rules/rng';
+import { campPlaceable, campsPlaced } from '../rules/schedule';
 import { inOwnSight } from '../rules/sight';
+import { followed, type Landed } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,
@@ -374,6 +379,34 @@ export const VILLAGER: NeutralScript = {
     return chosen;
   },
 };
+
+/** How far from the player's city a camp may be placed, and how far apart from every camp standing. */
+export type CampPlace = { readonly fromCity: Span; readonly apart: number };
+
+/**
+ * A camp placed near the player's city at the place named, with `count` warriors of the kind entered
+ * on and around it as the camp's guards; where no tile takes a camp, the same count entered as a raid
+ * of the camp's raiders.
+ */
+export function campedOrRaided(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  kind: string,
+  count: number,
+  { fromCity, apart }: CampPlace,
+): Landed {
+  const { scripts } = ageOf(catalogue, chronicle.age).camp;
+  if (!campPlaceable(catalogue, chronicle, fromCity, apart)) {
+    return raided(catalogue, chronicle, count, [{ kind, script: scripts.raider, weight: 1 }]);
+  }
+  const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
+  const [camp] = placing.placed;
+  // The first enemy lands on the camp, where its kind stands on it, only because `campsPlaced` asks no
+  // unit to stand there.
+  return followed(placing, (left) =>
+    enteredAround(catalogue, left, camp, count, [{ kind, script: scripts.guard, weight: 1 }]),
+  );
+}
 
 /** What a tile yields in every resource together. */
 function worthOf(yields: Partial<Resources>): number {

@@ -17,14 +17,13 @@ import {
 } from '../rules/cards';
 import type { Age, Schedule, Slice, Tables } from '../rules/catalogue';
 import { arrived, yielded } from '../rules/city';
-import { enteredAround, raided } from '../rules/enemies';
+import { raided } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind } from '../rules/map-kinds';
 import {
   addedToDrawPileTop,
   burned,
   campPlaceable,
-  campsPlaced,
   type Fire,
   featureDealable,
   featureDealt,
@@ -33,7 +32,7 @@ import {
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { guarding, RAIDER } from './scripts';
+import { type CampPlace, campedOrRaided, guarding, RAIDER } from './scripts';
 
 /** How many enemies a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -48,7 +47,7 @@ const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 
 
 const HERD = { feature: 'deer', fromCity: 4 } as const;
 
-const RIVAL_CAMP = { fromCity: [3, 4], apart: 3 } as const;
+const RIVAL_CAMP: CampPlace = { fromCity: [3, 4], apart: 3 };
 
 const TABLES: Tables = {
   units: {
@@ -218,24 +217,8 @@ const TABLES: Tables = {
         'make-room': {
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-          lands: (catalogue, chronicle) => {
-            const placing = campsPlaced(
-              catalogue,
-              chronicle,
-              1,
-              RIVAL_CAMP.fromCity,
-              RIVAL_CAMP.apart,
-            );
-            const [camp] = placing.placed;
-            if (camp === undefined) return placing;
-            // The first enemy lands on the camp, where its kind stands on it, only because
-            // `campsPlaced` asks no unit to stand there.
-            return followed(placing, (left) =>
-              enteredAround(catalogue, left, camp, raiders(chronicle.turn), [
-                { kind: 'warrior', script: 'guard', weight: 1 },
-              ]),
-            );
-          },
+          lands: (catalogue, chronicle) =>
+            campedOrRaided(catalogue, chronicle, 'warrior', raiders(chronicle.turn), RIVAL_CAMP),
         },
       },
     },
