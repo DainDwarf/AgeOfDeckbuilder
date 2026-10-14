@@ -253,7 +253,9 @@ export function createCardFace(
         return run.content.split('\n');
       },
     },
-  }).setOrigin(0.5, 1);
+  })
+    .setOrigin(0.5, 1)
+    .setName('rules');
 
   const ownRules = ownBoxOf(rules);
   const lineHeight = ownRules.height / run.widths.length;

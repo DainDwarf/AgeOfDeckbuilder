@@ -22,10 +22,11 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from '../rules/chronicle';
-import { arrived, bordered, populationTaken } from '../rules/city';
+import { arrived, bordered, populationTaken, warDeclared } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import {
+  campPlaceable,
   featureInside,
   featureRemovalInside,
   featuresRemovedInside,
@@ -37,9 +38,18 @@ import {
   terraformedInside,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
-import type { Chronicle } from '../rules/state';
+import { type Chronicle, cityRows, costsOf } from '../rules/state';
+import { relationsOf } from '../rules/units';
 import { NOMADIC } from './nomadic';
-import { NEUTRAL_GUARD, NEUTRAL_WAVE, NEUTRAL_WORKER, PILLAGER, VILLAGER } from './scripts';
+import {
+  type CampPlace,
+  campedOrRaided,
+  NEUTRAL_GUARD,
+  NEUTRAL_WAVE,
+  NEUTRAL_WORKER,
+  PILLAGER,
+  VILLAGER,
+} from './scripts';
 
 const { basePrice, camp } = NOMADIC.owns;
 
@@ -82,6 +92,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     predators: 1,
     drought: 1,
     travellers: 1 / 3,
+    grievance: 1,
   },
 };
 
@@ -100,6 +111,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     predators: 1,
     drought: 1,
     travellers: 1 / 3,
+    grievance: 1,
   },
 };
 
@@ -188,6 +200,36 @@ function travellersGive(turn: number): number {
 /** The money trading with the travellers gains: two for each they give. */
 function traded(chronicle: Chronicle): number {
   return 2 * travellersGive(chronicle.turn);
+}
+
+/** How many warriors escalating the grievance enters on this turn: one, and one more for every ten turns. */
+function grievers(turn: number): number {
+  return 1 + Math.floor(turn / 10);
+}
+
+/** Where escalating the grievance places its camp. */
+const GRIEVANCE_CAMP: CampPlace = { fromCity: [3, 4], apart: 3 };
+
+/** What escalating the grievance does: declare war, place a camp, or raid. */
+const ESCALATIONS = ['war', 'camp', 'raid'] as const;
+
+/**
+ * What escalating the grievance does on the chronicle as it stands: war while the neutral's city
+ * stands at peace, otherwise a camp where a tile takes one, otherwise a raid.
+ */
+function escalation(catalogue: Catalogue, chronicle: Chronicle): (typeof ESCALATIONS)[number] {
+  if (cityRows(chronicle, 'neutral') !== undefined && relationsOf(chronicle) === 'peace')
+    return 'war';
+  const { fromCity, apart } = GRIEVANCE_CAMP;
+  return campPlaceable(catalogue, chronicle, fromCity, apart) ? 'camp' : 'raid';
+}
+
+/** What the Tribute takes at its first strike, and how much more at each strike after. */
+const TRIBUTE = { food: 2, production: 2, money: 1 };
+
+/** The culture sending gifts costs on this turn: six, and one more for every five turns. */
+function gifts(turn: number): number {
+  return 6 + Math.floor(turn / 5);
 }
 
 const REGIONS: Age['regions'] = {
@@ -577,6 +619,21 @@ export const STONE: Slice = {
         strikes: (catalogue, chronicle) =>
           terraformedInside(catalogue, chronicle, PLAIN_AND_FOREST, 'desert', 1),
       },
+      tribute: {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        counters: TRIBUTE,
+        strikes: (_catalogue, chronicle, counter, set) => {
+          let landing = unchanged(chronicle);
+          const raised: Record<string, number> = {};
+          for (const { resource, amount } of costsOf(TRIBUTE)) {
+            landing = followed(landing, (left) => shocked(left, resource, counter(resource)));
+            raised[resource] = counter(resource) + amount;
+          }
+          return followed(landing, (left) => set(left, raised));
+        },
+      },
     },
     events: {
       departure: {
@@ -710,6 +767,40 @@ export const STONE: Slice = {
             reads: (_catalogue, chronicle) => ({ culture: travellersGive(chronicle.turn) }),
             lands: (_catalogue, chronicle) =>
               gained(chronicle, { culture: travellersGive(chronicle.turn) }),
+          },
+        },
+      },
+      grievance: {
+        answers: {
+          escalate: {
+            cost: {},
+            reads: (_catalogue, chronicle) => ({ warriors: grievers(chronicle.turn) }),
+            cases: { declared: ESCALATIONS, names: escalation },
+            lands: (catalogue, chronicle) => {
+              switch (escalation(catalogue, chronicle)) {
+                case 'war':
+                  return warDeclared(chronicle);
+                case 'camp':
+                case 'raid':
+                  return campedOrRaided(
+                    catalogue,
+                    chronicle,
+                    'warrior',
+                    grievers(chronicle.turn),
+                    GRIEVANCE_CAMP,
+                  );
+              }
+            },
+          },
+          'pay-tribute': {
+            cost: {},
+            reads: () => TRIBUTE,
+            lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'tribute', 1),
+          },
+          'send-gifts': {
+            cost: (_catalogue, chronicle) => ({ culture: gifts(chronicle.turn) }),
+            reads: (_catalogue, chronicle) => ({ culture: gifts(chronicle.turn) }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },
       },

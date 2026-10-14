@@ -20,6 +20,8 @@ const LORE = {
     'The rains have not come. The stream is a line of cracked mud, the fields have gone grey, and the elders have begun to talk of the old dances.',
   'event.travellers':
     'A band of travellers has made camp at the edge of your fields for the night, packs full and tongues loose. They move on at dawn, but tonight there is trading to do and tales to swap around the fire.',
+  'event.grievance':
+    'A delegation from the other village stands at your fires, stone-faced. One of their hunters was found dead on your side of the ridge, they say, and the herd he followed has not been seen since. They want amends, and they want them now.',
   'event.herd':
     'One of the hunters came back with news: a new herd, not far from here. The tribe has been arguing all evening about what to do.',
   'capture.camp':

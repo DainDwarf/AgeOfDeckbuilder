@@ -212,6 +212,9 @@ const TEXT = {
   'card.rain-dance': 'Rain dance',
   'rules.rain-dance':
     'Dries one [terrain:plain] or [terrain:forest] inside your border into [terrain:desert]',
+  'card.tribute': 'Tribute',
+  'rules.tribute':
+    'Takes {food}[food], {production}[production] and {money}[money], more each time',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
@@ -279,6 +282,18 @@ const TEXT = {
   'answer-rules.trade-with-them': 'Gain {money}[money]',
   'answer.share-stories': 'Share stories',
   'answer-rules.share-stories': 'Gain {culture}[culture]',
+  'event.grievance': 'A grievance',
+  'answer.escalate': 'Escalate',
+  'answer-rules.escalate.war': 'Declare war',
+  'answer-rules.escalate.camp':
+    'A [building:{camp}] with {warriors} [enemy:warrior] is placed near your [building:{building}]',
+  'answer-rules.escalate.raid':
+    'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
+  'answer.pay-tribute': 'Pay tribute',
+  'answer-rules.pay-tribute':
+    'Add [card:tribute] to the discard pile. Each turn it stays in your hand, it takes {food}[food], {production}[production] and {money}[money], more each time',
+  'answer.send-gifts': 'Send gifts',
+  'answer-rules.send-gifts': 'Pay {culture}[culture]',
   'event.herd': 'The herd',
   'answer.hunt-it': 'Hunt it',
   'answer-rules.hunt-it': 'Gain {food}[food]',

@@ -85,6 +85,7 @@ type PageReading = {
   fill: Answer<number | undefined>;
   place: Answer<{ x: number; y: number }>;
   ringed: Answer<boolean>;
+  rules: Answer<string>;
   names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
   kindLabelOnScreen: Answer<Spot>;
@@ -428,6 +429,9 @@ export async function readNames(page: Page): Promise<void> {
           const ring = part('ring', `${name} is no card face`);
           return (ring as Phaser.GameObjects.GameObject & { visible: boolean }).visible;
         }),
+        rules: answer(
+          () => (part('rules', `${name} is no card face`) as Phaser.GameObjects.Text).text,
+        ),
         names: answer(() => {
           const { camera } = found();
           const drawn = (data('names') as Name[] | undefined) ?? [];
@@ -1081,6 +1085,8 @@ export type Reading = {
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
   readonly ringed: boolean;
+  /** The face's rules entry, its marks as written. */
+  readonly rules: string;
   /** Whether the face's rules entry draws a name. */
   readonly drawsName: boolean;
   /** What each name the face's rules entry draws names, in the order it draws them. */
@@ -1118,6 +1124,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get ringed() {
       return owed(name, answered?.ringed);
+    },
+    get rules() {
+      return owed(name, answered?.rules);
     },
     get drawsName() {
       return owed(name, answered?.names).length > 0;
