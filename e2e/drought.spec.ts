@@ -5,22 +5,18 @@ import { gained } from '../src/rules/cards';
 import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
-import { eventLore } from '../src/ui/lore';
-import { eventName } from '../src/ui/text';
 import {
   barReadingOn,
   budget,
   chronicleOf,
-  dealtAlone,
-  firstSeed,
+  eventDealRead,
+  firstDealtAlone,
   idsOf,
   offeredOn,
   openSaved,
   readings,
-  rested,
-  settledOn,
+  restedOnDeal,
   standing,
-  stoppedOnDeal,
   take,
   watch,
   wonCampaign,
@@ -40,10 +36,7 @@ const RATIONING = 'rationing';
  * stopped on the deal; then what rationing costs gained.
  */
 function parched(campaign: Campaign): Chronicle {
-  const dealt = firstSeed('deals the drought alone first', (seed) => {
-    const stopped = stoppedOnDeal(settledOn(seed, [], campaign));
-    return dealtAlone(stopped, DROUGHT) ? stopped : undefined;
-  });
+  const dealt = firstDealtAlone(DROUGHT, campaign);
   const costs = answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, DROUGHT, RATIONING));
   const gain = Object.fromEntries(costs.map(({ resource, amount }) => [resource, amount]));
   return gained(dealt, gain).chronicle;
@@ -56,21 +49,15 @@ test('the drought deals its answers, and rationing pays the food the rules price
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = parched(campaign);
-  const answers = offeredOn(dealt);
-  const at = answers.indexOf(RATIONING);
+  const at = offeredOn(dealt).indexOf(RATIONING);
   const [price] = answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, DROUGHT, RATIONING));
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   const stock = `reading-${price.resource}-value`;
   expect(after.resources[price.resource]).toBe(dealt.resources[price.resource] - price.amount);
 
   await openSaved(page, dealt, campaign);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
-  const shown = await readings(page, ['deal-title', 'deal-lore', stock, ...faces]);
-  expect(shown('deal-title').text).toBe(eventName(DROUGHT));
-  expect(shown('deal-lore').text).toBe(eventLore(DROUGHT));
-  expect(faces.map((face) => shown(face).card)).toEqual(answers);
+  await restedOnDeal(page);
+  const shown = await eventDealRead(page, dealt, DROUGHT, [stock]);
   expect(shown(stock).text).toBe(barReadingOn(dealt, price.resource));
 
   await take(page, at);
@@ -95,8 +82,7 @@ test('the rain dance adds Rain dance to the discard pile', async ({ page }) => {
   expect(idsOf(after.discardPile)).toEqual([...idsOf(dealt.discardPile), RAIN_DANCE]);
 
   await openSaved(page, dealt, campaign);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
 
   await take(page, at);
 

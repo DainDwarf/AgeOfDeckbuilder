@@ -14,6 +14,7 @@ import {
   onScreen,
   openSaved,
   rested,
+  restedOnDeal,
   settledOn,
   standing,
   stoppedTurn,
@@ -106,8 +107,7 @@ test("an answer's charted tile, out of the frame under the deal window, is broug
 
   await pushOut(page, run.tile);
   await stoppedTurn(page);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
   expect(inside(await tileOnScreen(page, run.tile), frame)).toBe(false);
   expect(await standing(page, `tile-${key}`)).toBe(false);
   expect(await standing(page, `feature-${key}`)).toBe(false);

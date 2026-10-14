@@ -9,8 +9,8 @@ import {
   chronicleOf,
   civilizationOpened,
   cursorOverCanvas,
+  firstDealtAlone,
   launchedAs,
-  leanSeason,
   liftedName,
   namedIn,
   nameOnScreen,
@@ -18,12 +18,16 @@ import {
   openSaved,
   referenceOnFace,
   rested,
+  restedOnDeal,
   ringed,
   shows,
   standing,
   waitGameClock,
   watch,
 } from './chronicle-screen';
+
+/** The event the first spec opens on. */
+const LEAN_SEASON = 'lean-season';
 
 /** The cursor over something that answers a press. */
 const HAND = 'pointer';
@@ -55,13 +59,12 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   page,
 }) => {
   const problems = watch(page);
-  const dealt = leanSeason();
+  const dealt = firstDealtAlone(LEAN_SEASON);
   const { answer, at, named, name: naming } = namingAnswer(dealt);
   const answering = `deal-card-${at}`;
 
   await openSaved(page, dealt);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
   expect(await cardOnFace(page, answering)).toBe(answer);
 
   const name = await nameOnScreen(page, answering, naming);

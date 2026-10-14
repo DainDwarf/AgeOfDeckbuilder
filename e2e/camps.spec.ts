@@ -15,7 +15,7 @@ import {
   loreOf,
   marksIn,
   openSaved,
-  rested,
+  restedOnDeal,
   settledOn,
   sitesOf,
   standing,
@@ -68,8 +68,7 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
 
   await openSaved(page, chronicle);
   await stoppedTurn(page);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
 
   expect(await chronicleOf(page)).toEqual(captured);
   expect(tileAt(captured.tiles, camp)?.building).toBeUndefined();

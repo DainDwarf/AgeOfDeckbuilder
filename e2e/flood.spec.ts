@@ -8,21 +8,17 @@ import { improvementKind } from '../src/rules/map-kinds';
 import { answerOf } from '../src/rules/schedule';
 import { followed } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { eventLore } from '../src/ui/lore';
-import { eventName } from '../src/ui/text';
 import {
   budget,
   chronicleOf,
   cityTileOf,
-  dealtAlone,
+  dealtAloneOn,
+  eventDealRead,
   firstSeed,
   offeredOn,
   openSaved,
   readings,
-  rested,
-  settledOn,
-  standing,
-  stoppedOnDeal,
+  restedOnDeal,
   take,
   watch,
   wonCampaign,
@@ -46,15 +42,15 @@ function flooding(campaign: Campaign): { dealt: Chronicle; city: TileCoords } {
   const [terrain] = improvementKind(CATALOGUE, CLAY_PIT).terrains;
   const { reads } = answerOf(CATALOGUE, FLOOD, LOSE_THE_FIELDS);
   return firstSeed('deals the flood alone first, taking improvements alone', (seed) => {
-    const settled = settledOn(seed, [], campaign);
-    const city = cityTileOf(settled);
-    const clayed = followed(terraformed(CATALOGUE, settled, city, terrain), (left) =>
-      improvementPlaced(CATALOGUE, left, city, CLAY_PIT),
-    ).chronicle;
-    const dealt = stoppedOnDeal(clayed);
-    if (!dealtAlone(dealt, FLOOD)) return undefined;
+    const dealt = dealtAloneOn(seed, FLOOD, campaign, (settled) => {
+      const city = cityTileOf(settled);
+      return followed(terraformed(CATALOGUE, settled, city, terrain), (left) =>
+        improvementPlaced(CATALOGUE, left, city, CLAY_PIT),
+      ).chronicle;
+    });
+    if (dealt === undefined) return undefined;
     const read = reads(CATALOGUE, dealt);
-    return read.buildings === 0 && read.city === 0 ? { dealt, city } : undefined;
+    return read.buildings === 0 && read.city === 0 ? { dealt, city: cityTileOf(dealt) } : undefined;
   });
 }
 
@@ -65,20 +61,14 @@ test('the flood deals its answers, and losing the fields removes the clay pit st
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, city } = flooding(campaign);
-  const answers = offeredOn(dealt);
-  const at = answers.indexOf(LOSE_THE_FIELDS);
+  const at = offeredOn(dealt).indexOf(LOSE_THE_FIELDS);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   const mark = `improvement-${CLAY_PIT}-${tileKey(city)}`;
   expect(tileAt(after.tiles, city)?.improvements).not.toContain(CLAY_PIT);
 
   await openSaved(page, dealt, campaign);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
-  const shown = await readings(page, ['deal-title', 'deal-lore', mark, ...faces]);
-  expect(shown('deal-title').text).toBe(eventName(FLOOD));
-  expect(shown('deal-lore').text).toBe(eventLore(FLOOD));
-  expect(faces.map((face) => shown(face).card)).toEqual(answers);
+  await restedOnDeal(page);
+  const shown = await eventDealRead(page, dealt, FLOOD, [mark]);
   expect(shown(mark).standing).toBe(true);
 
   await take(page, at);

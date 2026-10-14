@@ -8,26 +8,24 @@ import { featureKind } from '../src/rules/map-kinds';
 import { answerCost, answerOf, answerRefusal } from '../src/rules/schedule';
 import { followed, unchanged } from '../src/rules/stages';
 import { type Chronicle, holds, playable } from '../src/rules/state';
-import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
-import { eventName } from '../src/ui/text';
 import {
   barReadingOn,
   budget,
   chronicleOf,
   cityTileOf,
   click,
-  dealtAlone,
+  dealtAloneOn,
+  eventDealRead,
+  firstDealtAlone,
   firstSeed,
   offeredOn,
   openSaved,
   readings,
   refusalLines,
-  rested,
+  restedOnDeal,
   ringed,
-  settledOn,
   standing,
-  stoppedOnDeal,
   take,
   watch,
   wonCampaign,
@@ -61,10 +59,7 @@ function placeOf(chronicle: Chronicle, answer: string): number {
  * costs gained.
  */
 function unherded(campaign: Campaign): Chronicle {
-  const dealt = firstSeed('deals the predators alone first', (seed) => {
-    const stopped = stoppedOnDeal(settledOn(seed, [], campaign));
-    return dealtAlone(stopped, PREDATORS) ? stopped : undefined;
-  });
+  const dealt = firstDealtAlone(PREDATORS, campaign);
   let cleared = unchanged(dealt);
   for (const { q, r, feature } of dealt.tiles) {
     if (feature === undefined || !holds(dealt, { q, r })) continue;
@@ -87,15 +82,16 @@ function herdedAtHome(campaign: Campaign): { dealt: Chronicle; city: TileCoords 
   return firstSeed(
     'deals the predators alone first, taking the deer on the city’s tile',
     (seed) => {
-      const settled = settledOn(seed, [], campaign);
-      const city = cityTileOf(settled);
-      const ground =
-        tileAt(settled.tiles, city)?.terrain === terrain
-          ? unchanged(settled)
-          : terraformed(CATALOGUE, settled, city, terrain);
-      const herded = followed(ground, (left) => featurePlaced(CATALOGUE, left, city, DEER));
-      const dealt = stoppedOnDeal(herded.chronicle);
-      if (!dealtAlone(dealt, PREDATORS)) return undefined;
+      const dealt = dealtAloneOn(seed, PREDATORS, campaign, (settled) => {
+        const city = cityTileOf(settled);
+        const ground =
+          tileAt(settled.tiles, city)?.terrain === terrain
+            ? unchanged(settled)
+            : terraformed(CATALOGUE, settled, city, terrain);
+        return followed(ground, (left) => featurePlaced(CATALOGUE, left, city, DEER)).chronicle;
+      });
+      if (dealt === undefined) return undefined;
+      const city = cityTileOf(dealt);
       const at = placeOf(dealt, ABANDON_A_HERD);
       const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
       return tileAt(after.tiles, city)?.feature === undefined ? { dealt, city } : undefined;
@@ -110,7 +106,6 @@ test('abandoning a herd is refused while no herd stands inside the border and sa
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = unherded(campaign);
-  const answers = offeredOn(dealt);
   const abandon = placeOf(dealt, ABANDON_A_HERD);
   const defend = placeOf(dealt, DEFEND_THE_HERDS);
   expect([answerable(dealt, ABANDON_A_HERD), answerable(dealt, DEFEND_THE_HERDS)]).toEqual([
@@ -127,13 +122,8 @@ test('abandoning a herd is refused while no herd stands inside the border and sa
   expect(after.resources[price.resource]).toBe(dealt.resources[price.resource] - price.amount);
 
   await openSaved(page, dealt, campaign);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
-  const shown = await readings(page, ['deal-title', 'deal-lore', stock, ...faces]);
-  expect(shown('deal-title').text).toBe(eventName(PREDATORS));
-  expect(shown('deal-lore').text).toBe(eventLore(PREDATORS));
-  expect(faces.map((face) => shown(face).card)).toEqual(answers);
+  await restedOnDeal(page);
+  const shown = await eventDealRead(page, dealt, PREDATORS, [stock]);
   expect(shown(stock).text).toBe(barReadingOn(dealt, price.resource));
 
   await click(page, `deal-card-${abandon}`);
@@ -166,8 +156,7 @@ test('abandoning a herd removes the deer standing on the city’s tile', async (
   const mark = `feature-${tileKey(city)}`;
 
   await openSaved(page, dealt, campaign);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
   expect(await standing(page, mark)).toBe(true);
 
   await take(page, at);

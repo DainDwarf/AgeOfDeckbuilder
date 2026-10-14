@@ -18,6 +18,7 @@ import {
   onScreen,
   openSaved,
   rested,
+  restedOnDeal,
   ringedTile,
   settledOn,
   shownCard,
@@ -159,8 +160,7 @@ test('a reading hovered while the deal window stands raises no tooltip', async (
 
   await page.setViewportSize(WINDOW);
   await openSaved(page, firstDealt(1));
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
 
   const food = await onScreen(page, 'reading-food');
   await page.mouse.move(food.x, food.y);
@@ -368,8 +368,7 @@ test("an answer's kind label on the deal window raises the overlay's bubble read
   const problems = watch(page);
 
   await openSaved(page, firstDealt(1));
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
 
   const label = await kindLabelOnScreen(page, 'deal-card-0');
   await page.mouse.move(label.x, label.y, { steps: 5 });

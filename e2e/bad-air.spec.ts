@@ -5,21 +5,17 @@ import { apply, outcome } from '../src/rules/chronicle';
 import { arrived } from '../src/rules/city';
 import { answerOf } from '../src/rules/schedule';
 import { type Chronicle, idle } from '../src/rules/state';
-import { eventLore } from '../src/ui/lore';
-import { eventName } from '../src/ui/text';
 import {
   barReadingOn,
   budget,
   chronicleOf,
-  dealtAlone,
+  dealtAloneOn,
+  eventDealRead,
   firstSeed,
   offeredOn,
   openSaved,
   readings,
-  rested,
-  settledOn,
-  standing,
-  stoppedOnDeal,
+  restedOnDeal,
   take,
   watch,
   wonCampaign,
@@ -39,9 +35,13 @@ const BURY_THE_DEAD = 'bury-the-dead';
 function sickened(campaign: Campaign): { dealt: Chronicle; killed: number } {
   const { reads } = answerOf(CATALOGUE, BAD_AIR, BURY_THE_DEAD);
   return firstSeed('deals the sickness alone first, the idle enough to bury', (seed) => {
-    const grown = arrived(settledOn(seed, [], campaign), 'player').chronicle;
-    const dealt = stoppedOnDeal(grown);
-    if (!dealtAlone(dealt, BAD_AIR)) return undefined;
+    const dealt = dealtAloneOn(
+      seed,
+      BAD_AIR,
+      campaign,
+      (settled) => arrived(settled, 'player').chronicle,
+    );
+    if (dealt === undefined) return undefined;
     const { population } = reads(CATALOGUE, dealt);
     return idle(dealt) >= population ? { dealt, killed: population } : undefined;
   });
@@ -54,19 +54,13 @@ test('the sickness deals its answers, and burying the dead kills the idle popula
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, killed } = sickened(campaign);
-  const answers = offeredOn(dealt);
-  const at = answers.indexOf(BURY_THE_DEAD);
+  const at = offeredOn(dealt).indexOf(BURY_THE_DEAD);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   expect(idle(after)).toBe(idle(dealt) - killed);
 
   await openSaved(page, dealt, campaign);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
-  const shown = await readings(page, ['deal-title', 'deal-lore', 'reading-idle-value', ...faces]);
-  expect(shown('deal-title').text).toBe(eventName(BAD_AIR));
-  expect(shown('deal-lore').text).toBe(eventLore(BAD_AIR));
-  expect(faces.map((face) => shown(face).card)).toEqual(answers);
+  await restedOnDeal(page);
+  const shown = await eventDealRead(page, dealt, BAD_AIR, ['reading-idle-value']);
   expect(shown('reading-idle-value').text).toBe(barReadingOn(dealt, 'idle'));
 
   await take(page, at);

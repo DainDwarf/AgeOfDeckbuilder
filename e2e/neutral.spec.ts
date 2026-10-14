@@ -59,6 +59,7 @@ import {
   playedOut,
   readings,
   rested,
+  restedOnDeal,
   ringedTile,
   settledOn,
   shownCard,
@@ -637,8 +638,7 @@ test('a warrior of the player’s standing on the neutral’s city through the e
   await openSaved(page, chronicle, CAMPAIGN);
   expect(await standing(page, mark)).toBe(true);
   await stoppedTurn(page);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
 
   const read = await readings(page, [mark, 'deal-title', 'deal-lore', ...faces, ...badges]);
   expect(read(mark).standing).toBe(false);

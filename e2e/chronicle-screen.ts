@@ -62,9 +62,10 @@ import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { openingChoices } from '../src/ui/launch-layout';
 import type { BarReading } from '../src/ui/look';
+import { eventLore } from '../src/ui/lore';
 import type { PileKind } from '../src/ui/piles';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
-import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
+import { ageName, cardName, eventName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 
@@ -753,6 +754,12 @@ export function rested(page: Page): Promise<void> {
   );
 }
 
+/** Waits for the deal's window to stand, then for a drawn frame, so a press finds its cards. */
+export async function restedOnDeal(page: Page): Promise<void> {
+  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await rested(page);
+}
+
 /**
  * Waits out a span of the game's own clock, the one a scene's timers run on. Phaser advances it by
  * at most a sixtieth of a second a frame for its first 120 frames, so on a slow runner a wait on the
@@ -1430,18 +1437,27 @@ export function firstDealt(seed: number): Chronicle {
   return stoppedOnDeal(settledOn(seed));
 }
 
-/** Whether the chronicle stands on a deal of the event with no deal behind it. */
-export function dealtAlone(chronicle: Chronicle, event: string): boolean {
-  const [deal, ...behind] = chronicle.deals;
-  return deal?.of === 'event' && deal.event === event && behind.length === 0;
+/**
+ * The seed's turn 1 from the campaign, settled bare and readied, stopped on its timeline's first
+ * deal, and nothing unless that deal is the event with no deal behind it.
+ */
+export function dealtAloneOn(
+  seed: number,
+  event: string,
+  campaign: Campaign,
+  readied: (settled: Chronicle) => Chronicle = (settled) => settled,
+): Chronicle | undefined {
+  const dealt = stoppedOnDeal(readied(settledOn(seed, [], campaign)));
+  const [deal, ...behind] = dealt.deals;
+  return deal?.of === 'event' && deal.event === event && behind.length === 0 ? dealt : undefined;
 }
 
-/** The chronicle of the first seed whose first deal is the lean season standing alone, stopped on it. */
-export function leanSeason(): Chronicle {
-  return firstSeed('deals the lean season alone first', (seed) => {
-    const dealt = firstDealt(seed);
-    return dealtAlone(dealt, 'lean-season') ? dealt : undefined;
-  });
+/**
+ * The chronicle of the first seed whose turn 1 from the campaign, settled bare, first deals the event
+ * alone, stopped on that deal.
+ */
+export function firstDealtAlone(event: string, campaign = freshCampaign(CATALOGUE)): Chronicle {
+  return firstSeed(`deals the ${event} alone first`, (seed) => dealtAloneOn(seed, event, campaign));
 }
 
 /**
@@ -2251,6 +2267,25 @@ function dealStanding(chronicle: Chronicle): Deal {
 /** What the deal standing on the chronicle offers, in the order dealt. */
 export function offeredOn(chronicle: Chronicle): readonly string[] {
   return offered(CATALOGUE, dealStanding(chronicle));
+}
+
+/**
+ * The event's deal standing on the chronicle read in one question with the names beside it, its
+ * title, lore and answers' faces asserted; the reading of a name beside it.
+ */
+export async function eventDealRead(
+  page: Page,
+  chronicle: Chronicle,
+  event: string,
+  beside: readonly string[],
+): Promise<(name: string) => Reading> {
+  const answers = offeredOn(chronicle);
+  const faces = answers.map((_, place) => `deal-card-${place}`);
+  const shown = await readings(page, ['deal-title', 'deal-lore', ...beside, ...faces]);
+  expect(shown('deal-title').text).toBe(eventName(event));
+  expect(shown('deal-lore').text).toBe(eventLore(event));
+  expect(faces.map((face) => shown(face).card)).toEqual(answers);
+  return shown;
 }
 
 /** The first place the deal standing offers an entry the rules admit: an answer nothing refuses, or a reward. */

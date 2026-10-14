@@ -5,7 +5,6 @@ import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/sched
 import type { Chronicle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
-import { eventName } from '../src/ui/text';
 import {
   besideTheDeal,
   budget,
@@ -14,21 +13,26 @@ import {
   click,
   cursorAt,
   enemiesOf,
+  eventDealRead,
+  firstDealtAlone,
   firstEntriesTaken,
   firstSeed,
-  leanSeason,
   loreOf,
+  offeredOn,
   onScreen,
   openSaved,
   refusalLines,
   rested,
+  restedOnDeal,
   ringed,
   settledOn,
   standing,
   take,
-  titleOf,
   watch,
 } from './chronicle-screen';
+
+/** The event the first spec opens on. */
+const LEAN_SEASON = 'lean-season';
 
 /** The answer of the lean season that enters warriors. */
 const RATION = 'ration';
@@ -63,22 +67,15 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const dealt = leanSeason();
-  const [deal] = dealt.deals;
-  if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const answers = offered(CATALOGUE, deal);
+  const dealt = firstDealtAlone(LEAN_SEASON);
+  const answers = offeredOn(dealt);
   const ration = answers.indexOf(RATION);
-  if (ration === -1) throw new Error(`the ${deal.event} offers no ${RATION}`);
+  if (ration === -1) throw new Error(`the ${LEAN_SEASON} offers no ${RATION}`);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: ration }));
 
   await openSaved(page, dealt);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
-  expect(await titleOf(page, 'deal')).toBe(eventName(deal.event));
-  expect(await loreOf(page, 'deal')).toBe(eventLore(deal.event));
-  for (const [at, answer] of answers.entries()) {
-    expect(await cardOnFace(page, `deal-card-${at}`)).toBe(answer);
-  }
+  await restedOnDeal(page);
+  await eventDealRead(page, dealt, LEAN_SEASON, []);
 
   const first = await onScreen(page, 'deal-card-0');
   const second = await onScreen(page, 'deal-card-1');
@@ -89,13 +86,13 @@ test('the events phase deals a choice, and the turn plays on from the one taken'
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(answers[1]);
   expect(await standing(page, 'deal')).toBe(true);
   expect(await standing(page, 'deal-card-1')).toBe(true);
-  expect(await loreOf(page, 'deal')).toBe(eventLore(deal.event));
+  expect(await loreOf(page, 'deal')).toBe(eventLore(LEAN_SEASON));
 
   const beside = await besideTheDeal(page);
   await page.mouse.click(beside.x, beside.y);
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
-  expect(await loreOf(page, 'deal')).toBe(eventLore(deal.event));
+  expect(await loreOf(page, 'deal')).toBe(eventLore(LEAN_SEASON));
 
   await click(page, 'deal-card-0');
   await expect.poll(() => ringed(page, 'deal-card-0')).toBe(true);
@@ -152,8 +149,7 @@ test('the take of an answer the city cannot pay for says why over the card, and 
   );
 
   await openSaved(page, dealt);
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
-  await rested(page);
+  await restedOnDeal(page);
 
   await click(page, `deal-card-${at}`);
   await expect.poll(() => ringed(page, `deal-card-${at}`)).toBe(true);
