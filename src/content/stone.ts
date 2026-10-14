@@ -34,6 +34,7 @@ import {
   removedInside,
   rewarded,
   showsNextLanding,
+  terraformedInside,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
@@ -79,6 +80,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     'bad-air': 1,
     strangers: 1,
     predators: 1,
+    drought: 1,
   },
 };
 
@@ -95,6 +97,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     'bad-air': 1,
     strangers: 1,
     predators: 1,
+    drought: 1,
   },
 };
 
@@ -160,6 +163,19 @@ function wolvesTake(turn: number): number {
 /** The military defending the herds costs: three for each herd the wolves would take, whatever the border holds. */
 function defence(chronicle: Chronicle): number {
   return 3 * wolvesTake(chronicle.turn);
+}
+
+/** The terrains the drought dries inside the border. */
+const PLAIN_AND_FOREST = ['plain', 'forest'];
+
+/** How hard the drought bites on this turn: one, and one more for every five turns. */
+function droughtBites(turn: number): number {
+  return 1 + Math.floor(turn / 5);
+}
+
+/** The food rationing costs, and the money buying grain costs: two for each the drought bites. */
+function shortfall(chronicle: Chronicle): number {
+  return 2 * droughtBites(chronicle.turn);
 }
 
 const REGIONS: Age['regions'] = {
@@ -542,6 +558,13 @@ export const STONE: Slice = {
         influence: 3,
         strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
       },
+      'rain-dance': {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        strikes: (catalogue, chronicle) =>
+          terraformedInside(catalogue, chronicle, PLAIN_AND_FOREST, 'desert', 1),
+      },
     },
     events: {
       departure: {
@@ -640,6 +663,25 @@ export const STONE: Slice = {
           'defend-the-herds': {
             cost: (_catalogue, chronicle) => ({ military: defence(chronicle) }),
             reads: (_catalogue, chronicle) => ({ military: defence(chronicle) }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
+      },
+      drought: {
+        answers: {
+          'rain-dance': {
+            cost: {},
+            reads: () => ({}),
+            lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'rain-dance', 1),
+          },
+          rationing: {
+            cost: (_catalogue, chronicle) => ({ food: shortfall(chronicle) }),
+            reads: (_catalogue, chronicle) => ({ food: shortfall(chronicle) }),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+          'buy-grain': {
+            cost: (_catalogue, chronicle) => ({ money: shortfall(chronicle) }),
+            reads: (_catalogue, chronicle) => ({ money: shortfall(chronicle) }),
             lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },

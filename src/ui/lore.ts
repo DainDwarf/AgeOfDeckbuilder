@@ -16,6 +16,8 @@ const LORE = {
     'A band has come down to your fires, thin and footsore, and asks to stay. Nobody understands a word they say, and they are not leaving.',
   'event.predators':
     'Wolves have come down from the hills. The herders found two carcasses at first light and tracks all round the pens, and tonight nobody wants to go out.',
+  'event.drought':
+    'The rains have not come. The stream is a line of cracked mud, the fields have gone grey, and the elders have begun to talk of the old dances.',
   'event.herd':
     'One of the hunters came back with news: a new herd, not far from here. The tribe has been arguing all evening about what to do.',
   'capture.camp':

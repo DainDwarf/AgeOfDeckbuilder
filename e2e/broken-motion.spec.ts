@@ -1,10 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { cultureThreshold, growthThreshold } from '../src/rules/city';
-import { type Chronicle, idle } from '../src/rules/state';
+import { RESOURCES } from '../src/rules/resources';
+import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
+  barReadingOn,
   budget,
   chronicleOf,
   counted,
@@ -107,20 +108,9 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   expect(faces).toEqual(committed.hand.map(() => 1));
   expect(await counted(page, `hand-${committed.hand.length}`)).toBe(0);
 
-  const readings: Record<string, string> = {
-    ...Object.fromEntries(
-      Object.entries(committed.resources).map(([key, count]) => [key, String(count)]),
-    ),
-    food: text('reading.over', {
-      count: committed.resources.food,
-      over: growthThreshold(committed, 'player'),
-    }),
-    culture: text('reading.over', {
-      count: committed.resources.culture,
-      over: cultureThreshold(committed, 'player'),
-    }),
-    idle: String(idle(committed)),
-  };
+  const readings: Record<string, string> = Object.fromEntries(
+    [...RESOURCES, 'idle' as const].map((key) => [key, barReadingOn(committed, key)]),
+  );
   expect(await paintedReadings(page, Object.keys(readings))).toEqual(readings);
   expect(await endTurnLabel(page)).toBe(text('button.end-turn'));
   const food = await onScreen(page, 'reading-food');

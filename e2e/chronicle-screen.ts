@@ -26,7 +26,7 @@ import {
   unitKind,
 } from '../src/rules/catalogue';
 import { admitted, apply, countOn, launched, outcome, refusalOf } from '../src/rules/chronicle';
-import { claimable, cultureThreshold } from '../src/rules/city';
+import { claimable, cultureThreshold, growthThreshold } from '../src/rules/city';
 import {
   CENTRE,
   distance,
@@ -51,6 +51,8 @@ import {
   type Chronicle,
   type ChronicleAchievement,
   type ChronicleCard,
+  type Deal,
+  idle,
   playable,
 } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
@@ -59,6 +61,7 @@ import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { openingChoices } from '../src/ui/launch-layout';
+import type { BarReading } from '../src/ui/look';
 import type { PileKind } from '../src/ui/piles';
 import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
@@ -1170,6 +1173,32 @@ export async function readings(
   };
 }
 
+/**
+ * What a reading of the resource bar reads on the chronicle, as `readingOf` in
+ * `src/ui/resource-bar.ts` paints it.
+ */
+export function barReadingOn(chronicle: Chronicle, reading: BarReading): string {
+  switch (reading) {
+    case 'idle':
+      return String(idle(chronicle));
+    case 'food':
+      return text('reading.over', {
+        count: chronicle.resources.food,
+        over: growthThreshold(chronicle, 'player'),
+      });
+    case 'culture':
+      return text('reading.over', {
+        count: chronicle.resources.culture,
+        over: cultureThreshold(chronicle, 'player'),
+      });
+    case 'production':
+    case 'military':
+    case 'money':
+    case 'science':
+      return String(chronicle.resources[reading]);
+  }
+}
+
 /** The items in the order their places read on the screen: top down, each line left to right. */
 export function readOrder<T>(
   items: readonly T[],
@@ -2212,10 +2241,21 @@ export function firstEntriesTaken(chronicle: Chronicle): Chronicle {
   return taking;
 }
 
-/** The first place the deal standing offers an entry the rules admit: an answer nothing refuses, or a reward. */
-export function firstAdmitted(chronicle: Chronicle): number {
+/** The deal standing first on the chronicle; a chronicle standing on none throws. */
+function dealStanding(chronicle: Chronicle): Deal {
   const [deal] = chronicle.deals;
   if (deal === undefined) throw new Error(`turn ${chronicle.turn} deals nothing`);
+  return deal;
+}
+
+/** What the deal standing on the chronicle offers, in the order dealt. */
+export function offeredOn(chronicle: Chronicle): readonly string[] {
+  return offered(CATALOGUE, dealStanding(chronicle));
+}
+
+/** The first place the deal standing offers an entry the rules admit: an answer nothing refuses, or a reward. */
+export function firstAdmitted(chronicle: Chronicle): number {
+  const deal = dealStanding(chronicle);
   switch (deal.of) {
     case 'event': {
       const at = offered(CATALOGUE, deal).findIndex((id) =>

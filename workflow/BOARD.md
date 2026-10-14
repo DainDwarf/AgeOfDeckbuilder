@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Drought** — the Stone Age's failed rains on both Stone schedules: _Rain dance_ adds the challenge **Rain dance**, which dries one plain or forest tile inside the border into desert at the end of every turn it stays in the hand; _Rationing_ pays food and _Buy grain_ money, more on a later turn. Done when the event stands on both schedules, `npm test` is green with the coherence test and the mechanism test among it, `e2e/drought.spec.ts` passes, and the Stone page says so. Doc-impact: `docs/ages/STONE.md`. [board/drought.md](board/drought.md)
 - **Travellers** — fortunate: a passing band trades, money or food now.
 - **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; its harsher answer dealing a challenge.
 - **The Nomadic events' needs** — A rival band, Wildfire and The herd dealt on every map, as the chronicle page now asks of every event, and the need mechanism going with them; Wildfire reworked to the shape of the Stone Age's events.

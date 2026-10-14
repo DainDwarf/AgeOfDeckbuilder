@@ -2,16 +2,18 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
 import { apply, outcome } from '../src/rules/chronicle';
-import { answerOf, offered } from '../src/rules/schedule';
+import { answerOf } from '../src/rules/schedule';
 import { type Chronicle, idle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { eventName } from '../src/ui/text';
 import {
+  barReadingOn,
   budget,
   chronicleOf,
   dealtAlone,
   firstSeed,
   idsOf,
+  offeredOn,
   openSaved,
   readings,
   rested,
@@ -52,9 +54,7 @@ test('the strangers deal their answers, and taking them in brings idle populatio
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, brought } = visited(campaign);
-  const [deal] = dealt.deals;
-  if (deal === undefined) throw new Error(`turn ${dealt.turn} deals nothing`);
-  const answers = offered(CATALOGUE, deal);
+  const answers = offeredOn(dealt);
   const at = answers.indexOf(TAKE_THEM_IN);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   expect(idle(after)).toBe(idle(dealt) + brought);
@@ -68,7 +68,7 @@ test('the strangers deal their answers, and taking them in brings idle populatio
   expect(shown('deal-title').text).toBe(eventName(STRANGERS));
   expect(shown('deal-lore').text).toBe(eventLore(STRANGERS));
   expect(faces.map((face) => shown(face).card)).toEqual(answers);
-  expect(shown('reading-idle-value').text).toBe(String(idle(dealt)));
+  expect(shown('reading-idle-value').text).toBe(barReadingOn(dealt, 'idle'));
 
   await take(page, at);
 
@@ -76,7 +76,7 @@ test('the strangers deal their answers, and taking them in brings idle populatio
   const left = await readings(page, ['deal', 'reading-idle-value']);
   expect([left('deal').standing, left('reading-idle-value').text]).toEqual([
     false,
-    String(idle(after)),
+    barReadingOn(after, 'idle'),
   ]);
 
   expect(problems).toEqual([]);

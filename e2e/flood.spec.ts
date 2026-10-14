@@ -5,7 +5,7 @@ import { improvementPlaced, terraformed } from '../src/rules/cards';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
-import { answerOf, offered } from '../src/rules/schedule';
+import { answerOf } from '../src/rules/schedule';
 import { followed } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
@@ -16,6 +16,7 @@ import {
   cityTileOf,
   dealtAlone,
   firstSeed,
+  offeredOn,
   openSaved,
   readings,
   rested,
@@ -64,9 +65,7 @@ test('the flood deals its answers, and losing the fields removes the clay pit st
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, city } = flooding(campaign);
-  const [deal] = dealt.deals;
-  if (deal === undefined) throw new Error(`turn ${dealt.turn} deals nothing`);
-  const answers = offered(CATALOGUE, deal);
+  const answers = offeredOn(dealt);
   const at = answers.indexOf(LOSE_THE_FIELDS);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   const mark = `improvement-${CLAY_PIT}-${tileKey(city)}`;

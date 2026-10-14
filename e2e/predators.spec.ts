@@ -5,19 +5,21 @@ import { featurePlaced, featureRemoved, gained, terraformed } from '../src/rules
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { featureKind } from '../src/rules/map-kinds';
-import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
+import { answerCost, answerOf, answerRefusal } from '../src/rules/schedule';
 import { followed, unchanged } from '../src/rules/stages';
 import { type Chronicle, holds, playable } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
 import { eventName } from '../src/ui/text';
 import {
+  barReadingOn,
   budget,
   chronicleOf,
   cityTileOf,
   click,
   dealtAlone,
   firstSeed,
+  offeredOn,
   openSaved,
   readings,
   refusalLines,
@@ -46,13 +48,6 @@ const DEER = 'deer';
 /** Whether nothing refuses the answer of the event on the chronicle. */
 function answerable(chronicle: Chronicle, answer: string): boolean {
   return playable(answerRefusal(CATALOGUE, chronicle, PREDATORS, answer));
-}
-
-/** What the deal standing on the chronicle offers, in the order dealt. */
-function offeredOn(chronicle: Chronicle): readonly string[] {
-  const [deal] = chronicle.deals;
-  if (deal === undefined) throw new Error(`turn ${chronicle.turn} deals nothing`);
-  return offered(CATALOGUE, deal);
 }
 
 /** The place the deal standing on the chronicle offers the answer in. */
@@ -139,7 +134,7 @@ test('abandoning a herd is refused while no herd stands inside the border and sa
   expect(shown('deal-title').text).toBe(eventName(PREDATORS));
   expect(shown('deal-lore').text).toBe(eventLore(PREDATORS));
   expect(faces.map((face) => shown(face).card)).toEqual(answers);
-  expect(shown(stock).text).toBe(String(dealt.resources[price.resource]));
+  expect(shown(stock).text).toBe(barReadingOn(dealt, price.resource));
 
   await click(page, `deal-card-${abandon}`);
   await expect.poll(() => ringed(page, `deal-card-${abandon}`)).toBe(true);
@@ -155,7 +150,7 @@ test('abandoning a herd is refused while no herd stands inside the border and sa
   const left = await readings(page, ['deal', stock]);
   expect([left('deal').standing, left(stock).text]).toEqual([
     false,
-    String(after.resources[price.resource]),
+    barReadingOn(after, price.resource),
   ]);
 
   expect(problems).toEqual([]);

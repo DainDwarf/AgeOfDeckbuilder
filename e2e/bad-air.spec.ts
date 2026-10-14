@@ -3,15 +3,17 @@ import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
 import { apply, outcome } from '../src/rules/chronicle';
 import { arrived } from '../src/rules/city';
-import { answerOf, offered } from '../src/rules/schedule';
+import { answerOf } from '../src/rules/schedule';
 import { type Chronicle, idle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { eventName } from '../src/ui/text';
 import {
+  barReadingOn,
   budget,
   chronicleOf,
   dealtAlone,
   firstSeed,
+  offeredOn,
   openSaved,
   readings,
   rested,
@@ -52,9 +54,7 @@ test('the sickness deals its answers, and burying the dead kills the idle popula
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, killed } = sickened(campaign);
-  const [deal] = dealt.deals;
-  if (deal === undefined) throw new Error(`turn ${dealt.turn} deals nothing`);
-  const answers = offered(CATALOGUE, deal);
+  const answers = offeredOn(dealt);
   const at = answers.indexOf(BURY_THE_DEAD);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   expect(idle(after)).toBe(idle(dealt) - killed);
@@ -67,7 +67,7 @@ test('the sickness deals its answers, and burying the dead kills the idle popula
   expect(shown('deal-title').text).toBe(eventName(BAD_AIR));
   expect(shown('deal-lore').text).toBe(eventLore(BAD_AIR));
   expect(faces.map((face) => shown(face).card)).toEqual(answers);
-  expect(shown('reading-idle-value').text).toBe(String(idle(dealt)));
+  expect(shown('reading-idle-value').text).toBe(barReadingOn(dealt, 'idle'));
 
   await take(page, at);
 
@@ -75,7 +75,7 @@ test('the sickness deals its answers, and burying the dead kills the idle popula
   const left = await readings(page, ['deal', 'reading-idle-value']);
   expect([left('deal').standing, left('reading-idle-value').text]).toEqual([
     false,
-    String(idle(after)),
+    barReadingOn(after, 'idle'),
   ]);
 
   expect(problems).toEqual([]);
