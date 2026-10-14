@@ -79,6 +79,7 @@ import {
   cornerKey,
   cornersOf,
   distance,
+  type FeatureId,
   MOVE_POINT,
   neighbours,
   type River,
@@ -100,6 +101,9 @@ import {
   type Fire,
   featureDealable,
   featureDealt,
+  featureInside,
+  featureRemovalInside,
+  featuresRemovedInside,
   fireRead,
   fireStartable,
   offered,
@@ -181,7 +185,16 @@ export const CURSE = 3;
 /** How many things inside the border the fixture's deluge removes. */
 export const DELUGE = 2;
 
-/** The production the fixture's explosion costs: the one answer of the fixture whose flat cost asks a stock. */
+/** How many features inside the border the fixture's cull removes. */
+export const CULL = 2;
+
+/** The production the fixture's cull costs. */
+export const CULL_COST = 1;
+
+/** The features the fixture's cull removes, and whose absence inside the border blocks it. */
+const CULLED: readonly FeatureId[] = ['PH_Fertile', 'PH_Game'];
+
+/** The production the fixture's explosion costs. */
 export const EXPLOSION = 4;
 
 /**
@@ -391,6 +404,22 @@ const EVENTS: Catalogue['events'] = {
         lands: (_catalogue, chronicle) => removedInside(chronicle, DELUGE),
       },
       PH_Wade: {
+        cost: {},
+        reads: () => ({}),
+        lands: (_catalogue, chronicle) => unchanged(chronicle),
+      },
+    },
+  },
+  PH_Prowl: {
+    answers: {
+      PH_Cull: {
+        cost: { production: CULL_COST },
+        blocked: (catalogue, chronicle) =>
+          featureInside(catalogue, chronicle, CULLED) ? [] : ['no-deer-or-cattle'],
+        reads: (catalogue, chronicle) => featureRemovalInside(catalogue, chronicle, CULLED, CULL),
+        lands: (catalogue, chronicle) => featuresRemovedInside(catalogue, chronicle, CULLED, CULL),
+      },
+      PH_Guard: {
         cost: {},
         reads: () => ({}),
         lands: (_catalogue, chronicle) => unchanged(chronicle),

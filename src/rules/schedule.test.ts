@@ -16,6 +16,8 @@ import {
   type Carrying,
   CITY,
   CIVILIZATION,
+  CULL,
+  CULL_COST,
   camped,
   cityOf,
   DELUGE,
@@ -61,10 +63,18 @@ import {
   tileKey,
 } from './map';
 import { nextRng, type Rng, seedRng } from './rng';
-import { offered } from './schedule';
+import { answerRefusal, offered } from './schedule';
 import { chartedAt, inSight } from './sight';
 import { type Stage, walked as stagesWalked, unchanged } from './stages';
-import { type Chronicle, holds, idle, type Snapshot, type Timeline, turnShown } from './state';
+import {
+  type Chronicle,
+  holds,
+  idle,
+  NO_REFUSAL,
+  type Snapshot,
+  type Timeline,
+  turnShown,
+} from './state';
 import { unitAt } from './units';
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
@@ -1080,6 +1090,99 @@ test('the player’s city’s building removed ends the chronicle in defeat righ
   expect(namesOf(stages)).toEqual(['answer', 'taken', 'retiled', 'ended']);
   expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'removal', turn: dealt.turn });
   expect(fallen.hand).toEqual([]);
+});
+
+/** What a prowl fixture lays on a tile, over the plain it stands as. */
+type Prowled = Partial<Pick<Tile, 'terrain' | 'feature' | 'improvements' | 'building'>>;
+
+/**
+ * A `ringed` city on a disc of plain out to three holding the cull's cost, each tile named laid as
+ * `Prowled` says, one end of turn on with the fixture's prowl standing.
+ */
+function prowled(laid: readonly (readonly [TileCoords, Prowled])[], seed = 7): Chronicle {
+  const on = new Map(laid.map(([at, layers]) => [tileKey(at), layers]));
+  const city = ringed(3, {
+    ...dueOn(2, 'PH_Prowl'),
+    drawPile: fullDraw(),
+    tiles: field(3).map((tile) => ({ ...tile, ...on.get(tileKey(tile)) })),
+    resources: { food: 0, production: CULL_COST, military: 0, money: 0, science: 0, culture: 0 },
+    rng: seedRng(seed),
+  });
+  return outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+}
+
+const CULLING = { type: 'take', at: 0 } as const;
+
+const { PH_Cull } = eventOf(CATALOGUE, 'PH_Prowl').answers;
+
+test('an answer blocked on the chronicle is dealt, read blocked with its reason, and its take refused with nothing paid, while the same answer is taken where the chronicle admits it', () => {
+  const bare = prowled([[DRY, { feature: 'PH_Fertile' }]]);
+  const herded = prowled([[SOAKED, { feature: 'PH_Fertile' }]]);
+  const [deal] = bare.deals;
+  if (deal === undefined) throw new Error('the prowl is not dealt');
+  const culled = outcome(apply(CATALOGUE, herded, CULLING));
+
+  expect(offered(CATALOGUE, deal)[CULLING.at]).toBe('PH_Cull');
+  expect(answerRefusal(CATALOGUE, bare, 'PH_Prowl', 'PH_Cull')).toEqual({
+    unaffordable: [],
+    blocked: ['no-deer-or-cattle'],
+  });
+  expect(stagedBy(bare, CULLING)).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, bare, CULLING))).toBe(bare);
+  expect(answerRefusal(CATALOGUE, herded, 'PH_Prowl', 'PH_Cull')).toEqual(NO_REFUSAL);
+  expect(culled.deals).toEqual([]);
+  expect(culled.resources.production).toBe(herded.resources.production - CULL_COST);
+  expect(featureOf(culled, SOAKED)).toBeUndefined();
+});
+
+test('a removal of features takes that many inside the border, each drawn once from the seeded generator among those standing there, the city’s own tile included, with every layer going with it, reads what it takes of each before it lands, and takes fewer where fewer stand and nothing where none does', () => {
+  const inside: [TileCoords, Prowled][] = [
+    [CITY, { feature: 'PH_Fertile' }],
+    [SOAKED, { feature: 'PH_Fertile', building: 'PH_Smokehouse' }],
+    [BARN, { terrain: 'forest', feature: 'PH_Game', improvements: ['PH_Snare'] }],
+  ];
+  const outside: [TileCoords, Prowled] = [
+    DRY,
+    { feature: 'PH_Fertile', building: 'PH_Smokehouse' },
+  ];
+  const takenFrom = new Set<string>();
+
+  for (const seed of SEEDS) {
+    const dealt = prowled([...inside, outside], seed);
+    const read = PH_Cull.reads(CATALOGUE, dealt);
+    const stages = apply(CATALOGUE, dealt, CULLING);
+    const landed = landedOf(stages);
+    const bared = inside.map(([at]) => at).filter((at) => featureOf(landed, at) === undefined);
+    const lost = (feature: FeatureId): number =>
+      bared.filter((at) => featureOf(dealt, at) === feature).length;
+
+    expect(bared).toHaveLength(CULL);
+    expect(read).toEqual({ PH_Fertile: lost('PH_Fertile'), PH_Game: lost('PH_Game') });
+    expect(retiledOn(stages)).toHaveLength(CULL);
+    expect(landed.rng).toEqual(steppedBy(dealt.rng, CULL));
+    for (const at of bared) {
+      expect(tileAt(landed.tiles, at)?.improvements).toEqual([]);
+      expect(buildingAt(landed, at)).toBe(tileKey(at) === tileKey(CITY) ? 'PH_City' : undefined);
+    }
+    for (const [at] of inside.filter(([at]) => !bared.includes(at))) {
+      expect(tileAt(landed.tiles, at)).toEqual(tileAt(dealt.tiles, at));
+    }
+    expect(landed.assigned).toEqual(dealt.assigned);
+    expect(outsideOf(dealt, landed)).toEqual(outsideOf(dealt, dealt));
+    takenFrom.add(bared.map(tileKey).join());
+  }
+  expect(takenFrom.size).toBeGreaterThan(1);
+
+  const one = prowled([[SOAKED, { feature: 'PH_Fertile' }], outside]);
+  const fewer = landedOf(apply(CATALOGUE, one, CULLING));
+  const none = prowled([outside]);
+
+  expect(PH_Cull.reads(CATALOGUE, one)).toEqual({ PH_Fertile: 1, PH_Game: 0 });
+  expect(featureOf(fewer, SOAKED)).toBeUndefined();
+  expect(fewer.rng).toEqual(steppedBy(one.rng, 1));
+  expect(outsideOf(one, fewer)).toEqual(outsideOf(one, one));
+  expect(PH_Cull.reads(CATALOGUE, none)).toEqual({ PH_Fertile: 0, PH_Game: 0 });
+  expect(PH_Cull.lands(CATALOGUE, none)).toEqual(unchanged(none));
 });
 
 /** The same tiles, with the named ones carrying the feature. */

@@ -206,9 +206,9 @@ export type TileBlock =
   | 'no-claim';
 
 /**
- * What stands against a card or a claim the cost alone would let through: what the city, the piles
- * or a turn already shown hold against it, a card nothing plays, and every reason an aim turns a
- * tile down.
+ * What stands against a card, an answer or a claim the cost alone would let through: what the city,
+ * the piles, the border or a turn already shown hold against it, a card nothing plays, and every
+ * reason an aim turns a tile down.
  */
 export type Block =
   | 'population'
@@ -218,6 +218,7 @@ export type Block =
   | 'hand'
   | 'turn-shown'
   | 'played-by-nothing'
+  | 'no-deer-or-cattle'
   | TileBlock;
 
 /** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */
@@ -233,7 +234,7 @@ export function costsOf(cost: Partial<Resources>): Cost[] {
   return entries;
 }
 
-/** Everything standing between the city and a card or a claim: what it cannot pay, and the map. */
+/** Everything standing between the city and a card, an answer or a claim: what it cannot pay, and what blocks it. */
 export type Refusal = {
   readonly unaffordable: readonly Resource[];
   readonly blocked: readonly Block[];

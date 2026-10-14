@@ -298,6 +298,7 @@ const TEXT = {
   'refusal.hand': 'No other card in the hand',
   'refusal.turn-shown': 'The next event is already shown',
   'refusal.played-by-nothing': 'Cannot be played',
+  'refusal.no-deer-or-cattle': 'No deer or cattle inside your border',
   'refusal.no-claim': 'Your city cannot claim that tile',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',

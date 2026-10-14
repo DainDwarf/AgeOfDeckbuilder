@@ -952,9 +952,7 @@ function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
  * answer is the one `answer` group over the deal `taken`, its cost and its landing; a reward is the
  * one `reward` group over the deal `taken` and its copies `added`, the others added nowhere.
  * While a deal still stands nothing more resolves; once none does, the last reward taken resumes the
- * end of turn at its opening, and the last answer taken draws the hand. A take made while no deal
- * stands, one at a place the deal does not offer, and one of an answer the city cannot pay for are
- * `refused`.
+ * end of turn at its opening, and the last answer taken draws the hand.
  */
 function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence {
   const [deal, ...waiting] = chronicle.deals;

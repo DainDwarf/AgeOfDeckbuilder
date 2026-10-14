@@ -1,4 +1,4 @@
-import { built, featurePlaced, retiled, terraformed } from './cards';
+import { built, featurePlaced, featureRemoved, retiled, terraformed } from './cards';
 import {
   type Aim,
   type Answer,
@@ -177,18 +177,19 @@ export function answerCost(catalogue: Catalogue, chronicle: Chronicle, answer: A
   }
 }
 
-/**
- * Everything standing between the city and an answer of the event: what it cannot pay. Nothing on
- * the map blocks an answer.
- */
+/** Everything standing between the city and an answer of the event: what it cannot pay, and what blocks it. */
 export function answerRefusal(
   catalogue: Catalogue,
   chronicle: Chronicle,
   event: string,
   answer: string,
 ): Refusal {
-  const costs = answerCost(catalogue, chronicle, answerOf(catalogue, event, answer));
-  return { unaffordable: unaffordable(chronicle, costs), blocked: [] };
+  const asked = answerOf(catalogue, event, answer);
+  const costs = answerCost(catalogue, chronicle, asked);
+  return {
+    unaffordable: unaffordable(chronicle, costs),
+    blocked: asked.blocked?.(catalogue, chronicle) ?? [],
+  };
 }
 
 /**
@@ -398,6 +399,87 @@ function oneRemovedInside(chronicle: Chronicle): Landed {
     ...tile,
     building: undefined,
   }));
+}
+
+/** A feature standing on a tile, with that tile. */
+type FeatureOn = { readonly at: TileCoords; readonly feature: FeatureId };
+
+/**
+ * Every one of the features standing inside the player's border, the city's own tile included, with
+ * its tile; a feature the catalogue does not hold is refused.
+ */
+function featuresInside(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  features: readonly FeatureId[],
+): FeatureOn[] {
+  for (const feature of features) featureKind(catalogue, feature);
+  return chronicle.tiles.flatMap(({ q, r, feature }) =>
+    feature !== undefined && features.includes(feature) && holds(chronicle, { q, r })
+      ? [{ at: { q, r }, feature }]
+      : [],
+  );
+}
+
+export function featureInside(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  features: readonly FeatureId[],
+): boolean {
+  return featuresInside(catalogue, chronicle, features).length > 0;
+}
+
+/**
+ * `count` of the features standing inside the player's border, fewer where fewer stand, drawn one at
+ * a time in one step each of the chronicle's generator among those not yet drawn; each with the
+ * generator its draw leaves.
+ */
+function featuresDrawn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  features: readonly FeatureId[],
+  count: number,
+): (FeatureOn & { readonly rng: Rng })[] {
+  let standing = featuresInside(catalogue, chronicle, features);
+  let rng = chronicle.rng;
+  const drawn: (FeatureOn & { readonly rng: Rng })[] = [];
+  while (drawn.length < count && standing.length > 0) {
+    const { picked, rng: left } = pickUniform(rng, standing);
+    rng = left;
+    drawn.push({ ...picked, rng });
+    standing = standing.filter((each) => each !== picked);
+  }
+  return drawn;
+}
+
+/** What `featuresRemovedInside` takes for that count, read before it lands: how many of each feature. */
+export function featureRemovalInside(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  features: readonly FeatureId[],
+  count: number,
+): Record<FeatureId, number> {
+  const drawn = featuresDrawn(catalogue, chronicle, features, count);
+  return Object.fromEntries(
+    features.map((feature) => [feature, drawn.filter((each) => each.feature === feature).length]),
+  );
+}
+
+/**
+ * `count` of the features inside the player's border removed, each drawn as `featuresDrawn` draws it
+ * and going with every layer that goes with it: one `retiled` each, nothing where none stands.
+ */
+export function featuresRemovedInside(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  features: readonly FeatureId[],
+  count: number,
+): Landed {
+  let landing = unchanged(chronicle);
+  for (const { at, rng } of featuresDrawn(catalogue, chronicle, features, count)) {
+    landing = followed(landing, (left) => featureRemoved(catalogue, { ...left, rng }, at));
+  }
+  return landing;
 }
 
 /**

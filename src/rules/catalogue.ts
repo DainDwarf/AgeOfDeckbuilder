@@ -350,14 +350,15 @@ function unitActs(aim: Aim): boolean {
 }
 
 /**
- * One answer an event deals: its cost, flat or a reading of the chronicle it is asked on,
- * what its rules entry reads of the chronicle it is dealt on, and what it does to the chronicle it
- * lands on. A draw of its own steps the generator that chronicle carries.
+ * One answer an event deals: its cost, flat or read off the chronicle, what blocks it there where it
+ * names that, what its rules entry reads, and what it does to the chronicle it lands on. A draw of
+ * its own steps the generator that chronicle carries.
  */
 export type Answer = {
   readonly cost:
     | Partial<Resources>
     | ((catalogue: Catalogue, chronicle: Chronicle) => Partial<Resources>);
+  readonly blocked?: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
   readonly reads: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
 };
@@ -709,8 +710,12 @@ export function catalogued(content: Catalogue): Catalogue {
       }
       dealtBy.set(answer, id);
     }
-    const free = Object.values(event.answers).some(({ cost }) => freeWhateverTheChronicle(cost));
-    if (!free) refuse(content, `the event ${id} deals no answer costing no stock`);
+    const free = Object.values(event.answers).some(
+      ({ cost, blocked }) => blocked === undefined && freeWhateverTheChronicle(cost),
+    );
+    if (!free) {
+      refuse(content, `the event ${id} deals no answer costing no stock and blocked by nothing`);
+    }
   }
   return content;
 }

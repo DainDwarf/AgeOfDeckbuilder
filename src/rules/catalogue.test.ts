@@ -1075,17 +1075,17 @@ test('a catalogue whose two events deal the same answer is refused', () => {
   expect(() => catalogued(content)).toThrow(/^fixture: /);
 });
 
-test('a catalogue whose event deals no answer costing no stock is refused, an answer costing nought of a stock costing none and one whose cost reads the chronicle never counting', () => {
+test('a catalogue whose event deals no answer costing no stock and blocked by nothing is refused, an answer costing nought of a stock costing none, and one whose cost reads the chronicle or that names what blocks it never counting', () => {
   const { PH_Blight } = CATALOGUE.events;
   const { PH_Endure, PH_Explosion } = PH_Blight.answers;
-  const blighted = (endure: Answer['cost']): Catalogue =>
+  const blighted = (endure: Answer['cost'], blocked?: Answer['blocked']): Catalogue =>
     changed({
       version: 'blighted',
       events: {
         ...CATALOGUE.events,
         PH_Blight: {
           ...PH_Blight,
-          answers: { PH_Endure: { ...PH_Endure, cost: endure }, PH_Explosion },
+          answers: { PH_Endure: { ...PH_Endure, cost: endure, blocked }, PH_Explosion },
         },
       },
     });
@@ -1095,6 +1095,7 @@ test('a catalogue whose event deals no answer costing no stock is refused, an an
   expect(catalogued(blighted({ food: 0, money: 0 })).version).toBe('blighted');
   expect(catalogued(blighted({})).version).toBe('blighted');
   expect(() => catalogued(blighted(() => ({})))).toThrow(/^blighted: /);
+  expect(() => catalogued(blighted({}, () => []))).toThrow(/^blighted: /);
 });
 
 test('a catalogue whose region’s schedule deals an event it does not hold is refused', () => {
