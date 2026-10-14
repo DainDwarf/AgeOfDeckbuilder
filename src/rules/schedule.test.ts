@@ -247,16 +247,16 @@ test('the blight is dealt as readily on the third turn as the twentieth', () => 
   expect(Math.max(...turns)).toBeGreaterThanOrEqual(20);
 });
 
-test('a timeline dealing on the first turn stops the end of the settle phase on its deal, and the take draws its hand', () => {
+test('a timeline dealing on the first turn stops the end of the settle phase on its deal over the hand it drew, and the take draws nothing', () => {
   const settled = settledOn(opening(plains(4), dueOn(1)), CITY);
   const dealt = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 1 }));
 
   expect(dealt.turn).toBe(1);
   expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
-  expect(dealt.hand).toEqual([]);
+  expect(dealt.hand).toHaveLength(5);
   expect(taken.deals).toEqual([]);
-  expect(taken.hand).toHaveLength(5);
+  expect(taken.hand).toEqual(dealt.hand);
 });
 
 test('nothing is dealt before the due turn, and the raid enters a warrior on a camp', () => {
@@ -303,23 +303,24 @@ test('a famine taken on any turn adds its hazard and leaves the food stock as it
     const landed = endedTurn(awaiting(due), 'PH_Famine');
 
     expect(landed.resources.food).toBe(STOCKED);
-    expect(idsOf(landed.hand)).toEqual(['PH_Hunger']);
+    expect(idsOf(landed.drawPile)).toEqual(['PH_Hunger']);
   }
 });
 
-test('the famine adds its hazard to the top of the draw pile, and leaves the city as it stood', () => {
+test('the famine taken on a due turn adds its hazard to the top of the draw pile, drawn in the next turn’s hand, and leaves the city as it stood', () => {
   const waiting = awaiting(15, { drawPile: fullDraw() });
   const after = endedTurn(waiting, 'PH_Famine');
 
-  expect(idsOf(after.hand)).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
-  expect(idsOf(after.drawPile)).toEqual(fullDraw().slice(4));
+  expect(idsOf(after.hand)).toEqual(fullDraw());
+  expect(idsOf(after.drawPile)).toEqual(['PH_Hunger']);
+  expect(idsOf(endedTurn(after).hand)[0]).toBe('PH_Hunger');
   expect(after.resources.food).toBe(STOCKED);
   expect(after.population).toBe(waiting.population);
   expect(growthThreshold(after, 'player')).toBe(growthThreshold(waiting, 'player'));
   expect(enemiesOf(after)).toEqual([]);
 });
 
-test('a due turn deals its one event, and the turn ends there', () => {
+test('a due turn deals its one event over the hand it drew, and the turn ends there', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
   const blighted = dealtBy(5, dueOn(5, 'PH_Blight'));
   const staged = stagedBy(awaiting(5, { drawPile: fullDraw() }), { type: 'end-turn' });
@@ -327,9 +328,9 @@ test('a due turn deals its one event, and the turn ends there', () => {
   expect(standing.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(blighted.deals).toEqual([{ of: 'event', event: 'PH_Blight' }]);
   expect(standing.turn).toBe(5);
-  expect(standing.hand).toEqual([]);
+  expect(idsOf(standing.hand)).toEqual(fullDraw());
   expect(staged.slice(-3)).toEqual(['deal', 'rolled', 'dealt']);
-  expect(staged).not.toContain('drawn');
+  expect(staged.indexOf('drawn')).toBeLessThan(staged.indexOf('deal'));
 });
 
 /** A timeline of that age's regions' schedule from a seed due on the second turn, and the hunger among the cards or not. */
@@ -470,23 +471,18 @@ test('the same seed is due on the same turns whatever answers are taken, though 
   expect(differs).toBe(true);
 });
 
-test('the take lands the answer at its place in the order declared and no other, draws nothing of its own, and draws a hand', () => {
+test('the take lands the answer at its place in the order declared and no other, draws nothing of its own, and resolves nothing after its landing', () => {
   const standing = dealtBy(5, { drawPile: fullDraw() });
   const raided = outcome(apply(CATALOGUE, standing, { type: 'take', at: 0 }));
   const starved = outcome(apply(CATALOGUE, standing, { type: 'take', at: 1 }));
 
-  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual([
-    'answer',
-    'taken',
-    'enter',
-    'drawn',
-  ]);
+  expect(stagedBy(standing, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter']);
   expect(enemiesOf(raided)).toHaveLength(1);
-  expect(idsOf(raided.hand)).toEqual(fullDraw());
   expect(enemiesOf(starved)).toEqual([]);
-  expect(idsOf(starved.hand)).toEqual(['PH_Hunger', ...fullDraw().slice(0, 4)]);
+  expect(idsOf(starved.drawPile)).toEqual(['PH_Hunger']);
   expect(starved.rng).toEqual(standing.rng);
   for (const after of [raided, starved]) {
+    expect(after.hand).toEqual(standing.hand);
     expect(after.deals).toEqual([]);
     expect(after.resources.food).toBe(STOCKED);
     expect(after.timeline).toEqual(standing.timeline);
@@ -504,12 +500,7 @@ test('a raid with no free tile to enter on enters nobody, draws nothing, and res
   const raided = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
   expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
-  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual([
-    'answer',
-    'taken',
-    'runtime-error',
-    'drawn',
-  ]);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'runtime-error']);
   expect(enemiesOf(raided)).toEqual([]);
   expect(raided.rng).toEqual(dealt.rng);
 });
@@ -533,7 +524,7 @@ test('an answer taken pays its cost before it lands, and one the city cannot pay
   expect(exploded.deals).toEqual([]);
   expect(idsOf(exploded.hand)).toEqual(fullDraw());
   expect(endured.resources).toEqual(short.resources);
-  expect(endured.hand[0].id).toBe('PH_Hunger');
+  expect(endured.drawPile[0].id).toBe('PH_Hunger');
 });
 
 test('an answer whose cost reads the chronicle is refused where that reading outruns the stock, and pays exactly that reading where it does not', () => {
@@ -588,13 +579,6 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
   }
   expect(stagedBy(waiting, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter']);
 });
-
-/** The chronicle an answer's landing leaves: the last stage's before the hand is drawn. */
-function landedOf(stages: readonly Stage[]): Chronicle {
-  const read = [...stagesWalked(stages)];
-  const drawing = read.findIndex((stage) => stage.name === 'drawn');
-  return outcome(drawing < 0 ? read : read.slice(0, drawing));
-}
 
 /** The age and the timeline dealing the fixture's upheaval at the end of a `cityOf` city's turn. */
 const UPHEAVAL_DUE: Carrying = dueOn(2, 'PH_Upheaval');
@@ -712,7 +696,7 @@ test('an answer taking the city’s last population falls on the take, and nothi
     'ended',
   ]);
   expect(after.population).toBe(0);
-  expect(after.hand).toEqual([]);
+  expect(after.hand).toEqual(dealt.hand);
   expect(after.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
 });
 
@@ -777,7 +761,7 @@ function aflame(
   const dealt = outcome(apply(catalogue, city, { type: 'end-turn' }));
   if (dealt.deals.length === 0) throw new Error('the wildfire is not dealt');
   const read = eventOf(catalogue, 'PH_Wildfire').answers.PH_Burn.reads(catalogue, dealt);
-  return { dealt, read, landed: landedOf(apply(catalogue, dealt, { type: 'take', at: 0 })) };
+  return { dealt, read, landed: outcome(apply(catalogue, dealt, { type: 'take', at: 0 })) };
 }
 
 function terrainOf(chronicle: Chronicle, at: TileCoords): string | undefined {
@@ -1017,7 +1001,7 @@ test('a removal takes improvements inside the border while they stand, each draw
       { rng: seedRng(seed) },
     );
     const { dealt, read, stages } = deluged(city);
-    const landed = landedOf(stages);
+    const landed = outcome(stages);
     const left = improvementsOn(landed, held);
 
     expect(read).toEqual({ improvements: DELUGE, buildings: 0, city: 0 });
@@ -1046,7 +1030,7 @@ test('once no improvement stands inside the border, a removal takes a building t
       { rng: seedRng(seed) },
     );
     const { dealt, read, stages } = deluged(city);
-    const landed = landedOf(stages);
+    const landed = outcome(stages);
     const [first, second] = retiledOn(stages);
     const razed = [SOAKED, BARN].filter((at) => buildingAt(landed, at) === undefined);
 
@@ -1089,7 +1073,7 @@ test('the player’s city’s building removed ends the chronicle in defeat righ
 
   expect(namesOf(stages)).toEqual(['answer', 'taken', 'retiled', 'ended']);
   expect(fallen.ending).toEqual({ outcome: 'defeat', cause: 'removal', turn: dealt.turn });
-  expect(fallen.hand).toEqual([]);
+  expect(fallen.hand).toEqual(dealt.hand);
 });
 
 /** What a prowl fixture lays on a tile, over the plain it stands as. */
@@ -1151,7 +1135,7 @@ test('a removal of features takes that many inside the border, each drawn once f
     const dealt = prowled([...inside, outside], seed);
     const read = PH_Cull.reads(CATALOGUE, dealt);
     const stages = apply(CATALOGUE, dealt, CULLING);
-    const landed = landedOf(stages);
+    const landed = outcome(stages);
     const bared = inside.map(([at]) => at).filter((at) => featureOf(landed, at) === undefined);
     const lost = (feature: FeatureId): number =>
       bared.filter((at) => featureOf(dealt, at) === feature).length;
@@ -1174,7 +1158,7 @@ test('a removal of features takes that many inside the border, each drawn once f
   expect(takenFrom.size).toBeGreaterThan(1);
 
   const one = prowled([[SOAKED, { feature: 'PH_Fertile' }], outside]);
-  const fewer = landedOf(apply(CATALOGUE, one, CULLING));
+  const fewer = outcome(apply(CATALOGUE, one, CULLING));
   const none = prowled([outside]);
 
   expect(PH_Cull.reads(CATALOGUE, one)).toEqual({ PH_Fertile: 1, PH_Game: 0 });
@@ -1208,19 +1192,11 @@ function herded(open: TileCoords[], carrying: Carrying = {}): Chronicle {
   });
 }
 
-/**
- * The city one end of turn on with the herd standing, the chronicle its first answer lands on, and
- * the one the take leaves once the hand is drawn.
- */
-function followed(city: Chronicle): {
-  dealt: Chronicle;
-  landed: Chronicle;
-  taken: Chronicle;
-} {
+/** The city one end of turn on with the herd standing, and the chronicle its first answer taken leaves. */
+function followed(city: Chronicle): { dealt: Chronicle; landed: Chronicle } {
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   if (dealt.deals.length === 0) throw new Error('the herd is not dealt');
-  const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
-  return { dealt, landed: landedOf(stages), taken: outcome(stages) };
+  return { dealt, landed: outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 })) };
 }
 
 function featureOf(chronicle: Chronicle, at: TileCoords): FeatureId | undefined {
@@ -1283,7 +1259,7 @@ test('a tile an answer charts is charted where it was not, its snapshot holding 
 test('a tile an answer charts that was charted before holds what the answer dealt onto it and whoever stands on it, over the snapshot it had', () => {
   const at = { q: HERD, r: 0 };
   const seen = chartedAt(CATALOGUE, herded([at]), at);
-  const { dealt, landed, taken } = followed(withUnits(seen, [standing('enemy', at, {}, 0, 0)]));
+  const { dealt, landed } = followed(withUnits(seen, [standing('enemy', at, {}, 0, 0)]));
 
   expect(snapshotOf(dealt, at)).toBeDefined();
   expect(snapshotOf(dealt, at)?.tile.feature).toBeUndefined();
@@ -1294,26 +1270,25 @@ test('a tile an answer charts that was charted before holds what the answer deal
     faction: 'enemy',
     embarked: false,
   });
-  expect(snapshotOf(taken, at)?.tile.feature).toBe('PH_Fertile');
   expect(inSight(CATALOGUE, landed).has(tileKey(at))).toBe(false);
 });
 
 test('a tile an answer charted stays charted as it was then, and in fog, through the commands and the turns that follow, where nothing sees it', () => {
   const at = { q: HERD, r: 0 };
-  const { taken } = followed(herded([at]));
+  const { landed } = followed(herded([at]));
   const fogged = (chronicle: Chronicle): void => {
     expect(inSight(CATALOGUE, chronicle).has(tileKey(at))).toBe(false);
     expect(chartedTile(chronicle, at)).toBeUndefined();
     expect(snapshotOf(chronicle, at)?.tile.feature).toBe('PH_Fertile');
   };
 
-  let later = outcome(apply(CATALOGUE, taken, assignTo(CITY)));
+  let later = outcome(apply(CATALOGUE, landed, assignTo(CITY)));
   fogged(later);
   for (let turns = 0; turns < 3; turns++) {
     later = outcome(apply(CATALOGUE, later, { type: 'end-turn' }));
     fogged(later);
   }
-  expect(later.turn).toBe(taken.turn + 3);
+  expect(later.turn).toBe(landed.turn + 3);
 });
 
 test('a landing resolves as one stage per change it makes, in the order it makes them, each carrying the tile it landed on', () => {
@@ -1325,20 +1300,20 @@ test('a landing resolves as one stage per change it makes, in the order it makes
     units: [standing('player', burning, { health: FIRE.damage + 1 })],
   });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  const [answer, , unassigned, lost, retiled, damaged, drawn] = stagesWalked(
+  const [answer, , unassigned, lost, retiled, damaged, ...rest] = stagesWalked(
     apply(CATALOGUE, dealt, { type: 'take', at: 0 }),
   );
   const healthOn = (stage: Stage): number | undefined =>
     unitAt(stage.chronicle.units, burning)?.stats.health;
 
-  expect([answer, unassigned, lost, retiled, damaged, drawn].map((stage) => stage.name)).toEqual([
+  expect([answer, unassigned, lost, retiled, damaged].map((stage) => stage.name)).toEqual([
     'answer',
     'assigned',
     'population',
     'retiled',
     'damaged',
-    'drawn',
   ]);
+  expect(rest).toEqual([]);
   expect(unassigned).toMatchObject({ tile: burning });
   expect(retiled).toMatchObject({ tile: burning });
   expect(damaged).toMatchObject({ tile: burning });
@@ -1349,26 +1324,24 @@ test('a landing resolves as one stage per change it makes, in the order it makes
   expect(healthOn(damaged)).toBe(1);
 });
 
-test('a tile a landing charts is charted as the stage charting it stands, and stays so through every stage after', () => {
+test('a tile a landing charts is charted as the stage charting it stands', () => {
   const at = { q: HERD, r: 0 };
   const city = herded([at], { units: [standing('enemy', at, {}, 0, 0)] });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const stages = apply(CATALOGUE, dealt, { type: 'take', at: 0 });
-  const [, , retiled, charting, ...after] = stagesWalked(stages);
+  const [, , retiled, charting] = stagesWalked(stages);
 
-  expect(namesOf(stages)).toEqual(['answer', 'taken', 'retiled', 'charted', 'drawn']);
+  expect(namesOf(stages)).toEqual(['answer', 'taken', 'retiled', 'charted']);
   expect(retiled).toMatchObject({ tile: at });
   expect(charting).toMatchObject({ tile: at });
   expect(snapshotOf(retiled.chronicle, at)).toBeUndefined();
-  for (const stage of [charting, ...after]) {
-    expect(snapshotOf(stage.chronicle, at)?.tile.feature).toBe('PH_Fertile');
-    expect(snapshotOf(stage.chronicle, at)?.unit).toEqual({
-      type: 'PH_Warrior',
-      faction: 'enemy',
-      embarked: false,
-    });
-    expect(inSight(CATALOGUE, stage.chronicle).has(tileKey(at))).toBe(false);
-  }
+  expect(snapshotOf(charting.chronicle, at)?.tile.feature).toBe('PH_Fertile');
+  expect(snapshotOf(charting.chronicle, at)?.unit).toEqual({
+    type: 'PH_Warrior',
+    faction: 'enemy',
+    embarked: false,
+  });
+  expect(inSight(CATALOGUE, charting.chronicle).has(tileKey(at))).toBe(false);
 });
 
 test('an event needing a tile near the city to deal a feature onto is dealt with one, and not without one', () => {
@@ -1455,7 +1428,7 @@ function stoodOut(): Chronicle {
   return standingOut;
 }
 
-test('the capstone’s turn lands the capstone straight and draws the hand, dealing nothing, whatever deal was due on that turn', () => {
+test('the capstone’s turn draws the hand and lands the capstone straight on it, dealing nothing, whatever deal was due on that turn', () => {
   const due = dueOn(CAPSTONE);
   for (const carrying of [
     { timeline: besieging() },
@@ -1472,11 +1445,11 @@ test('the capstone’s turn lands the capstone straight and draws the hand, deal
     expect(staged.slice(staged.indexOf('turn'))).toEqual([
       'turn',
       'turn',
+      'drawn',
       'capstone-landing',
       'rolled',
       ...Array<string>(5).fill('retiled'),
       ...Array<string>(5).fill('enter'),
-      'drawn',
     ]);
   }
 });
@@ -1528,9 +1501,9 @@ test('the capstone’s landing is a stage of its own on its turn, even where it 
   expect(staged.slice(staged.indexOf('turn'))).toEqual([
     'turn',
     'turn',
+    'drawn',
     'capstone-landing',
     'rolled',
-    'drawn',
   ]);
 });
 
@@ -1551,7 +1524,7 @@ test('a schedule naming two capstones draws each of them at the launch, and the 
   expect(besieged).toEqual(drawn.map(({ capstone }) => capstone.id === 'PH_Siege'));
 });
 
-test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on its landing and the draw', () => {
+test('a camp captured the turn before the capstone’s deals its rewards, and the take opens the capstone’s turn on the draw and its landing', () => {
   const camp = { q: 4, r: 0 };
   const dealt = outcome(
     apply(
@@ -1574,11 +1547,11 @@ test('a camp captured the turn before the capstone’s deals its rewards, and th
     'added',
     'turn',
     'turn',
+    'drawn',
     'capstone-landing',
     'rolled',
     ...campsOf(taken).map(() => 'retiled'),
     ...campsOf(taken).map(() => 'enter'),
-    'drawn',
   ]);
   expect(taken.turn).toBe(CAPSTONE);
   expect(taken.deals).toEqual([]);
@@ -1858,9 +1831,14 @@ test('a capstone’s condition met partway through a play ends the chronicle the
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
-test('a capstone’s condition holding before the capstone lands ends the chronicle on the landing, before the draw, the tick and the roll reading nothing', () => {
+test('a capstone’s condition holding before the capstone lands ends the chronicle on the landing, the tick, the draw and the roll reading nothing', () => {
   const tilledEarly = tilled(
-    awaitingTillage({ ...FARMING, turn: CAPSTONE - 2, drawPile: [], hand: ['PH_Farm'] }),
+    awaitingTillage({
+      ...FARMING,
+      turn: CAPSTONE - 2,
+      drawPile: [...fullDraw(), ...fullDraw()],
+      hand: ['PH_Farm'],
+    }),
   );
   expect(buildingAt(tilledEarly, TILLED)).toBe(TILLAGE);
 
@@ -1874,11 +1852,12 @@ test('a capstone’s condition holding before the capstone lands ends the chroni
   expect(staged.slice(staged.indexOf('turn'))).toEqual([
     'turn',
     'turn',
+    'drawn',
     'capstone-landing',
     'rolled',
     'ended',
   ]);
-  expect(outcome(stages).hand).toEqual([]);
+  expect(idsOf(outcome(stages).hand)).toEqual(fullDraw());
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 

@@ -1435,9 +1435,9 @@ export function beforeTheFall(): Chronicle {
 export const SHELTER = 'shelter';
 
 /**
- * The first seed's capstone landing turn, the shelter in the hand, with a claim's culture gained, a
- * tile beside the city claimed, the shelter's cost gained and a worker entered on that tile; where
- * the shelter lies, the tile, which its aim admits, and the chronicle the shelter played there wins.
+ * The first seed's turn after its capstone's landing, the shelter in the hand, its cost gained and a
+ * worker on a tile claimed beside the city; where the shelter lies, that tile, which its aim admits,
+ * and the chronicle the shelter played there wins.
  */
 export function landed(): {
   chronicle: Chronicle;
@@ -1450,7 +1450,7 @@ export function landed(): {
   if (aim.aim !== 'tile') throw new Error(`${SHELTER} is aimed at no tile`);
   return firstSeed('lands its capstone with a shelter to build beside the city', (seed) => {
     let turned = settledOn(seed);
-    while (turned.turn < turned.timeline.capstone.turn && turned.ending === undefined) {
+    while (turned.turn <= turned.timeline.capstone.turn && turned.ending === undefined) {
       turned = endedTurn(turned);
     }
     if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
@@ -2170,9 +2170,8 @@ export async function stoppedTurn(page: Page): Promise<void> {
 
 /**
  * One whole turn: the end of turn, the first entry the rules admit of every deal it may stop on
- * taken through the window's own presses, one window after another, and the capstone's window a
- * landing stops on closed by a press on its card, the draw after it waited out. What every spec that
- * only wants the next turn open ends the turn with.
+ * taken through the window's presses, and the capstone's window a landing stops on closed by a press
+ * on its card, the landing after it waited out.
  */
 export async function endTurn(page: Page): Promise<void> {
   await stoppedTurn(page);

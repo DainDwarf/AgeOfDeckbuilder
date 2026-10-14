@@ -825,7 +825,7 @@ function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
         (left) => citiesHalf(catalogue, left).growth,
         (left) => enemyPhase(catalogue, left),
         (left) => captures(catalogue, left),
-        (left) => (left.deals.length > 0 ? unchanged(left) : opened(catalogue, left)),
+        (left) => openedUnlessDealt(catalogue, left),
       ]);
   }
 }
@@ -905,18 +905,17 @@ function everyCity(
   return followed(step(chronicle, 'player'), (left) => step(left, 'neutral'));
 }
 
-/**
- * The opening of the next turn: the `turn`, the capstone's second script, the events phase, and the
- * draw — or, while the events phase leaves a deal standing, nothing after it: the hand waits on the
- * take.
- */
 function opened(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   return course(chronicle, [
     ticked,
+    drawn,
     (left) => continued(catalogue, left),
     (left) => events(catalogue, left),
-    (left) => (left.deals.length > 0 ? unchanged(left) : drawn(left)),
   ]);
+}
+
+function openedUnlessDealt(catalogue: Catalogue, chronicle: Chronicle): Sequence {
+  return chronicle.deals.length > 0 ? unchanged(chronicle) : opened(catalogue, chronicle);
 }
 
 function ticked(chronicle: Chronicle): Sequence<Group> {
@@ -948,11 +947,9 @@ function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
 }
 
 /**
- * One entry of the deal standing taken, by its place in the order dealt, and the deal popped: an
- * answer is the one `answer` group over the deal `taken`, its cost and its landing; a reward is the
- * one `reward` group over the deal `taken` and its copies `added`, the others added nowhere.
- * While a deal still stands nothing more resolves; once none does, the last reward taken resumes the
- * end of turn at its opening, and the last answer taken draws the hand.
+ * One entry of the deal standing taken, by its place in the order dealt. The turn's event is dealt
+ * behind every capture's rewards, so an answer resolves nothing after its landing, and the last
+ * reward taken resumes the end of turn at its opening.
  */
 function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence {
   const [deal, ...waiting] = chronicle.deals;
@@ -967,27 +964,19 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence 
         return refused(chronicle);
       }
       const answer = answerOf(catalogue, deal.event, id);
-      const answering = grouped(
+      return grouped(
         { name: 'answer' },
         followed(taken, (left) => answered(catalogue, left, answer)),
       );
-      return followed<Stage>(answering, (left) => resumed(left, drawn));
     }
     case 'capture': {
       const rewarding = grouped(
         { name: 'reward' },
         followed(taken, (left) => rewarded(catalogue, left, id, deal.rewards[id])),
       );
-      return followed<Stage>(rewarding, (left) =>
-        resumed(left, (standing) => opened(catalogue, standing)),
-      );
+      return followed<Stage>(rewarding, (left) => openedUnlessDealt(catalogue, left));
     }
   }
-}
-
-/** What a take goes on to resolve: nothing while a deal still stands, and the rest where none does. */
-function resumed(chronicle: Chronicle, rest: (left: Chronicle) => Sequence): Sequence {
-  return chronicle.deals.length > 0 ? unchanged(chronicle) : rest(chronicle);
 }
 
 /**

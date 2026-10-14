@@ -139,8 +139,7 @@ export type Chronicle = {
   readonly shownTurn?: number;
   /**
    * The deals waiting on the take, the one standing first, and none at all while no deal stands.
-   * While one does the chronicle waits on the take: it has no hand, and every other command is
-   * refused.
+   * While one does the chronicle waits on the take, and every other command is refused.
    */
   readonly deals: readonly Deal[];
   readonly resources: Resources;

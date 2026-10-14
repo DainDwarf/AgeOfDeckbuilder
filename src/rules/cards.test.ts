@@ -2047,9 +2047,11 @@ test('a hazard strikes from the hand alone, and never from a pile', () => {
   expect(ended.resources.food).toBe(STOCKED.food + yielded);
 });
 
-/** Turn 2 of a city dealt the cold, `answer` taken: the frost it added drawn into the hand. */
+/** Turn 3 of a city dealt the cold on turn 2, `answer` taken: the frost it added drawn into the hand. */
 function chilled(answer: string): Chronicle {
-  return endedTurn(unfed([], 3 * FREEZE, dealing({ turn: 2, event: 'PH_Cold' })), answer);
+  return endedTurn(
+    endedTurn(unfed([], 3 * FREEZE, dealing({ turn: 2, event: 'PH_Cold' })), answer),
+  );
 }
 
 test('a card added with its counter set carries the value set, and its strike takes that value', () => {

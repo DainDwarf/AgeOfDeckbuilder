@@ -1136,7 +1136,7 @@ test('the settle phase’s end rolls no camp', () => {
   expect(enemiesOf(opened)).toEqual([]);
 });
 
-test('two camps captured the turn before an event is due deal two deals of rewards, and the last take opens the turn on the event, taken in turn, the draw after the last', () => {
+test('two camps captured the turn before an event is due deal two deals of rewards, and the last take opens the turn on its draw and the event, taken in turn, nothing after the last', () => {
   const camps = [
     { q: 4, r: 0 },
     { q: 0, r: 4 },
@@ -1170,14 +1170,15 @@ test('two camps captured the turn before an event is due deal two deals of rewar
     'added',
     'turn',
     'turn',
+    'drawn',
     'deal',
     'rolled',
     'dealt',
   ]);
   expect(second.deals).toEqual([{ of: 'event', event: 'PH_Hardship' }]);
   expect(idsOf(second.discardPile)).toEqual(['PH_Spoils', 'PH_Cache']);
-  expect(second.hand).toEqual([]);
-  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter', 'drawn']);
+  expect(idsOf(second.hand)).toEqual(fullDraw());
+  expect(stagedBy(second, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'enter']);
   expect(outcome(apply(CATALOGUE, second, { type: 'take', at: 0 })).deals).toEqual([]);
 });
 
