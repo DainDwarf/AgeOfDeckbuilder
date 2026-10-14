@@ -12,6 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **Events after the draw** — swapping the events and the draw in the turn, so the hand is drawn before the schedule deals; `e2e/strangers.spec.ts`, red on `main` since Predators because the draw after the take shuffles the discard pile away, goes green with it.
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.
 - **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; its harsher answer dealing a challenge.
