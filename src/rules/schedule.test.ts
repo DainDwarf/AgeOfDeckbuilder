@@ -43,6 +43,7 @@ import {
   QUIET,
   REGION,
   ringed,
+  SPRAWL,
   type Standing,
   settledOn,
   stagedBy,
@@ -922,8 +923,14 @@ const BARN: TileCoords = { q: 0, r: 1 };
 /** A tile outside a `ringed` city's border. */
 const DRY: TileCoords = { q: 2, r: 0 };
 
-/** What a deluge fixture lays on a tile: its improvements, and the building in its slot. */
-type Laid = { readonly improvements?: readonly string[]; readonly building?: string };
+/** What a fixture lays on a tile, over the plain it stands as. */
+type Laid = Partial<Pick<Tile, 'terrain' | 'feature' | 'improvements' | 'building'>>;
+
+/** A disc of plain out to three, each tile named laid as `Laid` says. */
+function laidOut(laid: readonly (readonly [TileCoords, Laid])[]): Tile[] {
+  const on = new Map(laid.map(([at, layers]) => [tileKey(at), layers]));
+  return field(3).map((tile) => ({ ...tile, ...on.get(tileKey(tile)) }));
+}
 
 /**
  * A `ringed` city on a disc of plain out to three, each tile named carrying what is laid beside it,
@@ -933,15 +940,7 @@ function flooding(
   laid: readonly (readonly [TileCoords, Laid])[],
   carrying: Carrying = {},
 ): Chronicle {
-  const on = new Map(laid.map(([at, layers]) => [tileKey(at), layers]));
-  return ringed(3, {
-    ...dueOn(2, 'PH_Deluge'),
-    tiles: field(3).map((tile) => {
-      const { improvements = [], building = tile.building } = on.get(tileKey(tile)) ?? {};
-      return { ...tile, improvements: [...improvements], building };
-    }),
-    ...carrying,
-  });
+  return ringed(3, { ...dueOn(2, 'PH_Deluge'), tiles: laidOut(laid), ...carrying });
 }
 
 /** The city one end of turn on with the deluge standing, what its card reads, and the stages its take resolves as. */
@@ -1076,19 +1075,15 @@ test('the player’s city’s building removed ends the chronicle in defeat righ
   expect(fallen.hand).toEqual(dealt.hand);
 });
 
-/** What a prowl fixture lays on a tile, over the plain it stands as. */
-type Prowled = Partial<Pick<Tile, 'terrain' | 'feature' | 'improvements' | 'building'>>;
-
 /**
  * A `ringed` city on a disc of plain out to three holding the cull's cost, each tile named laid as
- * `Prowled` says, one end of turn on with the fixture's prowl standing.
+ * `Laid` says, one end of turn on with the fixture's prowl standing.
  */
-function prowled(laid: readonly (readonly [TileCoords, Prowled])[], seed = 7): Chronicle {
-  const on = new Map(laid.map(([at, layers]) => [tileKey(at), layers]));
+function prowled(laid: readonly (readonly [TileCoords, Laid])[], seed = 7): Chronicle {
   const city = ringed(3, {
     ...dueOn(2, 'PH_Prowl'),
     drawPile: fullDraw(),
-    tiles: field(3).map((tile) => ({ ...tile, ...on.get(tileKey(tile)) })),
+    tiles: laidOut(laid),
     resources: { food: 0, production: CULL_COST, military: 0, money: 0, science: 0, culture: 0 },
     rng: seedRng(seed),
   });
@@ -1120,15 +1115,12 @@ test('an answer blocked on the chronicle is dealt, read blocked with its reason,
 });
 
 test('a removal of features takes that many inside the border, each drawn once from the seeded generator among those standing there, the city’s own tile included, with every layer going with it, reads what it takes of each before it lands, and takes fewer where fewer stand and nothing where none does', () => {
-  const inside: [TileCoords, Prowled][] = [
+  const inside: [TileCoords, Laid][] = [
     [CITY, { feature: 'PH_Fertile' }],
     [SOAKED, { feature: 'PH_Fertile', building: 'PH_Smokehouse' }],
     [BARN, { terrain: 'forest', feature: 'PH_Game', improvements: ['PH_Snare'] }],
   ];
-  const outside: [TileCoords, Prowled] = [
-    DRY,
-    { feature: 'PH_Fertile', building: 'PH_Smokehouse' },
-  ];
+  const outside: [TileCoords, Laid] = [DRY, { feature: 'PH_Fertile', building: 'PH_Smokehouse' }];
   const takenFrom = new Set<string>();
 
   for (const seed of SEEDS) {
@@ -1167,6 +1159,83 @@ test('a removal of features takes that many inside the border, each drawn once f
   expect(outsideOf(one, fewer)).toEqual(outsideOf(one, one));
   expect(PH_Cull.reads(CATALOGUE, none)).toEqual({ PH_Fertile: 0, PH_Game: 0 });
   expect(PH_Cull.lands(CATALOGUE, none)).toEqual(unchanged(none));
+});
+
+/**
+ * A `ringed` city on a disc of plain out to three, each tile named laid as `Laid` says, the fixture's
+ * sprawl in its hand: what its strike holds at the end of the turn, and the chronicle it leaves.
+ */
+function sprawled(
+  laid: readonly (readonly [TileCoords, Laid])[],
+  seed = 7,
+): { city: Chronicle; held: readonly Stage[]; left: Chronicle } {
+  const city = ringed(3, { hand: ['PH_Sprawl'], tiles: laidOut(laid), rng: seedRng(seed) });
+  for (const stage of stagesWalked(apply(CATALOGUE, city, { type: 'end-turn' }))) {
+    if (stage.kind === 'group' && stage.name === 'strike') {
+      return { city, held: stage.stages, left: stage.chronicle };
+    }
+  }
+  throw new Error('the sprawl strikes nothing');
+}
+
+/** The tiles beside the city a `ringed` city holds but `SOAKED` and `BARN`, laid as hills. */
+const HILLS_BESIDE: [TileCoords, Laid][] = neighbours(CITY)
+  .filter((at) => ![SOAKED, BARN].some((other) => tileKey(other) === tileKey(at)))
+  .map((at) => [at, { terrain: 'hills' }]);
+
+test('a challenge that terraforms strikes that many tiles of the terrains it names inside the border, each drawn once from the seeded generator among those standing there, the city’s own tile included, every layer going with the old terrain or the feature and the population working them staying, and fewer where fewer stand and nothing where none does', () => {
+  const inside: [TileCoords, Laid][] = [
+    [CITY, { terrain: 'plain' }],
+    [SOAKED, { building: TILLAGE, improvements: ['PH_Road'] }],
+    [BARN, { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' }],
+  ];
+  const outside: [TileCoords, Laid] = [
+    DRY,
+    { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' },
+  ];
+  const candidates = inside.map(([at]) => at);
+  const terraformedOn = new Set<string>();
+
+  for (const seed of SEEDS) {
+    const { city, held, left } = sprawled([...inside, ...HILLS_BESIDE, outside], seed);
+    const changed = candidates.filter((at) => terrainOf(left, at) === 'urban');
+
+    expect(changed).toHaveLength(SPRAWL);
+    expect(namesOf(held)).toEqual(Array(SPRAWL).fill('retiled'));
+    expect(left.rng).toEqual(steppedBy(city.rng, SPRAWL));
+    for (const at of changed) {
+      const before = tileAt(city.tiles, at);
+      expect(tileAt(left.tiles, at)).toEqual({
+        ...before,
+        terrain: 'urban',
+        feature: undefined,
+        building: tileKey(at) === tileKey(CITY) ? 'PH_City' : undefined,
+      });
+    }
+    for (const at of candidates.filter((at) => !changed.includes(at))) {
+      expect(tileAt(left.tiles, at)).toEqual(tileAt(city.tiles, at));
+    }
+    for (const [at] of HILLS_BESIDE) expect(terrainOf(left, at)).toBe('hills');
+    expect(left.assigned).toEqual(city.assigned);
+    expect(left.ending).toBeUndefined();
+    expect(outsideOf(city, left)).toEqual(outsideOf(city, city));
+    terraformedOn.add(changed.map(tileKey).join());
+  }
+  expect(terraformedOn.size).toBeGreaterThan(1);
+
+  const one = sprawled([[BARN, { terrain: 'hills' }], ...HILLS_BESIDE]);
+  const none = sprawled([
+    [SOAKED, { terrain: 'hills' }],
+    [BARN, { terrain: 'hills' }],
+    ...HILLS_BESIDE,
+  ]);
+
+  expect(terrainOf(one.left, SOAKED)).toBe('urban');
+  expect(namesOf(one.held)).toEqual(['retiled']);
+  expect(one.left.rng).toEqual(steppedBy(one.city.rng, 1));
+  expect(none.held).toEqual([]);
+  expect(none.left.tiles).toEqual(none.city.tiles);
+  expect(none.left.rng).toEqual(none.city.rng);
 });
 
 /** The same tiles, with the named ones carrying the feature. */

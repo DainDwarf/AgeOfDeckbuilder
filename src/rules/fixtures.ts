@@ -111,6 +111,7 @@ import {
   removedInside,
   showsNextLanding,
   spanEnded,
+  terraformedInside,
   tileCharted,
   unitDamaged,
 } from './schedule';
@@ -179,8 +180,14 @@ export const FROST = 2;
 /** The counter the fixture's freeze sets on the frost it adds: the food that frost strikes off. */
 export const FREEZE = 5;
 
-/** The food the fixture's curse strikes off the stock: the one challenge of the fixture carrying a strike. */
+/** The food the fixture's curse strikes off the stock. */
 export const CURSE = 3;
+
+/** How many tiles inside the border the fixture's sprawl terraforms into urban at each strike. */
+export const SPRAWL = 2;
+
+/** The terrains the fixture's sprawl terraforms. */
+const SPRAWLED: readonly Terrain[] = ['plain', 'forest'];
 
 /** How many things inside the border the fixture's deluge removes. */
 export const DELUGE = 2;
@@ -686,6 +693,13 @@ const TABLES: Omit<Tables, 'technologies'> = {
       cost: {},
       influence: 2,
       strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', CURSE),
+    },
+    PH_Sprawl: {
+      kind: 'challenge',
+      cost: {},
+      influence: 2,
+      strikes: (catalogue, chronicle) =>
+        terraformedInside(catalogue, chronicle, SPRAWLED, 'urban', SPRAWL),
     },
     PH_Idol: {
       kind: 'instant',

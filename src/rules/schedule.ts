@@ -12,8 +12,16 @@ import {
   scheduleOf,
 } from './catalogue';
 import { costPaid, populationKilled } from './city';
-import { distance, type FeatureId, groundRunsTo, type Tile, type TileCoords, tileKey } from './map';
-import { buildingKind, entryOf, featureKind, refuse } from './map-kinds';
+import {
+  distance,
+  type FeatureId,
+  groundRunsTo,
+  type Terrain,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from './map';
+import { buildingKind, entryOf, featureKind, refuse, terrainKind } from './map-kinds';
 import { nextRng, pickUniform, pickWeighted, type Rng } from './rng';
 import {
   change,
@@ -401,24 +409,40 @@ function oneRemovedInside(chronicle: Chronicle): Landed {
   }));
 }
 
-/** A feature standing on a tile, with that tile. */
-type FeatureOn = { readonly at: TileCoords; readonly feature: FeatureId };
+/** Every tile inside the player's border the predicate admits, the city's own tile included. */
+function tilesInside(chronicle: Chronicle, admits: (tile: Tile) => boolean): Tile[] {
+  return chronicle.tiles.filter((tile) => admits(tile) && holds(chronicle, tile));
+}
 
 /**
- * Every one of the features standing inside the player's border, the city's own tile included, with
- * its tile; a feature the catalogue does not hold is refused.
+ * `count` of the tiles inside the player's border the predicate admits, fewer where fewer stand,
+ * drawn one at a time in one step each of the chronicle's generator among those not yet drawn; each
+ * with the generator its draw leaves.
  */
-function featuresInside(
-  catalogue: Catalogue,
+function tilesDrawnInside(
   chronicle: Chronicle,
+  admits: (tile: Tile) => boolean,
+  count: number,
+): { readonly tile: Tile; readonly rng: Rng }[] {
+  let standing = tilesInside(chronicle, admits);
+  let rng = chronicle.rng;
+  const drawn: { readonly tile: Tile; readonly rng: Rng }[] = [];
+  while (drawn.length < count && standing.length > 0) {
+    const { picked, rng: left } = pickUniform(rng, standing);
+    rng = left;
+    drawn.push({ tile: picked, rng });
+    standing = standing.filter((each) => each !== picked);
+  }
+  return drawn;
+}
+
+/** Whether a tile carries one of the features; a feature the catalogue does not hold is refused. */
+function carriesOneOf(
+  catalogue: Catalogue,
   features: readonly FeatureId[],
-): FeatureOn[] {
+): (tile: Tile) => boolean {
   for (const feature of features) featureKind(catalogue, feature);
-  return chronicle.tiles.flatMap(({ q, r, feature }) =>
-    feature !== undefined && features.includes(feature) && holds(chronicle, { q, r })
-      ? [{ at: { q, r }, feature }]
-      : [],
-  );
+  return ({ feature }) => feature !== undefined && features.includes(feature);
 }
 
 export function featureInside(
@@ -426,30 +450,7 @@ export function featureInside(
   chronicle: Chronicle,
   features: readonly FeatureId[],
 ): boolean {
-  return featuresInside(catalogue, chronicle, features).length > 0;
-}
-
-/**
- * `count` of the features standing inside the player's border, fewer where fewer stand, drawn one at
- * a time in one step each of the chronicle's generator among those not yet drawn; each with the
- * generator its draw leaves.
- */
-function featuresDrawn(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  features: readonly FeatureId[],
-  count: number,
-): (FeatureOn & { readonly rng: Rng })[] {
-  let standing = featuresInside(catalogue, chronicle, features);
-  let rng = chronicle.rng;
-  const drawn: (FeatureOn & { readonly rng: Rng })[] = [];
-  while (drawn.length < count && standing.length > 0) {
-    const { picked, rng: left } = pickUniform(rng, standing);
-    rng = left;
-    drawn.push({ ...picked, rng });
-    standing = standing.filter((each) => each !== picked);
-  }
-  return drawn;
+  return tilesInside(chronicle, carriesOneOf(catalogue, features)).length > 0;
 }
 
 /** What `featuresRemovedInside` takes for that count, read before it lands: how many of each feature. */
@@ -459,15 +460,18 @@ export function featureRemovalInside(
   features: readonly FeatureId[],
   count: number,
 ): Record<FeatureId, number> {
-  const drawn = featuresDrawn(catalogue, chronicle, features, count);
+  const drawn = tilesDrawnInside(chronicle, carriesOneOf(catalogue, features), count);
   return Object.fromEntries(
-    features.map((feature) => [feature, drawn.filter((each) => each.feature === feature).length]),
+    features.map((feature) => [
+      feature,
+      drawn.filter(({ tile }) => tile.feature === feature).length,
+    ]),
   );
 }
 
 /**
- * `count` of the features inside the player's border removed, each drawn as `featuresDrawn` draws it
- * and going with every layer that goes with it: one `retiled` each, nothing where none stands.
+ * `count` of the features inside the player's border removed, each drawn as `tilesDrawnInside` draws
+ * it and going with every layer that goes with it: one `retiled` each, nothing where none stands.
  */
 export function featuresRemovedInside(
   catalogue: Catalogue,
@@ -476,8 +480,38 @@ export function featuresRemovedInside(
   count: number,
 ): Landed {
   let landing = unchanged(chronicle);
-  for (const { at, rng } of featuresDrawn(catalogue, chronicle, features, count)) {
+  for (const { tile, rng } of tilesDrawnInside(
+    chronicle,
+    carriesOneOf(catalogue, features),
+    count,
+  )) {
+    const at = { q: tile.q, r: tile.r };
     landing = followed(landing, (left) => featureRemoved(catalogue, { ...left, rng }, at));
+  }
+  return landing;
+}
+
+/**
+ * `count` of the tiles inside the player's border of the terrains named terraformed into `to`, each
+ * drawn as `tilesDrawnInside` draws it: fewer where fewer stand, nothing where none does. A terrain
+ * the catalogue does not hold is refused.
+ */
+export function terraformedInside(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  terrains: readonly Terrain[],
+  to: Terrain,
+  count: number,
+): Landed {
+  for (const terrain of [...terrains, to]) terrainKind(catalogue, terrain);
+  let landing = unchanged(chronicle);
+  for (const { tile, rng } of tilesDrawnInside(
+    chronicle,
+    ({ terrain }) => terrains.includes(terrain),
+    count,
+  )) {
+    const at = { q: tile.q, r: tile.r };
+    landing = followed(landing, (left) => terraformed(catalogue, { ...left, rng }, at, to));
   }
   return landing;
 }
