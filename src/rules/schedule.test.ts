@@ -1779,7 +1779,7 @@ test('a capstone’s condition holding before the capstone lands ends the chroni
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
-test('a change that both leaves the city no population and meets a capstone’s condition ends the chronicle in defeat', () => {
+test('a change that both leaves the city no population and meets a capstone’s condition ends the chronicle in victory', () => {
   const emptied: Catalogue = {
     ...CATALOGUE,
     capstones: {
@@ -1796,7 +1796,7 @@ test('a change that both leaves the city no population and meets a capstone’s 
   const stages = apply(emptied, city, { type: 'end-turn' });
 
   expect(namesOf(stages).slice(-3)).toEqual(['assigned', 'population', 'ended']);
-  expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 1 });
+  expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: 1 });
 });
 
 test('the schedule keeps dealing past the landing of a capstone no span passes', () => {

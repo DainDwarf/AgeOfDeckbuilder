@@ -5,6 +5,7 @@ import { RESOURCES } from './resources';
 import {
   change,
   changeOn,
+  fall,
   followed,
   grouped,
   type Landed,
@@ -178,17 +179,20 @@ function populationLeaving(
 
 /**
  * The faction's city's population one fewer, its `population` carrying what a stock taken past
- * nothing did not cover where it pays for one, and nothing where that city is none.
+ * nothing did not cover where it pays for one, and nothing where that city is none. The player's
+ * city's last taken, it falls.
  */
 function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: Cost): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined) return unchanged(chronicle);
   const fewer = withCityRows(chronicle, whose, { population: city.population - 1 });
-  return landedAs(
+  const taken = landedAs(
     uncovered === undefined
       ? change('population', fewer)
       : { kind: 'change', name: 'population', uncovered, chronicle: fewer },
   );
+  if (whose !== 'player' || city.population > 1) return taken;
+  return followed(taken, (left) => fall(left, 'population'));
 }
 
 /**

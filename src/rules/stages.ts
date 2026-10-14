@@ -1,4 +1,4 @@
-import { type TileCoords, tileAt } from './map';
+import type { TileCoords } from './map';
 import type { CardId, Chronicle, Cost, DefeatCause } from './state';
 
 /**
@@ -199,28 +199,9 @@ export function unchanged<S extends Stage = Change>(chronicle: Chronicle): Seque
   return { stages: [], chronicle };
 }
 
-/**
- * A landing that made the one change: the one place a change joins what a command resolves as.
- * Where it leaves a standing city fallen, an `ended` right after it.
- */
+/** A landing that made the one change: the one place a change joins what a command resolves as. */
 export function landedAs(stage: Change): Landed {
-  const { chronicle } = stage;
-  const cause = fallsFor(chronicle);
-  if (cause === undefined) return { stages: [stage], chronicle };
-  const ended = change('ended', fall(chronicle, cause));
-  return { stages: [stage, ended], chronicle: ended.chronicle };
-}
-
-/**
- * What the player's city falls for on this chronicle, settled and not ended: no population left, or
- * its building gone from its tile; nothing where it stands.
- */
-export function fallsFor(chronicle: Chronicle): DefeatCause | undefined {
-  const { city, ending } = chronicle;
-  if (ending !== undefined || city === undefined) return undefined;
-  if (chronicle.population <= 0) return 'population';
-  const standing = tileAt(chronicle.tiles, city)?.building;
-  return standing === chronicle.citySection.building ? undefined : 'removal';
+  return { stages: [stage], chronicle: stage.chronicle };
 }
 
 /**
@@ -242,7 +223,9 @@ export function grouped(head: GroupHead, over: Sequence): Sequence<Group> {
   return { stages: [group], chronicle: group.chronicle };
 }
 
-/** The city's fall: the chronicle records what took it and on which turn, and ends there. */
-export function fall(chronicle: Chronicle, cause: DefeatCause): Chronicle {
-  return { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } };
+/** The player's city's fall, the one `ended`: the chronicle records what took it and on which turn. */
+export function fall(chronicle: Chronicle, cause: DefeatCause): Landed {
+  return landedAs(
+    change('ended', { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } }),
+  );
 }

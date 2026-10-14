@@ -42,6 +42,7 @@ import {
   change,
   changeFrom,
   changeOn,
+  fall,
   followed,
   type Group,
   grouped,
@@ -695,15 +696,24 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
   );
 }
 
-/** One tile of the map layered over, every other tile left as it stands: the one `retiled` change. */
+/**
+ * One tile of the map layered over, every other tile left as it stands: the one `retiled` change. The
+ * player's city's tile coming out without its building, the city falls.
+ */
 export function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Landed {
   const key = tileKey(at);
-  return landedAs(
+  const laid = landedAs(
     changeOn('retiled', at, {
       ...paid,
       tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)),
     }),
   );
+  return followed(laid, (left) => {
+    const { city, citySection } = left;
+    if (city === undefined || tileKey(city) !== key) return unchanged(left);
+    if (tileAt(left.tiles, city)?.building === citySection.building) return unchanged(left);
+    return fall(left, 'removal');
+  });
 }
 
 /** The building filling the building slot of a tile. */

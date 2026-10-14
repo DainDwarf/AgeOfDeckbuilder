@@ -168,7 +168,7 @@ function kept<T>(dropped: string[], read: () => T): T | undefined {
 
 /**
  * The chronicle part of a save, its civilization named among the campaign's that stands. An ended
- * chronicle is refused.
+ * chronicle is refused, and so is one whose city stands with no population or without its building.
  */
 function chronicleSaveOf(
   catalogue: Catalogue,
@@ -178,6 +178,17 @@ function chronicleSaveOf(
 ): ChronicleSave {
   const chronicle = chronicleOf(catalogue, slot);
   if (chronicle.ending !== undefined) refused(catalogue, slot, 'has ended');
+  const { city, citySection } = chronicle;
+  if (city !== undefined && chronicle.population === 0) {
+    refused(catalogue, slot, 'holds no population, its city standing');
+  }
+  if (city !== undefined && tileAt(chronicle.tiles, city)?.building !== citySection.building) {
+    refused(
+      catalogue,
+      record(catalogue, slot)('city'),
+      `names ${tileKey(city)}, a tile without the building ${citySection.building}`,
+    );
+  }
   const civilizationSlot = field('civilization');
   const civilization = string(catalogue, civilizationSlot);
   if (!Object.hasOwn(campaign.civilizations, civilization)) {

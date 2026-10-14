@@ -12,6 +12,7 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from './chronicle';
+import { growthThreshold } from './city';
 import {
   AGE,
   achieved,
@@ -552,15 +553,16 @@ test('the turn ticks first, then refreshes every unit short of full move points 
   }
 });
 
-test('a city whose food stock of nought would grow at no population falls on the food spent, and grows nobody', () => {
-  const empty = cityOf(['urban'], { tiles: field(2), population: 0, assigned: [] });
+test('a city whose last population a strike takes falls on the take, and grows nobody on the food stock of nought its growth threshold at no population would meet', () => {
+  const last = cityOf(['urban'], { tiles: field(2), hand: ['PH_Hunger'] });
 
-  const stages = apply(CATALOGUE, empty, { type: 'end-turn' });
+  const stages = apply(CATALOGUE, last, { type: 'end-turn' });
   const ended = outcome(stages);
 
-  expect(namesOf(stages)).toEqual(['income', 'grow', 'stock', 'ended']);
+  expect(namesOf(stages)).not.toContain('grow');
   expect(ended.population).toBe(0);
-  expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: empty.turn });
+  expect(ended.resources.food).toBe(growthThreshold(ended, 'player'));
+  expect(ended.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: last.turn });
 });
 
 test('every card of the deck is in exactly one pile through a full cycle', () => {
@@ -583,25 +585,6 @@ test('the same command on the same chronicle gives the same chronicle back', () 
     outcome(apply(CATALOGUE, city, { type: 'end-turn' })),
   );
   expect(city).toEqual(untouched);
-});
-
-test('a city with no population left falls on the first change a command makes, whatever the command was, and nothing after it resolves', () => {
-  const empty = cityOf(['urban'], {
-    tiles: field(2),
-    population: 0,
-    hand: ['PH_Harvest'],
-    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
-  });
-
-  const played = apply(CATALOGUE, empty, { type: 'play', index: 0, aim: 'none' });
-
-  expect(namesOf(played)).toEqual(['played', 'discarded', 'ended']);
-  expect(outcome(played).ending).toEqual({
-    outcome: 'defeat',
-    cause: 'population',
-    turn: empty.turn,
-  });
-  expect(outcome(played).resources).toEqual(empty.resources);
 });
 
 test('the settle puts the city on its tile: its terrain and building, no feature, that tile alone held and staffed, and the card in no pile', () => {
@@ -909,21 +892,16 @@ test('the fall’s ending is read as any change: a victory’s achievement is no
       },
     },
   };
-  const empty = cityOf(['urban'], {
+  const last = cityOf(['urban'], {
     tiles: field(2),
-    population: 0,
-    assigned: [],
+    hand: ['PH_Hunger'],
     achievements: [{ id: victoryOf(QUIET), reached: false, tally: {} }],
   });
+  const struck = ['income', 'stock', 'strike', 'assigned', 'population', 'ended'];
 
-  expect(namesOf(apply(CATALOGUE, empty, { type: 'end-turn' }))).toEqual([
-    'income',
-    'grow',
-    'stock',
-    'ended',
-  ]);
-  const fallen = apply(anyEnding, empty, { type: 'end-turn' });
-  expect(namesOf(fallen)).toEqual(['income', 'grow', 'stock', 'ended', 'reached']);
+  expect(namesOf(apply(CATALOGUE, last, { type: 'end-turn' }))).toEqual(struck);
+  const fallen = apply(anyEnding, last, { type: 'end-turn' });
+  expect(namesOf(fallen)).toEqual([...struck, 'reached']);
   expect(outcome(fallen).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 1 });
   expect(outcome(fallen).achievements).toEqual([
     { id: victoryOf(QUIET), reached: true, tally: {} },

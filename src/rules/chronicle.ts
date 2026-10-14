@@ -93,7 +93,6 @@ import {
   changeFrom,
   changeOn,
   fall,
-  fallsFor,
   followed,
   type Group,
   grouped,
@@ -312,7 +311,6 @@ export function chartedAndRead(
   return conditionsRead(catalogue, started, charting(catalogue, started, stages));
 }
 
-/** The capstone is never read on a chronicle whose city falls on it. */
 function conditionsRead(
   catalogue: Catalogue,
   started: Chronicle,
@@ -325,10 +323,7 @@ function conditionsRead(
   // started on that turn or after starts past the landing.
   let landed = started.turn >= turn;
   const passesNow = (chronicle: Chronicle): boolean =>
-    landed &&
-    chronicle.ending === undefined &&
-    fallsFor(chronicle) === undefined &&
-    passes(catalogue, chronicle);
+    landed && chronicle.ending === undefined && passes(catalogue, chronicle);
 
   // Every stage was built off the chronicle the command started on, so the record a `reached` makes
   // is carried onto every stage after it here.
@@ -1345,7 +1340,7 @@ function preparesLanded(catalogue: Catalogue, chronicle: Chronicle): Sequence {
     landing = followed<Stage>(landing, (left) => {
       switch (landingOn(left, unit)) {
         case 'player':
-          return landedAs(change('ended', fall(left, 'capture')));
+          return fall(left, 'capture');
         case 'neutral':
           return capturedByTheEnemies(catalogue, left, unit);
         case undefined: {

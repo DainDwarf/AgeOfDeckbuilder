@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The fall at its sources** — the population fall is raised by the helper that takes a person when it takes the player's city's last, the removal fall by the helper that lays a tile over when the player's city's tile comes out without its building, and the recorder of a change records it alone; the victory walk reads no fall; the save reader refuses a chronicle whose city stands with no population or without its building; the rules tests pass with the same stage sequences. Doc-impact: `docs/CHRONICLE.md`. [board/the-fall-at-its-sources.md](board/the-fall-at-its-sources.md)
 - **The game moves away** — the deer and the cattle near the city are gone.
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.

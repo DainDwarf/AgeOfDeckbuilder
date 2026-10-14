@@ -31,6 +31,8 @@ import {
   hoardedVictory,
   NO_DEALS,
   onTheNeutralCity,
+  opening,
+  plains,
   preparedOnTheCity,
   QUIET,
   REGION,
@@ -242,6 +244,12 @@ test('a chronicle saved once the neutral’s city has fallen reads back without 
   expect(read.chronicle).toEqual(save);
 });
 
+test('a chronicle saved on its settle phase, its city standing nowhere and no population, reads back', () => {
+  const save = { chronicle: opening(plains(3)), civilization: CIVILIZATION_ID };
+
+  expect(readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save)).chronicle).toEqual(save);
+});
+
 test('a campaign saved with no chronicle in progress reads back alone', () => {
   expect(readSave(CATALOGUE, writeSave(CATALOGUE, campaign()))).toEqual({
     campaign: campaign(),
@@ -399,6 +407,21 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     'a negative population',
     (chronicle) => ({ ...chronicle, population: -1 }),
     'chronicle holds -1 population',
+  ],
+  [
+    'a city standing with no population',
+    (chronicle) => ({ ...chronicle, population: 0 }),
+    'chronicle holds no population, its city standing',
+  ],
+  [
+    'a city standing on a tile without its building',
+    (chronicle) => ({
+      ...chronicle,
+      tiles: chronicle.tiles.map((tile) =>
+        tileKey(tile) === tileKey(CITY) ? { ...tile, building: undefined } : tile,
+      ),
+    }),
+    `chronicle.city names ${tileKey(CITY)}, a tile without the building ${CIVILIZATION.city.building}`,
   ],
   [
     'a next unit number below the first unit number',

@@ -27,13 +27,14 @@ import {
   influenceOf,
   technologyOf,
 } from './catalogue';
-import { apply, outcome } from './chronicle';
+import { chartedAndRead, outcome } from './chronicle';
 import {
   AGE,
   CATALOGUE,
   type Carrying,
   CENSUS,
   type ChroniclePile,
+  CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
   CLEARING,
@@ -53,6 +54,7 @@ import {
   victoryOf,
 } from './fixtures';
 import { readSave, writeSave } from './save';
+import { removedInside } from './schedule';
 import type { CardId, Chronicle } from './state';
 
 function numbersOf(cards: readonly CampaignCard[]): number[] {
@@ -159,19 +161,29 @@ test('a card a technology unlocks that the collection already owns enters as new
 });
 
 /**
- * A first-age chronicle of no population that reaches `HOARD` by the card it plays and falls on the
- * play, keeping the cards `kept` lays in its piles besides, the hand's after the card played.
+ * The chronicle a city holding its tile alone leaves once its building is removed, read as a
+ * command's stages are.
+ */
+function removedAlone(alone: Chronicle): Chronicle {
+  return outcome(chartedAndRead(CATALOGUE, alone, removedInside(alone, 1).stages));
+}
+
+/**
+ * A first-age chronicle of one population holding its city's tile alone, its food stock at `HOARD`'s
+ * need, that falls on its building removed and reaches `HOARD` on the removal, keeping the cards
+ * `kept` lays in its piles besides.
  */
 function hoardedDefeat(kept: Pick<Carrying, ChroniclePile> = {}): Chronicle {
-  const empty = reaching([], {
-    ...kept,
-    tiles: field(2),
-    population: 0,
-    assigned: [],
-    hand: ['PH_Harvest', ...(kept.hand ?? [])],
-    resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 1, culture: 0 },
-  });
-  return outcome(apply(CATALOGUE, empty, { type: 'play', index: 0, aim: 'none' }));
+  return removedAlone(
+    reaching([], {
+      ...kept,
+      tiles: field(2),
+      held: [CITY],
+      population: 1,
+      assigned: [CITY],
+      resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    }),
+  );
 }
 
 test('a defeat pays as a victory does: the achievements it reached', () => {
@@ -245,8 +257,7 @@ test('an ended chronicle pays the influence of every trophy it kept in any pile,
 });
 
 test('a chronicle that ends having reached no achievement pays nothing', () => {
-  const empty = cityOf(['urban'], { tiles: field(2), population: 0, assigned: [] });
-  const fallen = outcome(apply(CATALOGUE, empty, { type: 'end-turn' }));
+  const fallen = removedAlone(cityOf(['urban'], { tiles: field(2) }));
   const opened = newCampaign(CATALOGUE, CIVILIZATION_ID);
 
   const paid = paidInto(CATALOGUE, opened, fallen);
