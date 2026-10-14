@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Events after the draw** — swapping the events and the draw in the turn, so the hand is drawn before the schedule deals; `e2e/strangers.spec.ts`, red on `main` since Predators because the draw after the take shuffles the discard pile away, goes green with it.
+- **Events after the draw** — the turn opens on its hand: the opening ticks, draws, runs the capstone's second script and then the events phase, so the deal and the capstone's landing stand over a drawn hand and the take of an answer resolves nothing after its landing; the rules tests state that order, the docs say so, and `e2e/strangers.spec.ts` is green. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/events-after-the-draw.md](board/events-after-the-draw.md)
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.
 - **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; its harsher answer dealing a challenge.
