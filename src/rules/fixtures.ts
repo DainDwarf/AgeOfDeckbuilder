@@ -89,7 +89,7 @@ import {
   tileKey,
 } from './map';
 import type { MapRegion } from './map-kinds';
-import type { Resources } from './resources';
+import { RESOURCES, type Resources } from './resources';
 import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
 import {
@@ -1806,6 +1806,13 @@ export function everyCard(chronicle: Chronicle): CardId[] {
     ...chronicle.discardPile,
     ...chronicle.exhaustPile,
   ]).sort();
+}
+
+/** What the stock rose by, resource by resource, from one chronicle to the next. */
+export function gainedBetween(before: Chronicle, after: Chronicle): Resources {
+  return Object.fromEntries(
+    RESOURCES.map((resource) => [resource, after.resources[resource] - before.resources[resource]]),
+  ) as Resources;
 }
 
 /** What the cards of a pile are, by id, in pile order. */

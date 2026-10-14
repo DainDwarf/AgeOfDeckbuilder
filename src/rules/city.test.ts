@@ -47,6 +47,7 @@ import {
   enemyStanding,
   everyCard,
   field,
+  gainedBetween,
   heldBy,
   idsOf,
   madeOf,
@@ -306,13 +307,6 @@ test('an assigned tile yields what all four of its layers declare, summed', () =
     );
   }
 });
-
-/** What the stock rose by, resource by resource, from one chronicle to the next. */
-function gainedBetween(before: Chronicle, after: Chronicle): Resources {
-  return Object.fromEntries(
-    RESOURCES.map((resource) => [resource, after.resources[resource] - before.resources[resource]]),
-  ) as Resources;
-}
 
 /** What these yields come to together, every resource named. */
 function together(...yields: Partial<Resources>[]): Resources {

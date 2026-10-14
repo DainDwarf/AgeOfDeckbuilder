@@ -20,6 +20,8 @@ const TEXT = {
   'label.action': 'Action',
   'label.sight': 'Sight',
   'reading.over': '{count}/{over}',
+  'reading.plus': '+{count}',
+  'reading.minus': '−{count}',
   'threshold.culture': '−{culture}',
   'tooltip.food': 'Grows your population if you reach the threshold', // glossary exception: reach
   'tooltip.production': 'Build, place, and terraform',

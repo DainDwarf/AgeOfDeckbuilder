@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The end of turn's reading** — the resource bar reads, after each value, what ending the turn would do to it: for a stock the income less what the hand's strikes take, for idle the population growth brings or the strikes take, in a colour of its own where a stock cannot cover the strikes; the reading is the end of turn's own run, held by one fixture test, and one spec reads the bar against it. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/end-of-turns-reading.md](board/end-of-turns-reading.md)
 - **The fall at its sources** — the population fall raised by `populationFewer` when it takes the last person, the removal fall by `retiled` when the city's tile loses its building; `landedAs` only records a change.
 - **The game moves away** — the deer and the cattle near the city are gone.
 - **Drought** — the land dries and the food stock pays for it.

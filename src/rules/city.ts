@@ -165,16 +165,29 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
  * The population of the faction's city off the tile and then one fewer. The tile must be one its
  * population works: `assigned` toggles, and on an unworked tile it would put one on.
  */
-function populationLeaving(chronicle: Chronicle, whose: CityFaction, at: TileCoords): Landed {
-  return followed(assigned(chronicle, whose, at), (left) => populationFewer(left, whose));
+function populationLeaving(
+  chronicle: Chronicle,
+  whose: CityFaction,
+  at: TileCoords,
+  uncovered?: Cost,
+): Landed {
+  return followed(assigned(chronicle, whose, at), (left) =>
+    populationFewer(left, whose, uncovered),
+  );
 }
 
-/** The faction's city's population one fewer, and nothing where that city is none. */
-function populationFewer(chronicle: Chronicle, whose: CityFaction): Landed {
+/**
+ * The faction's city's population one fewer, its `population` carrying what a stock taken past
+ * nothing did not cover where it pays for one, and nothing where that city is none.
+ */
+function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: Cost): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined) return unchanged(chronicle);
+  const fewer = withCityRows(chronicle, whose, { population: city.population - 1 });
   return landedAs(
-    change('population', withCityRows(chronicle, whose, { population: city.population - 1 })),
+    uncovered === undefined
+      ? change('population', fewer)
+      : { kind: 'change', name: 'population', uncovered, chronicle: fewer },
   );
 }
 
@@ -192,14 +205,18 @@ export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
 /**
  * One population of the faction's city taken, whichever it is: an idle one where one is idle, and
  * where none is the last assigned tile unassigned first, the city's last no exception; the
- * population one fewer. Nothing where that city has no population at all.
+ * population one fewer, as `populationFewer` takes it. Nothing where that city has none at all.
  */
-export function populationTaken(chronicle: Chronicle, whose: CityFaction): Landed {
+export function populationTaken(
+  chronicle: Chronicle,
+  whose: CityFaction,
+  uncovered?: Cost,
+): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined || city.population <= 0) return unchanged(chronicle);
   const last = city.assigned[city.assigned.length - 1];
-  if (idle(city) > 0 || last === undefined) return populationFewer(chronicle, whose);
-  return populationLeaving(chronicle, whose, last);
+  if (idle(city) > 0 || last === undefined) return populationFewer(chronicle, whose, uncovered);
+  return populationLeaving(chronicle, whose, last, uncovered);
 }
 
 /**

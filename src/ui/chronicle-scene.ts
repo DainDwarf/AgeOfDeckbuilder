@@ -268,12 +268,16 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       for (const part of parts) part.render(this.current);
     };
 
-    /** The screen standing on the chronicle, every part painted on it, the hand and the button live. */
+    /**
+     * The screen standing on the chronicle, every part painted on it, the hand, the button and the
+     * bar live.
+     */
     const stand = (on: Chronicle): void => {
       this.current = on;
       paint();
       hand.live(true);
       endTurn.live(true);
+      bar.live(true);
       this.sequence = undefined;
     };
 
@@ -297,6 +301,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       try {
         endTurn.live(false);
         hand.live(false);
+        bar.live(false);
         dismiss();
 
         for (const stage of walked(stages)) {

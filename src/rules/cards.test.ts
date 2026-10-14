@@ -32,6 +32,7 @@ import {
   type Command,
   declaresWar,
   outcome,
+  reckoned,
   refusalOf,
 } from './chronicle';
 import { growthThreshold, warDeclared } from './city';
@@ -64,6 +65,7 @@ import {
   FROST,
   field,
   fullDraw,
+  gainedBetween,
   HUNGER,
   idsOf,
   madeOf,
@@ -2201,6 +2203,15 @@ test('a strike on a stock already at nothing raises no stock stage, and takes on
   expect(strike.left.population).toBe(empty.population - 1);
 });
 
+/** What each stock gained from the income group the end of turn stages on the city. */
+function incomeOf(city: Chronicle): Resources {
+  const income = apply(CATALOGUE, city, { type: 'end-turn' }).find(
+    (stage) => stage.name === 'income',
+  );
+  if (income === undefined) throw new Error('the end of turn stages no income');
+  return gainedBetween(city, income.chronicle);
+}
+
 test('growth takes what the income and the strikes leave: a stock over the growth threshold a strike leaves under it grows nobody, and one the income brings to it grows', () => {
   const crowded = { population: 3 };
   const threshold = growthThreshold(hungry(0, crowded), 'player');
@@ -2211,11 +2222,8 @@ test('growth takes what the income and the strikes leave: a stock over the growt
   });
 
   const starved = outcome(apply(CATALOGUE, struck, { type: 'end-turn' }));
-  const growing = apply(CATALOGUE, fed, { type: 'end-turn' });
-  const income = growing.find((stage) => stage.name === 'income');
-  if (income === undefined) throw new Error('the end of turn stages no income');
-  const yielded = income.chronicle.resources.food - fed.resources.food;
-  const grown = outcome(growing);
+  const yielded = incomeOf(fed).food;
+  const grown = outcome(apply(CATALOGUE, fed, { type: 'end-turn' }));
 
   expect(struck.resources.food).toBeGreaterThan(threshold);
   expect(growthThreshold(fed, 'player')).toBe(threshold);
@@ -2224,6 +2232,41 @@ test('growth takes what the income and the strikes leave: a stock over the growt
   expect(starved.resources.food).toBe(threshold - 1);
   expect(grown.population).toBe(fed.population + 1);
   expect(grown.resources.food).toBe(threshold - 1 + yielded - threshold);
+});
+
+test('the reckoning is the end of turn’s own run: each stock as the strikes leave it, one the strike takes past nothing reading its income less the whole of what it asked, and the population as growth leaves it; where the income reaches the growth threshold, each stock reads its income alone and the population one more; on the settle phase, nothing', () => {
+  const short = hungry(HUNGER - 1);
+  const grow = apply(CATALOGUE, short, { type: 'end-turn' }).find((stage) => stage.name === 'grow');
+  if (grow === undefined) throw new Error('the end of turn stages no growth');
+  const left = stricken(short);
+  const crowded = { population: 3 };
+  const threshold = growthThreshold(cityOf(['urban', 'plain'], crowded), 'player');
+  const fed = cityOf(['urban', 'plain'], {
+    ...crowded,
+    resources: { ...STOCKED, food: threshold - 1 },
+  });
+
+  const settling = hungry(HUNGER - 1, { turn: 0 });
+
+  const struck = reckoned(CATALOGUE, short);
+  const growing = reckoned(CATALOGUE, fed);
+
+  if (struck === undefined || growing === undefined) {
+    throw new Error('ending the turn runs no cities’ half');
+  }
+  expect(struck.stocks).toEqual({
+    ...gainedBetween(short, left),
+    food: incomeOf(short).food - HUNGER,
+  });
+  expect(short.resources.food + struck.stocks.food).toBeLessThan(0);
+  expect(struck.pastNothing).toEqual(new Set(['food']));
+  expect(short.population + struck.population).toBe(grow.chronicle.population);
+  expect(struck.population).toBe(-1);
+  expect(growing.stocks).toEqual(incomeOf(fed));
+  expect(fed.resources.food + growing.stocks.food).toBeGreaterThanOrEqual(threshold);
+  expect(growing.pastNothing).toEqual(new Set());
+  expect(growing.population).toBe(1);
+  expect(reckoned(CATALOGUE, settling)).toBeUndefined();
 });
 
 test('a card the city falls short for is refused for the resource it is short of', () => {

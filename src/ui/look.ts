@@ -82,6 +82,8 @@ export type Look = {
   readonly aimSlab: number;
   readonly emptyEdge: number;
   readonly unaffordableMark: number;
+  /** The ink of a stock ending the turn takes past nothing, and of the population it takes. */
+  readonly takenPastNothing: number;
   readonly affordableCard: Paper;
   readonly unaffordableCard: Paper;
   readonly mapDim: Wash;
@@ -154,6 +156,7 @@ export const LOOK: Look = {
   aimSlab: 0x232833,
   emptyEdge: 0x4a5058,
   unaffordableMark: 0xc0392b,
+  takenPastNothing: 0xc0392b,
   affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
   unaffordableCard: { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 },
   mapDim: { colour: 0x0d1014, strength: 0.6 },

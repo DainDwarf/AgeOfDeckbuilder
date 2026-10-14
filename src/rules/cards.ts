@@ -883,7 +883,7 @@ export function gained(paid: Chronicle, gain: Partial<Resources>): Landed {
 
 /**
  * A resource shocked: the player's city's stock of it loses the amount, never below nothing, and
- * where the stock does not cover it one population is taken besides, however far past it falls.
+ * where the stock does not cover it one population is taken besides, carrying how far past it falls.
  */
 export function shocked(chronicle: Chronicle, resource: Resource, amount: number): Landed {
   const stock = chronicle.resources[resource];
@@ -897,5 +897,7 @@ export function shocked(chronicle: Chronicle, resource: Resource, amount: number
             resources: { ...chronicle.resources, [resource]: left },
           }),
         );
-  return stock < amount ? followed(struck, (after) => populationTaken(after, 'player')) : struck;
+  if (stock >= amount) return struck;
+  const uncovered = { resource, amount: amount - stock };
+  return followed(struck, (after) => populationTaken(after, 'player', uncovered));
 }

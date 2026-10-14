@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
+import { type Reckoning, reckoned } from '../rules/chronicle';
 import { assignWaiting, claimWaiting, cultureThreshold, growthThreshold } from '../rules/city';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { type Group, type Stage, walked } from '../rules/stages';
@@ -14,6 +15,7 @@ import {
   MARGIN,
   onClick,
   onHover,
+  ownBoxOf,
   type Stratum,
   UI_FONT,
 } from './design-space';
@@ -28,6 +30,7 @@ const SUNK_WORD_INK = css(LOOK.ink);
 
 const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: WORD_INK };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.ink) };
+const RECKONING_STYLE = { fontFamily: UI_FONT, fontSize: '13px', color: css(LOOK.ink) };
 
 const CHIP_TO_WORD = 18;
 const WORD_TO_VALUE = 8;
@@ -56,7 +59,9 @@ export type Reading = {
 
 type Entry = Reading & {
   readonly key: BarReading;
-  /** The chip, the word and the value together: what the well presses into the bar. */
+  /** What ending the turn now would do to the value, after it. */
+  readonly reckoning: Phaser.GameObjects.Text;
+  /** The chip, the word, the value and its reckoning together: what the well presses into the bar. */
   readonly face: Phaser.GameObjects.Container;
   /** The well the reading sits in while it is latched down or its act waits; it stands only then. */
   readonly well: Phaser.GameObjects.Container;
@@ -68,6 +73,8 @@ type Entry = Reading & {
 export type ResourceBar = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
+  /** Whether the screen stands on what the bar last rendered, or plays out past it. */
+  live(on: boolean): void;
   /** Latches down the readings of these resources, and lets every other one back up. */
   latch(shown: ReadonlySet<Resource>): void;
   /** Whether the object is the bar's paper between its readings, which is beside the things. */
@@ -101,7 +108,7 @@ export function createResourceBar(
       .setName('bar-edge'),
   );
 
-  const slot = digitSlot(scene);
+  const { slot, space } = digitSlot(scene);
 
   const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
   const layout = layOutBar({
@@ -142,6 +149,24 @@ export function createResourceBar(
     }
   };
 
+  /** Whether the screen stands on the chronicle last rendered, and that chronicle. */
+  let live = true;
+  let rendered: Chronicle | undefined;
+
+  // Read only while the screen stands: a render mid play-out is of a chronicle the end of turn is
+  // still leaving, and its reckoning would count the income twice.
+  const reckon = (): void => {
+    const read = live && rendered !== undefined ? reckoned(catalogue, rendered) : undefined;
+    for (const entry of entries) {
+      const { count, taken } =
+        read === undefined ? { count: 0, taken: false } : reckoningOf(read, entry.key);
+      entry.reckoning.setText(reckoningReads(count));
+      entry.reckoning.setColor(css(taken ? LOOK.takenPastNothing : LOOK.ink));
+      const value = ownBoxOf(entry.value);
+      entry.reckoning.x += value.x + value.width + space - ownBoxOf(entry.reckoning).x;
+    }
+  };
+
   const render = (chronicle: Chronicle): void => {
     for (const entry of rising) stopMotion(scene, entry.ticking);
     rising = [];
@@ -150,6 +175,8 @@ export function createResourceBar(
       entry.ticking.count = count;
       entry.value.setText(readsAs(count, over));
     }
+    rendered = chronicle;
+    reckon();
     waiting = actsWaiting(catalogue, chronicle);
     dress();
   };
@@ -223,6 +250,10 @@ export function createResourceBar(
           return grouped(stage);
       }
     },
+    live(on: boolean): void {
+      live = on;
+      reckon();
+    },
     latch(shown: ReadonlySet<Resource>): void {
       latched = shown;
       dress();
@@ -235,14 +266,19 @@ export function createResourceBar(
 
 /**
  * The width every value grows rightward into, so no reading ever moves: two numbers of two digits
- * read over each other, which is four digits and the stroke between them. A value wider than that
- * grows into the gap before the next reading instead of moving it.
+ * read over each other, a space, and a reckoning of two digits; and that space. A value wider than
+ * that grows into the gap before the next reading, its reckoning with it.
  */
-function digitSlot(scene: Phaser.Scene): number {
-  const digits = addText(scene, 0, 0, '00/00', VALUE_STYLE);
-  const width = digits.width;
-  digits.destroy();
-  return width;
+function digitSlot(scene: Phaser.Scene): { slot: number; space: number } {
+  const measured = (shown: string, style: Phaser.Types.GameObjects.Text.TextStyle) => {
+    const sample = addText(scene, 0, 0, shown, style);
+    const sizes = { width: sample.width, own: ownBoxOf(sample).width };
+    sample.destroy();
+    return sizes;
+  };
+  const space = measured(' ', VALUE_STYLE).own;
+  const reckoning = measured(text('reading.minus', { count: '00' }), RECKONING_STYLE).own;
+  return { slot: measured('00/00', VALUE_STYLE).width + space + reckoning, space };
 }
 
 /**
@@ -342,12 +378,15 @@ function createEntry(
     tip: text(`tooltip.${key}`),
   });
   const { chip, word, value, hover } = reading;
+  const reckoning = addText(scene, 0, BAR_HEIGHT / 2, '', RECKONING_STYLE)
+    .setOrigin(0, 0.5)
+    .setName(`reading-${key}-reckoning`);
   // The well is added first, so the reading it holds is painted inside it.
   const { well, floor } = createWell(scene, `reading-${key}`);
   well.setVisible(false);
-  const face = scene.add.container(0, 0, [chip, word, value]);
+  const face = scene.add.container(0, 0, [chip, word, value, reckoning]);
   bar.add([well, face, hover]);
-  return { ...reading, key, face, well, floor, ticking: { count: 0 } };
+  return { ...reading, key, reckoning, face, well, floor, ticking: { count: 0 } };
 }
 
 /** How wide a reading's content stands for the bar's flow, its value taking the width handed. */
@@ -407,4 +446,29 @@ function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<Ba
 /** How a reading paints: the number alone, or the number over the threshold it stands against. */
 function readsAs(count: number, over: number | undefined): string {
   return over === undefined ? String(count) : text('reading.over', { count, over });
+}
+
+/**
+ * What ending the turn would do to a reading: the count it moves by, and whether it is a stock taken
+ * past nothing or the population taken.
+ */
+function reckoningOf(read: Reckoning, key: BarReading): { count: number; taken: boolean } {
+  switch (key) {
+    case 'idle':
+      return { count: read.population, taken: read.population < 0 };
+    case 'food':
+    case 'production':
+    case 'military':
+    case 'money':
+    case 'science':
+    case 'culture':
+      return { count: read.stocks[key], taken: read.pastNothing.has(key) };
+  }
+}
+
+/** How a reckoning paints: signed, and nothing where it moves nothing. */
+function reckoningReads(count: number): string {
+  if (count > 0) return text('reading.plus', { count });
+  if (count < 0) return text('reading.minus', { count: -count });
+  return '';
 }

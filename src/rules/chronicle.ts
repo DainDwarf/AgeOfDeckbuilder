@@ -72,7 +72,7 @@ import {
   tileKey,
 } from './map';
 import { featureKind, refuse, terrainKind } from './map-kinds';
-import type { Resource } from './resources';
+import { RESOURCES, type Resource, type Resources } from './resources';
 import { nextRng, seedRng, shuffle as shuffleItems } from './rng';
 import {
   answered,
@@ -158,6 +158,16 @@ export type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 /** A full hand. */
 const HAND_SIZE = 5;
 
+/** Nothing of every resource. */
+const NOUGHT: Readonly<Resources> = {
+  food: 0,
+  production: 0,
+  military: 0,
+  money: 0,
+  science: 0,
+  culture: 0,
+};
+
 export function beginChronicle(
   catalogue: Catalogue,
   age: string,
@@ -178,7 +188,6 @@ export function beginChronicle(
   }
   const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
   const shuffled = shuffleItems(seedRng(seed), civilization.cards.map(made));
-  const nought = { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0 };
   const neutralTile =
     neutral === undefined
       ? undefined
@@ -199,7 +208,7 @@ export function beginChronicle(
     held: [],
     turn: 0,
     deals: [],
-    resources: nought,
+    resources: NOUGHT,
     population: 0,
     assigned: [],
     neutral: neutralAt && {
@@ -207,7 +216,7 @@ export function beginChronicle(
       held: [neutralAt],
       population: 1,
       assigned: [neutralAt],
-      resources: nought,
+      resources: NOUGHT,
     },
     relations: neutralAt && 'peace',
     units: [],
@@ -650,14 +659,18 @@ function sameTally(one: Tally, other: Tally): boolean {
   );
 }
 
-/**
- * The stages a command resolves as before the map is charted. A chronicle that has ended refuses
- * every command, and one waiting on a deal every command but the take.
- */
+/** The stages a command resolves as before the map is charted. */
 function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command): readonly Stage[] {
-  if (chronicle.ending !== undefined) return refused(chronicle).stages;
-  if (chronicle.deals.length > 0 && command.type !== 'take') return refused(chronicle).stages;
+  if (refusedAhead(chronicle, command)) return refused(chronicle).stages;
   return stagesOf(catalogue, chronicle, command).stages;
+}
+
+/**
+ * Whether the chronicle refuses the command before anything of it resolves: an ended one every
+ * command, and one waiting on a deal every command but the take.
+ */
+function refusedAhead(chronicle: Chronicle, command: Command): boolean {
+  return chronicle.ending !== undefined || (chronicle.deals.length > 0 && command.type !== 'take');
 }
 
 /** A command the rules turned down: one `refused` group holding nothing, on the chronicle as it stood. */
@@ -807,21 +820,86 @@ function moved(name: 'drawn' | 'shuffled', before: Chronicle, after: Chronicle):
 }
 
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
-  if (chronicle.city === undefined) return refused(chronicle);
-  if (onSettlePhase(chronicle)) return opened(catalogue, chronicle);
-  return course(chronicle, [
-    (left) =>
-      grouped(
-        { name: 'income' },
-        everyCity(left, (city, whose) => income(catalogue, city, whose)),
-      ),
-    (left) => struck(catalogue, left),
-    (left) => discarded(left, everyPlace(left.hand)),
-    (left) => grouped({ name: 'grow' }, everyCity(left, grow)),
-    (left) => enemyPhase(catalogue, left),
-    (left) => captures(catalogue, left),
-    (left) => (left.deals.length > 0 ? unchanged(left) : opened(catalogue, left)),
-  ]);
+  switch (endOfTurnAs(chronicle)) {
+    case 'refused':
+      return refused(chronicle);
+    case 'opening':
+      return opened(catalogue, chronicle);
+    case 'cities':
+      return course(chronicle, [
+        (left) => citiesHalf(catalogue, left).growth,
+        (left) => enemyPhase(catalogue, left),
+        (left) => captures(catalogue, left),
+        (left) => (left.deals.length > 0 ? unchanged(left) : opened(catalogue, left)),
+      ]);
+  }
+}
+
+/**
+ * How ending the turn resolves on the chronicle: refused where the chronicle refuses it ahead or no
+ * city is settled, the opening alone on the settle phase, and from the cities' half on every turn
+ * after it.
+ */
+function endOfTurnAs(chronicle: Chronicle): 'refused' | 'opening' | 'cities' {
+  if (refusedAhead(chronicle, { type: 'end-turn' }) || chronicle.city === undefined) {
+    return 'refused';
+  }
+  return onSettlePhase(chronicle) ? 'opening' : 'cities';
+}
+
+/**
+ * The cities' half of the end of turn, income, the strikes, the discard and growth: what the strikes
+ * leave, and what growth leaves after them.
+ */
+function citiesHalf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): { readonly strikes: Sequence; readonly growth: Sequence } {
+  const earned = grouped(
+    { name: 'income' },
+    everyCity(chronicle, (city, whose) => income(catalogue, city, whose)),
+  );
+  const strikes = followed(earned, (left) => struck(catalogue, left));
+  const discarding = followed<Stage>(strikes, (left) => discarded(left, everyPlace(left.hand)));
+  const growth = followed<Stage>(discarding, (left) =>
+    grouped({ name: 'grow' }, everyCity(left, grow)),
+  );
+  return { strikes, growth };
+}
+
+/** What ending the turn now would do to the player's city, read off the end of turn's own steps. */
+export type Reckoning = {
+  /** Each stock's income less the whole of what the strikes asked of it, past nothing included. */
+  readonly stocks: Resources;
+  /** The stocks the strikes take past nothing. */
+  readonly pastNothing: ReadonlySet<Resource>;
+  /** The population growth brings, or the strikes take. */
+  readonly population: number;
+};
+
+/**
+ * The cities' half as ending the turn would run it on the chronicle: the stocks read as the strikes
+ * leave them, before growth spends food, and the population after it; nothing where it runs none.
+ */
+export function reckoned(catalogue: Catalogue, chronicle: Chronicle): Reckoning | undefined {
+  if (endOfTurnAs(chronicle) !== 'cities') return undefined;
+  const { strikes, growth } = citiesHalf(catalogue, chronicle);
+  const uncovered = { ...NOUGHT };
+  for (const stage of walked(strikes.stages)) {
+    if (stage.kind !== 'change' || stage.name !== 'population') continue;
+    if (stage.uncovered === undefined) continue;
+    uncovered[stage.uncovered.resource] += stage.uncovered.amount;
+  }
+  const stocks = { ...NOUGHT };
+  for (const resource of RESOURCES) {
+    stocks[resource] =
+      strikes.chronicle.resources[resource] - chronicle.resources[resource] - uncovered[resource];
+  }
+  return {
+    stocks,
+    pastNothing: new Set(RESOURCES.filter((resource) => uncovered[resource] > 0)),
+    population: growth.chronicle.population - chronicle.population,
+  };
 }
 
 /** A step of the end of turn taken by every city in turn: the player's, then the neutral's. */

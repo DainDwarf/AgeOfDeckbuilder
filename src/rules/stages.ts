@@ -1,17 +1,19 @@
 import { type TileCoords, tileAt } from './map';
-import type { CardId, Chronicle, DefeatCause } from './state';
+import type { CardId, Chronicle, Cost, DefeatCause } from './state';
 
 /**
  * One row of the chronicle moved, and the chronicle it leaves. `stock` carries the tile if one
- * yielded it; `discarded`, `exhausted`, `recalled` and `banished` carry where their cards came out
- * of, indices into the pile as it stood before — the hand, the discard pile for `recalled` — and a
- * `discarded` or an `exhausted` card lies on top of its pile in the chronicle the change leaves, in
- * the order of the places.
+ * yielded it; `population` carries, where it pays for a stock taken past nothing, the resource and
+ * how much of it the stock did not cover; `discarded`, `exhausted`, `recalled` and `banished` carry
+ * where their cards came out of, indices into the pile as it stood before — the hand, the discard
+ * pile for `recalled` — and a `discarded` or an `exhausted` card lies on top of its pile in the
+ * chronicle the change leaves, in the order of the places.
  */
 export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
   | { readonly name: PlainChange }
   | { readonly name: PlacedChange; readonly places: readonly number[] }
   | { readonly name: 'stock'; readonly tile?: TileCoords }
+  | { readonly name: 'population'; readonly uncovered?: Cost }
   | { readonly name: TiledChange; readonly tile: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
 );
@@ -82,7 +84,6 @@ export function plays(stages: readonly Stage[]): Play[] {
 /** The changes that carry nothing but the chronicle they leave. */
 type PlainChange =
   | 'added'
-  | 'population'
   | 'drawn'
   | 'shuffled'
   | 'turn'
@@ -132,7 +133,7 @@ type PlainGroup =
   | 'answer'
   | 'reward';
 
-export function change(name: PlainChange | 'stock', chronicle: Chronicle): Change {
+export function change(name: PlainChange | 'stock' | 'population', chronicle: Chronicle): Change {
   return { kind: 'change', name, chronicle };
 }
 
