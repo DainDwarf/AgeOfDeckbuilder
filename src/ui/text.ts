@@ -7,10 +7,10 @@ import type { Reference } from './text-run';
 /** Every player-facing sentence but the lore (`lore.ts`), one entry each. English is the only language. */
 const TEXT = {
   'label.food': 'Food',
-  'label.production': 'Production',
-  'label.military': 'Military',
+  'label.production': 'Prod',
+  'label.military': 'Mil',
   'label.money': 'Money',
-  'label.science': 'Science',
+  'label.science': 'Sci',
   'label.culture': 'Culture',
   'label.idle': 'Idle',
   'label.health': 'Health',
