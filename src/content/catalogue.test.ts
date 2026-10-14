@@ -25,7 +25,7 @@ import { tileAt, tileKey } from '../rules/map';
 import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
-import { answerCost, timelineOf } from '../rules/schedule';
+import { answerCost, answerRefusal, timelineOf } from '../rules/schedule';
 import type { Landed } from '../rules/stages';
 import type { Chronicle, Rewards } from '../rules/state';
 import { answerFace } from '../ui/face';
@@ -441,7 +441,7 @@ test('every region’s schedule rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of a region’s schedule costs, lands and reads a rules entry on the numbers it reads, and every capstone of its schedule lands, continues and is not passed, on a chronicle launched and settled in that region’s age', () => {
+test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, and every capstone of its schedule lands, continues and is not passed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
@@ -449,6 +449,7 @@ test('every answer of every event of a region’s schedule costs, lands and read
         expect(() => eventOf(CATALOGUE, id).needs?.(CATALOGUE, chronicle)).not.toThrow();
         for (const [name, answer] of Object.entries(eventOf(CATALOGUE, id).answers)) {
           expect(() => answerCost(CATALOGUE, chronicle, answer)).not.toThrow();
+          expect(() => answerRefusal(CATALOGUE, chronicle, id, name)).not.toThrow();
           expect(() => answer.reads(CATALOGUE, chronicle)).not.toThrow();
           expect(() => answerFace(CATALOGUE, chronicle, id, name)).not.toThrow();
           expect(() => answer.lands(CATALOGUE, chronicle)).not.toThrow();

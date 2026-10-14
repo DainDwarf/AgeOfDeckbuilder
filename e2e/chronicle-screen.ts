@@ -43,7 +43,7 @@ import {
 import { featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
-import { addedToDrawPileTop, campsPlaced } from '../src/rules/schedule';
+import { addedToDrawPileTop, answerRefusal, campsPlaced, offered } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
 import {
@@ -2169,14 +2169,14 @@ export async function stoppedTurn(page: Page): Promise<void> {
 }
 
 /**
- * One whole turn: the end of turn, the first entry of every deal it may stop on taken through the
- * window's own presses, one window after another, and the capstone's window a landing stops on
- * closed by a press on its card, the draw after it waited out. What every spec that only wants the
- * next turn open ends the turn with.
+ * One whole turn: the end of turn, the first entry the rules admit of every deal it may stop on
+ * taken through the window's own presses, one window after another, and the capstone's window a
+ * landing stops on closed by a press on its card, the draw after it waited out. What every spec that
+ * only wants the next turn open ends the turn with.
  */
 export async function endTurn(page: Page): Promise<void> {
   await stoppedTurn(page);
-  while (await standing(page, 'deal')) await take(page, 0);
+  while (await standing(page, 'deal')) await take(page, firstAdmitted(await chronicleOf(page)));
   if (!(await standing(page, 'capstone'))) return;
   await click(page, 'capstone-card-0');
   await playedOut(page);
@@ -2191,22 +2191,43 @@ export async function take(page: Page, at: number): Promise<void> {
 
 /**
  * The chronicle one whole turn leaves, played through the rules: the end of turn, and the first entry
- * of every deal it may stop on taken. What every seed a spec searches for is run forward with, a
- * chronicle waiting on a deal taking no other command.
+ * the rules admit of every deal it may stop on taken. What every seed a spec searches for is run
+ * forward with, a chronicle waiting on a deal taking no other command.
  */
 export function endedTurn(chronicle: Chronicle): Chronicle {
   return firstEntriesTaken(outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' })));
 }
 
-/** The first entry of every deal standing taken, one deal after another, as the window's presses take them. */
+/**
+ * The first entry the rules admit of every deal standing taken, one deal after another, as the
+ * window's presses take them.
+ */
 export function firstEntriesTaken(chronicle: Chronicle): Chronicle {
   let taking = chronicle;
   while (taking.deals.length > 0) {
-    const taken = outcome(apply(CATALOGUE, taking, { type: 'take', at: 0 }));
-    if (taken === taking) throw new Error(`the take at 0 is refused on turn ${taking.turn}`);
+    const at = firstAdmitted(taking);
+    const taken = outcome(apply(CATALOGUE, taking, { type: 'take', at }));
+    if (taken === taking) throw new Error(`the take at ${at} is refused on turn ${taking.turn}`);
     taking = taken;
   }
   return taking;
+}
+
+/** The first place the deal standing offers an entry the rules admit: an answer nothing refuses, or a reward. */
+export function firstAdmitted(chronicle: Chronicle): number {
+  const [deal] = chronicle.deals;
+  if (deal === undefined) throw new Error(`turn ${chronicle.turn} deals nothing`);
+  switch (deal.of) {
+    case 'event': {
+      const at = offered(CATALOGUE, deal).findIndex((id) =>
+        playable(answerRefusal(CATALOGUE, chronicle, deal.event, id)),
+      );
+      if (at < 0) throw new Error(`turn ${chronicle.turn} deals no answer the rules admit`);
+      return at;
+    }
+    case 'capture':
+      return 0;
+  }
 }
 
 /**

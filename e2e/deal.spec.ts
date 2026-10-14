@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
-import { type Chronicle, playable } from '../src/rules/state';
+import type { Chronicle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
 import { eventName } from '../src/ui/text';
@@ -48,7 +48,7 @@ function unpaid(): { dealt: Chronicle; answer: string } {
       const [deal] = dealt.deals;
       if (deal?.of === 'event') {
         const answer = offered(CATALOGUE, deal).find(
-          (id) => !playable(answerRefusal(CATALOGUE, dealt, deal.event, id)),
+          (id) => answerRefusal(CATALOGUE, dealt, deal.event, id).unaffordable.length > 0,
         );
         if (answer !== undefined) return { dealt, answer };
       }

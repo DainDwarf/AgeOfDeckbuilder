@@ -26,6 +26,9 @@ import { arrived, bordered, populationTaken } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import {
+  featureInside,
+  featureRemovalInside,
+  featuresRemovedInside,
   type Removal,
   removalInside,
   removedInside,
@@ -75,6 +78,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
     flood: 1,
     'bad-air': 1,
     strangers: 1,
+    predators: 1,
   },
 };
 
@@ -90,6 +94,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
     flood: 1,
     'bad-air': 1,
     strangers: 1,
+    predators: 1,
   },
 };
 
@@ -142,6 +147,19 @@ function takenIn(catalogue: Catalogue, chronicle: Chronicle): Landed {
     landing = followed(landing, (left) => arrived(left, 'player'));
   }
   return followed(landing, (left) => rewarded(catalogue, left, 'misunderstandings', 1));
+}
+
+/** The features the wolves take inside the border. */
+const DEER_AND_CATTLE = ['deer', 'cattle'];
+
+/** How many herds the wolves take on this turn: one, and one more for every ten turns. */
+function wolvesTake(turn: number): number {
+  return 1 + Math.floor(turn / 10);
+}
+
+/** The military defending the herds costs: three for each herd the wolves would take, whatever the border holds. */
+function defence(chronicle: Chronicle): number {
+  return 3 * wolvesTake(chronicle.turn);
 }
 
 const REGIONS: Age['regions'] = {
@@ -518,6 +536,12 @@ export const STONE: Slice = {
         influence: 3,
         strikes: (_catalogue, chronicle) => shocked(chronicle, 'culture', 3),
       },
+      wolves: {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
+      },
     },
     events: {
       departure: {
@@ -583,6 +607,39 @@ export const STONE: Slice = {
           'refuse-them': {
             cost: {},
             reads: () => ({}),
+            lands: (_catalogue, chronicle) => unchanged(chronicle),
+          },
+        },
+      },
+      predators: {
+        answers: {
+          'abandon-a-herd': {
+            cost: {},
+            blocked: (catalogue, chronicle) =>
+              featureInside(catalogue, chronicle, DEER_AND_CATTLE) ? [] : ['no-deer-or-cattle'],
+            reads: (catalogue, chronicle) =>
+              featureRemovalInside(
+                catalogue,
+                chronicle,
+                DEER_AND_CATTLE,
+                wolvesTake(chronicle.turn),
+              ),
+            lands: (catalogue, chronicle) =>
+              featuresRemovedInside(
+                catalogue,
+                chronicle,
+                DEER_AND_CATTLE,
+                wolvesTake(chronicle.turn),
+              ),
+          },
+          'let-the-farmers-handle-it': {
+            cost: {},
+            reads: () => ({}),
+            lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'wolves', 1),
+          },
+          'defend-the-herds': {
+            cost: (_catalogue, chronicle) => ({ military: defence(chronicle) }),
+            reads: (_catalogue, chronicle) => ({ military: defence(chronicle) }),
             lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },

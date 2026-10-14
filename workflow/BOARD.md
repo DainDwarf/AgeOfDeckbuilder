@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Predators** — the Stone Age's wolves on both Stone schedules: _Abandon a herd_ removes deer and cattle inside the border, seeded, more on a later turn, refused while none stands; _Let the farmers handle it_ adds the challenge **Wolves**, killing one population a strike; _Defend the herds_ pays military by the count whatever the border holds; an answer may name what refuses it; `npm test` green with the mechanism tests, `e2e/predators.spec.ts` passing, the pages saying so. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/predators.md](board/predators.md)
 - **Drought** — the land dries and the food stock pays for it.
 - **Travellers** — fortunate: a passing band trades, money or food now.
 - **The neutral's grievance** — reparations paid or the neutral turned hostile, dealt only while it stands at peace; its harsher answer dealing a challenge.
