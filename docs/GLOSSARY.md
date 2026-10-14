@@ -85,7 +85,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **exhaust** | A keyword on a card, and a building card's own once played: played, it goes to the exhaust pile instead of the discard pile. | single use, one-use, consume, consumed, exile, remove (for a card played), spend (for a card) |
 | **exhaust pile** | The cards exhausted this chronicle, out of the cycle and kept in view. | removed pile, used pile, exile pile, void |
 | **banish** | To take a card out of the chronicle for good: a keyword on a card, and a settle card's own once played, a trophy's once played and a hazard's once paid. | gone (for a card), vanish, purge, burn, destroy (for a card) |
-| **counter** | A named number a card carries in a chronicle, declared by its content and set when the card is made. | token, charge, variable |
+| **counter** | A named number a card carries in a chronicle, declared by its content. | token, charge, variable |
 | **draw pile** | The cards not yet drawn this cycle; refilled from the discard pile when empty. | library |
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |
