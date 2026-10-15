@@ -11,11 +11,11 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  tileYield,
 } from '../src/rules/map';
 import { featureKind } from '../src/rules/map-kinds';
 import type { Resources } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
+import { tileYield } from '../src/rules/yields';
 import { featureName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
@@ -142,7 +142,7 @@ function riverBeside(): Found<Partial<Resources>> {
     tile.building === undefined &&
     tile.improvements.length === 0 &&
     runsAlong(chronicle.rivers, tile)
-      ? tileYield(CATALOGUE, tile, tilesBeside(drawnFaces(chronicle)))
+      ? tileYield(CATALOGUE, chronicle, tile, tilesBeside(drawnFaces(chronicle)))
       : undefined,
   );
 }

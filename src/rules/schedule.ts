@@ -232,6 +232,15 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Sequence<
   return grouped({ name: 'capstone-continued' }, continues(catalogue, chronicle));
 }
 
+/** The numbers the capstone's rules entry reads of the chronicle as it stands, none for one reading none. */
+export function capstoneReading(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  id: string,
+): Record<string, number> {
+  return capstoneOf(catalogue, id).reads?.(catalogue, chronicle) ?? {};
+}
+
 /** A content defect met in play, followed through as the one change saying so. */
 function runtimeError(chronicle: Chronicle): Landed {
   return landedAs(change('runtime-error', chronicle));

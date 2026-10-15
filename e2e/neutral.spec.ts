@@ -18,7 +18,6 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  tileYield,
 } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
@@ -26,6 +25,7 @@ import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
+import { tileYield } from '../src/rules/yields';
 import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
@@ -557,10 +557,10 @@ function workerBeside(): { chronicle: Chronicle; tile: TileCoords } {
     const city = opened.neutral?.city;
     const beside = tilesBeside(opened.tiles);
     const source = opened.tiles.find(
-      (tile) => (tileYield(CATALOGUE, tile, beside).production ?? 0) > 0,
+      (tile) => (tileYield(CATALOGUE, opened, tile, beside).production ?? 0) > 0,
     );
     if (city === undefined || source === undefined) return undefined;
-    const gives = tileYield(CATALOGUE, source, beside).production ?? 0;
+    const gives = tileYield(CATALOGUE, opened, source, beside).production ?? 0;
     for (const tile of neighbours(city)) {
       const there = tileAt(opened.tiles, tile);
       if (there === undefined || there.building !== undefined) continue;

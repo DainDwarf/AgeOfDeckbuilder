@@ -2,7 +2,6 @@ import Phaser from 'phaser';
 import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
 import { preparedAs } from '../rules/enemies';
 import {
-  builtYield,
   groundCost,
   MOVE_POINT,
   movementCost,
@@ -10,13 +9,12 @@ import {
   runsAlong,
   type Tile,
   type TilesBeside,
-  type YieldSource,
-  yieldParts,
 } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { Chronicle } from '../rules/state';
 import { relationsOf, type Unit, unitAt } from '../rules/units';
+import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
@@ -160,7 +158,7 @@ export function cardsOf(
   catalogue: Catalogue,
   tile: Tile,
   units: readonly Unit[],
-  chronicle: Pick<Chronicle, 'city' | 'relations'>,
+  chronicle: Pick<Chronicle, 'city' | 'relations' | 'turn' | 'timeline'>,
   rivers: readonly River[],
   beside: TilesBeside,
 ): Card[] {
@@ -173,7 +171,7 @@ export function cardsOf(
     cards.push({ kind: 'unit', unit: { ...unit, prepares, hostile } });
   }
 
-  const parts = yieldParts(catalogue, tile, beside);
+  const parts = yieldParts(catalogue, chronicle, tile, beside);
   const rows = (place: ReturnType<typeof placeOf>): Row[] =>
     parts.filter((part) => placeOf(part) === place);
 

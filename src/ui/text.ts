@@ -619,9 +619,9 @@ export function capstoneName(capstone: string): string {
   return named('capstone-name', capstone, 'the capstone');
 }
 
-/** What a capstone's rules entry reads on the screen; a capstone no entry names is refused. */
-export function capstoneRules(capstone: string): string {
-  return named('capstone-rules', capstone, 'the capstone');
+/** What a capstone's rules entry reads on the screen, with its numbers; a capstone no entry names is refused. */
+export function capstoneRules(capstone: string, values: Record<string, number>): string {
+  return named('capstone-rules', capstone, 'the capstone', values);
 }
 
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */

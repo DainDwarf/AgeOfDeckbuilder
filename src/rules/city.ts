@@ -1,5 +1,5 @@
 import { ageOf, type Catalogue, cardOf, costOf, unitCardOf, workerAim } from './catalogue';
-import { neighbours, type TileCoords, tileAt, tileKey, tileYield } from './map';
+import { neighbours, type TileCoords, tileAt, tileKey } from './map';
 import { refuse } from './map-kinds';
 import { RESOURCES } from './resources';
 import {
@@ -32,6 +32,7 @@ import {
   withCityRows,
 } from './state';
 import { type Relations, relationsOf, type Unit, unitAt } from './units';
+import { tileYield } from './yields';
 
 /**
  * The neutral turned hostile, for the rest of the chronicle: the one `relations` change, and nothing
@@ -122,7 +123,7 @@ export function yielded(
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) refuse(catalogue, `no tile of the map yields at ${tileKey(at)}`);
   const city = cityRows(chronicle, whose);
-  const yields = tileYield(catalogue, tile, (coord) => tileAt(chronicle.tiles, coord));
+  const yields = tileYield(catalogue, chronicle, tile, (coord) => tileAt(chronicle.tiles, coord));
   if (city === undefined || costsOf(yields).length === 0) return unchanged(chronicle);
   const resources = { ...city.resources };
   for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;

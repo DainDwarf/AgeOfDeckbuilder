@@ -42,7 +42,6 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  tileYield,
 } from '../src/rules/map';
 import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
@@ -60,6 +59,7 @@ import {
   playable,
 } from '../src/rules/state';
 import { standsOn, type Unit, unitAt } from '../src/rules/units';
+import { tileYield } from '../src/rules/yields';
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -1263,17 +1263,18 @@ export function drawnFaces(chronicle: Chronicle): Tile[] {
 }
 
 /**
- * How many glyphs each resource is owed for the faces of the map `counted` keeps, every face it draws
- * read beside them: one for every point they yield of it.
+ * How many glyphs each resource is owed for the faces of the chronicle's map `counted` keeps, every
+ * face it draws read beside them: one for every point they yield of it.
  */
 export function glyphsOf(
+  chronicle: Chronicle,
   faces: readonly Tile[],
   counted: (face: Tile) => boolean = () => true,
 ): Glyphs {
   const owed = noGlyphs();
   const beside = tilesBeside(faces);
   for (const face of faces.filter(counted)) {
-    const yields = tileYield(CATALOGUE, face, beside);
+    const yields = tileYield(CATALOGUE, chronicle, face, beside);
     for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
   }
   return owed;

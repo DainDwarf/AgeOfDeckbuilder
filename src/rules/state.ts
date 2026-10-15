@@ -264,6 +264,23 @@ export function onSettlePhase(chronicle: Chronicle): boolean {
   return chronicle.turn === 0;
 }
 
+/** Whether the capstone has landed: the turn is its own or past it. */
+export function capstoneLanded(chronicle: Pick<Chronicle, 'turn' | 'timeline'>): boolean {
+  return chronicle.turn >= chronicle.timeline.capstone.turn;
+}
+
+/** Every card the chronicle's piles hold: the draw pile's, the hand's, the discard pile's and the exhaust pile's. */
+export function cardsInPiles(
+  chronicle: Pick<Chronicle, 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile'>,
+): ChronicleCard[] {
+  return [
+    ...chronicle.drawPile,
+    ...chronicle.hand,
+    ...chronicle.discardPile,
+    ...chronicle.exhaustPile,
+  ];
+}
+
 /** The turn of the next landing a card has shown, and nothing once that turn has come. */
 export function turnShown(chronicle: Chronicle): number | undefined {
   const { shownTurn } = chronicle;

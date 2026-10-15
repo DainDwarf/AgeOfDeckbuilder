@@ -8,14 +8,13 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  type YieldPart,
-  yieldParts,
 } from '../src/rules/map';
 import { buildingKind } from '../src/rules/map-kinds';
 import { addedToDrawPileTop } from '../src/rules/schedule';
 import { followed } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import { type YieldPart, yieldParts } from '../src/rules/yields';
 import { buildingName, terrainName, text } from '../src/ui/text';
 import {
   admits,
@@ -110,7 +109,9 @@ function partOf(
   const faces = drawnFaces(chronicle);
   const face = faces.find((drawn) => tileKey(drawn) === tileKey(at));
   if (face === undefined) throw new Error(`the map draws no face of ${tileKey(at)}`);
-  return yieldParts(CATALOGUE, face, tilesBeside(faces)).find((part) => part.kind === kind);
+  return yieldParts(CATALOGUE, chronicle, face, tilesBeside(faces)).find(
+    (part) => part.kind === kind,
+  );
 }
 
 test('the Fishery played at the coast tile inside the border its embarked worker stands on builds a Fishery there', async ({
@@ -148,7 +149,7 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
   await openSaved(page, built, CAMPAIGN);
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(glyphsOf(drawnFaces(built)));
+  expect(await glyphs(page)).toEqual(glyphsOf(built, drawnFaces(built)));
 
   const seen = await readings(page, [`tile-${tileKey(beside)}`, `tile-${tileKey(tile)}`]);
   const coast = seen(`tile-${tileKey(beside)}`).onScreen;

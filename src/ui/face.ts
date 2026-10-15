@@ -10,7 +10,7 @@ import {
   costOf,
   influenceOf,
 } from '../rules/catalogue';
-import { answerCase, answerOf } from '../rules/schedule';
+import { answerCase, answerOf, capstoneReading } from '../rules/schedule';
 import type { CardId, Chronicle, ChronicleCard, Cost } from '../rules/state';
 import {
   answerName,
@@ -131,15 +131,20 @@ export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerR
   return cardFace(catalogue, namedCardMade(catalogue, id, reading), undefined);
 }
 
-/** The face a capstone is drawn as: it costs nothing, and its rules entry reads no numbers. */
-export function capstoneFace(id: string): Face {
+/**
+ * The face the chronicle's capstone is drawn as: it costs nothing, and its rules entry and the cards
+ * it names read the numbers it reads of that chronicle.
+ */
+export function capstoneFace(catalogue: Catalogue, chronicle: Chronicle): Face {
+  const { id } = chronicle.timeline.capstone;
+  const reading = capstoneReading(catalogue, chronicle, id);
   return {
     id,
     name: capstoneName(id),
     kind: 'capstone',
-    rules: capstoneRules(id),
+    rules: capstoneRules(id, reading),
     costs: [],
-    reading: {},
+    reading,
     influence: 0,
   };
 }

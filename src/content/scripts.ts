@@ -31,7 +31,6 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  tileYield,
 } from '../rules/map';
 import { RESOURCES, type Resources } from '../rules/resources';
 import { pickUniform, type Rng } from '../rules/rng';
@@ -54,6 +53,7 @@ import {
   type Unit,
   unitAt,
 } from '../rules/units';
+import { tileYield } from '../rules/yields';
 
 /**
  * The raider, going for the nearest by its own walk of the cities not its own, the player's where
@@ -228,7 +228,7 @@ function buildOf(
       ...chronicle,
       units: chronicle.units.map((unit) => (unit.id === worker.id ? { ...unit, tile: at } : unit)),
     };
-    const before = tileYield(catalogue, tile, beside);
+    const before = tileYield(catalogue, chronicle, tile, beside);
     const away = distance(at, neutral.city);
     for (const card of cards) {
       const aim = workerAim(cardOf(catalogue, card));
@@ -239,10 +239,10 @@ function buildOf(
       ) {
         continue;
       }
-      const after = aim.effect(catalogue, there, at).chronicle.tiles;
-      const relaid = tileAt(after, at);
+      const after = aim.effect(catalogue, there, at).chronicle;
+      const relaid = tileAt(after.tiles, at);
       if (relaid === undefined) continue;
-      const yields = tileYield(catalogue, relaid, tilesBeside(after));
+      const yields = tileYield(catalogue, after, relaid, tilesBeside(after.tiles));
       const added = {
         food: (yields.food ?? 0) - (before.food ?? 0),
         worth: worthOf(yields) - worthOf(before),
@@ -334,7 +334,7 @@ export const VILLAGER: NeutralScript = {
     let nearest = Number.POSITIVE_INFINITY;
     for (const tile of chronicle.tiles) {
       if (!among.has(tileKey(tile))) continue;
-      const worth = worthOf(tileYield(catalogue, tile, beside));
+      const worth = worthOf(tileYield(catalogue, chronicle, tile, beside));
       const away = city === undefined ? 0 : distance(tile, city);
       if (worth < most || (worth === most && away >= nearest)) continue;
       most = worth;
@@ -351,7 +351,7 @@ export const VILLAGER: NeutralScript = {
       .filter((tile) => among.has(tileKey(tile)))
       .map((tile) => ({
         tile: { q: tile.q, r: tile.r },
-        yields: tileYield(catalogue, tile, beside),
+        yields: tileYield(catalogue, chronicle, tile, beside),
       }))
       .sort(
         (a, b) =>

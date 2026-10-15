@@ -29,6 +29,7 @@ import {
   type TileBlock,
 } from './state';
 import { type Landing, LEAST_STATS, standsOn, type Unit, type UnitStats } from './units';
+import type { YieldRule } from './yields';
 
 /**
  * What a unit does by its script in the enemy phase, asked of it as the phase stands it: one unit at
@@ -391,11 +392,14 @@ export type ScheduledEvent = {
 
 /**
  * A capstone: what it does to the chronicle on the turn it lands, what it does on every turn after
- * that one, and whether the chronicle has passed it.
+ * that one, the numbers its rules entry reads of the chronicle, the rule it lays over every tile's
+ * yield from its landing on, and whether the chronicle has passed it.
  */
 export type Capstone = {
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
   readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
+  readonly reads?: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
+  readonly yieldRule?: YieldRule;
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 

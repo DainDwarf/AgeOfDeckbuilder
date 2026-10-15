@@ -46,6 +46,7 @@ import {
   enemyPhaseOf,
   enemyStanding,
   everyCard,
+  FALLOW,
   field,
   gainedBetween,
   heldBy,
@@ -53,6 +54,7 @@ import {
   madeOf,
   NEUTRAL,
   NEUTRAL_TILE,
+  NO_DEALS,
   NO_GROWTH,
   namesOf,
   neutralStanding,
@@ -85,13 +87,13 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  tileYield,
 } from './map';
 import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } from './map-kinds';
-import { RESOURCES, type Resources } from './resources';
+import { RESOURCES, type Resources, withNone } from './resources';
 import { inSight } from './sight';
 import { type Chronicle, type CityRows, idle, type Snapshot, withCityRows } from './state';
 import { FIRST_UNIT_NUMBER, type Unit, unitAt } from './units';
+import { tileYield } from './yields';
 
 /** The command a drag in city mode sends: the population off one tile and onto another. */
 function reassignTo(from: TileCoords, to: TileCoords): Command {
@@ -120,9 +122,14 @@ function claimCard(): AimedCard {
 
 /** The one reason the free claim refuses a tile of the map, and nothing on one it admits. */
 function claimRefusal(chronicle: Chronicle, at: TileCoords): string | undefined {
+  return refuses(CATALOGUE, chronicle, claimCard(), tileOn(chronicle, at));
+}
+
+/** The tile of the chronicle's map at those coordinates; a map reaching none there throws. */
+function tileOn(chronicle: Chronicle, at: TileCoords): Tile {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) throw new Error(`${tileKey(at)} is no tile of the map`);
-  return refuses(CATALOGUE, chronicle, claimCard(), tile);
+  return tile;
 }
 
 /** A tile of a generated map that touches the border and has never been in sight. */
@@ -349,6 +356,64 @@ test('a building that gives beside it gives every tile of its terrain beside it,
     together(ground('plain'), WELL_GIVES.yields),
   ]);
   expect(gainedBetween(city, foraged)).toEqual(together(ground('plain'), WELL_GIVES.yields));
+});
+
+test('from the landing of a capstone ruling the yield, the terrain’s and the feature’s food are nothing at the income of either city and through a card gaining a tile’s yield, the building’s and the improvement’s kept, and before it the yield is the layers’', () => {
+  const landingOn = (turn: number): Pick<Chronicle, 'timeline'> => ({
+    timeline: { ...NO_DEALS, capstone: { id: FALLOW, turn } },
+  });
+  const layered = { terrain: 'plain', feature: 'PH_Fertile', improvements: ['PH_Ditch'] };
+  const farmed: Tile = { q: 1, r: 0, ...layered, building: 'PH_Farm' };
+  const out: Tile = { q: 0, r: 5, ...layered };
+  const city = (turn: number): Chronicle =>
+    withTile(
+      withTile(
+        cityOf(['urban', 'plain'], {
+          ...NO_GROWTH,
+          ...landingOn(turn),
+          units: [worker(out)],
+          hand: ['PH_Forage'],
+        }),
+        farmed,
+      ),
+      out,
+    );
+  const neutral = (turn: number): Chronicle => {
+    const opened = besideTheNeutral(landingOn(turn));
+    return withTile(opened, { ...tileOn(opened, NEUTRAL_TILE), ...layered });
+  };
+  const layers = (tile: Tile, landed: boolean): Resources => {
+    const ground = [terrainKind(CATALOGUE, tile.terrain).yields];
+    if (tile.feature !== undefined) ground.push(featureKind(CATALOGUE, tile.feature).yields);
+    const laid = tile.improvements.map((kind) => improvementKind(CATALOGUE, kind).yields);
+    if (tile.building !== undefined) laid.push(buildingKind(CATALOGUE, tile.building).yields);
+    return together(
+      ...ground.map((yields) => (landed ? withNone(yields, 'food') : yields)),
+      ...laid,
+    );
+  };
+
+  for (const landed of [false, true]) {
+    const landing = landed ? 1 : 2;
+    const player = city(landing);
+    const income = heldBy(apply(CATALOGUE, player, { type: 'end-turn' }), 'income');
+    const foraged = outcome(apply(CATALOGUE, player, aimedAt(out)));
+    const theirs = neutral(landing);
+    const theirIncome = heldBy(apply(CATALOGUE, theirs, { type: 'end-turn' }), 'income').at(-1);
+
+    expect(
+      income.map((stock, at) =>
+        gainedBetween(at === 0 ? player : income[at - 1].chronicle, stock.chronicle),
+      ),
+    ).toEqual([layers(tileOn(player, CITY), landed), layers(farmed, landed)]);
+    expect(gainedBetween(player, foraged)).toEqual(layers(out, landed));
+    expect(theirIncome).toMatchObject({ name: 'stock', tile: NEUTRAL_TILE });
+    expect(theirIncome?.chronicle.neutral?.resources).toEqual(
+      layers(tileOn(theirs, NEUTRAL_TILE), landed),
+    );
+  }
+  expect(layers(farmed, true).food).toBeGreaterThan(0);
+  expect(layers(farmed, true).food).toBeLessThan(layers(farmed, false).food);
 });
 
 test('resources accumulate over consecutive turns', () => {
@@ -824,7 +889,7 @@ test('at income the neutral’s assigned tile yields into its own stocks, after 
   const chronicle = besideTheNeutral();
   const tile = tileAt(chronicle.tiles, NEUTRAL_TILE);
   if (tile === undefined) throw new Error('the neutral’s city stands on no tile of the map');
-  const gives = tileYield(CATALOGUE, tile, tilesBeside(chronicle.tiles));
+  const gives = tileYield(CATALOGUE, chronicle, tile, tilesBeside(chronicle.tiles));
   const occupied = withUnits(chronicle, [standing('enemy', NEUTRAL_TILE)]);
 
   const income = heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'income');

@@ -15,7 +15,7 @@ import {
   technologyOf,
 } from './catalogue';
 import { refuse } from './map-kinds';
-import type { CardId, Chronicle, CitySection, Ending } from './state';
+import { type CardId, type Chronicle, type CitySection, cardsInPiles, type Ending } from './state';
 
 /**
  * A card the campaign owns: the number it was dealt, which no other card of the campaign ever takes,
@@ -383,12 +383,7 @@ export function influenceCardsIn(
   chronicle: Chronicle,
 ): (HeldCopies & { readonly card: InfluenceCard })[] {
   const held = new Map<CardId, { card: InfluenceCard; copies: number }>();
-  for (const { id } of [
-    ...chronicle.drawPile,
-    ...chronicle.hand,
-    ...chronicle.discardPile,
-    ...chronicle.exhaustPile,
-  ]) {
+  for (const { id } of cardsInPiles(chronicle)) {
     const card = influenceCardOf(cardOf(catalogue, id));
     if (card === undefined) continue;
     held.set(id, { card, copies: (held.get(id)?.copies ?? 0) + 1 });

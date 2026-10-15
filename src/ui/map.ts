@@ -19,7 +19,6 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
-  tileYield,
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight } from '../rules/sight';
@@ -34,6 +33,7 @@ import {
   type Snapshot,
 } from '../rules/state';
 import { type Faction, type Landing, type Unit, unitAt, unitOf } from '../rules/units';
+import { tileYield } from '../rules/yields';
 import { MAP_FRAME } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended, SLIDE_HOME, stopMotion } from './card-motion';
@@ -1018,7 +1018,7 @@ export function createMapView(
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
-      const yields = tileYield(catalogue, face.tile, faces);
+      const yields = tileYield(catalogue, shown, face.tile, faces);
       const owed: Resource[] = [];
       for (const resource of RESOURCES) {
         if (!asked.has(resource)) continue;

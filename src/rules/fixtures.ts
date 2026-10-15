@@ -83,7 +83,7 @@ import {
   tileKey,
 } from './map';
 import type { MapRegion } from './map-kinds';
-import { RESOURCES, type Resources } from './resources';
+import { RESOURCES, type Resources, withNone } from './resources';
 import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
 import {
@@ -119,6 +119,7 @@ import {
   type ChronicleAchievement,
   type ChronicleCard,
   type CitySection,
+  cardsInPiles,
   cityOn,
   type Deal,
   holds,
@@ -158,6 +159,12 @@ const FAR = 1000;
 
 /** The building whose standing on a tile the city holds passes the fixture's tillage. */
 export const TILLAGE = 'PH_Farm';
+
+/**
+ * The capstone whose rule over the yield takes the terrain's and the feature's food to nothing, and
+ * which nothing passes. No schedule names it.
+ */
+export const FALLOW = 'PH_Fallow';
 
 /** The food the fixture's hunger strikes off the stock. */
 export const HUNGER = 6;
@@ -762,6 +769,21 @@ const TABLES: Omit<Tables, 'technologies'> = {
       lands: (_catalogue, chronicle) => unchanged(chronicle),
       passes: (_catalogue, chronicle) =>
         chronicle.tiles.some((tile) => tile.building === TILLAGE && holds(chronicle, tile)),
+    },
+    [FALLOW]: {
+      lands: (_catalogue, chronicle) => unchanged(chronicle),
+      yieldRule: (part) => {
+        switch (part.kind) {
+          case 'terrain':
+          case 'feature':
+            return withNone(part.yields, 'food');
+          case 'improvement':
+          case 'building':
+          case 'beside':
+            return part.yields;
+        }
+      },
+      passes: () => false,
     },
   },
   terrains: {
@@ -1818,12 +1840,7 @@ export function worker(tile: TileCoords): Standing {
 export const WORKER_STATS = worker(CITY).stats;
 
 export function everyCard(chronicle: Chronicle): CardId[] {
-  return idsOf([
-    ...chronicle.drawPile,
-    ...chronicle.hand,
-    ...chronicle.discardPile,
-    ...chronicle.exhaustPile,
-  ]).sort();
+  return idsOf(cardsInPiles(chronicle)).sort();
 }
 
 /** What the stock rose by, resource by resource, from one chronicle to the next. */

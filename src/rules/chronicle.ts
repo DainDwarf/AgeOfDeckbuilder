@@ -112,6 +112,7 @@ import {
   type ChronicleAchievement,
   type ChronicleCard,
   type CityFaction,
+  capstoneLanded,
   onSettlePhase,
   playable,
   type Refusal,
@@ -317,11 +318,10 @@ function conditionsRead(
   stages: readonly Stage[],
 ): Stage[] {
   if (started.ending !== undefined) return [...stages];
-  const { id, turn } = started.timeline.capstone;
-  const { passes } = capstoneOf(catalogue, id);
+  const { passes } = capstoneOf(catalogue, started.timeline.capstone.id);
   // The events phase lands the capstone in the command whose tick reaches its turn, so a command
   // started on that turn or after starts past the landing.
-  let landed = started.turn >= turn;
+  let landed = capstoneLanded(started);
   const passesNow = (chronicle: Chronicle): boolean =>
     landed && chronicle.ending === undefined && passes(catalogue, chronicle);
 

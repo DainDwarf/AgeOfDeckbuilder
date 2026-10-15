@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
-import type { Chronicle } from '../src/rules/state';
+import { type Chronicle, cardsInPiles } from '../src/rules/state';
 import { openingChoices } from '../src/ui/launch-layout';
 import {
   aimed,
@@ -34,12 +34,7 @@ import {
 
 /** Every card the chronicle holds, wherever it stands: the cards of the civilization it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
-  return idsOf([
-    ...chronicle.drawPile,
-    ...chronicle.hand,
-    ...chronicle.discardPile,
-    ...chronicle.exhaustPile,
-  ]).sort();
+  return idsOf(cardsInPiles(chronicle)).sort();
 }
 
 /**

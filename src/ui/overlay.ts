@@ -401,8 +401,7 @@ export function createOverlay({
   const showCapstone = (announcement: Capstone): void => {
     raiseOnScrim(announcement);
 
-    const { id } = announcement.on.timeline.capstone;
-    const face = capstoneFace(id);
+    const face = capstoneFace(catalogue, announcement.on);
     const title = raiseTitle('capstone', text('capstone.title'));
     const laid = layWindow(
       'capstone',
@@ -412,7 +411,7 @@ export function createOverlay({
         closeCapstone(announcement);
       },
     );
-    raiseLore('capstone', capstoneLore(id, announcement.raised), laid);
+    raiseLore('capstone', capstoneLore(face.id, announcement.raised), laid);
   };
 
   /** The aim window raised. */

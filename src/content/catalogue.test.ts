@@ -20,13 +20,20 @@ import {
 import { admitted, apply, launched, refusalOf } from '../rules/chronicle';
 import { claimable } from '../rules/city';
 import { settledLaunch } from '../rules/fixtures';
-import { tileAt, tileKey } from '../rules/map';
+import { tileAt, tileKey, tilesBeside } from '../rules/map';
 import { biomeKind } from '../rules/map-kinds';
 import { seedRng } from '../rules/rng';
 import { writeSave } from '../rules/save';
-import { answerCost, answerOf, answerRefusal, timelineOf } from '../rules/schedule';
+import {
+  answerCost,
+  answerOf,
+  answerRefusal,
+  capstoneReading,
+  timelineOf,
+} from '../rules/schedule';
 import type { Landed } from '../rules/stages';
 import type { Chronicle, Rewards } from '../rules/state';
+import { yieldParts } from '../rules/yields';
 import { answerFace, answerFaceOfCase } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
@@ -176,10 +183,7 @@ function answerEntries(chronicle: Chronicle, event: string, answer: string): str
 }
 
 test('every rules entry and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
-  const entries = [
-    ...Object.keys(CATALOGUE.cards).flatMap(rulesAsDrawn),
-    ...Object.keys(CATALOGUE.capstones).map((id) => capstoneRules(id)),
-  ];
+  const entries = Object.keys(CATALOGUE.cards).flatMap(rulesAsDrawn);
   for (const age of AGES) {
     entries.push(
       ...Object.entries(ageOf(CATALOGUE, age).achievements).map(([id, { need }]) =>
@@ -193,6 +197,9 @@ test('every rules entry and every goal of the catalogue lays out, and every name
           entries.push(...answerEntries(chronicle, event, name));
         }
       }
+    }
+    for (const id of Object.keys(CATALOGUE.capstones)) {
+      entries.push(capstoneRules(id, capstoneReading(CATALOGUE, chronicle, id)));
     }
   }
   for (const entry of entries) {
@@ -339,10 +346,13 @@ test('every reward of every age’s camp, site and neutral’s city has a name, 
   }
 });
 
-test('every capstone of the catalogue has a name, a rules entry, a lore at each raising of its window and a victory line on the screen', () => {
+test('every capstone of the catalogue has a name, a rules entry read on the numbers it reads of a chronicle launched and settled in each age, a lore at each raising of its window and a victory line on the screen', () => {
+  const chronicles = AGES.map(settledIn);
   for (const id of Object.keys(CATALOGUE.capstones)) {
     expect(() => capstoneName(id)).not.toThrow();
-    expect(() => capstoneRules(id)).not.toThrow();
+    for (const chronicle of chronicles) {
+      expect(() => capstoneRules(id, capstoneReading(CATALOGUE, chronicle, id))).not.toThrow();
+    }
     expect(() => capstoneLore(id, 'opening')).not.toThrow();
     expect(() => capstoneLore(id, 'landing')).not.toThrow();
     expect(() => victoryLine(id)).not.toThrow();
@@ -450,9 +460,11 @@ test('every region’s schedule rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues and is not passed, on a chronicle launched and settled in that region’s age', () => {
+test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield and is not passed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
+    const beside = tilesBeside(chronicle.tiles);
+    const parts = chronicle.tiles.flatMap((tile) => yieldParts(CATALOGUE, chronicle, tile, beside));
     for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
       for (const id of Object.keys(schedule.entries)) {
         for (const [name, answer] of Object.entries(eventOf(CATALOGUE, id).answers)) {
@@ -468,6 +480,7 @@ test('every answer of every event of a region’s schedule costs, answers what b
         const capstone = capstoneOf(CATALOGUE, id);
         expect(() => capstone.lands(CATALOGUE, chronicle)).not.toThrow();
         expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
+        for (const part of parts) expect(() => capstone.yieldRule?.(part)).not.toThrow();
         expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
       }
     }
