@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The long winter** — the first capstone: for a span the land outside the border gives nothing and hunger strikes every turn; what passes it is this line's question.
+- **The long winter** — the temperate schedule's capstone: its landing adds Cold night hazards paid in production, and from the landing on the terrain's and the feature's food is nothing on every tile; passed when no Cold night is left in any pile. Done when `long-winter` stands in the Stone Age's catalogue as the temperate schedule's capstone, the catalogue's coherence test passes on it, the yield rule a capstone carries is held by one rules test on the fixture, and `docs/ages/STONE.md` says what the trial is. Doc-impact: `docs/ages/STONE.md`, `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/long-winter.md](board/long-winter.md)
 - **The monument** — the second capstone: a building raised through a worker, the age ending the moment it stands, as the Shelter does.
 - **The siege** — the third capstone: raids every turn for a span, endured; the fixture's siege door walked by real content.
 - **The victory** — the age's victory achievement and its technology, which unlocks the Bronze Age once that age exists and nothing until then; the technology's name is this line's question.
