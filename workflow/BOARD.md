@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The monument** — the second capstone: a building raised through a worker, the age ending the moment it stands, as the Shelter does.
+- **The monument** — the temperate schedule names the monument beside the long winter: its landing puts Foundations on top of the draw pile, a chain of three stage cards raises the monument through a worker over three plays, one hazard drawn among three is added every turn after the landing, the monument standing is victory on the play and a stage removed is defeat on the spot; the catalogue's coherence test passes and the age page says so. Doc-impact: `docs/ages/STONE.md`, `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/monument.md](board/monument.md)
 - **The siege** — the third capstone: raids every turn for a span, endured; the fixture's siege door walked by real content.
 - **The victory** — the age's victory achievement and its technology, which unlocks the Bronze Age once that age exists and nothing until then; the technology's name is this line's question.
 - **The archipelago's schedule** — the region's own schedule: what it copies from the temperate one, what is its own, and its capstones.
