@@ -12,4 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The archipelago's schedule** — the region's own schedule: what it copies from the temperate one, what is its own, and its capstones.
+- **The archipelago's schedule** — the archipelago's schedule names the Stone Age's three trials, the catalogue's coherence test passes and the age page says both regions name the same trials. Doc-impact: `docs/ages/STONE.md`. [board/archipelago-schedule.md](board/archipelago-schedule.md)
