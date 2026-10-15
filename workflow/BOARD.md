@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The Nomadic events' needs** — A rival band, Wildfire and The herd dealt on every map, as the chronicle page now asks of every event, and the need mechanism going with them; Wildfire reworked to the shape of the Stone Age's events.
+- **The Nomadic events' needs** — no event of the catalogue names a need and a due turn always deals; Make room refused where no tile takes a camp, Follow it dealing deer or cattle onto the nearest bare forest or plain, and Wildfire dealing Let the fields burn and Cut a firebreak, the Stone Age's with Embers between them. Doc-impact: `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`, `DOGMAS.md`. [board/nomadic-events-needs.md](board/nomadic-events-needs.md)
 - **The long winter** — the first capstone: for a span the land outside the border gives nothing and hunger strikes every turn; what passes it is this line's question.
 - **The monument** — the second capstone: a building raised through a worker, the age ending the moment it stands, as the Shelter does.
 - **The siege** — the third capstone: raids every turn for a span, endured; the fixture's siege door walked by real content.
