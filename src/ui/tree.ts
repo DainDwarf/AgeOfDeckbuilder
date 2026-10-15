@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Campaign } from '../rules/campaign';
-import { type Catalogue, earningOf, technologyOf } from '../rules/catalogue';
+import { ageUnlockedBy, type Catalogue, earningOf, technologyOf } from '../rules/catalogue';
 import { type Control, type Press, pressOf } from './bindings';
 import { createFootBubble, type Name } from './card-face';
 import {
@@ -77,6 +77,7 @@ function readingsOf(catalogue: Catalogue): Map<string, Reading> {
   for (const technology of Object.keys(catalogue.technologies)) {
     const earned = earningOf(catalogue, technology);
     const { unlocks } = technologyOf(catalogue, technology);
+    const age = ageUnlockedBy(catalogue, technology);
     const reward: RewardLine[] = [
       ...Object.entries(unlocks.cards).map(
         ([card, copies]): RewardLine => ({
@@ -92,9 +93,9 @@ function readingsOf(catalogue: Catalogue): Map<string, Reading> {
               entry: text('plate.region', { region: regionName(unlocks.region) }),
             } as const,
           ]),
-      ...(unlocks.age === undefined
+      ...(age === undefined
         ? []
-        : [{ kind: 'run', entry: text('plate.age', { age: ageName(unlocks.age) }) } as const]),
+        : [{ kind: 'run', entry: text('plate.age', { age: ageName(age) }) } as const]),
       ...(unlocks.city === undefined
         ? []
         : [
@@ -180,11 +181,17 @@ export function createTree(
         .setName(`ground-${age}`),
     );
   }
+  root.add(
+    scene.add
+      .rectangle(tree.toCome, 0, tree.width - tree.toCome, ROOM.height, LOOK.groundToCome)
+      .setOrigin(0, 0)
+      .setName('ground-to-come'),
+  );
   const washes = scene.add.graphics();
   for (const [at, { age, to }] of tree.grounds.entries()) {
     const next = tree.grounds[at + 1];
     const out = groundColourOf(age);
-    const into = next === undefined ? LOOK.page : groundColourOf(next.age);
+    const into = next === undefined ? LOOK.groundToCome : groundColourOf(next.age);
     washes.fillGradientStyle(out, into, out, into, 1);
     washes.fillRect(to - WASH / 2, 0, WASH, ROOM.height);
   }

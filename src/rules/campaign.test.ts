@@ -343,17 +343,15 @@ test('a new campaign has reached the first age alone', () => {
   expect(agesReached(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID))).toEqual([AGE]);
 });
 
-test('a campaign paid an age’s victory has reached the age its technology unlocks, beside the first, in the order of history', () => {
+test('a campaign paid the first age’s victory has reached the age after it, beside the first, in the order of history', () => {
   const { campaign } = paidInto(
     CATALOGUE,
     newCampaign(CATALOGUE, CIVILIZATION_ID),
     hoardedVictory(),
   );
-  const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
-  const next = technologyOf(CATALOGUE, technology).unlocks.age;
 
-  expect(next).toBeDefined();
-  expect(agesReached(CATALOGUE, campaign)).toEqual([AGE, next]);
+  expect(campaign.technologies).toContain(achievementOf(CATALOGUE, AGE, victoryOf(AGE)).technology);
+  expect(agesReached(CATALOGUE, campaign)).toEqual([AGE, QUIET]);
 });
 
 test('a region a technology unlocks is reached once that technology is learned, in every age holding its name, and a region no technology unlocks is reached from the first chronicle', () => {

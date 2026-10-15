@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
+import { ageOf, ageUnlockedBy, firstAge, victoryTechnologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { browseOf } from '../src/ui/collection-layout';
 import { cardFaceAtStart, kindTooltip } from '../src/ui/face';
@@ -42,14 +42,15 @@ const CITY_CARD = `${PILE}-card`;
 
 const BROWSE = 'civilization-browse';
 
-/** The first age, a technology its achievements earn that unlocks an age, and that age. */
+/** The first age, the technology its victory earns, and the age that technology unlocks. */
 const FIRST = firstAge(CATALOGUE);
 const { technology: UNLOCKER, age: UNLOCKED } = (() => {
-  for (const { technology } of Object.values(ageOf(CATALOGUE, FIRST).achievements)) {
-    const { age } = technologyOf(CATALOGUE, technology).unlocks;
-    if (age !== undefined) return { technology, age };
+  const technology = victoryTechnologyOf(CATALOGUE, FIRST);
+  const age = technology === undefined ? undefined : ageUnlockedBy(CATALOGUE, technology);
+  if (technology === undefined || age === undefined) {
+    throw new Error(`the victory of the age ${FIRST} unlocks no age`);
   }
-  throw new Error(`no technology the age ${FIRST} earns unlocks an age`);
+  return { technology, age };
 })();
 
 /** The segments of the two ages on the time arrow. */

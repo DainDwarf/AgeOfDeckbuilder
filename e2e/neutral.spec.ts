@@ -3,10 +3,10 @@ import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import {
   ageOf,
+  ageUnlockedBy,
   cardOf,
   neutralOf,
   neutralWorkerKind,
-  technologyOf,
   unitKind,
 } from '../src/rules/catalogue';
 import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
@@ -87,7 +87,7 @@ const AGE = (() => {
 /** A new campaign with the technology that unlocks the age learned with its needs. */
 const CAMPAIGN = (() => {
   const unlocker = Object.keys(CATALOGUE.technologies).find(
-    (id) => technologyOf(CATALOGUE, id).unlocks.age === AGE,
+    (id) => ageUnlockedBy(CATALOGUE, id) === AGE,
   );
   if (unlocker === undefined) throw new Error(`no technology unlocks the age ${AGE}`);
   return learnedWithNeeds(CATALOGUE, freshCampaign(CATALOGUE), [unlocker]);

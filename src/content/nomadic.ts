@@ -16,6 +16,7 @@ import {
   throughWorker,
 } from '../rules/cards';
 import type { Age, Schedule, Slice, Tables, UnitEntryTable } from '../rules/catalogue';
+import { endedInVictory } from '../rules/chronicle';
 import { arrived, yielded } from '../rules/city';
 import { raided, rowsDrawn } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
@@ -273,7 +274,7 @@ const TABLES: Tables = {
   technologies: {
     settlement: {
       needs: [],
-      unlocks: { cards: {}, age: 'stone', city: { building: 'village', replaces: 'hearth' } },
+      unlocks: { cards: {}, city: { building: 'village', replaces: 'hearth' } },
     },
   },
   terrains: {
@@ -422,12 +423,13 @@ export const NOMADIC: Slice = {
     regions: REGIONS,
     achievements: {
       'first-shelter': {
-        count: (_catalogue, chronicle) => (chronicle.ending?.outcome === 'victory' ? 1 : 0),
+        ...endedInVictory(),
         need: 1,
         technology: 'settlement',
         influence: 3,
       },
     },
+    victory: 'first-shelter',
   },
   brings: TABLES,
 };

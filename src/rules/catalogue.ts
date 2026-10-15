@@ -501,22 +501,22 @@ export type Achievement = {
 
 /**
  * A technology: the technologies it needs, and what it unlocks — cards, each with the copies added
- * to the collection, at most one region, by its name in every age, at most one age, and at most one
- * city's building, in place of the one it names.
+ * to the collection, at most one region, by its name in every age, and at most one city's building,
+ * in place of the one it names.
  */
 export type Technology = {
   readonly needs: readonly string[];
   readonly unlocks: {
     readonly cards: Readonly<Record<string, number>>;
     readonly region?: string;
-    readonly age?: string;
     readonly city?: { readonly building: string; readonly replaces: string };
   };
 };
 
 /**
  * What an age owns: its camp, its neutral where it names one, its sites by key, its regions by key,
- * its achievements by key in order, and the base price of its cards.
+ * its achievements by key in order, the one of them that is its victory, and the base price of its
+ * cards.
  */
 export type Age = {
   readonly basePrice: number;
@@ -525,6 +525,7 @@ export type Age = {
   readonly sites: Readonly<Record<string, Site>>;
   readonly regions: Readonly<Record<string, Region>>;
   readonly achievements: Readonly<Record<string, Achievement>>;
+  readonly victory?: string;
 };
 
 /**
@@ -1028,8 +1029,14 @@ function treeHeld(content: Catalogue): void {
   const earnedBy = new Map<string, string>();
   /** Where the age of the achievement that earns a technology stands in the order of history. */
   const earnedIn = new Map<string, number>();
+  /** The technology each age's victory earns, in the order of history. */
+  const victories: (string | undefined)[] = [];
   const ages = Object.entries(content.ages);
-  for (const [at, [age, { achievements }]] of ages.entries()) {
+  for (const [at, [age, { achievements, victory }]] of ages.entries()) {
+    if (victory !== undefined && !Object.hasOwn(achievements, victory)) {
+      refuse(content, `the age ${age} names the victory ${victory}, which it does not own`);
+    }
+    victories.push(victory === undefined ? undefined : achievements[victory].technology);
     for (const [id, { need, influence, technology }] of Object.entries(achievements)) {
       const owner = ownedBy.get(id);
       if (owner !== undefined) refuse(content, `the ages ${owner} and ${age} both own ${id}`);
@@ -1050,12 +1057,11 @@ function treeHeld(content: Catalogue): void {
     }
   }
 
-  const ageUnlockedBy = new Map<string, string>();
   const regionUnlockedBy = new Map<string, string>();
   const cityUnlockedBy = new Map<string, string>();
   const unlockedOnce = (
     unlockers: Map<string, string>,
-    noun: 'age' | 'region' | "city's building",
+    noun: 'region' | "city's building",
     unlocked: string,
     technology: string,
   ): void => {
@@ -1097,16 +1103,8 @@ function treeHeld(content: Catalogue): void {
       }
       unlockedOnce(cityUnlockedBy, "city's building", building, id);
     }
-    if (unlocks.age === undefined) continue;
-    ageOf(content, unlocks.age);
-    unlockedOnce(ageUnlockedBy, 'age', unlocks.age, id);
   }
-  for (const [at, [age, { regions }]] of ages.entries()) {
-    const unlocker = ageUnlockedBy.get(age);
-    if (at === 0 && unlocker !== undefined) {
-      refuse(content, `the first age ${age} is unlocked by ${unlocker}`);
-    }
-    if (at > 0 && unlocker === undefined) refuse(content, `the age ${age} is unlocked by nothing`);
+  for (const [age, { regions }] of ages) {
     if (Object.keys(regions).every((region) => regionUnlockedBy.has(region))) {
       refuse(content, `the age ${age} holds no region reached from the first chronicle`);
     }
@@ -1129,22 +1127,24 @@ function treeHeld(content: Catalogue): void {
     if (at === undefined) refuse(content, `the technology ${id} is earned by no achievement`);
     return at;
   };
-  for (const [id, { needs, unlocks }] of Object.entries(content.technologies)) {
+  for (const [id, { needs }] of Object.entries(content.technologies)) {
     const own = placeOf(id);
     const [age] = ages[own];
     for (const need of needs) {
       const later = placeOf(need);
-      if (later <= own) continue;
-      refuse(
-        content,
-        `the technology ${id} of the age ${age} needs ${need} of the later age ${ages[later][0]}`,
-      );
+      if (later > own) {
+        refuse(
+          content,
+          `the technology ${id} of the age ${age} needs ${need} of the later age ${ages[later][0]}`,
+        );
+      }
+      if (need === victories[own]) {
+        refuse(
+          content,
+          `the technology ${id} of the age ${age} needs ${need}, the technology of its age's victory`,
+        );
+      }
     }
-    if (unlocks.age === undefined || unlocks.age === ages[own + 1]?.[0]) continue;
-    refuse(
-      content,
-      `the technology ${id} of the age ${age} unlocks the age ${unlocks.age}, not the one after it`,
-    );
   }
 }
 
@@ -1408,6 +1408,27 @@ export function earningOf(
     }
   }
   refuse(catalogue, `the technology ${technology} is earned by no achievement`);
+}
+
+/**
+ * The technology an age's victory earns, and none for an age naming no victory; an age the
+ * catalogue does not hold is refused.
+ */
+export function victoryTechnologyOf(catalogue: Catalogue, age: string): string | undefined {
+  const { victory } = ageOf(catalogue, age);
+  return victory === undefined ? undefined : achievementOf(catalogue, age, victory).technology;
+}
+
+/**
+ * The age a technology unlocks: the one after the age whose victory earns it, and none for any other
+ * technology, the last age's victory's among them. A technology the catalogue does not hold is
+ * refused.
+ */
+export function ageUnlockedBy(catalogue: Catalogue, technology: string): string | undefined {
+  technologyOf(catalogue, technology);
+  const ages = Object.keys(catalogue.ages);
+  const at = ages.findIndex((age) => victoryTechnologyOf(catalogue, age) === technology);
+  return at === -1 ? undefined : ages[at + 1];
 }
 
 /** A chronicle begun on any other version of the content than this catalogue's is refused. */

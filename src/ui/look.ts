@@ -98,6 +98,8 @@ export type Look = {
   readonly building: Readonly<Record<string, BuildingRole>>;
   /** The ground each age stands on in the technology tree, by the age's id. */
   readonly ground: Readonly<Record<string, number>>;
+  /** The ground of the age after the last the technology tree holds, which the tree ends on. */
+  readonly groundToCome: number;
 };
 
 // Roles that agree on a value today are still separate entries: one theme decision recolours one
@@ -214,6 +216,7 @@ export const LOOK: Look = {
     nomadic: 0x2a5a41,
     stone: 0x4b4f58,
   },
+  groundToCome: 0x6b4a26,
 };
 
 /** A colour in the notation a text style takes it in. */

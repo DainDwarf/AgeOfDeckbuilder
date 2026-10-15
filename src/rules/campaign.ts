@@ -1,6 +1,7 @@
 import {
   achievementOf,
   ageOf,
+  ageUnlockedBy,
   type Catalogue,
   type Civilization,
   cardAge,
@@ -95,16 +96,12 @@ export function unpinned(campaign: Campaign, technology: string): Campaign {
   return { ...campaign, pins: campaign.pins.filter((pin) => pin !== technology) };
 }
 
-/** The ages or the regions those technologies unlock; a technology the catalogue does not hold is refused. */
-function unlockedBy(
-  catalogue: Catalogue,
-  technologies: readonly string[],
-  noun: 'age' | 'region',
-): Set<string> {
+/** The regions those technologies unlock; a technology the catalogue does not hold is refused. */
+function regionsUnlockedBy(catalogue: Catalogue, technologies: readonly string[]): Set<string> {
   return new Set(
     technologies.flatMap((technology) => {
-      const unlocked = technologyOf(catalogue, technology).unlocks[noun];
-      return unlocked === undefined ? [] : [unlocked];
+      const { region } = technologyOf(catalogue, technology).unlocks;
+      return region === undefined ? [] : [region];
     }),
   );
 }
@@ -114,7 +111,9 @@ function unlockedBy(
  * technology it has learned unlocks. A technology the catalogue does not hold is refused.
  */
 export function agesReached(catalogue: Catalogue, campaign: Campaign): string[] {
-  const unlocked = unlockedBy(catalogue, campaign.technologies, 'age');
+  const unlocked = new Set(
+    campaign.technologies.map((technology) => ageUnlockedBy(catalogue, technology)),
+  );
   const first = firstAge(catalogue);
   return Object.keys(catalogue.ages).filter((age) => age === first || unlocked.has(age));
 }
@@ -125,8 +124,8 @@ export function agesReached(catalogue: Catalogue, campaign: Campaign): string[] 
  * catalogue does not hold is refused.
  */
 export function regionsReached(catalogue: Catalogue, campaign: Campaign, age: string): string[] {
-  const unlockable = unlockedBy(catalogue, Object.keys(catalogue.technologies), 'region');
-  const unlocked = unlockedBy(catalogue, campaign.technologies, 'region');
+  const unlockable = regionsUnlockedBy(catalogue, Object.keys(catalogue.technologies));
+  const unlocked = regionsUnlockedBy(catalogue, campaign.technologies);
   return Object.keys(ageOf(catalogue, age).regions).filter(
     (region) => !unlockable.has(region) || unlocked.has(region),
   );

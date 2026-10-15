@@ -476,6 +476,11 @@ function reachedOn(
   return raised;
 }
 
+/** An achievement's count for the chronicle's ending in victory: one once it has ended so, none before. */
+export function endedInVictory(): Pick<Achievement, 'count'> {
+  return { count: (_catalogue, chronicle) => (chronicle.ending?.outcome === 'victory' ? 1 : 0) };
+}
+
 /**
  * An achievement's tally and count for the turns on which that many cards were played: a turn is
  * counted once, by the play that brings it to the number, and the settle phase never.

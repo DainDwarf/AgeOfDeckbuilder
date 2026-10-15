@@ -5,16 +5,19 @@
  */
 
 import { available } from '../rules/campaign';
-import { type Catalogue, technologyOf } from '../rules/catalogue';
+import { type Catalogue, technologyOf, victoryTechnologyOf } from '../rules/catalogue';
 
 export const PLATE_WIDTH = 236;
 const COLUMN_GAP = 70;
 const ROW_GAP = 22;
 
-/** How far the first column's middle stands off the tree's left end, the last's off the far border. */
+/**
+ * How far the first column's middle stands off the tree's left end, and the tree's right end off the
+ * last column's middle.
+ */
 const LEAD = 200;
 
-/** How wide the wash one ground runs into the next with is, centred on the border between them. */
+/** How wide the wash out of a ground is, centred on where the ground ends. */
 export const WASH = 180;
 
 export type PlateState = 'learned' | 'available' | 'unknown';
@@ -39,15 +42,19 @@ export type Link = {
   readonly points: readonly Point[];
 };
 
-/** An age's ground: from the tree's left end or its border with the age before, to where it ends. */
+/** An age's ground: from the tree's left end or its border with the age before, to its own border. */
 export type Ground = { readonly age: string; readonly from: number; readonly to: number };
 
 export type Tree = {
   readonly plates: readonly Plate[];
   readonly links: readonly Link[];
-  /** In the order of history; the last one ends on the far border. */
+  /** In the order of history, each ending in the middle of its age's victory's column. */
   readonly grounds: readonly Ground[];
-  /** The tree's right end: the far border and the half of its wash past it. */
+  /**
+   * Where the last ground's wash ends, from which the ground of the age after it runs to the tree's
+   * right end.
+   */
+  readonly toCome: number;
   readonly width: number;
   /** How far the tree may be moved, as the tree's point standing on the room's left edge. */
   readonly least: number;
@@ -69,38 +76,42 @@ function middleOf(column: number): number {
 
 /**
  * Every technology's column: one after the furthest it needs, on the ground of the age whose
- * achievement earns it, and the one that unlocks an age on that age's border whatever it needs.
+ * achievement earns it, and an age's victory technology on the border at its ground's right end,
+ * the column after every other of the age's, whatever it needs; and each age's border column.
  */
-function columnsOf(catalogue: Catalogue, doors: ReadonlyMap<string, string>): Map<string, number> {
+function columnsOf(catalogue: Catalogue): {
+  columns: Map<string, number>;
+  borders: number[];
+  victories: (string | undefined)[];
+} {
   const ageOfTechnology = new Map<string, string>();
   for (const [age, { achievements }] of Object.entries(catalogue.ages)) {
     for (const { technology } of Object.values(achievements)) ageOfTechnology.set(technology, age);
   }
-  const opened = new Set(doors.values());
 
   const columns = new Map<string, number>();
-  let border = 0;
+  const borders: number[] = [];
+  const victories: (string | undefined)[] = [];
   for (const [at, age] of Object.keys(catalogue.ages).entries()) {
-    const door = doors.get(age);
-    if (at > 0 && door !== undefined) columns.set(door, border);
-    const start = at === 0 ? 0 : border + 1;
+    const victory = victoryTechnologyOf(catalogue, age);
+    victories.push(victory);
+    const start = at === 0 ? 0 : borders[at - 1] + 1;
     const members = Object.keys(catalogue.technologies).filter(
-      (id) => ageOfTechnology.get(id) === age && !opened.has(id),
+      (id) => ageOfTechnology.get(id) === age && id !== victory,
     );
     const column = (id: string): number => {
       const known = columns.get(id);
       if (known !== undefined) return known;
-      if (!members.includes(id)) {
-        throw new Error(`the technology ${id} stands on no ground before the age ${age}'s`);
-      }
       const needs = technologyOf(catalogue, id).needs.map(column);
       const placed = Math.max(start, ...needs.map((need) => need + 1));
       columns.set(id, placed);
       return placed;
     };
-    border = Math.max(start, ...members.map((id) => column(id) + 1));
+    const border = Math.max(start, ...members.map((id) => column(id) + 1));
+    if (victory !== undefined) columns.set(victory, border);
+    borders.push(border);
   }
-  return columns;
+  return { columns, borders, victories };
 }
 
 /**
@@ -121,12 +132,8 @@ export function layOutTree(
   plateHeight: number,
   room: Room,
 ): Tree {
-  /** The technology that unlocks each age, by the age's id. */
-  const doors = new Map<string, string>();
-  for (const [id, { unlocks }] of Object.entries(catalogue.technologies)) {
-    if (unlocks.age !== undefined) doors.set(unlocks.age, id);
-  }
-  const columns = columnsOf(catalogue, doors);
+  const ages = Object.keys(catalogue.ages);
+  const { columns, borders, victories } = columnsOf(catalogue);
   const stateOf = (id: string): PlateState => {
     if (learned.includes(id)) return 'learned';
     return available(catalogue, id, learned) ? 'available' : 'unknown';
@@ -168,6 +175,7 @@ export function layOutTree(
   };
   const links: Link[] = [];
   for (const to of plates) {
+    if (victories.includes(to.technology)) continue;
     for (const need of technologyOf(catalogue, to.technology).needs) {
       const from = plateOf(need);
       const start = { x: from.x + PLATE_WIDTH, y: from.y + plateHeight / 2 };
@@ -184,22 +192,15 @@ export function layOutTree(
     }
   }
 
-  const ages = Object.keys(catalogue.ages);
-  const last = Math.max(...columns.values());
-  const far = middleOf(last) + LEAD;
-  const starts = ages.map((age, at) => {
-    if (at === 0) return 0;
-    const door = doors.get(age);
-    if (door === undefined) throw new Error(`no technology unlocks the age ${age}`);
-    return middleOf(plateOf(door).column);
-  });
   const grounds = ages.map((age, at) => ({
     age,
-    from: starts[at],
-    to: starts[at + 1] ?? far,
+    from: at === 0 ? 0 : middleOf(borders[at - 1]),
+    to: middleOf(borders[at]),
   }));
 
-  const width = far + WASH / 2;
+  const end = grounds[grounds.length - 1].to;
+  const toCome = end + WASH / 2;
+  const width = end + LEAD;
   const least = 0;
   const most = Math.max(least, width - room.width);
   const availablePlates = plates.filter(({ state }) => state === 'available');
@@ -215,6 +216,7 @@ export function layOutTree(
     plates,
     links,
     grounds,
+    toCome,
     width,
     least,
     most,

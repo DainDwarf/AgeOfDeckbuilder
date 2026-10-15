@@ -1,5 +1,11 @@
 import { expect, test } from 'vitest';
-import { type Achievement, ageOf, type Catalogue, catalogued } from '../rules/catalogue';
+import {
+  type Achievement,
+  ageOf,
+  type Catalogue,
+  catalogued,
+  technologyOf,
+} from '../rules/catalogue';
 import { AGE, CATALOGUE, QUIET } from '../rules/fixtures';
 import { layOutTree, PLATE_WIDTH, type Plate, type Point, stopped, type Tree } from './tree-layout';
 
@@ -13,20 +19,27 @@ const KILN = 'PH_Kiln';
 const DOOR = 'PH_Door';
 const WHEEL = 'PH_Wheel';
 const BRONZE = 'PH_Bronze';
+const IRON = 'PH_Iron';
 
 const PLATE_HEIGHT = 74;
 
 const ROOM = { width: 800, height: 600, margin: 24 };
 
+/** The achievement that earns the technology in `TREE`. */
+function earnerOf(technology: string): string {
+  return `PH_Earns_${technology}`;
+}
+
 /**
  * Two ages of the fixture's, the first holding a technology needing one a column back and one two
- * columns back past a plate, the technology that unlocks the second age, and the second a chain.
+ * columns back past a plate, and its victory's, which unlocks the second age; the second a chain,
+ * and its victory's, needing the chain's first.
  */
 const TREE: Catalogue = (() => {
   const earning = (ids: readonly string[]): Readonly<Record<string, Achievement>> =>
     Object.fromEntries(
       ids.map((technology) => [
-        `PH_Earns_${technology}`,
+        earnerOf(technology),
         { count: () => 0, need: 1, technology, influence: 1 },
       ]),
     );
@@ -37,19 +50,31 @@ const TREE: Catalogue = (() => {
       [POTTERY]: { needs: [FIRE], unlocks: { cards: {} } },
       [WEAVING]: { needs: [], unlocks: { cards: {} } },
       [KILN]: { needs: [FIRE, POTTERY], unlocks: { cards: {} } },
-      [DOOR]: { needs: [], unlocks: { cards: {}, age: LATE } },
+      [DOOR]: { needs: [], unlocks: { cards: {} } },
       [WHEEL]: { needs: [DOOR], unlocks: { cards: {} } },
       [BRONZE]: { needs: [WHEEL], unlocks: { cards: {} } },
+      [IRON]: { needs: [WHEEL], unlocks: { cards: {} } },
     },
     ages: {
       [EARLY]: {
         ...ageOf(CATALOGUE, EARLY),
         achievements: earning([FIRE, POTTERY, WEAVING, KILN, DOOR]),
+        victory: earnerOf(DOOR),
       },
-      [LATE]: { ...ageOf(CATALOGUE, LATE), achievements: earning([WHEEL, BRONZE]) },
+      [LATE]: {
+        ...ageOf(CATALOGUE, LATE),
+        achievements: earning([WHEEL, BRONZE, IRON]),
+        victory: earnerOf(IRON),
+      },
     },
   });
 })();
+
+/** `TREE` with the first age's victory technology needing one of its age's first column. */
+const DOOR_NEEDING: Catalogue = catalogued({
+  ...TREE,
+  technologies: { ...TREE.technologies, [DOOR]: { needs: [WEAVING], unlocks: { cards: {} } } },
+});
 
 const EVERY = Object.keys(TREE.technologies);
 
@@ -102,14 +127,15 @@ test('a technology stands one column after the furthest technology it needs', ()
   expect(plateOf(tree, KILN).x).toBeGreaterThan(plateOf(tree, POTTERY).x + PLATE_WIDTH);
 });
 
-test('each age is a ground in the order of history, a technology stands on its age’s ground, and the one that unlocks the next age on the border between the two', () => {
+test('each age is a ground in the order of history, a technology stands on its age’s ground, and the age’s victory technology on the border at its ground’s right end', () => {
   const tree = laid();
   const [early, late] = tree.grounds;
 
   expect(tree.grounds.map(({ age }) => age)).toEqual([EARLY, LATE]);
   expect(early.from).toBe(0);
   expect(early.to).toBe(late.from);
-  expect(middleOf(plateOf(tree, DOOR)).x).toBe(late.from);
+  expect(middleOf(plateOf(tree, DOOR)).x).toBe(early.to);
+  expect(middleOf(plateOf(tree, IRON)).x).toBe(late.to);
   for (const technology of [FIRE, POTTERY, WEAVING, KILN]) {
     const { x } = plateOf(tree, technology);
     expect(x).toBeGreaterThan(early.from);
@@ -122,18 +148,22 @@ test('each age is a ground in the order of history, a technology stands on its a
   }
 });
 
-test('the technology that unlocks the next age stands on the border whatever it needs', () => {
-  const needing = catalogued({
-    ...TREE,
-    technologies: {
-      ...TREE.technologies,
-      [DOOR]: { needs: [WEAVING], unlocks: { cards: {}, age: LATE } },
-    },
-  });
-  const tree = layOutTree(needing, [], PLATE_HEIGHT, ROOM);
+test('an age’s victory technology stands in the column after every other technology of its age, whatever it needs, and the tree’s right end stands as far past it as the first column stands off the left end', () => {
+  const tree = layOutTree(DOOR_NEEDING, [], PLATE_HEIGHT, ROOM);
+  const iron = plateOf(tree, IRON);
 
-  expect(plateOf(tree, DOOR).column).toBe(plateOf(laid(), DOOR).column);
-  expect(middleOf(plateOf(tree, DOOR)).x).toBe(tree.grounds[1].from);
+  expect(plateOf(tree, DOOR).column).toBe(plateOf(tree, KILN).column + 1);
+  expect(plateOf(tree, BRONZE).column).toBe(plateOf(tree, WHEEL).column + 1);
+  expect(iron.column).toBe(plateOf(tree, BRONZE).column + 1);
+  expect(tree.width - (iron.x + PLATE_WIDTH)).toBe(plateOf(tree, FIRE).x);
+});
+
+test('no link runs to a victory technology, whatever it needs', () => {
+  const { links } = layOutTree(DOOR_NEEDING, [], PLATE_HEIGHT, ROOM);
+
+  expect(technologyOf(DOOR_NEEDING, IRON).needs).toEqual([WHEEL]);
+  expect(links.filter(({ to }) => to === DOOR || to === IRON)).toEqual([]);
+  expect(links.some(({ from }) => from === DOOR)).toBe(true);
 });
 
 test('every column is centred on the room’s middle, its technologies in the content’s order', () => {
@@ -163,6 +193,7 @@ test('a technology learned is learned, one needing none that is not is available
     [DOOR]: 'available',
     [WHEEL]: 'unknown',
     [BRONZE]: 'unknown',
+    [IRON]: 'unknown',
   });
 });
 

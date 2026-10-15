@@ -5,6 +5,7 @@ import {
   type Answer,
   achievementOf,
   ageOf,
+  ageUnlockedBy,
   type Camp,
   type Card,
   type Catalogue,
@@ -38,6 +39,7 @@ import {
   camping,
   changed,
   cityOf,
+  FEAST,
   field,
   GRANARY,
   HOARD,
@@ -52,7 +54,6 @@ import {
   SLICES,
   SLOW_SLINGER,
   victoryOf,
-  WARY,
   WELL,
   WORKER_SCRIPT,
 } from './fixtures';
@@ -158,11 +159,10 @@ test('a catalogue whose technology needs one it does not hold, or needs itself t
   );
 });
 
-test('a catalogue whose technology unlocks a card it does not hold, a card by fewer than one copy, or an age it does not hold, is refused', () => {
+test('a catalogue whose technology unlocks a card it does not hold, or a card by fewer than one copy, is refused', () => {
   const unlocking: Technology['unlocks'][] = [
     { cards: { PH_Scout: 2 } },
     { cards: { PH_Harvest: 0 } },
-    { cards: {}, age: 'PH_Unheld' },
   ];
   for (const unlocks of unlocking) {
     const content = withTechnologies({ [GRANARY]: { ...GRANARY_DECLARED, unlocks } });
@@ -207,22 +207,46 @@ test('a catalogue whose trophy or challenge gains influence that is not a whole 
   }
 });
 
-test('a catalogue whose age but the first is unlocked by no technology or by two, or whose first age is unlocked by one, is refused', () => {
-  const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
-  const past = technologyOf(CATALOGUE, technology);
-  const unlocking = (age: string): Catalogue =>
-    withTechnologies({ [GRANARY]: { ...GRANARY_DECLARED, unlocks: { cards: {}, age } } });
+test('a catalogue whose age names a victory it does not own is refused, and one naming any achievement of its own is not', () => {
+  for (const victory of [victoryOf(QUIET), 'PH_Unheld']) {
+    expect(() => catalogued(aged({ victory }))).toThrow(
+      `fixture: the age ${AGE} names the victory ${victory}, which it does not own`,
+    );
+  }
+  expect(() => catalogued(aged({ victory: FEAST }))).not.toThrow();
+});
 
-  expect(past.unlocks.age).toBe(QUIET);
+test('a technology unlocks the age after the one whose victory earns it, and no other technology unlocks an age, the last age’s victory’s among them', () => {
+  const ages = Object.keys(CATALOGUE.ages);
+  const last = ages[ages.length - 1];
+  const past = achievementOf(CATALOGUE, AGE, victoryOf(AGE)).technology;
+  const feasting = catalogued(aged({ victory: FEAST }));
+  const { technology: feast } = achievementOf(CATALOGUE, AGE, FEAST);
+
+  expect(ageUnlockedBy(CATALOGUE, past)).toBe(QUIET);
+  expect(ageUnlockedBy(CATALOGUE, feast)).toBeUndefined();
+  expect(ageUnlockedBy(feasting, feast)).toBe(QUIET);
+  expect(ageUnlockedBy(feasting, past)).toBeUndefined();
+  expect(
+    ageUnlockedBy(CATALOGUE, achievementOf(CATALOGUE, last, victoryOf(last)).technology),
+  ).toBeUndefined();
+  expect(() => ageUnlockedBy(CATALOGUE, 'PH_Unheld')).toThrow(
+    'fixture: no technology is named PH_Unheld',
+  );
+});
+
+test('a catalogue whose technology needs the technology of its own age’s victory is refused, and one needing an earlier age’s victory’s is not', () => {
+  const past = achievementOf(CATALOGUE, AGE, victoryOf(AGE)).technology;
+  const later = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET)).technology;
+
   expect(() =>
-    catalogued(withTechnologies({ [technology]: { ...past, unlocks: { cards: {} } } })),
-  ).toThrow(`fixture: the age ${QUIET} is unlocked by nothing`);
-  expect(() => catalogued(unlocking(QUIET))).toThrow(
-    `fixture: the age ${QUIET} is unlocked by both ${GRANARY} and ${technology}`,
+    catalogued(withTechnologies({ [GRANARY]: { ...GRANARY_DECLARED, needs: [past] } })),
+  ).toThrow(
+    `fixture: the technology ${GRANARY} of the age ${AGE} needs ${past}, the technology of its age's victory`,
   );
-  expect(() => catalogued(unlocking(AGE))).toThrow(
-    `fixture: the first age ${AGE} is unlocked by ${GRANARY}`,
-  );
+  expect(() =>
+    catalogued(withTechnologies({ [later]: { ...technologyOf(CATALOGUE, later), needs: [past] } })),
+  ).not.toThrow();
 });
 
 test('a catalogue whose technology unlocks a region no age holds, whose region is unlocked by two technologies, or whose age holds no region reached from the first chronicle, is refused', () => {
@@ -278,21 +302,6 @@ test('a catalogue whose technology needs one earned in a later age is refused, a
   expect(() =>
     catalogued(withTechnologies({ [later]: { ...past, needs: [GRANARY] } })),
   ).not.toThrow();
-});
-
-test('a catalogue whose technology unlocks an age other than the one right after its own is refused', () => {
-  const { technology: first } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
-  const { technology: second } = achievementOf(CATALOGUE, QUIET, victoryOf(QUIET));
-  expect(technologyOf(CATALOGUE, first).unlocks.age).toBe(QUIET);
-  expect(technologyOf(CATALOGUE, second).unlocks.age).toBe(WARY);
-  const swapped = withTechnologies({
-    [first]: { ...technologyOf(CATALOGUE, first), unlocks: { cards: {}, age: WARY } },
-    [second]: { ...technologyOf(CATALOGUE, second), unlocks: { cards: {}, age: QUIET } },
-  });
-
-  expect(() => catalogued(swapped)).toThrow(
-    `fixture: the technology ${first} of the age ${AGE} unlocks the age ${WARY}, not the one after it`,
-  );
 });
 
 test('a catalogue whose camp’s opening or roll holds no row, a row of a kind or a script it does not hold, or a row at a weight not above nought is refused', () => {

@@ -61,6 +61,7 @@ import {
   apply,
   beginChronicle,
   type Command,
+  endedInVictory,
   launched,
   outcome,
   playsOn,
@@ -1123,7 +1124,7 @@ export function victoryOf(age: string): string {
   return `PH_Victory_${age}`;
 }
 
-/** The technology a fixture age's victory earns: it unlocks the next age of the table, if any. */
+/** The technology a fixture age's victory earns: it needs none, and unlocks the next age, if any. */
 function pastOf(age: string): string {
   return `PH_Past_${age}`;
 }
@@ -1135,7 +1136,7 @@ const AGES = Object.keys(SCHEDULES);
 function achievementsOf(age: string): Age['achievements'] {
   const victory: Age['achievements'] = {
     [victoryOf(age)]: {
-      count: (_catalogue, chronicle) => (chronicle.ending?.outcome === 'victory' ? 1 : 0),
+      ...endedInVictory(),
       need: 1,
       technology: pastOf(age),
       influence: 2,
@@ -1177,25 +1178,20 @@ function achievementsOf(age: string): Age['achievements'] {
   };
 }
 
-/** The fixture's technologies: the first age's five, and each age's victory unlocking the next age. */
+/** The fixture's technologies: the first age's five, and each age's victory's. */
 const TECHNOLOGIES: Tables['technologies'] = {
   [GRANARY]: { needs: [], unlocks: { cards: { PH_Harvest: 2 } } },
   [CENSUS]: { needs: [GRANARY], unlocks: { cards: {} } },
   [LARDER]: { needs: [], unlocks: { cards: {} } },
   [SURVEYING]: { needs: [], unlocks: { cards: {} } },
   [DITCHING]: { needs: [], unlocks: { cards: {} } },
-  ...Object.fromEntries(
-    AGES.map((age, at) => {
-      const next = AGES[at + 1];
-      const unlocks = next === undefined ? { cards: {} } : { cards: {}, age: next };
-      return [pastOf(age), { needs: [], unlocks }];
-    }),
-  ),
+  ...Object.fromEntries(AGES.map((age) => [pastOf(age), { needs: [], unlocks: { cards: {} } }])),
 };
 
 /**
- * Every fixture age, each owning its own achievements and the maps handed in, each region dealing the
- * age's own schedule, over the camp handed in, the fixture's neutral, and the fixture's site.
+ * Every fixture age, each owning its own achievements, its victory among them, and the maps handed
+ * in, each region dealing the age's own schedule, over the camp handed in, the fixture's neutral,
+ * and the fixture's site.
  */
 export function agesOver(
   camp: Camp,
@@ -1213,6 +1209,7 @@ export function agesOver(
           Object.entries(maps).map(([region, map]) => [region, { ...map, schedule }]),
         ),
         achievements: achievementsOf(id),
+        victory: victoryOf(id),
       },
     ]),
   );

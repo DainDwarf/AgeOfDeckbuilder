@@ -20,6 +20,7 @@ import {
   type Aim,
   achievementOf,
   ageOf,
+  ageUnlockedBy,
   type Catalogue,
   type Civilization,
   cardOf,
@@ -690,12 +691,13 @@ export function readsOf(page: Page, names: readonly string[]): Promise<string[][
 export function rewardOf(technology: string): string[] {
   const { unlocks } = technologyOf(CATALOGUE, technology);
   const { influence } = earningOf(CATALOGUE, technology).achievement;
+  const age = ageUnlockedBy(CATALOGUE, technology);
   return [
     ...Object.entries(unlocks.cards).map(([card, copies]) => text('plate.cards', { copies, card })),
     ...(unlocks.region === undefined
       ? []
       : [text('plate.region', { region: regionName(unlocks.region) })]),
-    ...(unlocks.age === undefined ? [] : [text('plate.age', { age: ageName(unlocks.age) })]),
+    ...(age === undefined ? [] : [text('plate.age', { age: ageName(age) })]),
     ...(unlocks.city === undefined
       ? []
       : [text('plate.building', { building: unlocks.city.building })]),

@@ -1,13 +1,6 @@
 import { expect, test } from 'vitest';
 import { newCampaign, paidInto } from '../rules/campaign';
-import {
-  achievementOf,
-  ageOf,
-  firstRegion,
-  merged,
-  type Region,
-  technologyOf,
-} from '../rules/catalogue';
+import { ageOf, firstRegion, merged, type Region } from '../rules/catalogue';
 import {
   AGE,
   CATALOGUE,
@@ -20,7 +13,6 @@ import {
   REGIONS,
   regionsUnlocked,
   SLICES,
-  victoryOf,
 } from '../rules/fixtures';
 import { clustersOf, openingChoices, RING, ringOf, withAge } from './launch-layout';
 
@@ -46,13 +38,9 @@ test('the launch screen opens on the furthest age the campaign has reached, and 
     newCampaign(CATALOGUE, CIVILIZATION_ID),
     hoardedVictory(),
   );
-  const { technology } = achievementOf(CATALOGUE, AGE, victoryOf(AGE));
-  const next = technologyOf(CATALOGUE, technology).unlocks.age;
-  if (next === undefined) throw new Error(`the victory of ${AGE} unlocks no age`);
-
   expect(openingChoices(CATALOGUE, campaign)).toEqual({
-    age: next,
-    region: firstRegion(CATALOGUE, next),
+    age: QUIET,
+    region: firstRegion(CATALOGUE, QUIET),
     civilization: CIVILIZATION_ID,
   });
 });

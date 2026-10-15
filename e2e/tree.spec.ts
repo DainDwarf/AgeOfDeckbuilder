@@ -1,10 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, firstAge, technologyOf } from '../src/rules/catalogue';
+import { ageOf, ageUnlockedBy, firstAge } from '../src/rules/catalogue';
 import { DEFAULTS } from '../src/ui/bindings';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
-import { WASH } from '../src/ui/tree-layout';
 import {
   cardOnFace,
   namedIn,
@@ -27,26 +26,22 @@ const [[ACHIEVEMENT, EARNED]] = Object.entries(ageOf(CATALOGUE, AGE).achievement
 const TECHNOLOGY = EARNED.technology;
 const PLATE = `plate-${TECHNOLOGY}`;
 
-/** The age the first age's technology unlocks, and the last age of the catalogue. */
-const NEXT = technologyOf(CATALOGUE, TECHNOLOGY).unlocks.age;
-const LAST = Object.keys(CATALOGUE.ages).at(-1);
+/** The age the first age's technology unlocks. */
+const NEXT = ageUnlockedBy(CATALOGUE, TECHNOLOGY);
 
 /**
- * Where the tree's two ends stand, in design units: its left end, and its right end half a wash past
- * where the last age's ground ends.
+ * Where the tree's two ends stand, in design units: its left end, and its right end, where the
+ * ground of the age to come ends.
  */
 function treeEnds(page: Page): Promise<{ left: number; right: number }> {
-  return page.evaluate(
-    ({ last, wash }) => {
-      const tree = window.named?.('tree')?.object as Phaser.GameObjects.Container | undefined;
-      const ground = window.named?.(`ground-${last}`)?.object as
-        | Phaser.GameObjects.Rectangle
-        | undefined;
-      if (tree === undefined || ground === undefined) throw new Error('there is no tree');
-      return { left: tree.x, right: tree.x + ground.x + ground.width + wash / 2 };
-    },
-    { last: LAST, wash: WASH },
-  );
+  return page.evaluate(() => {
+    const tree = window.named?.('tree')?.object as Phaser.GameObjects.Container | undefined;
+    const toCome = window.named?.('ground-to-come')?.object as
+      | Phaser.GameObjects.Rectangle
+      | undefined;
+    if (tree === undefined || toCome === undefined) throw new Error('there is no tree');
+    return { left: tree.x, right: tree.x + toCome.x + toCome.width };
+  });
 }
 
 /** The room's two edges, in design units: the navbar's right edge, and the screen's. */
