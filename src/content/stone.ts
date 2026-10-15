@@ -14,7 +14,15 @@ import {
   placesImprovement,
   shocked,
 } from '../rules/cards';
-import type { Age, Answer, Card, Catalogue, Schedule, Slice } from '../rules/catalogue';
+import type {
+  Age,
+  Answer,
+  Card,
+  Catalogue,
+  Schedule,
+  Slice,
+  UnitEntryTable,
+} from '../rules/catalogue';
 import {
   drawPileEmptied,
   gainedFrom,
@@ -24,6 +32,7 @@ import {
   unitsKilledBy,
 } from '../rules/chronicle';
 import { arrived, bordered, populationTaken, warDeclared } from '../rules/city';
+import { raided, rowsDrawn } from '../rules/enemies';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { withNone } from '../rules/resources';
@@ -50,6 +59,7 @@ import {
   NEUTRAL_WAVE,
   NEUTRAL_WORKER,
   PILLAGER,
+  SIEGE_RAIDER,
   VILLAGER,
 } from './scripts';
 
@@ -89,7 +99,7 @@ const RIVERS: RiverFlow = {
 const TEMPERATE_SCHEDULE: Schedule = {
   spacing: [5, 8],
   window: [26, 34],
-  capstones: ['long-winter', 'monument'],
+  capstones: ['long-winter', 'monument', 'siege'],
   entries: {
     'rival-band': 1,
     'stone-wildfire': 1,
@@ -248,6 +258,28 @@ const MONUMENT_GROUND = ['plain', 'hills', 'desert'];
 
 /** The hazards the monument adds, one a turn, each drawn alike. */
 const MONUMENT_HAZARDS = ['unrest', 'thieves', 'weary-builders'];
+
+/** The unit kind whose kill passes the siege. */
+const LEADER = 'leader';
+
+/** The script every enemy of the siege's raid carries. */
+const SIEGE_SCRIPT = 'siege-raider';
+
+/** How many enemies the siege's band draws behind its leader. */
+const SIEGE_BAND = 5;
+
+/** What the siege's band draws each of its enemies from. */
+const SIEGE_ROWS: UnitEntryTable = [
+  { kind: 'warrior', script: SIEGE_SCRIPT, weight: 2 },
+  { kind: 'archer', script: SIEGE_SCRIPT, weight: 1 },
+];
+
+/** The siege's raid: its leader in front of the band drawn behind it. */
+function siegeRaided(catalogue: Catalogue, chronicle: Chronicle): Landed {
+  const band = rowsDrawn(catalogue, chronicle, SIEGE_ROWS, SIEGE_BAND);
+  const leader = { kind: LEADER, script: SIEGE_SCRIPT };
+  return raided(catalogue, band.chronicle, [leader, ...band.rows]);
+}
 
 const REGIONS: Age['regions'] = {
   temperate: {
@@ -473,8 +505,20 @@ export const STONE: Slice = {
         action: 1,
         sight: 2,
       },
+      [LEADER]: {
+        type: LEADER,
+        worker: false,
+        health: 8,
+        damage: 3,
+        range: 1,
+        move: 2 * MOVE_POINT,
+        action: 1,
+        sight: 2,
+        bonus: 1,
+      },
     },
     scripts: {
+      [SIEGE_SCRIPT]: SIEGE_RAIDER,
       pillager: PILLAGER,
       'neutral-guard': NEUTRAL_GUARD,
       'neutral-wave': NEUTRAL_WAVE,
@@ -897,6 +941,12 @@ export const STONE: Slice = {
         passes: (_catalogue, chronicle) =>
           chronicle.tiles.some((tile) => tile.building === 'monument'),
         fails: (catalogue, before, after) => buildingRemoved(catalogue, before, after, MONUMENT),
+      },
+      siege: {
+        lands: siegeRaided,
+        reads: () => ({ band: SIEGE_BAND }),
+        passes: (_catalogue, chronicle) =>
+          capstoneLanded(chronicle) && !chronicle.units.some((unit) => unit.stats.type === LEADER),
       },
     },
     technologies: {

@@ -8,8 +8,9 @@ import {
   pinned,
   unpinned,
 } from './campaign';
-import { catalogued } from './catalogue';
+import { bonusOf, catalogued, entered } from './catalogue';
 import { apply, type Command, outcome, refusalOf } from './chronicle';
+import { enemyEntering } from './enemies';
 import {
   AGE,
   achievementIn,
@@ -36,6 +37,7 @@ import {
   preparedOnTheCity,
   QUIET,
   REGION,
+  SCRIPT,
   SITE,
   SURVEY,
   SURVEYED,
@@ -151,6 +153,15 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
 
   expect(embarked.units[0].embarked).toBe(true);
   expect(read.chronicle).toEqual(save);
+});
+
+test('a chronicle saved with a unit of a kind carrying a bonus reads back whole: the bonus is the kind’s, never the unit’s', () => {
+  const city = cityOf(['urban'], { tiles: field(2) });
+  const led = entered(CATALOGUE, city, enemyEntering('PH_Chief', SCRIPT, { q: 1, r: 0 })).chronicle;
+  const save = { chronicle: led, civilization: CIVILIZATION_ID };
+
+  expect(bonusOf(CATALOGUE, led.units[0].stats)).toBeGreaterThan(0);
+  expect(readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save)).chronicle).toEqual(save);
 });
 
 test('a chronicle saved with an enemy prepared reads back with it prepared', () => {

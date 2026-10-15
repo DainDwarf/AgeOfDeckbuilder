@@ -55,6 +55,7 @@ import {
   NEUTRAL_WORKER,
   PILLAGER,
   RAIDER,
+  SIEGE_RAIDER,
   VILLAGER,
 } from './scripts';
 
@@ -842,6 +843,27 @@ test('a raider goes for the nearer city by its own walk, the neutral’s or the 
   for (const city of [NEUTRAL_TILE, CITY]) {
     expect(asked(RAIDING, raiding(raider(city)))).toEqual({ to: tileKey(city), acts: 'prepare' });
   }
+});
+
+/** The fixture's content, its enemies entering as the siege's raiders in place of its own script. */
+const SIEGING: Catalogue = catalogued({
+  ...CATALOGUE,
+  scripts: { ...CATALOGUE.scripts, [SCRIPT]: SIEGE_RAIDER },
+});
+
+test('the siege’s raider goes for the player’s city where the neutral’s lies nearer, where the raider goes for the neutral’s', () => {
+  const from = neutralAround([], [standing('enemy', { q: 2, r: 0 }, { move: 2 * MOVE_POINT })]);
+
+  expect(movesOf(from, RAIDING)).toEqual([['2,0', '1,0']]);
+  expect(movesOf(from, SIEGING)).toEqual([['2,0', '0,0']]);
+});
+
+test('the siege’s raider prepares nothing on the neutral’s city’s tile, and the capture on the player’s', () => {
+  const on = (tile: TileCoords): Chronicle =>
+    neutralAround([], [standing('enemy', tile, { move: 0 })]);
+
+  expect(asked(SIEGING, on(NEUTRAL_TILE)).acts).toBeUndefined();
+  expect(asked(SIEGING, on(CITY)).acts).toBe('prepare');
 });
 
 test('the neutral’s wave embarks where the ground ends to cross toward its camp', () => {

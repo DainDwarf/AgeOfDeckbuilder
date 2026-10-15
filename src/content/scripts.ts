@@ -16,6 +16,7 @@ import {
   otherCityOn,
   pillaged,
   raided,
+  rowsDrawn,
   standsAs,
   stepMove,
   targetsInOwnSight,
@@ -55,31 +56,55 @@ import {
 } from '../rules/units';
 import { tileYield } from '../rules/yields';
 
-/**
- * The raider, going for the nearest by its own walk of the cities not its own, the player's where
- * its walk reaches none, and preparing the capture on that city's tile.
- */
-export const RAIDER: UnitScript = {
-  moveTo(catalogue: Catalogue, chronicle: Chronicle, raider: Unit) {
-    const { city } = chronicle;
-    if (city === undefined) return { landing: { tile: raider.tile, cost: 0 }, rng: chronicle.rng };
-    const target =
-      nearestByWalk(
-        catalogue,
-        chronicle,
-        raider,
-        (tile) => otherCityOn(chronicle, tile, raider.faction) !== undefined,
-      ) ?? city;
-    return { ...walkedTo(catalogue, chronicle, raider, target), rng: chronicle.rng };
-  },
+/** Which city a raider goes for: the nearer of those not its own, or the player's alone. */
+export type RaidedCity = 'nearer' | 'player';
 
-  acts(catalogue: Catalogue, chronicle: Chronicle, raider: Unit): ScriptAct {
-    if (otherCityOn(chronicle, raider.tile, raider.faction) !== undefined) {
-      return { act: 'prepare' };
-    }
-    return weakest(catalogue, chronicle, raider);
-  },
-};
+/** Whether a raider going for that city goes for one standing on the tile. */
+function goesForCityOn(
+  chronicle: Chronicle,
+  tile: TileCoords,
+  raider: Unit,
+  goesFor: RaidedCity,
+): boolean {
+  const city = otherCityOn(chronicle, tile, raider.faction);
+  switch (goesFor) {
+    case 'nearer':
+      return city !== undefined;
+    case 'player':
+      return city === 'player';
+  }
+}
+
+/**
+ * The raider, going for the nearest by its own walk of the cities it goes for, the player's where its
+ * walk reaches none, and preparing the capture on that city's tile.
+ */
+export function raidingFor(goesFor: RaidedCity): UnitScript {
+  return {
+    moveTo(catalogue: Catalogue, chronicle: Chronicle, raider: Unit) {
+      const { city } = chronicle;
+      if (city === undefined) {
+        return { landing: { tile: raider.tile, cost: 0 }, rng: chronicle.rng };
+      }
+      const target =
+        nearestByWalk(catalogue, chronicle, raider, (tile) =>
+          goesForCityOn(chronicle, tile, raider, goesFor),
+        ) ?? city;
+      return { ...walkedTo(catalogue, chronicle, raider, target), rng: chronicle.rng };
+    },
+
+    acts(catalogue: Catalogue, chronicle: Chronicle, raider: Unit): ScriptAct {
+      if (goesForCityOn(chronicle, raider.tile, raider, goesFor)) return { act: 'prepare' };
+      return weakest(catalogue, chronicle, raider);
+    },
+  };
+}
+
+/** The camps' raider, going for the nearer of the cities not its own. */
+export const RAIDER: UnitScript = raidingFor('nearer');
+
+/** The siege's raider, going for the player's city whatever city lies nearer. */
+export const SIEGE_RAIDER: UnitScript = raidingFor('player');
 
 /**
  * The pillager, going for the nearest of either city's workers and of what they built, and raiding
@@ -391,7 +416,8 @@ export function campedOrRaided(
 ): Landed {
   if (!campPlaceable(catalogue, chronicle, apart)) {
     const { raider } = ageOf(catalogue, chronicle.age).camp.scripts;
-    return raided(catalogue, chronicle, count, [{ kind, script: raider, weight: 1 }]);
+    const drawn = rowsDrawn(catalogue, chronicle, [{ kind, script: raider, weight: 1 }], count);
+    return raided(catalogue, drawn.chronicle, drawn.rows);
   }
   return guardedCampPlaced(catalogue, chronicle, kind, count, apart);
 }

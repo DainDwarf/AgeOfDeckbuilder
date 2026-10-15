@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest';
 import { improvementPlaced } from './cards';
+import { bonusCarried, bonusOf, unitKind } from './catalogue';
 import { apply, byHand, type Command, outcome } from './chronicle';
 import { warDeclared } from './city';
 import {
@@ -34,7 +35,7 @@ import { type ImprovementId, MOVE_POINT, type TileCoords, tileKey } from './map'
 import { charted } from './sight';
 import { walked } from './stages';
 import type { Chronicle } from './state';
-import { attackable, relationsOf } from './units';
+import { attackable, type Faction, relationsOf } from './units';
 
 /** The chronicle with the improvement placed on each of the named tiles, and the map charted of it. */
 function withImprovement(
@@ -254,6 +255,38 @@ test('an attack reaches its range and no further, and lands on a unit of another
   });
 
   expect(stagedBy(far, attackOn(1, { q: 2, r: 0 }))).toEqual(['attack', 'action-spent', 'damaged']);
+});
+
+test('an attack removes the attacker’s damage and the bonus of a unit of its faction beside it, and none for one two tiles off or one of another faction beside it', () => {
+  const attacker = { q: 1, r: 0 };
+  const target = { q: 2, r: 0 };
+  const damage = 2;
+  const chief = (faction: Faction, tile: TileCoords): Standing =>
+    standing(faction, tile, { type: 'PH_Chief', move: 0 });
+  const struck = (units: Standing[]): { lost: number; carried: number } => {
+    const city = cityOf(['urban'], {
+      tiles: field(3),
+      units: [
+        standing('player', attacker, { damage }),
+        standing('enemy', target, { health: 9 }),
+        ...units,
+      ],
+    });
+    const after = outcome(apply(CATALOGUE, city, attackOn(1, target)));
+    return {
+      lost: unitNamed(city, 2).stats.health - unitNamed(after, 2).stats.health,
+      carried: bonusCarried(CATALOGUE, city.units, unitNamed(city, 1)),
+    };
+  };
+  const bonus = bonusOf(CATALOGUE, unitKind(CATALOGUE, 'PH_Chief'));
+
+  expect(bonus).toBeGreaterThan(0);
+  expect(struck([chief('player', { q: 1, r: -1 })])).toEqual({
+    lost: damage + bonus,
+    carried: bonus,
+  });
+  expect(struck([chief('player', { q: -1, r: 0 })])).toEqual({ lost: damage, carried: 0 });
+  expect(struck([chief('enemy', { q: 1, r: -1 })])).toEqual({ lost: damage, carried: 0 });
 });
 
 test('an attack lands only on a unit standing on a tile in sight, whatever sees the tile', () => {

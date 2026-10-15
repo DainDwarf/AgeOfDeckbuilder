@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { type Catalogue, fullHealth, unitKind } from '../rules/catalogue';
+import { bonusOf, type Catalogue, damageOf, fullHealth, unitKind } from '../rules/catalogue';
 import { preparedAs } from '../rules/enemies';
 import {
   groundCost,
@@ -37,10 +37,12 @@ import type { Tooltip } from './tooltip';
 type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Partial<Resources> };
 
 /**
- * What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it, what its
- * prepare lands as, if it has prepared, and whether it is the neutral's while it is hostile.
+ * What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it, the damage
+ * its attack removes, what its prepare lands as, if it has prepared, and whether it is the neutral's
+ * while it is hostile.
  */
 type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
+  readonly damage: number;
   readonly prepares?: 'capture' | 'pillage';
   readonly hostile?: boolean;
 };
@@ -104,6 +106,7 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
         movePoints: stats.move,
         action: stats.action,
         embarked: false,
+        damage: stats.damage,
       };
       return { kind: 'unit', unit };
     }
@@ -168,7 +171,8 @@ export function cardsOf(
   if (unit !== undefined) {
     const prepares = preparedAs(chronicle, unit);
     const hostile = unit.faction === 'neutral' && relationsOf(chronicle) === 'hostile';
-    cards.push({ kind: 'unit', unit: { ...unit, prepares, hostile } });
+    const damage = damageOf(catalogue, units, unit);
+    cards.push({ kind: 'unit', unit: { ...unit, damage, prepares, hostile } });
   }
 
   const parts = yieldParts(catalogue, chronicle, tile, beside);
@@ -229,13 +233,32 @@ function stylesOf(em: number) {
   };
 }
 
-const STATS = ['health', 'damage', 'range', 'move', 'action', 'sight'] as const;
+const STATS = ['health', 'damage', 'bonus', 'range', 'move', 'action', 'sight'] as const;
 
 type Stat = (typeof STATS)[number];
 
-/** The stats a unit card reads: an embarked unit's reads no damage and no range. */
-function statsOf(unit: UnitReading): readonly Stat[] {
-  return unit.embarked ? STATS.filter((stat) => stat !== 'damage' && stat !== 'range') : STATS;
+/** The stats a unit card reads, in the order `STATS` lists them. */
+function statsOf(catalogue: Catalogue, unit: UnitReading): readonly Stat[] {
+  return STATS.filter((stat) => readsRow(catalogue, unit, stat));
+}
+
+/**
+ * Whether a unit card reads the stat's row: an embarked unit's reads no damage and no range, and the
+ * card of a unit whose kind carries no bonus reads none.
+ */
+function readsRow(catalogue: Catalogue, unit: UnitReading, stat: Stat): boolean {
+  switch (stat) {
+    case 'damage':
+    case 'range':
+      return !unit.embarked;
+    case 'bonus':
+      return bonusOf(catalogue, unit.stats) > 0;
+    case 'health':
+    case 'move':
+    case 'action':
+    case 'sight':
+      return true;
+  }
 }
 
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
@@ -246,7 +269,10 @@ function inMovePoints(hundredths: number): string {
   return (hundredths / MOVE_POINT).toString();
 }
 
-/** What a stat's row reads: what the unit has left over its own number, where it has two. */
+/**
+ * What a stat's row reads: what the unit has left over its own number, where it has two, and its own
+ * damage and the bonus it carries, where it carries one.
+ */
 function readingOf(catalogue: Catalogue, unit: UnitReading, stat: Stat): string {
   switch (stat) {
     case 'health':
@@ -255,7 +281,12 @@ function readingOf(catalogue: Catalogue, unit: UnitReading, stat: Stat): string 
       return `${inMovePoints(unit.movePoints)} / ${inMovePoints(unit.stats.move)}`;
     case 'action':
       return `${unit.action} / ${unit.stats.action}`;
-    case 'damage':
+    case 'damage': {
+      const carried = unit.damage - unit.stats.damage;
+      return carried > 0 ? `${unit.stats.damage} + ${carried}` : String(unit.stats.damage);
+    }
+    case 'bonus':
+      return text('reading.plus', { count: bonusOf(catalogue, unit.stats) });
     case 'range':
     case 'sight':
       return String(unit.stats[stat]);
@@ -470,7 +501,7 @@ function buildFace(
   let rowTop = ruleY + 1 + 0.55 * em;
 
   if (card.kind === 'unit') {
-    for (const stat of statsOf(card.unit)) {
+    for (const stat of statsOf(catalogue, card.unit)) {
       const label = addText(scene, left, 0, text(`label.${stat}`), style.label).setOrigin(0, 0.5);
       const reading = readingOf(catalogue, card.unit, stat);
       const value = addText(scene, right, 0, reading, style.value).setOrigin(1, 0.5);

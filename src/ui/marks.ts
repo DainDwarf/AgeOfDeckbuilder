@@ -10,6 +10,7 @@ const UNIT_MARKS: Readonly<Record<string, number[]>> = {
   warrior: POINT,
   scout: [0, -14, 11, 12, 0, 5, -11, 12],
   archer: [-13, -9, 13, -9, 0, 14],
+  leader: [0, -14, 13, -4, 8, 12, -8, 12, -13, -4],
 };
 
 /** The wall the city is drawn as, and the camp and the neutral's city with it. */

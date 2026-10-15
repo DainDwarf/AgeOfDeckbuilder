@@ -404,6 +404,17 @@ test('a catalogue whose unit kind has a stat that is not a whole number is refus
   );
 });
 
+test('a catalogue whose unit kind carries a bonus below one, or one that is not a whole number, is refused', () => {
+  for (const bonus of [0, 1.5]) {
+    const kind = { ...CATALOGUE.units.PH_Warrior, bonus };
+    const content = changed({ units: { ...CATALOGUE.units, PH_Warrior: kind } });
+
+    expect(() => catalogued(content)).toThrow(
+      `fixture: the unit kind PH_Warrior carries a bonus of ${bonus}`,
+    );
+  }
+});
+
 test('a catalogue whose biome names a terrain it does not hold is refused', () => {
   const { sea } = CATALOGUE.biomes;
   const content = changed({ biomes: { ...CATALOGUE.biomes, sea: { ...sea, rim: { shoal: 1 } } } });

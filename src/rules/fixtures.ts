@@ -67,7 +67,14 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
-import { attackOrNone, enemyEntering, enteredOnCamp, leastHealth, raided } from './enemies';
+import {
+  attackOrNone,
+  enemyEntering,
+  enteredOnCamp,
+  leastHealth,
+  raided,
+  rowsDrawn,
+} from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -261,7 +268,10 @@ function raidOf(table: UnitEntryTable): Answer {
   return {
     cost: {},
     reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-    lands: (catalogue, chronicle) => raided(catalogue, chronicle, raiders(chronicle.turn), table),
+    lands: (catalogue, chronicle) => {
+      const drawn = rowsDrawn(catalogue, chronicle, table, raiders(chronicle.turn));
+      return raided(catalogue, drawn.chronicle, drawn.rows);
+    },
   };
 }
 
@@ -555,6 +565,17 @@ const TABLES: Omit<Tables, 'technologies'> = {
       move: 2 * MOVE_POINT,
       action: 1,
       sight: 2,
+    },
+    PH_Chief: {
+      type: 'PH_Chief',
+      worker: false,
+      health: 6,
+      damage: 2,
+      range: 1,
+      move: 2 * MOVE_POINT,
+      action: 1,
+      sight: 2,
+      bonus: 2,
     },
   },
   scripts: { [SCRIPT]: BEELINE, [GUARD_SCRIPT]: SENTRY, [WORKER_SCRIPT]: FIRST_ADMITTED },

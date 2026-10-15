@@ -1,4 +1,4 @@
-import { dealtBiomes, discTiles, sharedBiomes, type Tile, type TileCoords } from './map';
+import { dealtBiomes, discTiles, distance, sharedBiomes, type Tile, type TileCoords } from './map';
 import {
   biomeKind,
   buildingKind,
@@ -532,7 +532,7 @@ export type Age = {
  * and the ages in the order of history.
  */
 export type Catalogue = MapContent & {
-  readonly units: Readonly<Record<string, UnitStats>>;
+  readonly units: Readonly<Record<string, UnitKind>>;
   readonly scripts: Readonly<Record<string, UnitScript>>;
   readonly cards: Readonly<Record<string, Card>>;
   readonly civilizations: Readonly<Record<string, Civilization>>;
@@ -546,6 +546,12 @@ export type Catalogue = MapContent & {
 
 /** The tables every age brings its content to. */
 export type Tables = Omit<Catalogue, 'version' | 'ages' | 'cardAges'>;
+
+/**
+ * A unit kind: the stats a unit of it enters with, and the bonus it carries, a kind naming none
+ * carrying none.
+ */
+export type UnitKind = UnitStats & { readonly bonus?: number };
 
 /** The steps past the centre part's reach within which no region keeps its camps. */
 export const FIRST_STEPS = 2;
@@ -616,6 +622,9 @@ export function catalogued(content: Catalogue): Catalogue {
       if (!Number.isInteger(value) || value < least) {
         refuse(content, `the unit kind ${id} has a ${stat} of ${value}`);
       }
+    }
+    if (kind.bonus !== undefined && (!Number.isInteger(kind.bonus) || kind.bonus < 1)) {
+      refuse(content, `the unit kind ${id} carries a bonus of ${kind.bonus}`);
     }
   }
   for (const [id, terrain] of Object.entries(content.terrains)) {
@@ -1148,14 +1157,41 @@ function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
   }
 }
 
-/** The stats a unit of that kind enters the map with; a kind the catalogue does not hold is refused. */
+/**
+ * The stats a unit of that kind enters the map with, its bonus never among them; a kind the
+ * catalogue does not hold is refused.
+ */
 export function unitKind(catalogue: Catalogue, id: string): UnitStats {
-  return entryOf(catalogue, catalogue.units, id, 'unit kind');
+  const { bonus: _bonus, ...stats } = entryOf(catalogue, catalogue.units, id, 'unit kind');
+  return stats;
 }
 
 /** A unit's full health: its kind's, read off the catalogue by the type the unit carries. */
 export function fullHealth(catalogue: Catalogue, stats: UnitStats): number {
   return unitKind(catalogue, stats.type).health;
+}
+
+/**
+ * The bonus a unit's kind carries, read off the catalogue by the type the unit carries, and none
+ * where its kind names none.
+ */
+export function bonusOf(catalogue: Catalogue, stats: UnitStats): number {
+  return entryOf(catalogue, catalogue.units, stats.type, 'unit kind').bonus ?? 0;
+}
+
+/** The bonus a unit carries: that of every unit of its faction standing beside it, together. */
+export function bonusCarried(catalogue: Catalogue, units: readonly Unit[], unit: Unit): number {
+  let carried = 0;
+  for (const other of units) {
+    if (other.faction !== unit.faction || distance(other.tile, unit.tile) !== 1) continue;
+    carried += bonusOf(catalogue, other.stats);
+  }
+  return carried;
+}
+
+/** The damage a unit's attack removes: its own, and the bonus it carries. */
+export function damageOf(catalogue: Catalogue, units: readonly Unit[], unit: Unit): number {
+  return unit.stats.damage + bonusCarried(catalogue, units, unit);
 }
 
 /** The script a unit acts by; a script the catalogue does not hold is refused. */

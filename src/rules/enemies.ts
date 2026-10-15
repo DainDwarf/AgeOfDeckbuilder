@@ -269,20 +269,27 @@ function rowDrawn(
   return { picked, chronicle: { ...chronicle, rng } };
 }
 
-/** The rows of that many enemies, drawn out of the table one after another. */
-function rowsDrawn(
+/** What one enemy enters as: its kind and its script. */
+export type EnemyEntry = Pick<UnitEntryRow, 'kind' | 'script'>;
+
+/**
+ * What that many enemies enter as, each drawn out of the table one after another, and the
+ * chronicle's generator as the draws leave it; a table holding no row, or a row the catalogue does
+ * not hold, is refused.
+ */
+export function rowsDrawn(
   catalogue: Catalogue,
   chronicle: Chronicle,
   table: UnitEntryTable,
   enemies: number,
-): { readonly rows: readonly UnitEntryRow[]; readonly chronicle: Chronicle } {
+): { readonly rows: readonly EnemyEntry[]; readonly chronicle: Chronicle } {
   unitEntryTableHeld(catalogue, table, "a unit entry's table");
-  const rows: UnitEntryRow[] = [];
+  const rows: EnemyEntry[] = [];
   let drawing = chronicle;
   for (let enemy = 0; enemy < enemies; enemy++) {
-    const drawn = rowDrawn(drawing, table);
-    rows.push(drawn.picked);
-    drawing = drawn.chronicle;
+    const { picked, chronicle: drawn } = rowDrawn(drawing, table);
+    rows.push({ kind: picked.kind, script: picked.script });
+    drawing = drawn;
   }
   return { rows, chronicle: drawing };
 }
@@ -381,7 +388,7 @@ function enteredAs(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
-  rows: readonly UnitEntryRow[],
+  rows: readonly EnemyEntry[],
   camp: TileCoords | undefined,
 ): Landed {
   const doors = new Map<string, ReturnType<typeof aroundDoor>>();
@@ -416,19 +423,17 @@ function enteredAs(
 }
 
 /**
- * That many enemies of the camp's entering around it as a door, every one's row drawn out of the
- * table before any enters; a count below one is a `runtime-error`.
+ * Enemies of the camp's, one of each row in order, entering around it as a door; no row at all is a
+ * `runtime-error`.
  */
 export function enteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   camp: TileCoords,
-  enemies: number,
-  table: UnitEntryTable,
+  rows: readonly EnemyEntry[],
 ): Landed {
-  if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
-  const drawn = rowsDrawn(catalogue, chronicle, table, enemies);
-  return enteredAs(catalogue, drawn.chronicle, camp, drawn.rows, camp);
+  if (rows.length === 0) return landedAs(change('runtime-error', chronicle));
+  return enteredAs(catalogue, chronicle, camp, rows, camp);
 }
 
 /**
@@ -490,19 +495,17 @@ function raidEntry(
 }
 
 /**
- * A raid of that many enemies, none a camp's: every one's row drawn out of the table, then its door
- * drawn for the first, and every one entering around it. A raid of none, or one with no door with a
- * free tile around it for its first, draws nothing and is a `runtime-error`.
+ * A raid, none of its enemies a camp's, one of each row in order: its door drawn for the first row's
+ * kind, and every one entering around it. A raid of no row, or one with no door with a free tile
+ * around it for its first, draws nothing and is a `runtime-error`.
  */
 export function raided(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  enemies: number,
-  table: UnitEntryTable,
+  rows: readonly EnemyEntry[],
 ): Landed {
-  if (enemies <= 0) return landedAs(change('runtime-error', chronicle));
-  const drawn = rowsDrawn(catalogue, chronicle, table, enemies);
-  const door = raidEntry(catalogue, drawn.chronicle, drawn.rows[0].kind);
+  if (rows.length === 0) return landedAs(change('runtime-error', chronicle));
+  const door = raidEntry(catalogue, chronicle, rows[0].kind);
   if (door === undefined) return landedAs(change('runtime-error', chronicle));
-  return enteredAs(catalogue, door.chronicle, door.entry, drawn.rows, undefined);
+  return enteredAs(catalogue, door.chronicle, door.entry, rows, undefined);
 }

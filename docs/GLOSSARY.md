@@ -111,7 +111,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
 | **movement cost** | What entering a tile spends of a unit's move points; a tile that names none for a unit is not entered by it. | move cost, terrain cost, travel cost, difficulty, impassable |
 | **terraform** | To change a tile's terrain into another. | transform, convert, reshape |
-| **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | bonus |
+| **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | — |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
 | **improvement** | A layer a worker places on a tile; unlike a building, a tile holds any number. | — |
 | **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
@@ -124,6 +124,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **heal** | To bring a unit's health back up. | refresh (of health), repair, restore, regenerate, cure |
 | **attack** | The act: a unit removes its damage from a target's health. | hit |
 | **damage** | A unit's stat: the health its attack removes. | strength, power, harm |
+| **bonus** | What a unit adds to the damage of the units of its faction standing beside it. | buff, boost, aura, rally, lead |
 | **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
 | **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |

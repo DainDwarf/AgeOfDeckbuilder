@@ -12,7 +12,7 @@ import {
   scheduleOf,
 } from './catalogue';
 import { costPaid } from './city';
-import { enteredAround } from './enemies';
+import { enteredAround, rowsDrawn } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -602,9 +602,10 @@ export function guardedCampPlaced(
   const { guard } = ageOf(catalogue, chronicle.age).camp.scripts;
   // The first enemy lands on the camp, where its kind stands on it, only because `campsPlaced` asks no
   // unit to stand there.
-  return followed(placing, (left) =>
-    enteredAround(catalogue, left, camp, count, [{ kind, script: guard, weight: 1 }]),
-  );
+  return followed(placing, (left) => {
+    const drawn = rowsDrawn(catalogue, left, [{ kind, script: guard, weight: 1 }], count);
+    return enteredAround(catalogue, drawn.chronicle, camp, drawn.rows);
+  });
 }
 
 /** One roll of the generator inside a span of turns, both ends included. */

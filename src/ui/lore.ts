@@ -56,6 +56,10 @@ const LORE = {
     'The elders say the ancestors want a house of stone on this land. When the time comes, raise the monument, and the Stone Age is won.',
   'capstone-landing.monument':
     'The time has come. Lay the ground, raise the stones and adorn them, and the Stone Age is won. Every night the work waits, the people grow restless.',
+  'capstone-opening.siege':
+    'The elders say a great band is gathering beyond the hills under one leader. When it comes, kill the leader, and the Stone Age is won.',
+  'capstone-landing.siege':
+    'The band has come, a leader at its head, and those beside the leader strike the harder for it. Kill the leader, and the Stone Age is won.',
 } as const;
 
 /** The capstone window's two raisings, each reading a lore of its own. */

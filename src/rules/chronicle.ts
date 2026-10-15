@@ -27,6 +27,7 @@ import {
   cardOf,
   checkContent,
   costOf,
+  damageOf,
   entered,
   neutralScriptOf,
   neutralWorkerKind,
@@ -56,6 +57,7 @@ import {
   otherCityOn,
   pillaged,
   preparedAs,
+  rowsDrawn,
   stepMove,
   wavesSent,
 } from './enemies';
@@ -1253,7 +1255,7 @@ function attack(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand
   );
   if (target === undefined) return refused(chronicle);
   const opening = target.faction === 'neutral' ? warDeclared(chronicle) : unchanged(chronicle);
-  return blow(opening, unit, target);
+  return blow(catalogue, opening, unit, target);
 }
 
 /**
@@ -1261,12 +1263,17 @@ function attack(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand
  * over those, the attacker's action spent and then the target losing the attacker's damage or killed
  * by it. Nobody moves.
  */
-function blow(opening: Landed, attacker: Unit, target: Unit): Sequence<Group> {
+function blow(
+  catalogue: Catalogue,
+  opening: Landed,
+  attacker: Unit,
+  target: Unit,
+): Sequence<Group> {
   return grouped(
     { name: 'attack', attacker: attacker.tile, target: target.tile },
     followed(
       followed(opening, (left) => actionSpent(left, attacker.tile)),
-      (left) => unitDamaged(left, target.tile, attacker.stats.damage),
+      (left) => unitDamaged(left, target.tile, damageOf(catalogue, left.units, attacker)),
     ),
   );
 }
@@ -1451,7 +1458,7 @@ function scriptedActs(
         ) {
           return landedAs(change('runtime-error', standing));
         }
-        return followed<Stage>(blow(unchanged(standing), acting, target), acts);
+        return followed<Stage>(blow(catalogue, unchanged(standing), acting, target), acts);
       }
     }
   };
@@ -1511,7 +1518,8 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
       if (step.value >= camp.odds) return unchanged(drawn);
-      return enteredAround(catalogue, drawn, { q, r }, 1, camp.roll);
+      const rolled = rowsDrawn(catalogue, drawn, camp.roll, 1);
+      return enteredAround(catalogue, rolled.chronicle, { q, r }, rolled.rows);
     });
   }
   return rolling;

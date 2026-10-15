@@ -10,7 +10,7 @@ import {
 } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable, warDeclared } from './city';
-import { attackOrNone, enteredAround, enteredOnCamp, raided } from './enemies';
+import { attackOrNone, enteredOnCamp, raided, rowsDrawn } from './enemies';
 import {
   aimedAt,
   attackOn,
@@ -723,6 +723,22 @@ test('a raid’s door is read on its first enemy’s kind: a camp no tile around
     else expect(distance(first.tile, CENTRE)).toBe(5);
   }
   expect(new Set(firsts.map((first) => first.stats.type)).size).toBe(2);
+});
+
+test('a raid handed a row in front of the rows it drew enters that row first, and reads its door on that row’s kind', () => {
+  const { camp, beside, tiles } = island();
+  const city = cityOf(['urban'], { tiles: madeOf(tiles, 'forest', [camp, beside]) });
+  const leading = { kind: 'PH_Slinger', script: SCRIPT };
+
+  for (const seed of SEEDS) {
+    const drawn = rowsDrawn(SLOW_SLINGER, { ...city, rng: seedRng(seed) }, [RAIDER_ROW], 2);
+    const raid = raided(SLOW_SLINGER, drawn.chronicle, [leading, ...drawn.rows]).chronicle;
+    const [first, ...after] = enemiesOf(raid);
+
+    expect(first.stats.type).toBe('PH_Slinger');
+    expect(distance(first.tile, CENTRE)).toBe(5);
+    expect(after.map((enemy) => enemy.stats.type)).toEqual([CAMP_KIND, CAMP_KIND]);
+  }
 });
 
 test('a raid enters each enemy under its row’s script and of no camp, whatever door it comes through', () => {
@@ -1898,8 +1914,7 @@ test('an entry handed a table holding no row, or a row at a weight not above nou
   for (const table of [[], [RAIDER_ROW, { ...RAIDER_ROW, weight: 0 }]]) {
     for (const landing of [
       () => enteredOnCamp(CATALOGUE, city, camp, table),
-      () => enteredAround(CATALOGUE, city, camp, 1, table),
-      () => raided(CATALOGUE, city, 1, table),
+      () => rowsDrawn(CATALOGUE, city, table, 1),
     ]) {
       expect(landing).toThrow(/^fixture: a unit entry's table /);
     }

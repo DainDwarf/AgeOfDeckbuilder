@@ -15,9 +15,9 @@ import {
   slotFree,
   throughWorker,
 } from '../rules/cards';
-import type { Age, Schedule, Slice, Tables } from '../rules/catalogue';
+import type { Age, Schedule, Slice, Tables, UnitEntryTable } from '../rules/catalogue';
 import { arrived, yielded } from '../rules/city';
-import { raided } from '../rules/enemies';
+import { raided, rowsDrawn } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind } from '../rules/map-kinds';
 import {
@@ -43,6 +43,9 @@ function hungerFood(turn: number): number {
 function wildfireTakes(turn: number): number {
   return 2 * (1 + Math.floor(turn / 5));
 }
+
+/** What an event's raid enters. */
+const RAID: UnitEntryTable = [{ kind: 'warrior', script: 'raider', weight: 1 }];
 
 /** How far apart from every camp standing a rival band's camp is placed. */
 const RIVAL_CAMP_APART = 3;
@@ -193,10 +196,10 @@ const TABLES: Tables = {
         ration: {
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
-          lands: (catalogue, chronicle) =>
-            raided(catalogue, chronicle, raiders(chronicle.turn), [
-              { kind: 'warrior', script: 'raider', weight: 1 },
-            ]),
+          lands: (catalogue, chronicle) => {
+            const drawn = rowsDrawn(catalogue, chronicle, RAID, raiders(chronicle.turn));
+            return raided(catalogue, drawn.chronicle, drawn.rows);
+          },
         },
       },
     },
@@ -205,10 +208,10 @@ const TABLES: Tables = {
         fight: {
           cost: {},
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) + 1 }),
-          lands: (catalogue, chronicle) =>
-            raided(catalogue, chronicle, raiders(chronicle.turn) + 1, [
-              { kind: 'warrior', script: 'raider', weight: 1 },
-            ]),
+          lands: (catalogue, chronicle) => {
+            const drawn = rowsDrawn(catalogue, chronicle, RAID, raiders(chronicle.turn) + 1);
+            return raided(catalogue, drawn.chronicle, drawn.rows);
+          },
         },
         'make-room': {
           cost: {},
