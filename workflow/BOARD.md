@@ -12,5 +12,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The victory** — the age's victory achievement and its technology, which unlocks the Bronze Age once that age exists and nothing until then; the technology's name is this line's question.
+- **The victory** — the Stone Age's victory is its achievement, Metalworking its technology, needing Settlement and unlocking nothing until the Bronze Age exists; each age names its victory among its achievements and the next age follows from the order of history; a victory technology's plate stands on the border at its ground's right end, after every other technology of the age, no link to it, the last ground washing into the colour of the age to come. Doc-impact: `docs/ages/STONE.md`, `docs/META.md`, `docs/META-SCREENS.md`. [board/the-victory.md](board/the-victory.md)
 - **The archipelago's schedule** — the region's own schedule: what it copies from the temperate one, what is its own, and its capstones.
