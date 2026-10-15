@@ -66,14 +66,7 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
-import {
-  attackOrNone,
-  enemyEntering,
-  enteredAround,
-  enteredOnCamp,
-  leastHealth,
-  raided,
-} from './enemies';
+import { attackOrNone, enemyEntering, enteredOnCamp, leastHealth, raided } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -95,23 +88,20 @@ import { seedRng } from './rng';
 import type { ChronicleSave } from './save';
 import {
   addedToDrawPileTop,
-  burned,
   campPlaceable,
   campsPlaced,
-  type Fire,
-  featureDealable,
-  featureDealt,
+  featureDealtNearest,
   featureInside,
   featureRemovalInside,
   featuresRemovedInside,
-  fireRead,
-  fireStartable,
+  guardedCampPlaced,
   offered,
   removalInside,
   removedInside,
   showsNextLanding,
   spanEnded,
   terraformedInside,
+  terraformedNearest,
   tileCharted,
   unitDamaged,
 } from './schedule';
@@ -224,12 +214,6 @@ export const ENCAMPED = 3;
 
 const RIVALS = { fromCity: [3, 4], apart: 3 } as const;
 
-/** The fixture's wildfire: forest burned to plain, starting within three of the city. */
-export const FIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 3, around: 1, damage: 3 };
-
-/** How far from the city the fixture's herd deals its feature. */
-export const HERD = 3;
-
 /** The fixture's building that gives to the tiles beside it. */
 export const WELL = 'PH_Well';
 
@@ -335,22 +319,23 @@ const EVENTS: Catalogue['events'] = {
     },
   },
   PH_Rivals: {
-    needs: (catalogue, chronicle) =>
-      campPlaceable(catalogue, chronicle, RIVALS.fromCity, RIVALS.apart),
     answers: {
       PH_Encampment: {
         cost: {},
+        blocked: (catalogue, chronicle) =>
+          campPlaceable(catalogue, chronicle, RIVALS.fromCity, RIVALS.apart)
+            ? []
+            : ['no-camp-tile'],
         reads: () => ({ warriors: ENCAMPED }),
-        lands: (catalogue, chronicle) => {
-          const placing = campsPlaced(catalogue, chronicle, 1, RIVALS.fromCity, RIVALS.apart);
-          const [camp] = placing.placed;
-          if (camp === undefined) return placing;
-          // The first enemy lands on the camp, where its kind stands on it, only because
-          // `campsPlaced` asks no unit to stand there.
-          return followed(placing, (left) =>
-            enteredAround(catalogue, left, camp, ENCAMPED, [GUARD_ROW]),
-          );
-        },
+        lands: (catalogue, chronicle) =>
+          guardedCampPlaced(
+            catalogue,
+            chronicle,
+            CAMP_KIND,
+            ENCAMPED,
+            RIVALS.fromCity,
+            RIVALS.apart,
+          ),
       },
       PH_Truce: {
         cost: {},
@@ -360,12 +345,12 @@ const EVENTS: Catalogue['events'] = {
     },
   },
   PH_Wildfire: {
-    needs: (_catalogue, chronicle) => fireStartable(chronicle, FIRE),
     answers: {
       PH_Burn: {
         cost: {},
-        reads: (_catalogue, chronicle) => fireRead(chronicle, FIRE),
-        lands: (catalogue, chronicle) => burned(catalogue, chronicle, FIRE),
+        reads: () => ({}),
+        lands: (catalogue, chronicle) =>
+          terraformedNearest(catalogue, chronicle, ['forest'], 'plain'),
       },
       PH_Firebreak: {
         cost: {},
@@ -375,13 +360,12 @@ const EVENTS: Catalogue['events'] = {
     },
   },
   PH_Herd: {
-    needs: (catalogue, chronicle) => featureDealable(catalogue, chronicle, 'PH_Fertile', HERD),
     answers: {
       PH_Follow: {
         cost: {},
         reads: () => ({}),
         lands: (catalogue, chronicle) => {
-          const dealt = featureDealt(catalogue, chronicle, 'PH_Fertile', HERD);
+          const dealt = featureDealtNearest(catalogue, chronicle, ['PH_Fertile', 'PH_Game']);
           const { at } = dealt;
           return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
         },
@@ -438,21 +422,6 @@ const EVENTS: Catalogue['events'] = {
         lands: (catalogue, chronicle) => featuresRemovedInside(catalogue, chronicle, CULLED, CULL),
       },
       PH_Guard: {
-        cost: {},
-        reads: () => ({}),
-        lands: (_catalogue, chronicle) => unchanged(chronicle),
-      },
-    },
-  },
-  PH_Spoilage: {
-    needs: (_catalogue, chronicle) => everyCard(chronicle).includes('PH_Hunger'),
-    answers: {
-      PH_Ration: {
-        cost: {},
-        reads: () => ({}),
-        lands: (_catalogue, chronicle) => unchanged(chronicle),
-      },
-      PH_Waste: {
         cost: {},
         reads: () => ({}),
         lands: (_catalogue, chronicle) => unchanged(chronicle),
@@ -1012,10 +981,7 @@ export const AGE = 'age';
  */
 export const QUIET = 'quiet';
 
-/**
- * The age whose regions' schedule deals the hardship and the spoilage alike, the spoilage only once
- * the city's cards hold the hunger.
- */
+/** The age after the quiet one, whose regions' schedule deals the hardship. */
 export const WARY = 'wary';
 
 /** The schedule every region of a fixture age deals, by the age's id, in the order of the ages table. */
@@ -1036,7 +1002,7 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
     spacing: [3, 7],
     window: [27, 33],
     capstones: ['PH_Siege'],
-    entries: { PH_Hardship: 1, PH_Spoilage: 1 },
+    entries: { PH_Hardship: 1 },
   },
   ...Object.fromEntries(
     Object.keys(EVENTS).map((event): [string, Schedule] => [

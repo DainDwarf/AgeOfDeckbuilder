@@ -13,7 +13,7 @@ import {
   placesImprovement,
   shocked,
 } from '../rules/cards';
-import type { Age, Card, Catalogue, Schedule, Slice } from '../rules/catalogue';
+import type { Age, Answer, Card, Catalogue, Schedule, Slice } from '../rules/catalogue';
 import {
   drawPileEmptied,
   gainedFrom,
@@ -36,6 +36,7 @@ import {
   rewarded,
   showsNextLanding,
   terraformedInside,
+  terraformedNearest,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
 import { type Chronicle, cityRows, costsOf } from '../rules/state';
@@ -64,6 +65,13 @@ function nomadicTrophy(id: string): Extract<Card, { readonly kind: 'trophy' }> {
   return card;
 }
 
+/** The answer of that id the Nomadic Age's event of that id deals. */
+function nomadicAnswer(event: string, id: string): Answer {
+  const answer = NOMADIC.brings.events?.[event]?.answers[id];
+  if (answer === undefined) throw new Error(`the Nomadic Age's ${event} deals no answer ${id}`);
+  return answer;
+}
+
 const RIVERS: RiverFlow = {
   source: 'mountain',
   relief: 1,
@@ -83,7 +91,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
   capstones: ['first-shelter'],
   entries: {
     'rival-band': 1,
-    wildfire: 1,
+    'stone-wildfire': 1,
     herd: 1 / 3,
     departure: 1,
     flood: 1,
@@ -102,7 +110,7 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
   capstones: ['first-shelter'],
   entries: {
     'rival-band': 1,
-    wildfire: 1,
+    'stone-wildfire': 1,
     herd: 1 / 3,
     departure: 1,
     flood: 1,
@@ -619,6 +627,13 @@ export const STONE: Slice = {
         strikes: (catalogue, chronicle) =>
           terraformedInside(catalogue, chronicle, PLAIN_AND_FOREST, 'desert', 1),
       },
+      embers: {
+        kind: 'challenge',
+        cost: {},
+        influence: 3,
+        strikes: (catalogue, chronicle) =>
+          terraformedNearest(catalogue, chronicle, ['forest'], 'plain'),
+      },
       tribute: {
         kind: 'challenge',
         cost: {},
@@ -636,6 +651,17 @@ export const STONE: Slice = {
       },
     },
     events: {
+      'stone-wildfire': {
+        answers: {
+          'stone-let-the-fields-burn': nomadicAnswer('wildfire', 'let-the-fields-burn'),
+          'burn-the-forest': {
+            cost: {},
+            reads: () => ({}),
+            lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'embers', 1),
+          },
+          'stone-firebreak': nomadicAnswer('wildfire', 'firebreak'),
+        },
+      },
       departure: {
         answers: {
           'let-them-go': {

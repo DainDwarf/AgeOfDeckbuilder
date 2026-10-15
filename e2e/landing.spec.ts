@@ -1,10 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { featurePlaced } from '../src/rules/cards';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
+import { featureKind } from '../src/rules/map-kinds';
 import { offered } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
-import { walked } from '../src/rules/stages';
+import { followed, unchanged, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import {
   budget,
@@ -27,16 +29,46 @@ import {
 const HERD = 'herd';
 const FOLLOW = 'follow-it';
 
+/** The features follow-it deals, each onto the terrain it lies on. */
+const HERDS = ['deer', 'cattle'];
+
+/** Whether the map draws the tile on the chronicle: in sight, or charted in fog. */
+function drawnOn(chronicle: Chronicle, key: string): boolean {
+  return (
+    inSight(CATALOGUE, chronicle).has(key) ||
+    chronicle.snapshots.some((kept) => tileKey(kept) === key)
+  );
+}
+
 /**
- * The first seed whose first deal stands alone, deals the herd, and has follow-it chart a tile the
- * map does not draw under the deal: the chronicle whose end of turn deals it, the turns before it
- * ended with nothing to take, where follow-it stands in the deal, and the tile.
+ * The chronicle with a feature placed on every tile the map draws that carries none and lies under
+ * one of `HERDS`, so follow-it deals onto a tile the map does not draw.
+ */
+function herdsDrawnPlaced(chronicle: Chronicle): Chronicle {
+  const lyingOn = new Map(
+    HERDS.map((feature) => [featureKind(CATALOGUE, feature).terrain, feature]),
+  );
+  let placing = unchanged(chronicle);
+  for (const { q, r, terrain, feature } of chronicle.tiles) {
+    const herd = lyingOn.get(terrain);
+    if (herd === undefined || feature !== undefined || !drawnOn(chronicle, tileKey({ q, r }))) {
+      continue;
+    }
+    placing = followed(placing, (left) => featurePlaced(CATALOGUE, left, { q, r }, herd));
+  }
+  return placing.chronicle;
+}
+
+/**
+ * The first seed, its turn 1 as `herdsDrawnPlaced` leaves it, whose first deal is the herd alone and
+ * whose follow-it charts a tile the map does not draw: the chronicle whose end of turn deals it, where
+ * follow-it stands in the deal, and the tile.
  */
 function herdDealt(): { before: Chronicle; at: number; tile: TileCoords } {
   const turns = 20;
   const complaint = `deals the herd alone as its first deal at one of ${turns} ended turns, its follow-it charting a tile the map does not draw`;
   return firstSeed(complaint, (seed) => {
-    let before = settledOn(seed);
+    let before = herdsDrawnPlaced(settledOn(seed));
     if (before.deals.length > 0) return undefined;
     let dealt = before;
     for (let turn = 0; turn < turns && dealt.deals.length === 0; turn++) {
@@ -51,11 +83,8 @@ function herdDealt(): { before: Chronicle; at: number; tile: TileCoords } {
     const [tile] = [...walked(apply(CATALOGUE, dealt, { type: 'take', at }))].flatMap((stage) =>
       stage.name === 'charted' ? [stage.tile] : [],
     );
-    if (tile === undefined) return undefined;
-    const key = tileKey(tile);
-    const drawn =
-      inSight(CATALOGUE, dealt).has(key) || dealt.snapshots.some((kept) => tileKey(kept) === key);
-    return drawn ? undefined : { before, at, tile };
+    if (tile === undefined || drawnOn(dealt, tileKey(tile))) return undefined;
+    return { before, at, tile };
   });
 }
 

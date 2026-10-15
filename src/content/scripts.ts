@@ -13,7 +13,6 @@ import {
 import {
   attackOrNone,
   campAshore,
-  enteredAround,
   leastHealth,
   otherCityOn,
   pillaged,
@@ -37,9 +36,9 @@ import {
 } from '../rules/map';
 import { RESOURCES, type Resources } from '../rules/resources';
 import { pickUniform, type Rng } from '../rules/rng';
-import { campPlaceable, campsPlaced } from '../rules/schedule';
+import { campPlaceable, guardedCampPlaced } from '../rules/schedule';
 import { inOwnSight } from '../rules/sight';
-import { followed, type Landed } from '../rules/stages';
+import type { Landed } from '../rules/stages';
 import {
   type CardId,
   type Chronicle,
@@ -384,9 +383,8 @@ export const VILLAGER: NeutralScript = {
 export type CampPlace = { readonly fromCity: Span; readonly apart: number };
 
 /**
- * A camp placed near the player's city at the place named, with `count` warriors of the kind entered
- * on and around it as the camp's guards; where no tile takes a camp, the same count entered as a raid
- * of the camp's raiders.
+ * A guarded camp placed near the player's city at the place named; where no tile takes a camp, the
+ * same count entered as a raid of the camp's raiders.
  */
 export function campedOrRaided(
   catalogue: Catalogue,
@@ -395,17 +393,11 @@ export function campedOrRaided(
   count: number,
   { fromCity, apart }: CampPlace,
 ): Landed {
-  const { scripts } = ageOf(catalogue, chronicle.age).camp;
   if (!campPlaceable(catalogue, chronicle, fromCity, apart)) {
-    return raided(catalogue, chronicle, count, [{ kind, script: scripts.raider, weight: 1 }]);
+    const { raider } = ageOf(catalogue, chronicle.age).camp.scripts;
+    return raided(catalogue, chronicle, count, [{ kind, script: raider, weight: 1 }]);
   }
-  const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
-  const [camp] = placing.placed;
-  // The first enemy lands on the camp, where its kind stands on it, only because `campsPlaced` asks no
-  // unit to stand there.
-  return followed(placing, (left) =>
-    enteredAround(catalogue, left, camp, count, [{ kind, script: scripts.guard, weight: 1 }]),
-  );
+  return guardedCampPlaced(catalogue, chronicle, kind, count, fromCity, apart);
 }
 
 /** What a tile yields in every resource together. */

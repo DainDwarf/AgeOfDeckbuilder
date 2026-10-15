@@ -455,7 +455,6 @@ test('every answer of every event of a region’s schedule costs, answers what b
     const chronicle = settledIn(age);
     for (const { schedule } of Object.values(ageOf(CATALOGUE, age).regions)) {
       for (const id of Object.keys(schedule.entries)) {
-        expect(() => eventOf(CATALOGUE, id).needs?.(CATALOGUE, chronicle)).not.toThrow();
         for (const [name, answer] of Object.entries(eventOf(CATALOGUE, id).answers)) {
           expect(() => answerCost(CATALOGUE, chronicle, answer)).not.toThrow();
           expect(() => answerRefusal(CATALOGUE, chronicle, id, name)).not.toThrow();

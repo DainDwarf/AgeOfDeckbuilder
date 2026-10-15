@@ -384,13 +384,9 @@ export type AnswerCases = {
   readonly names: (catalogue: Catalogue, chronicle: Chronicle) => string;
 };
 
-/**
- * An event: its answers, dealt in the order declared, and whether the chronicle meets its need, for
- * an event that names one.
- */
+/** An event: its answers, dealt in the order declared. */
 export type ScheduledEvent = {
   readonly answers: Readonly<Record<string, Answer>>;
-  readonly needs?: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
 };
 
 /**

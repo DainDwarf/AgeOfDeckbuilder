@@ -206,8 +206,8 @@ export type TileBlock =
 
 /**
  * What stands against a card, an answer or a claim the cost alone would let through: what the city,
- * the piles, the border or a turn already shown hold against it, a card nothing plays, and every
- * reason an aim turns a tile down.
+ * the piles, the border, the map or a turn already shown hold against it, a card nothing plays, and
+ * every reason an aim turns a tile down.
  */
 export type Block =
   | 'population'
@@ -218,6 +218,7 @@ export type Block =
   | 'turn-shown'
   | 'played-by-nothing'
   | 'no-deer-or-cattle'
+  | 'no-camp-tile'
   | TileBlock;
 
 /** What one thing asks for of one resource: a card's cost line by line, a claim's culture. */

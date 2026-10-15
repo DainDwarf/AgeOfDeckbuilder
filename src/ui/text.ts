@@ -212,6 +212,8 @@ const TEXT = {
   'card.rain-dance': 'Rain dance',
   'rules.rain-dance':
     'Dries one [terrain:plain] or [terrain:forest] inside your border into [terrain:desert]',
+  'card.embers': 'Embers',
+  'rules.embers': 'Burns one [terrain:forest] near your city into [terrain:plain]',
   'card.tribute': 'Tribute',
   'rules.tribute':
     'Takes {food}[food], {production}[production] and {money}[money], more each time',
@@ -227,11 +229,18 @@ const TEXT = {
   'answer-rules.make-room':
     'A [building:{camp}] with {warriors} [enemy:warrior] is placed near your [building:{building}]',
   'event.wildfire': 'Wildfire',
-  'answer.let-it-burn': 'Let it burn',
-  'answer-rules.let-it-burn':
-    'The fire burns {tiles} [terrain:forest] into [terrain:plain], kills {population} population and damages {units} unit',
+  'answer.let-the-fields-burn': 'Let the fields burn', // glossary exception: burn
+  'answer-rules.let-the-fields-burn': 'Lose {food}[food]', // glossary exception: burn
   'answer.firebreak': 'Cut a firebreak',
   'answer-rules.firebreak': 'Pay {production}[production]',
+  'event.stone-wildfire': 'Wildfire',
+  'answer.stone-let-the-fields-burn': 'Let the fields burn', // glossary exception: burn
+  'answer-rules.stone-let-the-fields-burn': 'Lose {food}[food]', // glossary exception: burn
+  'answer.stone-firebreak': 'Cut a firebreak',
+  'answer-rules.stone-firebreak': 'Pay {production}[production]',
+  'answer.burn-the-forest': 'Burn the forest', // glossary exception: burn
+  'answer-rules.burn-the-forest': // glossary exception: burn
+    'Add [card:embers] to the discard pile. Each turn it stays in your hand, it burns one [terrain:forest] near your city into [terrain:plain]',
   'event.departure': 'Departure',
   'answer.let-them-go': 'Let them go',
   'answer-rules.let-them-go': 'Lose one population',
@@ -298,7 +307,8 @@ const TEXT = {
   'answer.hunt-it': 'Hunt it',
   'answer-rules.hunt-it': 'Gain {food}[food]',
   'answer.follow-it': 'Follow it',
-  'answer-rules.follow-it': 'One [terrain:forest] gains [feature:deer]',
+  'answer-rules.follow-it':
+    'One [terrain:forest] gains [feature:deer] or one [terrain:plain] gains [feature:cattle]',
   'capstone-name.first-shelter': 'The first shelter',
   'capstone-rules.first-shelter': 'Add [card:shelter] to the top of the draw pile',
   'capstone.title': 'Capstone',
@@ -341,6 +351,7 @@ const TEXT = {
   'refusal.turn-shown': 'The next event is already shown',
   'refusal.played-by-nothing': 'Cannot be played',
   'refusal.no-deer-or-cattle': 'No deer or cattle inside your border',
+  'refusal.no-camp-tile': 'No tile near your city takes a camp',
   'refusal.no-claim': 'Your city cannot claim that tile',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',

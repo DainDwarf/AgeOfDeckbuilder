@@ -27,10 +27,8 @@ import {
   EXPLOSION,
   endedTurn,
   enemiesOf,
-  FIRE,
   field,
   fullDraw,
-  HERD,
   heldBy,
   idsOf,
   madeOf,
@@ -51,7 +49,6 @@ import {
   standing,
   TILLAGE,
   UPHEAVAL,
-  WARY,
   withUnits,
   worker,
 } from './fixtures';
@@ -77,7 +74,6 @@ import {
   type Timeline,
   turnShown,
 } from './state';
-import { unitAt } from './units';
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
 const SEEDS: readonly number[] = Array.from({ length: 40 }, (_, at) => at + 1);
@@ -335,52 +331,6 @@ test('a due turn deals its one event over the hand it drew, and the turn ends th
   expect(staged.indexOf('drawn')).toBeLessThan(staged.indexOf('deal'));
 });
 
-/** A timeline of that age's regions' schedule from a seed due on the second turn, and the hunger among the cards or not. */
-function spoiling(age: string, seed: number, hungry: boolean): Carrying {
-  return {
-    age,
-    timeline: { ...NO_DEALS, rng: seedRng(seed), next: 2 },
-    drawPile: hungry ? ['PH_Hunger', ...fullDraw()] : fullDraw(),
-  };
-}
-
-test('an event whose need the chronicle does not meet is never dealt while another can be, and one whose need it meets is dealt as any', () => {
-  const dealtOn = (hungry: boolean): string[] => [
-    ...new Set(
-      SEEDS.map((seed) => {
-        const [deal] = dealtBy(2, spoiling(WARY, seed, hungry)).deals;
-        return deal?.of === 'event' ? deal.event : 'nothing';
-      }),
-    ),
-  ];
-
-  expect(dealtOn(false)).toEqual(['PH_Hardship']);
-  expect(dealtOn(true).sort()).toEqual(['PH_Hardship', 'PH_Spoilage']);
-});
-
-test('a due turn no event’s need lets deal on deals nothing, and leaves the timeline where a deal leaves it', () => {
-  const end: Command = { type: 'end-turn' };
-  const unmet = awaiting(2, spoiling('PH_Spoilage', 7, false));
-  const met = awaiting(2, spoiling('PH_Spoilage', 7, true));
-  const passed = outcome(apply(CATALOGUE, unmet, end));
-  const dealt = outcome(apply(CATALOGUE, met, end));
-
-  expect(heldBy(apply(CATALOGUE, unmet, end), 'deal').map(({ name }) => name)).toEqual([
-    'rolled',
-    'runtime-error',
-  ]);
-  expect(heldBy(apply(CATALOGUE, met, end), 'deal').map(({ name }) => name)).toEqual([
-    'rolled',
-    'dealt',
-  ]);
-  expect(stagedBy(unmet, end)).toContain('drawn');
-  expect(passed.turn).toBe(2);
-  expect(passed.deals).toEqual([]);
-  expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Spoilage' }]);
-  expect(passed.timeline).toEqual(dealt.timeline);
-  expect(passed.timeline.rng).not.toEqual(unmet.timeline.rng);
-});
-
 test('a due turn is one deal group over the next due turn rolled and the event dealt, and a turn not due stages no deal at all', () => {
   const end: Command = { type: 'end-turn' };
   const waiting = awaiting(5, { drawPile: fullDraw() });
@@ -447,30 +397,6 @@ test('a reward taken is one reward group over the deal taken and the card added'
   expect(taken.chronicle.deals).toEqual([]);
   expect(taken.chronicle.discardPile).toEqual([]);
   expect(idsOf(added.chronicle.discardPile)).toEqual([Object.keys(CAMP.rewards)[0]]);
-});
-
-test('the same seed is due on the same turns whatever answers are taken, though what they let be dealt differs', () => {
-  let differs = false;
-  for (const seed of SEEDS.slice(0, 5)) {
-    const start = fed(
-      withUnits(
-        settledOn(launched(CATALOGUE, WARY, REGION, seed, CIVILIZATION, []).chronicle, CITY),
-        [standing('player', CITY, { type: 'PH_Worker', worker: true, health: 9999 })],
-      ),
-    );
-    const starved = walkedFrom(CATALOGUE, start, 20, 'PH_Famine');
-    const raided = walkedFrom(CATALOGUE, start, 20, 'PH_Raid');
-    const through = Math.min(raided.turn, starved.turn);
-    const until = (walk: Walk): Landing[] =>
-      walk.landings.filter((landing) => landing.turn <= through);
-
-    expect(until(raided).length).toBeGreaterThan(1);
-    expect(until(raided).map((landing) => landing.turn)).toEqual(
-      until(starved).map((landing) => landing.turn),
-    );
-    differs ||= JSON.stringify(until(raided)) !== JSON.stringify(until(starved));
-  }
-  expect(differs).toBe(true);
 });
 
 test('the take lands the answer at its place in the order declared and no other, draws nothing of its own, and resolves nothing after its landing', () => {
@@ -742,195 +668,122 @@ test('an answer placing a camp near the city places one, and its raid enters a w
   ]);
 });
 
-test('an event placing a camp near the city is not dealt where no tile near it takes a camp, and its answer landed there is a runtime error', () => {
+test('an event placing a camp near the city is dealt where no tile near it takes a camp, its answer blocked there, and that answer landed there is a runtime error', () => {
   const cramped = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: field(2),
     ...dueOn(2, 'PH_Rivals'),
   });
-  const passed = outcome(apply(CATALOGUE, cramped, { type: 'end-turn' }));
-  const landing = eventOf(CATALOGUE, 'PH_Rivals').answers.PH_Encampment.lands(CATALOGUE, passed);
+  const dealt = outcome(apply(CATALOGUE, cramped, { type: 'end-turn' }));
+  const landing = eventOf(CATALOGUE, 'PH_Rivals').answers.PH_Encampment.lands(CATALOGUE, dealt);
 
-  expect(
-    heldBy(apply(CATALOGUE, cramped, { type: 'end-turn' }), 'deal').map(({ name }) => name),
-  ).toEqual(['rolled', 'runtime-error']);
-  expect(passed.deals).toEqual([]);
+  expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Rivals' }]);
+  expect(answerRefusal(CATALOGUE, dealt, 'PH_Rivals', 'PH_Encampment')).toEqual({
+    unaffordable: [],
+    blocked: ['no-camp-tile'],
+  });
   expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
   expect(campsOf(landing.chronicle)).toEqual([]);
   expect(enemiesOf(landing.chronicle)).toEqual([]);
 });
 
-/**
- * A city on a disc of plain out to five, forest on the named tiles, dealt the fixture's wildfire at
- * the end of its turn.
- */
-function wooded(forest: TileCoords[], carrying: Carrying = {}): Chronicle {
-  return cityOf(['urban'], {
-    ...dueOn(2, 'PH_Wildfire'),
-    drawPile: fullDraw(),
-    tiles: madeOf(field(5), 'forest', forest),
-    ...carrying,
-  });
-}
-
-/** The city one end of turn on with the wildfire standing, what its card reads, and the chronicle the fire leaves. */
-function aflame(
+/** A city on these tiles dealt the fixture's wildfire at the end of its turn, and its burn taken. */
+function burnt(
   city: Chronicle,
   catalogue: Catalogue = CATALOGUE,
-): { dealt: Chronicle; read: Record<string, number>; landed: Chronicle } {
+): { dealt: Chronicle; landed: Chronicle } {
   const dealt = outcome(apply(catalogue, city, { type: 'end-turn' }));
   if (dealt.deals.length === 0) throw new Error('the wildfire is not dealt');
-  const read = eventOf(catalogue, 'PH_Wildfire').answers.PH_Burn.reads(catalogue, dealt);
-  return { dealt, read, landed: outcome(apply(catalogue, dealt, { type: 'take', at: 0 })) };
+  return { dealt, landed: outcome(apply(catalogue, dealt, { type: 'take', at: 0 })) };
 }
 
 function terrainOf(chronicle: Chronicle, at: TileCoords): string | undefined {
   return tileAt(chronicle.tiles, at)?.terrain;
 }
 
-/**
- * The fixture's content with the city's building standing on forest and plain besides urban, and
- * forest yielding no food, so a city working it alone never grows.
- */
+/** The fixture's content with the city's building standing on forest besides urban, and never on plain. */
 const CITY_IN_FOREST: Catalogue = catalogued({
   ...CATALOGUE,
-  terrains: {
-    ...CATALOGUE.terrains,
-    forest: { ...CATALOGUE.terrains.forest, yields: { production: 1 } },
-  },
   buildings: {
     ...CATALOGUE.buildings,
-    PH_City: { ...CATALOGUE.buildings.PH_City, terrains: ['urban', 'forest', 'plain'] },
+    PH_City: { ...CATALOGUE.buildings.PH_City, terrains: ['urban', 'forest'] },
   },
 });
 
-test('a fire burns every forest tile within its reach of the tile it starts on to plain, and no other tile', () => {
-  const start = { q: FIRE.fromCity, r: 0 };
-  const around = [
-    { q: FIRE.fromCity + 1, r: 0 },
-    { q: FIRE.fromCity + 1, r: -1 },
-    { q: FIRE.fromCity, r: 1 },
+test('an answer terraforming near the city turns one tile of the terrain it names into another, of those nearest to the city a terraform reaches one drawn once from the seeded generator, every layer going with the old terrain or the feature and the population working it staying, and nothing where none stands', () => {
+  const near = [
+    { q: 2, r: 0 },
+    { q: -2, r: 0 },
+    { q: 0, r: 2 },
+    { q: 0, r: -2 },
   ];
-  const beyond = { q: FIRE.fromCity + 2, r: 0 };
-  const burning = new Set([start, ...around].map(tileKey));
-  const { dealt, read, landed } = aflame(wooded([start, ...around, beyond]));
-
-  for (const tile of [start, ...around]) expect(terrainOf(landed, tile)).toBe('plain');
-  expect(terrainOf(landed, beyond)).toBe('forest');
-  expect(landed.tiles.filter((tile) => !burning.has(tileKey(tile)))).toEqual(
-    dealt.tiles.filter((tile) => !burning.has(tileKey(tile))),
+  const far = { q: 3, r: 0 };
+  const lodged = tileKey(near[0]);
+  const tiles = madeOf(field(5), 'forest', [...near, far]).map((tile) =>
+    tileKey(tile) === lodged
+      ? { ...tile, feature: 'PH_Game', building: 'PH_Lodge', improvements: ['PH_Snare'] }
+      : tile,
   );
-  expect(read.tiles).toBe(4);
-});
-
-test('the forest tile a fire starts on is drawn once from the seeded generator, and what the card reads is what lands', () => {
-  const worked = { q: 1, r: 0 };
-  const walkedTo = { q: 0, r: 2 };
-  const starts = [worked, { q: -2, r: 0 }, walkedTo, { q: 0, r: -2 }];
-  const far = { q: FIRE.fromCity + 1, r: 0 };
-  const burnedFrom = new Set<string>();
+  const struckOn = new Set<string>();
 
   for (const seed of SEEDS) {
-    const city = cityOf(['urban', 'forest'], {
-      ...dueOn(2, 'PH_Wildfire'),
-      drawPile: fullDraw(),
-      tiles: madeOf(field(5), 'forest', [...starts, far]),
-      rng: seedRng(seed),
-      units: [worker(walkedTo)],
-    });
-    const { dealt, read, landed } = aflame(city);
-    const burned = starts.filter((tile) => terrainOf(landed, tile) === 'plain');
+    const { dealt, landed } = burnt(
+      cityOf(['urban'], {
+        ...dueOn(2, 'PH_Wildfire'),
+        drawPile: fullDraw(),
+        tiles,
+        rng: seedRng(seed),
+      }),
+    );
+    const [struck, ...others] = near.filter((at) => terrainOf(landed, at) === 'plain');
+    const key = tileKey(struck);
 
-    expect(burned).toHaveLength(1);
+    expect(others).toEqual([]);
     expect(terrainOf(landed, far)).toBe('forest');
     expect(landed.rng).toEqual(nextRng(dealt.rng).rng);
-    expect(read).toEqual({
-      tiles: 1,
-      population: dealt.population - landed.population,
-      units: tileKey(burned[0]) === tileKey(walkedTo) ? 1 : 0,
+    expect(tileAt(landed.tiles, struck)).toEqual({
+      ...tileAt(dealt.tiles, struck),
+      terrain: 'plain',
+      feature: undefined,
+      building: undefined,
+      improvements: [],
     });
-    burnedFrom.add(tileKey(burned[0]));
+    expect(landed.tiles.filter((tile) => tileKey(tile) !== key)).toEqual(
+      dealt.tiles.filter((tile) => tileKey(tile) !== key),
+    );
+    struckOn.add(key);
   }
-  expect(burnedFrom.size).toBeGreaterThan(1);
-});
+  expect(struckOn.size).toBeGreaterThan(1);
 
-test('a fire kills the population working a burned tile, the city’s own tile included, and no idle population', () => {
-  const beside = { q: 1, r: 0 };
-  const city = cityOf(['forest', 'forest', 'plain'], {
-    ...dueOn(2, 'PH_Wildfire'),
-    drawPile: fullDraw(),
-    tiles: madeOf(field(5), 'forest', [CITY, beside]),
-    population: 5,
-  });
-  const { dealt, read, landed } = aflame(city, CITY_IN_FOREST);
+  const worked = { q: 1, r: 0 };
+  const working = burnt(
+    cityOf(['urban', 'forest'], {
+      ...dueOn(2, 'PH_Wildfire'),
+      drawPile: fullDraw(),
+      tiles: madeOf(field(5), 'forest', [worked, far]),
+    }),
+  );
+  const bare = burnt(
+    cityOf(['urban'], { ...dueOn(2, 'PH_Wildfire'), drawPile: fullDraw(), tiles: field(5) }),
+  );
+  const wooded = burnt(
+    cityOf(['forest'], {
+      ...dueOn(2, 'PH_Wildfire'),
+      drawPile: fullDraw(),
+      tiles: madeOf(field(5), 'forest', [CITY, far]),
+    }),
+    CITY_IN_FOREST,
+  );
 
-  expect(read.population).toBe(2);
-  expect(landed.population).toBe(dealt.population - 2);
-  expect(landed.assigned).toEqual([{ q: 2, r: 0 }]);
-  expect(terrainOf(landed, CITY)).toBe('plain');
-  expect(buildingAt(landed, CITY)).toBe('PH_City');
-  expect(landed.city).toEqual(CITY);
-});
-
-test('a fire killing the city’s last population ends the chronicle in defeat on the take', () => {
-  const city = cityOf(['forest'], {
-    ...dueOn(2, 'PH_Wildfire'),
-    drawPile: fullDraw(),
-    tiles: madeOf(field(5), 'forest', [CITY]),
-  });
-  const dealt = outcome(apply(CITY_IN_FOREST, city, { type: 'end-turn' }));
-  const taken = outcome(apply(CITY_IN_FOREST, dealt, { type: 'take', at: 0 }));
-
-  expect(dealt.population).toBe(1);
-  expect(taken.population).toBe(0);
-  expect(taken.ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
-});
-
-test('a fire damages every unit standing on a burned tile, whatever its faction, and its card counts the player’s alone', () => {
-  const warriorAt = { q: 2, r: 0 };
-  const enemyAt = { q: 3, r: 0 };
-  const workerAt = { q: 3, r: -1 };
-  const clear = { q: 1, r: 0 };
-  const city = wooded([warriorAt, enemyAt, workerAt], {
-    units: [
-      standing('player', warriorAt, { health: FIRE.damage + 2 }),
-      standing('enemy', enemyAt, { health: FIRE.damage + 1 }, 0, 0),
-      standing('player', workerAt, { type: 'PH_Worker', worker: true, health: FIRE.damage }),
-      standing('player', clear, { health: FIRE.damage }),
-    ],
-  });
-  const { read, landed } = aflame(city);
-
-  expect(read.units).toBe(2);
-  expect(unitAt(landed.units, warriorAt)?.stats.health).toBe(2);
-  expect(unitAt(landed.units, enemyAt)?.stats.health).toBe(1);
-  expect(unitAt(landed.units, workerAt)).toBeUndefined();
-  expect(unitAt(landed.units, clear)?.stats.health).toBe(FIRE.damage);
-});
-
-test('a camp on a burned tile stays, and the warrior on it takes the damage', () => {
-  const camp = { q: 2, r: 0 };
-  const city = wooded([], {
-    tiles: camped(madeOf(field(5), 'forest', [camp]), [camp]),
-    units: [standing('enemy', camp, { health: FIRE.damage + 1 }, 0, 0)],
-  });
-  const { landed } = aflame(city);
-
-  expect(terrainOf(landed, camp)).toBe('plain');
-  expect(buildingAt(landed, camp)).toBe(CAMP.building);
-  expect(unitAt(landed.units, camp)?.stats.health).toBe(1);
-});
-
-test('a wildfire is dealt with a forest tile within its distance of the city to start on, and not without one', () => {
-  const end: Command = { type: 'end-turn' };
-  const near = wooded([{ q: FIRE.fromCity, r: 0 }]);
-  const far = wooded([{ q: FIRE.fromCity + 1, r: 0 }]);
-
-  expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([
-    { of: 'event', event: 'PH_Wildfire' },
-  ]);
-  expect(stagedBy(far, end)).toContain('rolled');
-  expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
+  expect(terrainOf(wooded.landed, CITY)).toBe('forest');
+  expect(terrainOf(wooded.landed, far)).toBe('plain');
+  expect(terrainOf(working.landed, worked)).toBe('plain');
+  expect(terrainOf(working.landed, far)).toBe('forest');
+  expect(working.landed.assigned).toEqual(working.dealt.assigned);
+  expect(working.landed.population).toBe(working.dealt.population);
+  expect(stagedBy(bare.dealt, { type: 'take', at: 0 })).toEqual(['answer', 'taken']);
+  expect(bare.landed.tiles).toEqual(bare.dealt.tiles);
+  expect(bare.landed.rng).toEqual(bare.dealt.rng);
 });
 
 /** A tile beside the city that a `ringed` city holds. */
@@ -1263,19 +1116,22 @@ function featured(tiles: Tile[], feature: FeatureId, coords: TileCoords[]): Tile
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, feature } : tile));
 }
 
+/** How far from the city every plain of a `herded` disc carries a feature already. */
+const HERD = 3;
+
 /**
- * A city on a disc of plain out to five, every plain within the herd's reach of the city carrying a
- * feature already but the named ones, dealt the fixture's herd at the end of its turn.
+ * A city on a disc of plain out to five, forest on the named tiles, every plain within `HERD` of the
+ * city carrying a feature already but the named ones, dealt the fixture's herd at the end of its turn.
  */
-function herded(open: TileCoords[], carrying: Carrying = {}): Chronicle {
-  const wanted = new Set([CITY, ...open].map(tileKey));
+function herded(open: TileCoords[], carrying: Carrying = {}, forest: TileCoords[] = []): Chronicle {
+  const wanted = new Set([CITY, ...open, ...forest].map(tileKey));
   const covered = field(5).filter(
     (tile) => distance(tile, CITY) <= HERD && !wanted.has(tileKey(tile)),
   );
   return cityOf(['urban'], {
     ...dueOn(2, 'PH_Herd'),
     drawPile: fullDraw(),
-    tiles: featured(field(5), 'PH_Fertile', covered),
+    tiles: featured(madeOf(field(5), 'forest', forest), 'PH_Fertile', covered),
     ...carrying,
   });
 }
@@ -1295,10 +1151,12 @@ function snapshotOf(chronicle: Chronicle, at: TileCoords): Snapshot | undefined 
   return chronicle.snapshots.find((kept) => tileKey(kept) === tileKey(at));
 }
 
-test('a feature is dealt onto one tile near the city carrying none, drawn once from the seeded generator, and no other tile changes', () => {
-  const open = [
+test('a feature is dealt onto one of the tiles nearest the city carrying none, of a terrain one of the features named lies on, drawn once from the seeded generator among those equally near, the feature the one its terrain carries, and no other tile changes', () => {
+  const plain = [
     { q: HERD, r: 0 },
     { q: -HERD, r: 0 },
+  ];
+  const forest = [
     { q: 0, r: HERD },
     { q: 0, r: -HERD },
   ];
@@ -1306,18 +1164,43 @@ test('a feature is dealt onto one tile near the city carrying none, drawn once f
   const dealtOn = new Set<string>();
 
   for (const seed of SEEDS) {
-    const { dealt, landed } = followed(herded(open, { rng: seedRng(seed) }));
-    const gained = open.filter((tile) => featureOf(landed, tile) !== undefined);
+    const { dealt, landed } = followed(herded(plain, { rng: seedRng(seed) }, forest));
+    const [gained, ...others] = [...plain, ...forest].filter(
+      (tile) => featureOf(landed, tile) !== undefined,
+    );
+    const wooded = forest.some((tile) => tileKey(tile) === tileKey(gained));
 
-    expect(gained).toHaveLength(1);
+    expect(others).toEqual([]);
+    expect(featureOf(landed, gained)).toBe(wooded ? 'PH_Game' : 'PH_Fertile');
     expect(featureOf(landed, beyond)).toBeUndefined();
     expect(landed.rng).toEqual(nextRng(dealt.rng).rng);
-    expect(landed.tiles.filter((tile) => tileKey(tile) !== tileKey(gained[0]))).toEqual(
-      dealt.tiles.filter((tile) => tileKey(tile) !== tileKey(gained[0])),
+    expect(landed.tiles.filter((tile) => tileKey(tile) !== tileKey(gained))).toEqual(
+      dealt.tiles.filter((tile) => tileKey(tile) !== tileKey(gained)),
     );
-    dealtOn.add(tileKey(gained[0]));
+    dealtOn.add(tileKey(gained));
   }
-  expect(dealtOn.size).toBeGreaterThan(1);
+  expect(dealtOn.size).toBe(plain.length + forest.length);
+});
+
+test('a feature dealt where no tile of a terrain one of the features named lies on carries none is a runtime error, and draws nothing', () => {
+  const covered = field(5).filter((tile) => tileKey(tile) !== tileKey(CITY));
+  const dealt = outcome(
+    apply(
+      CATALOGUE,
+      cityOf(['urban'], {
+        ...dueOn(2, 'PH_Herd'),
+        drawPile: fullDraw(),
+        tiles: featured(field(5), 'PH_Fertile', covered),
+      }),
+      { type: 'end-turn' },
+    ),
+  );
+  const landed = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
+
+  expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Herd' }]);
+  expect(stagedBy(dealt, { type: 'take', at: 0 })).toEqual(['answer', 'taken', 'runtime-error']);
+  expect(landed.tiles).toEqual(dealt.tiles);
+  expect(landed.rng).toEqual(dealt.rng);
 });
 
 test('a tile whose feature a card removed is dealt that feature again by an answer, and stands as it stood before the removal', () => {
@@ -1380,36 +1263,26 @@ test('a tile an answer charted stays charted as it was then, and in fog, through
 });
 
 test('a landing resolves as one stage per change it makes, in the order it makes them, each carrying the tile it landed on', () => {
-  const burning = { q: 1, r: 0 };
-  const city = cityOf(['urban', 'forest'], {
-    ...dueOn(2, 'PH_Wildfire'),
-    drawPile: fullDraw(),
-    tiles: madeOf(field(5), 'forest', [burning]),
-    units: [standing('player', burning, { health: FIRE.damage + 1 })],
-  });
+  const city = cityOf(['urban'], { ...NO_GROWTH, tiles: field(6), ...dueOn(2, 'PH_Rivals') });
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
-  const [answer, , unassigned, lost, retiled, damaged, ...rest] = stagesWalked(
+  const [answer, , built, ...entered] = stagesWalked(
     apply(CATALOGUE, dealt, { type: 'take', at: 0 }),
   );
-  const healthOn = (stage: Stage): number | undefined =>
-    unitAt(stage.chronicle.units, burning)?.stats.health;
+  const [camp] = campsOf(built.chronicle);
 
-  expect([answer, unassigned, lost, retiled, damaged].map((stage) => stage.name)).toEqual([
+  expect([answer, built, ...entered].map((stage) => stage.name)).toEqual([
     'answer',
-    'assigned',
-    'population',
     'retiled',
-    'damaged',
+    ...Array<string>(ENCAMPED).fill('enter'),
   ]);
-  expect(rest).toEqual([]);
-  expect(unassigned).toMatchObject({ tile: burning });
-  expect(retiled).toMatchObject({ tile: burning });
-  expect(damaged).toMatchObject({ tile: burning });
-  expect(lost.chronicle.population).toBe(dealt.population - 1);
-  expect(terrainOf(lost.chronicle, burning)).toBe('forest');
-  expect(terrainOf(retiled.chronicle, burning)).toBe('plain');
-  expect(healthOn(retiled)).toBe(FIRE.damage + 1);
-  expect(healthOn(damaged)).toBe(1);
+  expect(built).toMatchObject({ tile: camp });
+  expect(campsOf(dealt)).toEqual([]);
+  expect(enemiesOf(built.chronicle)).toEqual([]);
+  for (const [at, entering] of entered.entries()) {
+    const enemies = enemiesOf(entering.chronicle);
+    expect(enemies).toHaveLength(at + 1);
+    expect(entering).toMatchObject({ tile: enemies[at].tile });
+  }
 });
 
 test('a tile a landing charts is charted as the stage charting it stands', () => {
@@ -1430,16 +1303,6 @@ test('a tile a landing charts is charted as the stage charting it stands', () =>
     embarked: false,
   });
   expect(inSight(CATALOGUE, charting.chronicle).has(tileKey(at))).toBe(false);
-});
-
-test('an event needing a tile near the city to deal a feature onto is dealt with one, and not without one', () => {
-  const end: Command = { type: 'end-turn' };
-  const near = herded([{ q: HERD, r: 0 }]);
-  const far = herded([{ q: HERD + 1, r: 0 }]);
-
-  expect(outcome(apply(CATALOGUE, near, end)).deals).toEqual([{ of: 'event', event: 'PH_Herd' }]);
-  expect(stagedBy(far, end)).toContain('rolled');
-  expect(outcome(apply(CATALOGUE, far, end)).deals).toEqual([]);
 });
 
 /** The turn the capstone lands on in every fixture below. */

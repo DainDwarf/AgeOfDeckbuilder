@@ -22,17 +22,13 @@ import { MOVE_POINT } from '../rules/map';
 import { buildingKind } from '../rules/map-kinds';
 import {
   addedToDrawPileTop,
-  burned,
   campPlaceable,
-  type Fire,
-  featureDealable,
-  featureDealt,
-  fireRead,
-  fireStartable,
+  featureDealtNearest,
+  guardedCampPlaced,
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { type CampPlace, campedOrRaided, guarding, RAIDER } from './scripts';
+import { type CampPlace, guarding, RAIDER } from './scripts';
 
 /** How many enemies a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -43,9 +39,10 @@ function hungerFood(turn: number): number {
   return 2 + Math.floor(turn / 10);
 }
 
-const WILDFIRE: Fire = { burns: 'forest', leaves: 'plain', fromCity: 4, around: 1, damage: 2 };
-
-const HERD = { feature: 'deer', fromCity: 4 } as const;
+/** The food the fields burning lose, and the production the firebreak costs, on this turn. */
+function wildfireTakes(turn: number): number {
+  return 2 * (1 + Math.floor(turn / 5));
+}
 
 const RIVAL_CAMP: CampPlace = { fromCity: [3, 4], apart: 3 };
 
@@ -203,8 +200,6 @@ const TABLES: Tables = {
       },
     },
     'rival-band': {
-      needs: (catalogue, chronicle) =>
-        campPlaceable(catalogue, chronicle, RIVAL_CAMP.fromCity, RIVAL_CAMP.apart),
       answers: {
         fight: {
           cost: {},
@@ -216,30 +211,39 @@ const TABLES: Tables = {
         },
         'make-room': {
           cost: {},
+          blocked: (catalogue, chronicle) =>
+            campPlaceable(catalogue, chronicle, RIVAL_CAMP.fromCity, RIVAL_CAMP.apart)
+              ? []
+              : ['no-camp-tile'],
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
           lands: (catalogue, chronicle) =>
-            campedOrRaided(catalogue, chronicle, 'warrior', raiders(chronicle.turn), RIVAL_CAMP),
+            guardedCampPlaced(
+              catalogue,
+              chronicle,
+              'warrior',
+              raiders(chronicle.turn),
+              RIVAL_CAMP.fromCity,
+              RIVAL_CAMP.apart,
+            ),
         },
       },
     },
     wildfire: {
-      needs: (_catalogue, chronicle) => fireStartable(chronicle, WILDFIRE),
       answers: {
-        'let-it-burn': {
+        'let-the-fields-burn': {
           cost: {},
-          reads: (_catalogue, chronicle) => fireRead(chronicle, WILDFIRE),
-          lands: (catalogue, chronicle) => burned(catalogue, chronicle, WILDFIRE),
+          reads: (_catalogue, chronicle) => ({ food: wildfireTakes(chronicle.turn) }),
+          lands: (_catalogue, chronicle) =>
+            shocked(chronicle, 'food', wildfireTakes(chronicle.turn)),
         },
         firebreak: {
-          cost: { production: 3 },
-          reads: () => ({ production: 3 }),
+          cost: (_catalogue, chronicle) => ({ production: wildfireTakes(chronicle.turn) }),
+          reads: (_catalogue, chronicle) => ({ production: wildfireTakes(chronicle.turn) }),
           lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },
     },
     herd: {
-      needs: (catalogue, chronicle) =>
-        featureDealable(catalogue, chronicle, HERD.feature, HERD.fromCity),
       answers: {
         'hunt-it': {
           cost: {},
@@ -250,7 +254,7 @@ const TABLES: Tables = {
           cost: {},
           reads: () => ({}),
           lands: (catalogue, chronicle) => {
-            const dealt = featureDealt(catalogue, chronicle, HERD.feature, HERD.fromCity);
+            const dealt = featureDealtNearest(catalogue, chronicle, ['deer', 'cattle']);
             const { at } = dealt;
             return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
           },

@@ -1,4 +1,4 @@
-import { built, featurePlaced, featureRemoved, retiled, terraformed } from './cards';
+import { built, featurePlaced, featureRemoved, reaches, retiled, terraformed } from './cards';
 import {
   type Aim,
   type Answer,
@@ -11,7 +11,8 @@ import {
   type Span,
   scheduleOf,
 } from './catalogue';
-import { costPaid, populationKilled } from './city';
+import { costPaid } from './city';
+import { enteredAround } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -76,37 +77,14 @@ function rolledFrom(
   return { ...timeline, rng: spaced.rng, next: landing + spaced.turns };
 }
 
-/**
- * The event drawn on the due turn, from the timeline's own generator, seeded and weighted among the
- * entries whose need the chronicle meets; no event where none does.
- */
-function eventDrawn(
-  catalogue: Catalogue,
-  schedule: Schedule,
-  chronicle: Chronicle,
-): { event?: string; rng: Rng } {
-  const { timeline } = chronicle;
-  const dealable = Object.entries(schedule.entries).filter(
-    ([entry]) => eventOf(catalogue, entry).needs?.(catalogue, chronicle) ?? true,
-  );
-  // The step is taken even where no need is met, or the turns a seed deals on would follow the play.
-  if (dealable.length === 0) return { rng: nextRng(timeline.rng).rng };
-  const { picked, rng } = pickWeighted(timeline.rng, dealable);
-  return { event: picked, rng };
-}
-
 /** Whether the turn has ticked past the last of a span of turns begun on the capstone's. */
 export function spanEnded(chronicle: Chronicle, turns: number): boolean {
   return chronicle.turn >= chronicle.timeline.capstone.turn + turns;
 }
 
 /**
- * The events phase, which draws from the chronicle's generator only through the capstone's landing.
- * On the capstone's turn, one `capstone-landing` group: nothing is dealt whatever was due, the next
- * due turn is rolled from that turn, and the capstone lands on what that leaves. On a due turn, one
- * `deal` group: the next due turn is rolled from that turn, and the event drawn is dealt behind the
- * deals already standing, nothing landing until one of its answers is taken — or, where no event is
- * drawn, a `runtime-error`, and play goes on to the next due turn. Any other turn stages nothing.
+ * The events phase, which draws from the chronicle's generator only through the capstone's landing:
+ * a due turn's event is drawn from the timeline's own, and nothing lands until an answer is taken.
  */
 export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   const { timeline, turn } = chronicle;
@@ -123,16 +101,14 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
   }
 
   if (turn !== timeline.next) return unchanged(chronicle);
-  const { event, rng } = eventDrawn(catalogue, schedule, chronicle);
+  const { picked: event, rng } = pickWeighted(timeline.rng, Object.entries(schedule.entries));
   const rolled = landedAs(
     change('rolled', { ...chronicle, timeline: rolledFrom(schedule, { ...timeline, rng }, turn) }),
   );
   return grouped(
     { name: 'deal' },
     followed(rolled, (left) =>
-      event === undefined
-        ? runtimeError(left)
-        : landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] })),
+      landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] })),
     ),
   );
 }
@@ -278,79 +254,6 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
  */
 export function tileCharted(chronicle: Chronicle, at: TileCoords): Landed {
   return landedAs(changeOn('charted', at, chronicle));
-}
-
-/**
- * A fire: the terrain it burns and the terrain it leaves, how far from the city's tile it may start
- * and how far from its start it burns, and the damage a unit on a burned tile takes.
- */
-export type Fire = {
-  readonly burns: string;
-  readonly leaves: string;
-  readonly fromCity: number;
-  readonly around: number;
-  readonly damage: number;
-};
-
-function fireStarts(chronicle: Chronicle, fire: Fire): TileCoords[] {
-  const { city } = chronicle;
-  if (city === undefined) return [];
-  return chronicle.tiles.filter(
-    (tile) => tile.terrain === fire.burns && distance(tile, city) <= fire.fromCity,
-  );
-}
-
-export function fireStartable(chronicle: Chronicle, fire: Fire): boolean {
-  return fireStarts(chronicle, fire).length > 0;
-}
-
-/**
- * The tiles a fire burns, and the chronicle's generator after the one step drawing its start
- * uniformly among the tiles it may start on: every tile of the terrain it burns within its distance
- * of the start, the start included. No tile to start on burns nothing and draws nothing.
- */
-function fireDrawn(
-  chronicle: Chronicle,
-  fire: Fire,
-): { readonly burning: readonly TileCoords[]; readonly rng: Rng } {
-  const candidates = fireStarts(chronicle, fire);
-  if (candidates.length === 0) return { burning: [], rng: chronicle.rng };
-  const { picked: start, rng } = pickUniform(chronicle.rng, candidates);
-  const burning = chronicle.tiles
-    .filter((tile) => tile.terrain === fire.burns && distance(tile, start) <= fire.around)
-    .map(({ q, r }) => ({ q, r }));
-  return { burning, rng };
-}
-
-/**
- * What the fire costs, read before it lands: the tiles burned, the population working them, and the
- * player's units standing on them.
- */
-export function fireRead(chronicle: Chronicle, fire: Fire): Record<string, number> {
-  const burning = new Set(fireDrawn(chronicle, fire).burning.map(tileKey));
-  return {
-    tiles: burning.size,
-    population: chronicle.assigned.filter((coord) => burning.has(tileKey(coord))).length,
-    units: chronicle.units.filter(
-      (unit) => unit.faction === 'player' && burning.has(tileKey(unit.tile)),
-    ).length,
-  };
-}
-
-/**
- * The fire landed: on every tile it burns, the population working it killed, the tile terraformed
- * into the terrain it leaves, and the unit standing on it damaged, whatever its faction. A fire that
- * would change nothing draws nothing and is a `runtime-error`.
- */
-export function burned(catalogue: Catalogue, chronicle: Chronicle, fire: Fire): Landed {
-  const { burning, rng } = fireDrawn(chronicle, fire);
-  let landing = unchanged({ ...chronicle, rng });
-  for (const tile of burning) {
-    landing = followed(landing, (left) => populationKilled(left, tile));
-    landing = followed(landing, (left) => terraformed(catalogue, left, tile, fire.leaves));
-    landing = followed(landing, (left) => unitDamaged(left, tile, fire.damage));
-  }
-  return landing.stages.length === 0 ? runtimeError(chronicle) : landing;
 }
 
 /**
@@ -536,50 +439,72 @@ export function terraformedInside(
 }
 
 /**
- * The tiles near the city a feature may be dealt onto: every tile of the terrain it lies on within
- * that distance of the city's tile carrying no feature, whatever else stands on them. None at all
- * while the city stands nowhere.
+ * Of the candidates, one of those nearest to the player's city, drawn in one step of the chronicle's
+ * generator, and the generator it leaves; nothing, and no step, for none or a city standing nowhere.
  */
-function featureTiles(
-  catalogue: Catalogue,
+function nearestDrawn<Candidate extends TileCoords>(
   chronicle: Chronicle,
-  feature: FeatureId,
-  fromCity: number,
-): Tile[] {
+  candidates: readonly Candidate[],
+): { readonly picked: Candidate; readonly rng: Rng } | undefined {
   const { city } = chronicle;
-  if (city === undefined) return [];
-  const { terrain } = featureKind(catalogue, feature);
-  return chronicle.tiles.filter(
-    (tile) =>
-      tile.terrain === terrain && tile.feature === undefined && distance(tile, city) <= fromCity,
+  if (city === undefined || candidates.length === 0) return undefined;
+  const nearest = Math.min(...candidates.map((candidate) => distance(candidate, city)));
+  return pickUniform(
+    chronicle.rng,
+    candidates.filter((candidate) => distance(candidate, city) === nearest),
   );
 }
 
-export function featureDealable(
+/**
+ * One of the features dealt onto a tile carrying none, of the terrain it lies on, drawn as
+ * `nearestDrawn` draws it, and the tile it landed on; a `runtime-error` where no such tile stands.
+ * Two features lying on one terrain are refused.
+ */
+export function featureDealtNearest(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  feature: FeatureId,
-  fromCity: number,
-): boolean {
-  return featureTiles(catalogue, chronicle, feature, fromCity).length > 0;
+  features: readonly FeatureId[],
+): Landed & { readonly at?: TileCoords } {
+  const lyingOn = new Map<Terrain, FeatureId>();
+  for (const feature of features) {
+    const { terrain } = featureKind(catalogue, feature);
+    const other = lyingOn.get(terrain);
+    if (other !== undefined)
+      refuse(catalogue, `the features ${other} and ${feature} lie on ${terrain}`);
+    lyingOn.set(terrain, feature);
+  }
+  const bare = chronicle.tiles.flatMap(({ q, r, terrain, feature }) => {
+    const dealt = feature === undefined ? lyingOn.get(terrain) : undefined;
+    return dealt === undefined ? [] : [{ q, r, feature: dealt }];
+  });
+  const drawn = nearestDrawn(chronicle, bare);
+  if (drawn === undefined) return runtimeError(chronicle);
+  const { q, r, feature } = drawn.picked;
+  const at = { q, r };
+  return { ...featurePlaced(catalogue, { ...chronicle, rng: drawn.rng }, at, feature), at };
 }
 
 /**
- * The feature dealt onto one tile near the city, drawn uniformly among the tiles it may be dealt
- * onto in one step of the chronicle's generator, and the tile it landed on. Every other tile is left
- * the object it was. No tile to deal onto deals nothing and draws nothing.
+ * One tile of the terrains named that a terraform into `to` reaches, terraformed into it, drawn as
+ * `nearestDrawn` draws it, and nothing where none stands. A terrain the catalogue does not hold is
+ * refused.
  */
-export function featureDealt(
+export function terraformedNearest(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  feature: FeatureId,
-  fromCity: number,
-): Landed & { readonly at?: TileCoords } {
-  const candidates = featureTiles(catalogue, chronicle, feature, fromCity);
-  if (candidates.length === 0) return unchanged(chronicle);
-  const { picked, rng } = pickUniform(chronicle.rng, candidates);
-  const at = { q: picked.q, r: picked.r };
-  return { ...featurePlaced(catalogue, { ...chronicle, rng }, at, feature), at };
+  terrains: readonly Terrain[],
+  to: Terrain,
+): Landed {
+  for (const terrain of [...terrains, to]) terrainKind(catalogue, terrain);
+  const drawn = nearestDrawn(
+    chronicle,
+    chronicle.tiles.filter(
+      (tile) => terrains.includes(tile.terrain) && reaches(catalogue, chronicle, tile, to),
+    ),
+  );
+  if (drawn === undefined) return unchanged(chronicle);
+  const at = { q: drawn.picked.q, r: drawn.picked.r };
+  return terraformed(catalogue, { ...chronicle, rng: drawn.rng }, at, to);
 }
 
 /**
@@ -644,11 +569,9 @@ export function campPlaceable(
 }
 
 /**
- * Camps placed around the city, drawn one at a time, each uniformly from the tiles a camp may be
- * placed on, `apart` from every camp standing — the generator's and the ones already drawn here
- * alike; the candidates are filtered again after each. When they run out it places what it can, and
- * where it can place none it draws nothing and is a `runtime-error`. Each camp placed is its own
- * stage, carrying the draw that placed it. It enters no unit.
+ * Camps placed around the city one at a time, each drawn among the tiles a camp may be placed on
+ * `apart` from every camp standing and every one drawn before it, as many as stand, and a
+ * `runtime-error` drawing nothing where none does. Each is its own stage; it enters no unit.
  */
 export function campsPlaced(
   catalogue: Catalogue,
@@ -684,6 +607,29 @@ export function campsPlaced(
     );
   }
   return { ...landing, placed: placings.map(({ tile }) => tile) };
+}
+
+/**
+ * One camp placed as `campsPlaced` places it, and `count` enemies of the kind entered on and around
+ * it as the age's camp's guards; where it places none, its `runtime-error` alone.
+ */
+export function guardedCampPlaced(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  kind: string,
+  count: number,
+  fromCity: Span,
+  apart: number,
+): Landed {
+  const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
+  const [camp] = placing.placed;
+  if (camp === undefined) return placing;
+  const { guard } = ageOf(catalogue, chronicle.age).camp.scripts;
+  // The first enemy lands on the camp, where its kind stands on it, only because `campsPlaced` asks no
+  // unit to stand there.
+  return followed(placing, (left) =>
+    enteredAround(catalogue, left, camp, count, [{ kind, script: guard, weight: 1 }]),
+  );
 }
 
 /** One roll of the generator inside a span of turns, both ends included. */

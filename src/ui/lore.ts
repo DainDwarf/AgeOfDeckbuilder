@@ -6,6 +6,8 @@ const LORE = {
     'Strangers have come to your door. A new tribe, they say, and they intend to make their camp nearby, whether you like it or not.',
   'event.wildfire':
     'There is smoke over the forest, and the wind is up. Somewhere out there, a wildfire is running.',
+  'event.stone-wildfire':
+    'There is smoke over the forest, and the wind is up. Somewhere out there, a wildfire is running.',
   'event.departure':
     'Some of the tribe have grown unhappy here. They talk of leaving, and they mean it.',
   'event.flood':

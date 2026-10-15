@@ -533,7 +533,12 @@ export function terraformable(
  * Whether a terraform into `to` reaches the tile: every tile but the city's and the neutral's city's,
  * and each of those into a terrain its building stands on alone.
  */
-function reaches(catalogue: Catalogue, chronicle: Chronicle, at: TileCoords, to: string): boolean {
+export function reaches(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  at: TileCoords,
+  to: string,
+): boolean {
   const standsOnTo = (building: string): boolean =>
     buildingKind(catalogue, building).terrains.includes(to);
   switch (cityOn(chronicle, at)) {
