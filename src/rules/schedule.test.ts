@@ -2,7 +2,7 @@ import { expect, test } from 'vitest';
 import { chartedTile } from './cards';
 import { ageOf, type Catalogue, catalogued, eventOf } from './catalogue';
 import { apply, type Command, launched, outcome, refusalOf } from './chronicle';
-import { growthThreshold } from './city';
+import { bordered, growthThreshold } from './city';
 import {
   AGE,
   AMBUSH,
@@ -24,6 +24,7 @@ import {
   culture,
   DELUGE,
   dealing,
+  deepBut,
   ENCAMPED,
   EXPLOSION,
   endedTurn,
@@ -69,6 +70,7 @@ import { chartedAt, inSight } from './sight';
 import { type Stage, walked as stagesWalked, unchanged } from './stages';
 import {
   type Chronicle,
+  holderOf,
   holds,
   idle,
   NO_REFUSAL,
@@ -1200,6 +1202,36 @@ test('a draw near the city lands on no tile the neutral holds, however near, and
     expect(featureOf(landed, NEUTRAL_TILE)).toBeUndefined();
     expect(featureOf(landed, far)).toBe('PH_Fertile');
   }
+});
+
+test('a camp is never placed on a tile the neutral holds, however near, but on a tile nobody holds further out, and an answer placing one is blocked where only the neutral’s tiles would take it', () => {
+  const corridor = Array.from({ length: 6 }, (_, q) => ({ q, r: 0 }));
+  const [far] = corridor.slice(-1);
+  const opened = besideTheNeutral(
+    dealing({ turn: 1, event: 'PH_Rivals' }),
+    deepBut(plains(5), corridor),
+  );
+  const bordering = (tiles: readonly TileCoords[]): Chronicle =>
+    tiles.reduce((chronicle, at) => bordered(chronicle, 'neutral', at).chronicle, opened);
+  const near = bordering([
+    { q: 3, r: 0 },
+    { q: 4, r: 0 },
+  ]);
+  const walled = bordering([{ q: 3, r: 0 }, { q: 4, r: 0 }, far]);
+
+  expect(opened.deals).toEqual([{ of: 'event', event: 'PH_Rivals' }]);
+  for (const seed of SEEDS) {
+    const landed = outcome(
+      apply(CATALOGUE, { ...near, rng: seedRng(seed) }, { type: 'take', at: 0 }),
+    );
+
+    expect(campsOf(landed)).toEqual([far]);
+    expect(holderOf(landed, far)).toBeUndefined();
+  }
+  expect(answerRefusal(CATALOGUE, walled, 'PH_Rivals', 'PH_Encampment')).toEqual({
+    unaffordable: [],
+    blocked: ['no-camp-tile'],
+  });
 });
 
 test('a feature dealt where no tile of a terrain one of the features named lies on carries none is a runtime error, and draws nothing', () => {
