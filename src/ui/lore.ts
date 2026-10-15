@@ -48,6 +48,10 @@ const LORE = {
     'The tribe has wandered long enough. When the time comes, build the first shelter, and the Nomadic Age is won.',
   'capstone-landing.first-shelter':
     'The time has come. The first shelter is in your hands: build it, and the Nomadic Age is won.',
+  'capstone-opening.long-winter':
+    'The elders say a winter is coming such as none remembers. When it comes, keep the fires burning until the thaw, and the Stone Age is won.',
+  'capstone-landing.long-winter':
+    'The snow has come and the fields lie dead under it. Keep the fires burning until the thaw, and the Stone Age is won.',
 } as const;
 
 /** The capstone window's two raisings, each reading a lore of its own. */

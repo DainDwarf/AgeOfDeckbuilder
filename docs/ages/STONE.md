@@ -92,6 +92,8 @@ The temperate region's schedule is its own: its deals come closer together than 
 
 The region names three trials and the opening draws one: a long winter, a monument raised, a siege endured. Each is hard to impossible on the deck the age opens with and beatable once its tree is climbed, on a chronicle longer than the Nomadic one.
 
+**The long winter.** When it lands it adds **Cold night** to the discard pile, several copies: a hazard costing production, and while it stays in the hand it kills one population at the end of the turn. From the landing on, the terrain's food and the feature's are nothing on every tile of the map, the neutral's land as the player's; what a worker placed or built keeps giving, and a card's own gain is a card's. The chronicle ends in victory the moment no Cold night is left in any pile, in the middle of the play that pays the last. So the winter is paid in production or in people, the food for the next population comes from what the city built, and a city that never built shrinks: the trial is whether the economy came home.
+
 ## The achievement 🔧
 
 The age's victory is its achievement beside the technologies'; its technology unlocks the Bronze Age.

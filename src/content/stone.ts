@@ -25,6 +25,7 @@ import {
 import { arrived, bordered, populationTaken, warDeclared } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
+import { withNone } from '../rules/resources';
 import {
   campPlaceable,
   featureRemovalNear,
@@ -37,7 +38,7 @@ import {
   terraformedNear,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
-import { type Chronicle, cityRows, costsOf } from '../rules/state';
+import { type Chronicle, capstoneLanded, cardsInPiles, cityRows, costsOf } from '../rules/state';
 import { relationsOf } from '../rules/units';
 import { NOMADIC } from './nomadic';
 import {
@@ -85,7 +86,7 @@ const RIVERS: RiverFlow = {
 const TEMPERATE_SCHEDULE: Schedule = {
   spacing: [5, 8],
   window: [26, 34],
-  capstones: ['first-shelter'],
+  capstones: ['long-winter'],
   entries: {
     'rival-band': 1,
     'stone-wildfire': 1,
@@ -630,6 +631,11 @@ export const STONE: Slice = {
         strikes: (catalogue, chronicle) =>
           terraformedNear(catalogue, chronicle, ['forest'], 'plain', 1),
       },
+      'cold-night': {
+        kind: 'hazard',
+        cost: { production: 3 },
+        strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
+      },
       tribute: {
         kind: 'challenge',
         cost: {},
@@ -817,6 +823,26 @@ export const STONE: Slice = {
             lands: (_catalogue, chronicle) => unchanged(chronicle),
           },
         },
+      },
+    },
+    capstones: {
+      'long-winter': {
+        lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'cold-night', 5),
+        reads: () => ({ count: 5 }),
+        yieldRule: (part) => {
+          switch (part.kind) {
+            case 'terrain':
+            case 'feature':
+              return withNone(part.yields, 'food');
+            case 'improvement':
+            case 'building':
+            case 'beside':
+              return part.yields;
+          }
+        },
+        passes: (_catalogue, chronicle) =>
+          capstoneLanded(chronicle) &&
+          !cardsInPiles(chronicle).some(({ id }) => id === 'cold-night'),
       },
     },
     technologies: {

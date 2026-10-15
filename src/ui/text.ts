@@ -217,6 +217,8 @@ const TEXT = {
   'card.tribute': 'Tribute',
   'rules.tribute':
     'Takes {food}[food], {production}[production] and {money}[money], more each time',
+  'card.cold-night': 'Cold night',
+  'rules.cold-night': 'Kills one population',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
@@ -311,6 +313,9 @@ const TEXT = {
     'Near your city, one [terrain:forest] gains [feature:deer] or one [terrain:plain] gains [feature:cattle]',
   'capstone-name.first-shelter': 'The first shelter',
   'capstone-rules.first-shelter': 'Add [card:shelter] to the top of the draw pile',
+  'capstone-name.long-winter': 'The long winter',
+  'capstone-rules.long-winter':
+    'Add {count} [card:cold-night] to the discard pile. Terrain and features give no food',
   'capstone.title': 'Capstone',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
@@ -406,6 +411,7 @@ const TEXT = {
   'defeat.removal': 'Your city was removed on turn {turn}.',
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
+  'victory.long-winter': 'The fires held and the thaw came. Stone Age is over.',
   'ending.end-chronicle': 'End chronicle',
   'navbar.title': 'Age of\nDeckbuilder',
   'navbar.campaign': 'Campaign',
