@@ -99,9 +99,9 @@ The region names three trials and the opening draws one: a long winter, a monume
 
 **The siege.** When it lands a raid enters through the raid's door, warriors and archers led by a **leader**, every one of them going for the player's city whatever city lies nearer and preparing the capture on its tile alone, attacking what they can on the way. The chronicle ends in victory the moment the leader is killed, whoever kills it, in the middle of the blow; the capstone names no second script, no span and nothing that fails it: the band at the city is the clock, and the schedule keeps dealing. So the siege is broken by reaching the leader through the band around it, which strikes the harder for standing beside it: the trial is whether the city has units enough, and the military to pay for them.
 
-## The achievement 🔧
+## The achievement ✅
 
-The age's victory is its achievement beside the technologies'; its technology unlocks the Bronze Age.
+The age's victory is its achievement beside the technologies'. Its technology is **Metalworking**, which needs Settlement and unlocks the Bronze Age, and it pays influence.
 
 ## The camps 🔧
 

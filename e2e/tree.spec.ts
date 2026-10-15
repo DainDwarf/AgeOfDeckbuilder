@@ -1,7 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, ageUnlockedBy, firstAge } from '../src/rules/catalogue';
+import {
+  achievementOf,
+  ageOf,
+  ageUnlockedBy,
+  firstAge,
+  victoryTechnologyOf,
+} from '../src/rules/catalogue';
 import { DEFAULTS } from '../src/ui/bindings';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import {
@@ -28,6 +34,13 @@ const PLATE = `plate-${TECHNOLOGY}`;
 
 /** The age the first age's technology unlocks. */
 const NEXT = ageUnlockedBy(CATALOGUE, TECHNOLOGY);
+
+/** The last age of the catalogue, its victory, the technology the victory earns, and its plate. */
+const AGES = Object.keys(CATALOGUE.ages);
+const LAST = AGES[AGES.length - 1];
+const VICTORY = ageOf(CATALOGUE, LAST).victory;
+const VICTORY_TECHNOLOGY = victoryTechnologyOf(CATALOGUE, LAST);
+const VICTORY_PLATE = `plate-${VICTORY_TECHNOLOGY}`;
 
 /**
  * Where the tree's two ends stand, in design units: its left end, and its right end, where the
@@ -128,6 +141,34 @@ test('on a campaign a won chronicle paid into, its technology stands learned, th
   expect(await page.evaluate((well) => window.named?.(well) !== undefined, `${PLATE}-well`)).toBe(
     true,
   );
+
+  expect(problems).toEqual([]);
+});
+
+test('on a campaign that learned the first age’s technology, the last age’s victory technology stands available on the border at its ground’s right end, past every other plate of its age, reading its name, its goal and its reward', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = wonCampaign();
+  expect(campaign.technologies).toContain(TECHNOLOGY);
+
+  await openCampaign(page, campaign);
+
+  expect(await plateReads(page, VICTORY_PLATE)).toEqual({
+    state: 'available',
+    name: technologyName(VICTORY_TECHNOLOGY),
+    goal: achievementGoal(VICTORY, achievementOf(CATALOGUE, LAST, VICTORY).need),
+    reward: rewardOf(VICTORY_TECHNOLOGY),
+  });
+  const others = Object.values(ageOf(CATALOGUE, LAST).achievements)
+    .map(({ technology }) => `plate-${technology}`)
+    .filter((plate) => plate !== VICTORY_PLATE);
+  const seen = await readings(page, [`ground-${LAST}`, VICTORY_PLATE, ...others]);
+  const border = seen(`ground-${LAST}`).across.right;
+  const plate = seen(VICTORY_PLATE).across;
+  expect(plate.left).toBeLessThan(border);
+  expect(plate.right).toBeGreaterThan(border);
+  for (const other of others) expect(seen(other).across.right).toBeLessThan(plate.left);
 
   expect(problems).toEqual([]);
 });

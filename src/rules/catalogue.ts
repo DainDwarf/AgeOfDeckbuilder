@@ -525,7 +525,7 @@ export type Age = {
   readonly sites: Readonly<Record<string, Site>>;
   readonly regions: Readonly<Record<string, Region>>;
   readonly achievements: Readonly<Record<string, Achievement>>;
-  readonly victory?: string;
+  readonly victory: string;
 };
 
 /**
@@ -1030,13 +1030,13 @@ function treeHeld(content: Catalogue): void {
   /** Where the age of the achievement that earns a technology stands in the order of history. */
   const earnedIn = new Map<string, number>();
   /** The technology each age's victory earns, in the order of history. */
-  const victories: (string | undefined)[] = [];
+  const victories: string[] = [];
   const ages = Object.entries(content.ages);
   for (const [at, [age, { achievements, victory }]] of ages.entries()) {
-    if (victory !== undefined && !Object.hasOwn(achievements, victory)) {
+    if (!Object.hasOwn(achievements, victory)) {
       refuse(content, `the age ${age} names the victory ${victory}, which it does not own`);
     }
-    victories.push(victory === undefined ? undefined : achievements[victory].technology);
+    victories.push(achievements[victory].technology);
     for (const [id, { need, influence, technology }] of Object.entries(achievements)) {
       const owner = ownedBy.get(id);
       if (owner !== undefined) refuse(content, `the ages ${owner} and ${age} both own ${id}`);
@@ -1410,13 +1410,9 @@ export function earningOf(
   refuse(catalogue, `the technology ${technology} is earned by no achievement`);
 }
 
-/**
- * The technology an age's victory earns, and none for an age naming no victory; an age the
- * catalogue does not hold is refused.
- */
-export function victoryTechnologyOf(catalogue: Catalogue, age: string): string | undefined {
-  const { victory } = ageOf(catalogue, age);
-  return victory === undefined ? undefined : achievementOf(catalogue, age, victory).technology;
+/** The technology an age's victory earns; an age the catalogue does not hold is refused. */
+export function victoryTechnologyOf(catalogue: Catalogue, age: string): string {
+  return achievementOf(catalogue, age, ageOf(catalogue, age).victory).technology;
 }
 
 /**

@@ -25,6 +25,7 @@ import type {
 } from '../rules/catalogue';
 import {
   drawPileEmptied,
+  endedInVictory,
   gainedFrom,
   playsOn,
   terrainsPlayedOn,
@@ -491,7 +492,14 @@ export const STONE: Slice = {
         technology: 'fishing',
         influence: 1,
       },
+      metalworking: {
+        ...endedInVictory(),
+        need: 1,
+        technology: 'metalworking',
+        influence: 5,
+      },
     },
+    victory: 'metalworking',
   },
   brings: {
     units: {
@@ -971,6 +979,7 @@ export const STONE: Slice = {
         unlocks: { cards: { 'food-trade': 1, 'goods-trade': 1 } },
       },
       fishing: { needs: ['raft'], unlocks: { cards: { fishery: 1 } } },
+      metalworking: { needs: ['settlement'], unlocks: { cards: {} } },
     },
     terrains: {
       desert: {

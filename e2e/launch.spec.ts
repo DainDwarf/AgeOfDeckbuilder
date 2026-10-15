@@ -46,10 +46,8 @@ const BROWSE = 'civilization-browse';
 const FIRST = firstAge(CATALOGUE);
 const { technology: UNLOCKER, age: UNLOCKED } = (() => {
   const technology = victoryTechnologyOf(CATALOGUE, FIRST);
-  const age = technology === undefined ? undefined : ageUnlockedBy(CATALOGUE, technology);
-  if (technology === undefined || age === undefined) {
-    throw new Error(`the victory of the age ${FIRST} unlocks no age`);
-  }
+  const age = ageUnlockedBy(CATALOGUE, technology);
+  if (age === undefined) throw new Error(`the victory of the age ${FIRST} unlocks no age`);
   return { technology, age };
 })();
 

@@ -82,7 +82,7 @@ function middleOf(column: number): number {
 function columnsOf(catalogue: Catalogue): {
   columns: Map<string, number>;
   borders: number[];
-  victories: (string | undefined)[];
+  victories: string[];
 } {
   const ageOfTechnology = new Map<string, string>();
   for (const [age, { achievements }] of Object.entries(catalogue.ages)) {
@@ -91,7 +91,7 @@ function columnsOf(catalogue: Catalogue): {
 
   const columns = new Map<string, number>();
   const borders: number[] = [];
-  const victories: (string | undefined)[] = [];
+  const victories: string[] = [];
   for (const [at, age] of Object.keys(catalogue.ages).entries()) {
     const victory = victoryTechnologyOf(catalogue, age);
     victories.push(victory);
@@ -108,7 +108,7 @@ function columnsOf(catalogue: Catalogue): {
       return placed;
     };
     const border = Math.max(start, ...members.map((id) => column(id) + 1));
-    if (victory !== undefined) columns.set(victory, border);
+    columns.set(victory, border);
     borders.push(border);
   }
   return { columns, borders, victories };
