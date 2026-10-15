@@ -12,6 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The siege** — the third capstone: raids every turn for a span, endured; the fixture's siege door walked by real content.
+- **The siege** — the temperate schedule names the siege beside the long winter and the monument: its landing enters a raid through the raid's door, warriors and archers led by a leader, a kind of its own that carries a bonus to the units of its faction beside it, the raid going for the player's city whatever city lies nearer, and the leader killed is victory on the blow, whoever strikes it; the catalogue's coherence test passes and the age page says so. Doc-impact: `docs/ages/STONE.md`, `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/siege.md](board/siege.md)
 - **The victory** — the age's victory achievement and its technology, which unlocks the Bronze Age once that age exists and nothing until then; the technology's name is this line's question.
 - **The archipelago's schedule** — the region's own schedule: what it copies from the temperate one, what is its own, and its capstones.
