@@ -3,12 +3,15 @@ import { RESOURCES, type Resource, type Resources } from './resources';
 import type { Rng } from './rng';
 import type { Faction, Relations, Unit } from './units';
 
-/** What took the city: an enemy captured it, it was left without population, or its building was removed. */
-export type DefeatCause = 'capture' | 'population' | 'removal';
+/**
+ * What ended the chronicle in defeat: an enemy captured the city, it was left without population, its
+ * building was removed, or the capstone's trial was failed.
+ */
+export type DefeatCause = 'capture' | 'population' | 'removal' | 'capstone';
 
 /**
- * How a chronicle ended and the turn it ended on: in victory, the capstone passed, or in defeat,
- * the city fallen to what the cause names.
+ * How a chronicle ended and the turn it ended on: in victory, the capstone passed, or in defeat, to
+ * what the cause names.
  */
 export type Ending = { readonly turn: number } & (
   | { readonly outcome: 'victory' }
@@ -190,6 +193,7 @@ export type TileBlock =
   | 'wrong-terrain'
   | 'wrong-feature'
   | 'slot-filled'
+  | 'wrong-building'
   | 'other-faction'
   | 'improvement-placed'
   | 'no-unit'

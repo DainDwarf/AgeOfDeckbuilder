@@ -1,51 +1,33 @@
 import { expect, test } from '@playwright/test';
-import { CATALOGUE } from '../src/content/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
-import type { Chronicle } from '../src/rules/state';
 import { capstoneLore } from '../src/ui/lore';
 import { text } from '../src/ui/text';
 import {
+  beforeTheLanding,
   budget,
   cardOnFace,
   chronicleOf,
   click,
-  endedTurn,
-  firstSeed,
   loreOf,
   onScreen,
   openSaved,
   playedOut,
   rested,
-  settledOn,
   standing,
   stoppedTurn,
   titleOf,
   watch,
 } from './chronicle-screen';
 
-/**
- * The first seed whose bare turn 1, its turns ended headlessly, stands on an open turn the turn
- * before the capstone lands: that chronicle.
- */
-function beforeTheCapstone(): Chronicle {
-  return firstSeed('stands on an open turn the turn before the capstone lands', (seed) => {
-    let chronicle = settledOn(seed);
-    const landing = chronicle.timeline.capstone.turn;
-    while (chronicle.turn < landing - 1 && chronicle.ending === undefined) {
-      chronicle = endedTurn(chronicle);
-    }
-    return chronicle.ending === undefined && chronicle.deals.length === 0 ? chronicle : undefined;
-  });
-}
-
 test('the capstone’s landing holds the end of turn on its window over the hand the turn drew, and the landing plays out once it closes', async ({
   page,
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const before = beforeTheCapstone();
+  const { before, landed } = beforeTheLanding(
+    'stands on an open turn the turn before the capstone lands',
+    (before, landed) => ({ before, landed }),
+  );
   const capstone = before.timeline.capstone.id;
-  const landed = outcome(apply(CATALOGUE, before, { type: 'end-turn' }));
 
   await openSaved(page, before);
   expect(await standing(page, 'capstone')).toBe(false);

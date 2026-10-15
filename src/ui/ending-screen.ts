@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { HeldCopies, Payment } from '../rules/campaign';
 import { achievementOf, type Catalogue } from '../rules/catalogue';
-import type { Chronicle, Ending } from '../rules/state';
+import type { Chronicle, DefeatCause, Ending } from '../rules/state';
 import type { Browser } from './browse';
 import { EASE, ended, stopMotion } from './card-motion';
 import { inCollectionOrder } from './collection-layout';
@@ -9,7 +9,7 @@ import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, TITLE_INK, UI_FONT } from './desi
 import { css, LOOK } from './look';
 import { BUTTON_HEIGHT, type CountedLine, createButton, laidLine } from './menu';
 import { chipAt } from './resource-bar';
-import { cardName, technologyName, text, victoryLine } from './text';
+import { cardName, defeatLine, technologyName, text, victoryLine } from './text';
 
 /** What the ending screen is handed: what the chronicle paid once it has ended, and the way out. */
 export type EndingOf = {
@@ -132,7 +132,7 @@ function drawEnding(
     color: TITLE_INK,
   }).setOrigin(0.5, 0);
   const line = addText(scene, DESIGN_WIDTH / 2, title.height + 24, said.line, style(false));
-  line.setOrigin(0.5, 0);
+  line.setOrigin(0.5, 0).setName('ending-line');
   const ledger = ledgerOf(scene, catalogue, on, line.y + line.height + gap);
 
   const buttonY = ledger.bottom + gap + BUTTON_HEIGHT / 2;
@@ -256,9 +256,21 @@ function says({ ending, timeline }: Ended): { title: string; line: string } {
     case 'victory':
       return { title: text('victory.title'), line: victoryLine(timeline.capstone.id) };
     case 'defeat':
-      return {
-        title: text('defeat.title'),
-        line: text(`defeat.${ending.cause}`, { turn: ending.turn }),
-      };
+      return { title: text('defeat.title'), line: defeatSaid(ending, timeline.capstone.id) };
+  }
+}
+
+/** The line the defeat screen reads: its cause's, or the capstone's where its trial was failed. */
+function defeatSaid(
+  { cause, turn }: { cause: DefeatCause; turn: number },
+  capstone: string,
+): string {
+  switch (cause) {
+    case 'capture':
+    case 'population':
+    case 'removal':
+      return text(`defeat.${cause}`, { turn });
+    case 'capstone':
+      return defeatLine(capstone, turn);
   }
 }

@@ -79,10 +79,12 @@ import {
   REGION,
   ringed,
   riverBetween,
+  SILO,
   SLOW_SLINGER,
   settledLaunch,
   stagedBy,
   standing,
+  TILLAGE,
   TITHE,
   TITHE_RISE,
   UPHEAVAL,
@@ -1474,6 +1476,22 @@ test('the farm card names the first of its five reasons: worker, action, terrain
   expect(refusedFor(withUnits(flat, [worker(out)]), 'PH_Farm', out)).toBe('outside-border');
   expect(refusedFor(filled, 'PH_Farm', at)).toBe('slot-filled');
   expect(refusedFor(withWorker, 'PH_Farm', at)).toBeUndefined();
+});
+
+test('a card building its building over a named one builds it in that one’s place, and is refused on an empty slot and on another building', () => {
+  const at = { q: 1, r: 0 };
+  const holding = (building?: string): Chronicle =>
+    withTile(workedTile(at, 'plain', { hand: [SILO], resources: production(3) }), {
+      ...at,
+      terrain: 'plain',
+      improvements: [],
+      building,
+    });
+
+  expect(refusedFor(holding(), SILO, at)).toBe('wrong-building');
+  expect(refusedFor(holding(CAMP.building), SILO, at)).toBe('wrong-building');
+  expect(refusedFor(holding(TILLAGE), SILO, at)).toBeUndefined();
+  expect(buildingAt(outcome(apply(CATALOGUE, holding(TILLAGE), aimedAt(at))), at)).toBe(SILO);
 });
 
 test('the forage card names the first of its three reasons: worker, action, then held', () => {

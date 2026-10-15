@@ -52,6 +52,10 @@ const LORE = {
     'The elders say a winter is coming such as none remembers. When it comes, keep the fires burning until the thaw, and the Stone Age is won.',
   'capstone-landing.long-winter':
     'The snow has come and the fields lie dead under it. Keep the fires burning until the thaw, and the Stone Age is won.',
+  'capstone-opening.monument':
+    'The elders say the ancestors want a house of stone on this land. When the time comes, raise the monument, and the Stone Age is won.',
+  'capstone-landing.monument':
+    'The time has come. Lay the ground, raise the stones and adorn them, and the Stone Age is won. Every night the work waits, the people grow restless.',
 } as const;
 
 /** The capstone window's two raisings, each reading a lore of its own. */

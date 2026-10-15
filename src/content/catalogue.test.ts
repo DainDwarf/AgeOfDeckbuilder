@@ -57,6 +57,7 @@ import {
   cardName,
   cardRules,
   civilizationName,
+  defeatLine,
   eventName,
   featureName,
   improvementName,
@@ -346,9 +347,9 @@ test('every reward of every age’s camp, site and neutral’s city has a name, 
   }
 });
 
-test('every capstone of the catalogue has a name, a rules entry read on the numbers it reads of a chronicle launched and settled in each age, a lore at each raising of its window and a victory line on the screen', () => {
+test('every capstone of the catalogue has a name, a rules entry read on the numbers it reads of a chronicle launched and settled in each age, a lore at each raising of its window, a victory line and, naming what fails it, a defeat line on the screen', () => {
   const chronicles = AGES.map(settledIn);
-  for (const id of Object.keys(CATALOGUE.capstones)) {
+  for (const [id, { fails }] of Object.entries(CATALOGUE.capstones)) {
     expect(() => capstoneName(id)).not.toThrow();
     for (const chronicle of chronicles) {
       expect(() => capstoneRules(id, capstoneReading(CATALOGUE, chronicle, id))).not.toThrow();
@@ -356,6 +357,7 @@ test('every capstone of the catalogue has a name, a rules entry read on the numb
     expect(() => capstoneLore(id, 'opening')).not.toThrow();
     expect(() => capstoneLore(id, 'landing')).not.toThrow();
     expect(() => victoryLine(id)).not.toThrow();
+    if (fails !== undefined) expect(() => defeatLine(id, 1)).not.toThrow();
   }
 });
 
@@ -460,7 +462,7 @@ test('every region’s schedule rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield and is not passed, on a chronicle launched and settled in that region’s age', () => {
+test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield and is neither passed nor failed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     const beside = tilesBeside(chronicle.tiles);
@@ -482,6 +484,7 @@ test('every answer of every event of a region’s schedule costs, answers what b
         expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
         for (const part of parts) expect(() => capstone.yieldRule?.(part)).not.toThrow();
         expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
+        expect(capstone.fails?.(CATALOGUE, chronicle, chronicle) ?? false).toBe(false);
       }
     }
   }

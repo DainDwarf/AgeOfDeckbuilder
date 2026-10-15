@@ -4,6 +4,7 @@
  * Every id here carries the `PH_` prefix so that one leaking into shipped code is one search away.
  */
 import {
+  buildingRemoved,
   builds,
   claimableTile,
   discarded,
@@ -165,6 +166,15 @@ export const TILLAGE = 'PH_Farm';
  * which nothing passes. No schedule names it.
  */
 export const FALLOW = 'PH_Fallow';
+
+/** The building built over `TILLAGE`, and the card that builds it. */
+export const SILO = 'PH_Silo';
+
+/**
+ * The capstone that lands nothing, which nothing passes, and which fails once a `TILLAGE` or a `SILO`
+ * leaves a tile with neither. No schedule names it.
+ */
+export const TOWER = 'PH_Tower';
 
 /** The food the fixture's hunger strikes off the stock. */
 export const HUNGER = 6;
@@ -606,6 +616,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Embark: { kind: 'action', cost: {}, ...embarks(EMBARKED_MOVE) },
     PH_Disembark: { kind: 'action', cost: {}, ...disembarks() },
     PH_Mill: { kind: 'building', cost: { production: 3 }, ...builds('PH_Mill') },
+    [SILO]: { kind: 'action', cost: { production: 3 }, ...builds(SILO, TILLAGE) },
     PH_Urbanisation: {
       kind: 'action',
       cost: { production: 5 },
@@ -785,6 +796,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
       },
       passes: () => false,
     },
+    [TOWER]: {
+      lands: (_catalogue, chronicle) => unchanged(chronicle),
+      fails: (catalogue, before, after) =>
+        buildingRemoved(catalogue, before, after, [TILLAGE, SILO]),
+      passes: () => false,
+    },
   },
   terrains: {
     plain: { yields: { food: 2 }, movementCost: MOVE_POINT, water: false, elevation: 0 },
@@ -868,6 +885,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       yields: { money: 1 },
     },
     PH_Mill: { terrains: ['plain'], river: true, yields: { production: 1 } },
+    [SILO]: { terrains: ['plain'], yields: {} },
     [WELL]: { terrains: ['plain'], yields: { money: 1 }, givesBeside: WELL_GIVES },
   },
   features: {

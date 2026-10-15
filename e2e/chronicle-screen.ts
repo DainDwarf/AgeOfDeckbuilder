@@ -46,7 +46,7 @@ import {
 import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
-import { addedToDrawPileTop, answerRefusal, offered } from '../src/rules/schedule';
+import { addedToDrawPileTop, answerRefusal, offered, unitDamaged } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
 import {
@@ -58,7 +58,7 @@ import {
   idle,
   playable,
 } from '../src/rules/state';
-import { standsOn, type Unit, unitAt } from '../src/rules/units';
+import { actsAsEnemy, relationsOf, standsOn, type Unit, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Name } from '../src/ui/card-face';
@@ -1487,6 +1487,47 @@ export function beforeTheFall(): Chronicle {
       chronicle = ended;
     }
     return undefined;
+  });
+}
+
+/** The chronicle with every unit acting as an enemy killed, as an attack's damage kills one. */
+export function cleared(chronicle: Chronicle): Chronicle {
+  let left = chronicle;
+  for (const unit of chronicle.units) {
+    if (!actsAsEnemy(unit, relationsOf(chronicle))) continue;
+    left = unitDamaged(left, unit.tile, unit.stats.health).chronicle;
+  }
+  return left;
+}
+
+/**
+ * What `answer` makes of the first seed it answers: the seed's turn 1 from the campaign, a new one
+ * unless one is given, settled bare, its turns ended each on what `readied` makes of it, up to an
+ * open turn the turn before its capstone lands, the one named where one is, and its end of turn.
+ */
+export function beforeTheLanding<T>(
+  complaint: string,
+  answer: (before: Chronicle, landed: Chronicle) => T | undefined,
+  {
+    campaign = freshCampaign(CATALOGUE),
+    capstone,
+    readied = (chronicle) => chronicle,
+  }: {
+    readonly campaign?: Campaign;
+    readonly capstone?: string;
+    readonly readied?: (chronicle: Chronicle) => Chronicle;
+  } = {},
+): T {
+  return firstSeed(complaint, (seed) => {
+    let chronicle = settledOn(seed, [], campaign);
+    const { id, turn } = chronicle.timeline.capstone;
+    if (capstone !== undefined && id !== capstone) return undefined;
+    while (chronicle.turn < turn - 1 && chronicle.ending === undefined) {
+      chronicle = endedTurn(readied(chronicle));
+    }
+    if (chronicle.ending !== undefined || chronicle.deals.length > 0) return undefined;
+    const landed = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+    return landed.ending === undefined ? answer(chronicle, landed) : undefined;
   });
 }
 

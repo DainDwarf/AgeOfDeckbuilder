@@ -318,12 +318,14 @@ function conditionsRead(
   stages: readonly Stage[],
 ): Stage[] {
   if (started.ending !== undefined) return [...stages];
-  const { passes } = capstoneOf(catalogue, started.timeline.capstone.id);
+  const { passes, fails } = capstoneOf(catalogue, started.timeline.capstone.id);
   // The events phase lands the capstone in the command whose tick reaches its turn, so a command
   // started on that turn or after starts past the landing.
   let landed = capstoneLanded(started);
   const passesNow = (chronicle: Chronicle): boolean =>
     landed && chronicle.ending === undefined && passes(catalogue, chronicle);
+  const failsNow = (before: Chronicle, after: Chronicle): boolean =>
+    landed && after.ending === undefined && fails?.(catalogue, before, after) === true;
 
   // Every stage was built off the chronicle the command started on, so the record a `reached` makes
   // is carried onto every stage after it here.
@@ -340,8 +342,13 @@ function conditionsRead(
     const victorious = victory(chronicle);
     return [victorious, ...recording(victorious.chronicle)];
   };
+  const failed = (chronicle: Chronicle): Stage[] => {
+    const fallen = fall(chronicle, 'capstone');
+    return [...fallen.stages, ...recording(fallen.chronicle)];
+  };
 
   let over = false;
+  let before = started;
   const walk = (held: readonly Stage[]): Stage[] => {
     const walked: Stage[] = [];
     for (const stage of held) {
@@ -355,6 +362,11 @@ function conditionsRead(
             over = true;
             return [...walked, ...ended(last)];
           }
+          if (failsNow(before, last)) {
+            over = true;
+            return [...walked, ...failed(last)];
+          }
+          before = last;
           break;
         }
         case 'group': {

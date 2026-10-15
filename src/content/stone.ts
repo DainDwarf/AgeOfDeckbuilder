@@ -1,4 +1,5 @@
 import {
+  buildingRemoved,
   builds,
   claimableTile,
   discarded,
@@ -26,7 +27,9 @@ import { arrived, bordered, populationTaken, warDeclared } from '../rules/city';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import { withNone } from '../rules/resources';
+import { pickUniform } from '../rules/rng';
 import {
+  addedToDrawPileTop,
   campPlaceable,
   featureRemovalNear,
   featuresRemovedNear,
@@ -86,7 +89,7 @@ const RIVERS: RiverFlow = {
 const TEMPERATE_SCHEDULE: Schedule = {
   spacing: [5, 8],
   window: [26, 34],
-  capstones: ['long-winter'],
+  capstones: ['long-winter', 'monument'],
   entries: {
     'rival-band': 1,
     'stone-wildfire': 1,
@@ -236,6 +239,15 @@ const TRIBUTE = { food: 2, production: 2, money: 1 };
 function gifts(turn: number): number {
   return 6 + Math.floor(turn / 5);
 }
+
+/** The buildings the monument stands as, each built over the one before. */
+const MONUMENT = ['foundations', 'great-stones', 'monument'];
+
+/** The terrains the monument's first building goes on, and so every one built over it. */
+const MONUMENT_GROUND = ['plain', 'hills', 'desert'];
+
+/** The hazards the monument adds, one a turn, each drawn alike. */
+const MONUMENT_HAZARDS = ['unrest', 'thieves', 'weary-builders'];
 
 const REGIONS: Age['regions'] = {
   temperate: {
@@ -636,6 +648,38 @@ export const STONE: Slice = {
         cost: { production: 3 },
         strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
       },
+      foundations: {
+        kind: 'action',
+        cost: { production: 4 },
+        becomes: 'great-stones',
+        ...builds('foundations'),
+      },
+      'great-stones': {
+        kind: 'action',
+        cost: { production: 8 },
+        becomes: 'ornaments',
+        ...builds('great-stones', 'foundations'),
+      },
+      ornaments: {
+        kind: 'action',
+        cost: { money: 4, culture: 6 },
+        ...builds('monument', 'great-stones'),
+      },
+      unrest: {
+        kind: 'hazard',
+        cost: { military: 2 },
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'culture', 2),
+      },
+      thieves: {
+        kind: 'hazard',
+        cost: { military: 2 },
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'money', 2),
+      },
+      'weary-builders': {
+        kind: 'hazard',
+        cost: { food: 2 },
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'production', 2),
+      },
       tribute: {
         kind: 'challenge',
         cost: {},
@@ -844,6 +888,16 @@ export const STONE: Slice = {
           capstoneLanded(chronicle) &&
           !cardsInPiles(chronicle).some(({ id }) => id === 'cold-night'),
       },
+      monument: {
+        lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'foundations'),
+        continues: (catalogue, chronicle) => {
+          const { rng, picked } = pickUniform(chronicle.rng, MONUMENT_HAZARDS);
+          return rewarded(catalogue, { ...chronicle, rng }, picked, 1);
+        },
+        passes: (_catalogue, chronicle) =>
+          chronicle.tiles.some((tile) => tile.building === 'monument'),
+        fails: (catalogue, before, after) => buildingRemoved(catalogue, before, after, MONUMENT),
+      },
     },
     technologies: {
       herbalism: { needs: ['settlement'], unlocks: { cards: { heal: 1 } } },
@@ -895,6 +949,9 @@ export const STONE: Slice = {
         givesBeside: { terrain: 'coast', yields: { food: 1 } },
       },
       megalith: { terrains: ['plain', 'hills', 'desert'], yields: { culture: 1 } },
+      foundations: { terrains: MONUMENT_GROUND, yields: {} },
+      'great-stones': { terrains: MONUMENT_GROUND, yields: {} },
+      monument: { terrains: MONUMENT_GROUND, yields: {} },
       'stone-painted-cave': { terrains: ['hills'], yields: {} },
       'stone-old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
       'stone-beast-bones': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },

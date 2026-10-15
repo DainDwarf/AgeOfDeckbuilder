@@ -224,7 +224,7 @@ export function grouped(head: GroupHead, over: Sequence): Sequence<Group> {
   return { stages: [group], chronicle: group.chronicle };
 }
 
-/** The player's city's fall, the one `ended`: the chronicle records what took it and on which turn. */
+/** A defeat, the one `ended` of it: the chronicle records what ended it and on which turn. */
 export function fall(chronicle: Chronicle, cause: DefeatCause): Landed {
   return landedAs(
     change('ended', { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } }),

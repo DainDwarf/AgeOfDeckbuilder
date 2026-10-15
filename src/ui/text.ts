@@ -73,6 +73,9 @@ const TEXT = {
   'building.tannery': 'Tannery',
   'building.fishery': 'Fishery',
   'building.megalith': 'Megalith',
+  'building.foundations': 'Foundations',
+  'building.great-stones': 'Great stones',
+  'building.monument': 'Monument',
   'panel.no-yield': 'No yield',
   'button.turn': 'Turn {turn}',
   'button.end-turn': 'End turn',
@@ -219,6 +222,20 @@ const TEXT = {
     'Takes {food}[food], {production}[production] and {money}[money], more each time',
   'card.cold-night': 'Cold night',
   'rules.cold-night': 'Kills one population',
+  'card.foundations': 'Foundations',
+  'rules.foundations':
+    'Build [building:foundations] on [terrain:plain], [terrain:hills] or [terrain:desert].\nBecomes [card:great-stones]',
+  'card.great-stones': 'Great stones',
+  'rules.great-stones':
+    'Build [building:great-stones] on [building:foundations].\nBecomes [card:ornaments]',
+  'card.ornaments': 'Ornaments',
+  'rules.ornaments': 'Build [building:monument] on [building:great-stones]. Win the Stone Age',
+  'card.unrest': 'Unrest',
+  'rules.unrest': 'Takes 2[culture]',
+  'card.thieves': 'Thieves',
+  'rules.thieves': 'Takes 2[money]',
+  'card.weary-builders': 'Weary builders',
+  'rules.weary-builders': 'Takes 2[production]',
   'event.lean-season': 'Lean season',
   'answer.share': 'Share food',
   'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
@@ -316,6 +333,9 @@ const TEXT = {
   'capstone-name.long-winter': 'The long winter',
   'capstone-rules.long-winter':
     'Add {count} [card:cold-night] to the discard pile. Terrain and features give no food',
+  'capstone-name.monument': 'The monument',
+  'capstone-rules.monument':
+    'Add [card:foundations] to the top of the draw pile. Each turn, add one of [card:unrest], [card:thieves] or [card:weary-builders] to the discard pile',
   'capstone.title': 'Capstone',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
@@ -339,6 +359,7 @@ const TEXT = {
   'refusal.wrong-terrain': 'Wrong terrain',
   'refusal.wrong-feature': 'Wrong feature',
   'refusal.slot-filled': 'A building already stands here',
+  'refusal.wrong-building': 'Wrong building',
   'refusal.other-faction': 'That tile belongs to another faction',
   'refusal.improvement-placed': 'That improvement is already here',
   'refusal.no-unit': 'No unit stands here',
@@ -409,9 +430,11 @@ const TEXT = {
   'defeat.capture': 'Your city was captured on turn {turn}.',
   'defeat.population': "Your city's population reached zero on turn {turn}.",
   'defeat.removal': 'Your city was removed on turn {turn}.',
+  'defeat.monument': 'The monument was thrown down on turn {turn}.',
   'victory.title': 'Victory',
   'victory.first-shelter': 'The shelter was built. Nomadic Age is over.',
   'victory.long-winter': 'The fires held and the thaw came. Stone Age is over.',
+  'victory.monument': 'The monument stands. Stone Age is over.',
   'ending.end-chronicle': 'End chronicle',
   'navbar.title': 'Age of\nDeckbuilder',
   'navbar.campaign': 'Campaign',
@@ -633,6 +656,14 @@ export function capstoneRules(capstone: string, values: Record<string, number>):
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */
 export function victoryLine(capstone: string): string {
   return named('victory', capstone, 'the capstone');
+}
+
+/**
+ * The line the defeat screen reads for failing a capstone on that turn; a capstone no entry names is
+ * refused.
+ */
+export function defeatLine(capstone: string, turn: number): string {
+  return named('defeat', capstone, 'the capstone', { turn });
 }
 
 /** What an age is named on the screen; an age no entry names is refused. */

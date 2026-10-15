@@ -45,12 +45,14 @@ import {
   QUIET,
   REGION,
   ringed,
+  SILO,
   SPRAWL,
   type Standing,
   settledOn,
   stagedBy,
   standing,
   TILLAGE,
+  TOWER,
   UPHEAVAL,
   withUnits,
   worker,
@@ -1881,6 +1883,40 @@ test('a change that both leaves the city no population and meets a capstone’s 
 
   expect(namesOf(stages).slice(-3)).toEqual(['assigned', 'population', 'ended']);
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: 1 });
+});
+
+/**
+ * The tillage's city on the turn before the tower lands, the tillage's building standing on the
+ * tilled tile with a worker on it, and the production to play on it.
+ */
+function awaitingTower(carrying: Carrying = {}): Chronicle {
+  return awaitingTillage({
+    tiles: builtOn(field(2), TILLAGE, [TILLED]),
+    timeline: { ...NO_DEALS, capstone: { id: TOWER, turn: CAPSTONE } },
+    ...FARMING,
+    drawPile: [],
+    ...carrying,
+  });
+}
+
+/** The card in the chronicle's hand played on the tilled tile. */
+function playedOnTilled(chronicle: Chronicle, card: string): Command {
+  return { type: 'play', index: idsOf(chronicle.hand).indexOf(card), aim: 'tile', tile: TILLED };
+}
+
+test('a capstone naming what fails it ends the chronicle in defeat on the change after which it holds, from its landing on: a building it names removed, never before the landing, and never the next built over it', () => {
+  const before = awaitingTower({ hand: ['PH_Urbanisation'] });
+  const early = outcome(apply(CATALOGUE, before, playedOnTilled(before, 'PH_Urbanisation')));
+  const landed = endedTurn(awaitingTower({ drawPile: ['PH_Urbanisation', SILO] }));
+  const removed = apply(CATALOGUE, landed, playedOnTilled(landed, 'PH_Urbanisation'));
+  const builtOver = apply(CATALOGUE, landed, playedOnTilled(landed, SILO));
+
+  expect(buildingAt(early, TILLED)).toBeUndefined();
+  expect(early.ending).toBeUndefined();
+  expect(namesOf(removed).slice(-2)).toEqual(['retiled', 'ended']);
+  expect(outcome(removed).ending).toEqual({ outcome: 'defeat', cause: 'capstone', turn: CAPSTONE });
+  expect(buildingAt(outcome(builtOver), TILLED)).toBe(SILO);
+  expect(namesOf(builtOver)).not.toContain('ended');
 });
 
 test('the schedule keeps dealing past the landing of a capstone no span passes', () => {

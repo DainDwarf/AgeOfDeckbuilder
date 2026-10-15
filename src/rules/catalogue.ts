@@ -391,9 +391,9 @@ export type ScheduledEvent = {
 };
 
 /**
- * A capstone: what it does to the chronicle on the turn it lands, what it does on every turn after
- * that one, the numbers its rules entry reads of the chronicle, the rule it lays over every tile's
- * yield from its landing on, and whether the chronicle has passed it.
+ * A capstone: what it does on its turn and on every turn after, the numbers its rules entry reads,
+ * the rule it lays over every tile's yield from its landing on, whether the chronicle has passed it,
+ * and whether one change, read on the chronicles before and after it, has failed it.
  */
 export type Capstone = {
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
@@ -401,6 +401,7 @@ export type Capstone = {
   readonly reads?: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
   readonly yieldRule?: YieldRule;
   readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
+  readonly fails?: (catalogue: Catalogue, before: Chronicle, after: Chronicle) => boolean;
 };
 
 /** The scripts every camp names, the rules reading both: the one its wave counts, and the one it sends. */

@@ -515,6 +515,34 @@ export function slotFree(tile: Tile): TileBlock | undefined {
 }
 
 /**
+ * A tile's one building slot holding that building: what a building built over it needs. A building
+ * the catalogue does not hold is refused.
+ */
+function slotHolding(catalogue: Catalogue, tile: Tile, building: string): TileBlock | undefined {
+  buildingKind(catalogue, building);
+  return tile.building === building ? undefined : 'wrong-building';
+}
+
+/**
+ * Whether a tile holding one of the buildings before holds none of them after. A building the
+ * catalogue does not hold is refused.
+ */
+export function buildingRemoved(
+  catalogue: Catalogue,
+  before: Pick<Chronicle, 'tiles'>,
+  after: Pick<Chronicle, 'tiles'>,
+  buildings: readonly string[],
+): boolean {
+  for (const building of buildings) buildingKind(catalogue, building);
+  if (before.tiles === after.tiles) return false;
+  const among = (building: string | undefined): boolean =>
+    building !== undefined && buildings.includes(building);
+  return before.tiles.some(
+    (tile) => among(tile.building) && !among(tileAt(after.tiles, tile)?.building),
+  );
+}
+
+/**
  * What a terraform of the player's into `to` asks of the tile besides the terrains it starts from: no
  * camp's tile until the camp is captured, and the city's tile only into a terrain the city's building
  * stands on.
@@ -658,18 +686,17 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
 }
 
 /**
- * How a building card builds its building, the refusal and the effect as one pair so neither is
- * written without the other: aimed through a worker at a tile of the ground the building goes on,
- * inside the border, its slot free; then the building fills that slot.
+ * How a card builds its building, the refusal and the effect as one pair: through a worker, on its
+ * ground, inside the border, the slot free or holding the one `over` names; then it fills the slot.
  */
-export function builds(building: string): Aim & { readonly aim: 'tile' } {
+export function builds(building: string, over?: string): Aim & { readonly aim: 'tile' } {
   return {
     ...throughWorker(
       (catalogue, chronicle, tile, whose) =>
         firstRefusal(
           groundFor(catalogue, chronicle, tile, buildingKind(catalogue, building)),
           inside(chronicle, tile, whose),
-          slotFree(tile),
+          over === undefined ? slotFree(tile) : slotHolding(catalogue, tile, over),
         ),
       (catalogue, paid, at) => built(catalogue, paid, at, building),
     ),

@@ -1,24 +1,22 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
-import { apply, outcome } from '../src/rules/chronicle';
 import { tileAt, tileKey, tilesBeside } from '../src/rules/map';
 import { terrainKind } from '../src/rules/map-kinds';
-import { unitDamaged } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
-import { actsAsEnemy, relationsOf, unitAt } from '../src/rules/units';
+import { unitAt } from '../src/rules/units';
 import { yieldParts } from '../src/rules/yields';
 import { capstoneFace } from '../src/ui/face';
 import { capstoneLore } from '../src/ui/lore';
 import { terrainName } from '../src/ui/text';
 import {
+  beforeTheLanding,
   budget,
   chronicleOf,
   cityTileOf,
+  cleared,
   click,
   drawnFaces,
-  endedTurn,
-  firstSeed,
   idsOf,
   onScreen,
   openSaved,
@@ -27,7 +25,6 @@ import {
   readings,
   rested,
   ringedTile,
-  settledOn,
   shownCard,
   standing,
   stoppedTurn,
@@ -41,16 +38,6 @@ const WINTER = 'long-winter';
 /** The hazard its landing adds. */
 const COLD_NIGHT = 'cold-night';
 
-/** The chronicle with every unit acting as an enemy killed, as an attack's damage kills one. */
-function cleared(chronicle: Chronicle): Chronicle {
-  let left = chronicle;
-  for (const unit of chronicle.units) {
-    if (!actsAsEnemy(unit, relationsOf(chronicle))) continue;
-    left = unitDamaged(left, unit.tile, unit.stats.health).chronicle;
-  }
-  return left;
-}
-
 /**
  * The first seed's turn 1 from the campaign, settled bare, each turn ended once `cleared`, up to an
  * open turn before the long winter lands on a city whose terrain gives food; and its end of turn.
@@ -59,23 +46,16 @@ function beforeTheWinter(campaign: Campaign): {
   readonly before: Chronicle;
   readonly landed: Chronicle;
 } {
-  return firstSeed(
+  return beforeTheLanding(
     'stands the turn before the long winter on a city whose terrain gives food',
-    (seed) => {
-      let chronicle = settledOn(seed, [], campaign);
-      const { id, turn } = chronicle.timeline.capstone;
-      if (id !== WINTER) return undefined;
-      while (chronicle.turn < turn - 1 && chronicle.ending === undefined) {
-        chronicle = endedTurn(cleared(chronicle));
-      }
-      if (chronicle.ending !== undefined || chronicle.deals.length > 0) return undefined;
-      const tile = tileAt(chronicle.tiles, cityTileOf(chronicle));
+    (before, landed) => {
+      const tile = tileAt(before.tiles, cityTileOf(before));
       if (tile === undefined || (terrainKind(CATALOGUE, tile.terrain).yields.food ?? 0) === 0) {
         return undefined;
       }
-      const landed = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
-      return landed.ending === undefined ? { before: chronicle, landed } : undefined;
+      return { before, landed };
     },
+    { campaign, capstone: WINTER, readied: cleared },
   );
 }
 
