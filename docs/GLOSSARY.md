@@ -65,6 +65,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **victory** | The end of a chronicle by passing the capstone; the age is won by it, and win is the verb. | success, triumph |
 | **defeat** | The end of a chronicle by the player's city's fall. | collapse, game over, loss, death |
 | **border** | The edge of the tiles a city holds; pushed out by culture. | frontier, territory |
+| **near a city** | How an answer or a strike draws its tile: seeded, each tile weighing less the further it lies from the tiles that city holds, never the other city's. | nearby, close to, around (for a draw), in the vicinity |
 | **turn** | One pass of the chronicle's cycle of phases. | round |
 | **phase** | One part of the turn's cycle, in its fixed order; what the turn list names. | step, stage (in prose), section |
 | **settle phase** | The chronicle's opening, before its first turn: the player's city stands nowhere, the hand is the city section's card and the settle section, and none of the cycle runs. | turn 0, turn zero, opening turn, setup, deployment |

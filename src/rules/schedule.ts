@@ -43,6 +43,7 @@ import {
   cityOn,
   costsOf,
   type Deal,
+  holderOf,
   holds,
   type Refusal,
   type Timeline,
@@ -256,17 +257,67 @@ export function tileCharted(chronicle: Chronicle, at: TileCoords): Landed {
   return landedAs(changeOn('charted', at, chronicle));
 }
 
-/**
- * Every improvement standing inside the player's border, the city's own tile included, once for each
- * tile it stands on, with that tile.
- */
-function improvementsInside(
+/** How much a tile weighs in a draw near the player's city for each tile it lies from the nearest tile that city holds. */
+const NEAR_FALLOFF = 1 / 8;
+
+/** The candidates a draw near the player's city may land on: none for a city nowhere, never the neutral's. */
+function drawableNear<Candidate extends TileCoords>(
   chronicle: Chronicle,
-): { readonly at: TileCoords; readonly improvement: string }[] {
-  return chronicle.tiles.flatMap((tile) =>
-    holds(chronicle, tile)
-      ? tile.improvements.map((improvement) => ({ at: { q: tile.q, r: tile.r }, improvement }))
-      : [],
+  candidates: readonly Candidate[],
+): Candidate[] {
+  if (chronicle.city === undefined) return [];
+  return candidates.filter((candidate) => holderOf(chronicle, candidate) !== 'neutral');
+}
+
+/**
+ * Of the candidates `drawableNear` admits, one drawn near the player's city in one step of the
+ * generator handed in, and the generator it leaves; nothing, and no step, where it admits none.
+ */
+function drawnNear<Candidate extends TileCoords>(
+  chronicle: Chronicle,
+  rng: Rng,
+  candidates: readonly Candidate[],
+): { readonly picked: Candidate; readonly rng: Rng } | undefined {
+  const { held } = chronicle;
+  const weighed = drawableNear(chronicle, candidates).map(
+    (candidate) =>
+      [
+        candidate,
+        NEAR_FALLOFF ** Math.min(...held.map((tile) => distance(candidate, tile))),
+      ] as const,
+  );
+  return weighed.length === 0 ? undefined : pickWeighted(rng, weighed);
+}
+
+/**
+ * `count` of the candidates drawn near the player's city as `drawnNear` draws one, one after another
+ * from the chronicle's generator, each anew among those not yet drawn, fewer where fewer stand; each
+ * with the generator its draw leaves.
+ */
+function countDrawnNear<Candidate extends TileCoords>(
+  chronicle: Chronicle,
+  candidates: readonly Candidate[],
+  count: number,
+): { readonly picked: Candidate; readonly rng: Rng }[] {
+  let standing = candidates;
+  let rng = chronicle.rng;
+  const drawn: { readonly picked: Candidate; readonly rng: Rng }[] = [];
+  while (drawn.length < count) {
+    const step = drawnNear(chronicle, rng, standing);
+    if (step === undefined) break;
+    rng = step.rng;
+    drawn.push(step);
+    standing = standing.filter((each) => each !== step.picked);
+  }
+  return drawn;
+}
+
+/** Every improvement standing on the map, once for each tile it stands on, with that tile. */
+function improvementsStanding(
+  chronicle: Chronicle,
+): { readonly q: number; readonly r: number; readonly improvement: string }[] {
+  return chronicle.tiles.flatMap(({ q, r, improvements }) =>
+    improvements.map((improvement) => ({ q, r, improvement })),
   );
 }
 
@@ -282,41 +333,44 @@ function buildingsInside(chronicle: Chronicle): TileCoords[] {
     .map(({ q, r }) => ({ q, r }));
 }
 
-/** What a removal inside the player's border takes: improvements, buildings, and the city, one or none. */
+/** What `removedNear` takes: improvements, buildings, and the city, one or none. */
 export type Removal = {
   readonly improvements: number;
   readonly buildings: number;
   readonly city: number;
 };
 
-/** What `removedInside` takes for that count, read before it lands. */
-export function removalInside(chronicle: Chronicle, count: number): Removal {
-  const improvements = Math.min(count, improvementsInside(chronicle).length);
+/** What `removedNear` takes for that count, read before it lands. */
+export function removalNear(chronicle: Chronicle, count: number): Removal {
+  const improvements = Math.min(
+    count,
+    drawableNear(chronicle, improvementsStanding(chronicle)).length,
+  );
   const buildings = Math.min(count - improvements, buildingsInside(chronicle).length);
   return { improvements, buildings, city: count > improvements + buildings ? 1 : 0 };
 }
 
 /**
- * `count` things inside the player's border removed, one at a time: an improvement while one stands,
- * then a building, each drawn in one step of the chronicle's generator among those standing, then the
- * city's own building, which is its fall. One `retiled` each.
+ * `count` things removed, one at a time: an improvement while one stands, drawn near the player's
+ * city; then a building inside the player's border, drawn in one step of the chronicle's generator
+ * among those standing; then the city's own building, which is its fall. One `retiled` each.
  */
-export function removedInside(chronicle: Chronicle, count: number): Landed {
+export function removedNear(chronicle: Chronicle, count: number): Landed {
   let landing = unchanged(chronicle);
   for (let removed = 0; removed < count; removed++) {
-    landing = followed(landing, (left) => oneRemovedInside(left));
+    landing = followed(landing, (left) => oneRemovedNear(left));
   }
   return landing;
 }
 
-/** The next thing inside the player's border `removedInside` takes. */
-function oneRemovedInside(chronicle: Chronicle): Landed {
-  const improvements = improvementsInside(chronicle);
-  if (improvements.length > 0) {
-    const { picked, rng } = pickUniform(chronicle.rng, improvements);
-    return retiled({ ...chronicle, rng }, picked.at, (tile) => ({
+/** The next thing `removedNear` takes. */
+function oneRemovedNear(chronicle: Chronicle): Landed {
+  const improvement = drawnNear(chronicle, chronicle.rng, improvementsStanding(chronicle));
+  if (improvement !== undefined) {
+    const { picked, rng } = improvement;
+    return retiled({ ...chronicle, rng }, { q: picked.q, r: picked.r }, (tile) => ({
       ...tile,
-      improvements: tile.improvements.filter((improvement) => improvement !== picked.improvement),
+      improvements: tile.improvements.filter((each) => each !== picked.improvement),
     }));
   }
   const buildings = buildingsInside(chronicle);
@@ -331,94 +385,62 @@ function oneRemovedInside(chronicle: Chronicle): Landed {
   }));
 }
 
-/** Every tile inside the player's border the predicate admits, the city's own tile included. */
-function tilesInside(chronicle: Chronicle, admits: (tile: Tile) => boolean): Tile[] {
-  return chronicle.tiles.filter((tile) => admits(tile) && holds(chronicle, tile));
-}
-
-/**
- * `count` of the tiles inside the player's border the predicate admits, fewer where fewer stand,
- * drawn one at a time in one step each of the chronicle's generator among those not yet drawn; each
- * with the generator its draw leaves.
- */
-function tilesDrawnInside(
-  chronicle: Chronicle,
-  admits: (tile: Tile) => boolean,
-  count: number,
-): { readonly tile: Tile; readonly rng: Rng }[] {
-  let standing = tilesInside(chronicle, admits);
-  let rng = chronicle.rng;
-  const drawn: { readonly tile: Tile; readonly rng: Rng }[] = [];
-  while (drawn.length < count && standing.length > 0) {
-    const { picked, rng: left } = pickUniform(rng, standing);
-    rng = left;
-    drawn.push({ tile: picked, rng });
-    standing = standing.filter((each) => each !== picked);
-  }
-  return drawn;
-}
-
-/** Whether a tile carries one of the features; a feature the catalogue does not hold is refused. */
-function carriesOneOf(
+/** The tiles carrying one of the features; a feature the catalogue does not hold is refused. */
+function carryingOneOf(
   catalogue: Catalogue,
+  chronicle: Chronicle,
   features: readonly FeatureId[],
-): (tile: Tile) => boolean {
+): Tile[] {
   for (const feature of features) featureKind(catalogue, feature);
-  return ({ feature }) => feature !== undefined && features.includes(feature);
+  return chronicle.tiles.filter(
+    ({ feature }) => feature !== undefined && features.includes(feature),
+  );
 }
 
-export function featureInside(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  features: readonly FeatureId[],
-): boolean {
-  return tilesInside(chronicle, carriesOneOf(catalogue, features)).length > 0;
-}
-
-/** What `featuresRemovedInside` takes for that count, read before it lands: how many of each feature. */
-export function featureRemovalInside(
+/** What `featuresRemovedNear` takes for that count, read before it lands: how many of each feature. */
+export function featureRemovalNear(
   catalogue: Catalogue,
   chronicle: Chronicle,
   features: readonly FeatureId[],
   count: number,
 ): Record<FeatureId, number> {
-  const drawn = tilesDrawnInside(chronicle, carriesOneOf(catalogue, features), count);
+  const drawn = countDrawnNear(chronicle, carryingOneOf(catalogue, chronicle, features), count);
   return Object.fromEntries(
     features.map((feature) => [
       feature,
-      drawn.filter(({ tile }) => tile.feature === feature).length,
+      drawn.filter(({ picked }) => picked.feature === feature).length,
     ]),
   );
 }
 
 /**
- * `count` of the features inside the player's border removed, each drawn as `tilesDrawnInside` draws
- * it and going with every layer that goes with it: one `retiled` each, nothing where none stands.
+ * `count` of the features removed, each drawn near the player's city as `countDrawnNear` draws it and
+ * going with every layer that goes with it: one `retiled` each, nothing where none stands.
  */
-export function featuresRemovedInside(
+export function featuresRemovedNear(
   catalogue: Catalogue,
   chronicle: Chronicle,
   features: readonly FeatureId[],
   count: number,
 ): Landed {
   let landing = unchanged(chronicle);
-  for (const { tile, rng } of tilesDrawnInside(
+  for (const { picked, rng } of countDrawnNear(
     chronicle,
-    carriesOneOf(catalogue, features),
+    carryingOneOf(catalogue, chronicle, features),
     count,
   )) {
-    const at = { q: tile.q, r: tile.r };
+    const at = { q: picked.q, r: picked.r };
     landing = followed(landing, (left) => featureRemoved(catalogue, { ...left, rng }, at));
   }
   return landing;
 }
 
 /**
- * `count` of the tiles inside the player's border of the terrains named terraformed into `to`, each
- * drawn as `tilesDrawnInside` draws it: fewer where fewer stand, nothing where none does. A terrain
- * the catalogue does not hold is refused.
+ * `count` of the tiles of the terrains named that a terraform into `to` reaches terraformed into it,
+ * each drawn near the player's city as `countDrawnNear` draws it: fewer where fewer stand, nothing
+ * where none does. A terrain the catalogue does not hold is refused.
  */
-export function terraformedInside(
+export function terraformedNear(
   catalogue: Catalogue,
   chronicle: Chronicle,
   terrains: readonly Terrain[],
@@ -426,41 +448,23 @@ export function terraformedInside(
   count: number,
 ): Landed {
   for (const terrain of [...terrains, to]) terrainKind(catalogue, terrain);
+  const reached = chronicle.tiles.filter(
+    (tile) => terrains.includes(tile.terrain) && reaches(catalogue, chronicle, tile, to),
+  );
   let landing = unchanged(chronicle);
-  for (const { tile, rng } of tilesDrawnInside(
-    chronicle,
-    ({ terrain }) => terrains.includes(terrain),
-    count,
-  )) {
-    const at = { q: tile.q, r: tile.r };
+  for (const { picked, rng } of countDrawnNear(chronicle, reached, count)) {
+    const at = { q: picked.q, r: picked.r };
     landing = followed(landing, (left) => terraformed(catalogue, { ...left, rng }, at, to));
   }
   return landing;
 }
 
 /**
- * Of the candidates, one of those nearest to the player's city, drawn in one step of the chronicle's
- * generator, and the generator it leaves; nothing, and no step, for none or a city standing nowhere.
+ * One of the features dealt onto a tile carrying none, of the terrain it lies on, drawn near the
+ * player's city, and the tile it landed on; a `runtime-error` where no such tile stands. Two features
+ * lying on one terrain are refused.
  */
-function nearestDrawn<Candidate extends TileCoords>(
-  chronicle: Chronicle,
-  candidates: readonly Candidate[],
-): { readonly picked: Candidate; readonly rng: Rng } | undefined {
-  const { city } = chronicle;
-  if (city === undefined || candidates.length === 0) return undefined;
-  const nearest = Math.min(...candidates.map((candidate) => distance(candidate, city)));
-  return pickUniform(
-    chronicle.rng,
-    candidates.filter((candidate) => distance(candidate, city) === nearest),
-  );
-}
-
-/**
- * One of the features dealt onto a tile carrying none, of the terrain it lies on, drawn as
- * `nearestDrawn` draws it, and the tile it landed on; a `runtime-error` where no such tile stands.
- * Two features lying on one terrain are refused.
- */
-export function featureDealtNearest(
+export function featureDealtNear(
   catalogue: Catalogue,
   chronicle: Chronicle,
   features: readonly FeatureId[],
@@ -477,34 +481,11 @@ export function featureDealtNearest(
     const dealt = feature === undefined ? lyingOn.get(terrain) : undefined;
     return dealt === undefined ? [] : [{ q, r, feature: dealt }];
   });
-  const drawn = nearestDrawn(chronicle, bare);
+  const drawn = drawnNear(chronicle, chronicle.rng, bare);
   if (drawn === undefined) return runtimeError(chronicle);
   const { q, r, feature } = drawn.picked;
   const at = { q, r };
   return { ...featurePlaced(catalogue, { ...chronicle, rng: drawn.rng }, at, feature), at };
-}
-
-/**
- * One tile of the terrains named that a terraform into `to` reaches, terraformed into it, drawn as
- * `nearestDrawn` draws it, and nothing where none stands. A terrain the catalogue does not hold is
- * refused.
- */
-export function terraformedNearest(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  terrains: readonly Terrain[],
-  to: Terrain,
-): Landed {
-  for (const terrain of [...terrains, to]) terrainKind(catalogue, terrain);
-  const drawn = nearestDrawn(
-    chronicle,
-    chronicle.tiles.filter(
-      (tile) => terrains.includes(tile.terrain) && reaches(catalogue, chronicle, tile, to),
-    ),
-  );
-  if (drawn === undefined) return unchanged(chronicle);
-  const at = { q: drawn.picked.q, r: drawn.picked.r };
-  return terraformed(catalogue, { ...chronicle, rng: drawn.rng }, at, to);
 }
 
 /**
@@ -522,21 +503,18 @@ export function addedToDrawPileTop(
 }
 
 /**
- * The tiles a camp may be placed on around the city: of the terrains a camp lies on, slot empty, the
- * ground running to the city from them, within `fromCity` of the city, held by nobody, no unit
- * standing on them, and `apart` at least from every camp in `standing`. None while the city stands
- * nowhere.
+ * The tiles a camp may be placed on: of the terrains a camp lies on, slot empty, the ground running to
+ * the player's city from them, three tiles at least from its own tile, held by no city, no unit
+ * standing on them, and `apart` at least from every camp in `standing`. None for a city nowhere.
  */
 function campTiles(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  fromCity: Span,
   apart: number,
   standing: readonly TileCoords[],
 ): Tile[] {
   const { city } = chronicle;
   if (city === undefined) return [];
-  const [near, far] = fromCity;
   const ground = buildingKind(catalogue, ageOf(catalogue, chronicle.age).camp.building).terrains;
   const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
   return chronicle.tiles.filter(
@@ -544,9 +522,8 @@ function campTiles(
       tile.building === undefined &&
       ground.includes(tile.terrain) &&
       reached.has(tileKey(tile)) &&
-      distance(tile, city) >= near &&
-      distance(tile, city) <= far &&
-      !holds(chronicle, tile) &&
+      distance(tile, city) >= 3 &&
+      holderOf(chronicle, tile) === undefined &&
       unitAt(chronicle.units, tile) === undefined &&
       standing.every((other) => distance(tile, other) >= apart),
   );
@@ -557,27 +534,19 @@ function campsStanding(catalogue: Catalogue, chronicle: Chronicle): TileCoords[]
   return chronicle.tiles.filter((tile) => tile.building === building);
 }
 
-export function campPlaceable(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  fromCity: Span,
-  apart: number,
-): boolean {
-  return (
-    campTiles(catalogue, chronicle, fromCity, apart, campsStanding(catalogue, chronicle)).length > 0
-  );
+export function campPlaceable(catalogue: Catalogue, chronicle: Chronicle, apart: number): boolean {
+  return campTiles(catalogue, chronicle, apart, campsStanding(catalogue, chronicle)).length > 0;
 }
 
 /**
- * Camps placed around the city one at a time, each drawn among the tiles a camp may be placed on
- * `apart` from every camp standing and every one drawn before it, as many as stand, and a
+ * Camps placed one at a time, each drawn near the player's city among the tiles a camp may be placed
+ * on `apart` from every camp standing and every one drawn before it, as many as stand, and a
  * `runtime-error` drawing nothing where none does. Each is its own stage; it enters no unit.
  */
 export function campsPlaced(
   catalogue: Catalogue,
   chronicle: Chronicle,
   camps: number,
-  fromCity: Span,
   apart: number,
 ): Landed & { readonly placed: readonly TileCoords[] } {
   if (chronicle.city === undefined) {
@@ -589,10 +558,8 @@ export function campsPlaced(
   const standing = campsStanding(catalogue, chronicle);
   const placings: { readonly tile: TileCoords; readonly rng: Rng }[] = [];
   for (let drawn = 0; drawn < camps; drawn++) {
-    const candidates = campTiles(catalogue, chronicle, fromCity, apart, standing);
-    if (candidates.length === 0) break;
-
-    const step = pickUniform(rng, candidates);
+    const step = drawnNear(chronicle, rng, campTiles(catalogue, chronicle, apart, standing));
+    if (step === undefined) break;
     rng = step.rng;
     const chosen = step.picked;
     standing.push(chosen);
@@ -618,10 +585,9 @@ export function guardedCampPlaced(
   chronicle: Chronicle,
   kind: string,
   count: number,
-  fromCity: Span,
   apart: number,
 ): Landed {
-  const placing = campsPlaced(catalogue, chronicle, 1, fromCity, apart);
+  const placing = campsPlaced(catalogue, chronicle, 1, apart);
   const [camp] = placing.placed;
   if (camp === undefined) return placing;
   const { guard } = ageOf(catalogue, chronicle.age).camp.scripts;

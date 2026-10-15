@@ -4,17 +4,17 @@ import type { Campaign } from '../src/rules/campaign';
 import { featurePlaced, featureRemoved, gained, terraformed } from '../src/rules/cards';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
-import { featureKind } from '../src/rules/map-kinds';
-import { answerCost, answerOf, answerRefusal } from '../src/rules/schedule';
-import { followed, unchanged } from '../src/rules/stages';
-import { type Chronicle, holds, playable } from '../src/rules/state';
-import { refused } from '../src/ui/refusal-lines';
+import { featureKind, terrainKind } from '../src/rules/map-kinds';
+import { answerCost, answerOf } from '../src/rules/schedule';
+import { charted, inSight } from '../src/rules/sight';
+import { followed, type Stage, unchanged, walked } from '../src/rules/stages';
+import { type Chronicle, holderOf, holds } from '../src/rules/state';
+import { unitAt } from '../src/rules/units';
 import {
   barReadingOn,
   budget,
   chronicleOf,
   cityTileOf,
-  click,
   dealtAloneOn,
   eventDealRead,
   firstDealtAlone,
@@ -22,9 +22,7 @@ import {
   offeredOn,
   openSaved,
   readings,
-  refusalLines,
   restedOnDeal,
-  ringed,
   standing,
   take,
   watch,
@@ -34,19 +32,17 @@ import {
 /** The event the spec opens on. */
 const PREDATORS = 'predators';
 
-/** The answer of the event that removes the herds inside the border. */
+/** The answer of the event that removes the herds near the city. */
 const ABANDON_A_HERD = 'abandon-a-herd';
 
 /** The answer of the event that pays military. */
 const DEFEND_THE_HERDS = 'defend-the-herds';
 
-/** The feature the spec places on the city's tile. */
+/** The feature the spec places. */
 const DEER = 'deer';
 
-/** Whether nothing refuses the answer of the event on the chronicle. */
-function answerable(chronicle: Chronicle, answer: string): boolean {
-  return playable(answerRefusal(CATALOGUE, chronicle, PREDATORS, answer));
-}
+/** The features the wolves take. */
+const HERDS = ['deer', 'cattle'];
 
 /** The place the deal standing on the chronicle offers the answer in. */
 function placeOf(chronicle: Chronicle, answer: string): number {
@@ -55,21 +51,54 @@ function placeOf(chronicle: Chronicle, answer: string): number {
 
 /**
  * The first seed's turn 1 from the campaign, settled bare, whose first deal is the event alone,
- * stopped on the deal; then every feature inside its border removed, and what defending the herds
- * costs gained.
+ * stopped on the deal; then what defending the herds costs gained.
  */
-function unherded(campaign: Campaign): Chronicle {
+function defensible(campaign: Campaign): Chronicle {
   const dealt = firstDealtAlone(PREDATORS, campaign);
-  let cleared = unchanged(dealt);
-  for (const { q, r, feature } of dealt.tiles) {
-    if (feature === undefined || !holds(dealt, { q, r })) continue;
-    cleared = followed(cleared, (left) => featureRemoved(CATALOGUE, left, { q, r }));
-  }
   const defence = answerOf(CATALOGUE, PREDATORS, DEFEND_THE_HERDS);
-  for (const { resource, amount } of answerCost(CATALOGUE, cleared.chronicle, defence)) {
-    cleared = followed(cleared, (left) => gained(left, { [resource]: amount }));
+  let paid = unchanged(dealt);
+  for (const { resource, amount } of answerCost(CATALOGUE, dealt, defence)) {
+    paid = followed(paid, (left) => gained(left, { [resource]: amount }));
   }
-  return cleared.chronicle;
+  return paid.chronicle;
+}
+
+/**
+ * `firstDealtAlone`'s chronicle with every deer and cattle removed, and deer placed, its terrain made
+ * where needed, on the first free land tile in the city's sight outside its border: the one herd.
+ */
+function strayed(campaign: Campaign): Chronicle {
+  const dealt = firstDealtAlone(PREDATORS, campaign);
+  const { terrain } = featureKind(CATALOGUE, DEER);
+  let readied = unchanged(dealt);
+  for (const { q, r, feature } of dealt.tiles) {
+    if (feature === undefined || !HERDS.includes(feature)) continue;
+    readied = followed(readied, (left) => featureRemoved(CATALOGUE, left, { q, r }));
+  }
+  const seen = inSight(CATALOGUE, dealt);
+  const stray = dealt.tiles.find(
+    (tile) =>
+      seen.has(tileKey(tile)) &&
+      holderOf(dealt, tile) === undefined &&
+      tile.building === undefined &&
+      !terrainKind(CATALOGUE, tile.terrain).water &&
+      unitAt(dealt.units, tile) === undefined,
+  );
+  if (stray === undefined)
+    throw new Error('no land tile stands in the city’s sight outside its border');
+  const at = { q: stray.q, r: stray.r };
+  if (stray.terrain !== terrain) {
+    readied = followed(readied, (left) => terraformed(CATALOGUE, left, at, terrain));
+  }
+  readied = followed(readied, (left) => featurePlaced(CATALOGUE, left, at, DEER));
+  return charted(CATALOGUE, readied.chronicle);
+}
+
+/** The tiles the stages retiled, in the order they retiled them. */
+function retiledBy(stages: readonly Stage[]): TileCoords[] {
+  return [...walked(stages)].flatMap((stage) =>
+    stage.kind === 'change' && stage.name === 'retiled' ? [stage.tile] : [],
+  );
 }
 
 /**
@@ -99,23 +128,44 @@ function herdedAtHome(campaign: Campaign): { dealt: Chronicle; city: TileCoords 
   );
 }
 
-test('abandoning a herd is refused while no herd stands inside the border and says why over the card, and defending the herds pays the military the rules price', async ({
+test('abandoning a herd with none inside the border takes the one standing outside it: the deer gone from the tile the landing names, and the deal closed', async ({
   page,
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
-  const dealt = unherded(campaign);
-  const abandon = placeOf(dealt, ABANDON_A_HERD);
-  const defend = placeOf(dealt, DEFEND_THE_HERDS);
-  expect([answerable(dealt, ABANDON_A_HERD), answerable(dealt, DEFEND_THE_HERDS)]).toEqual([
-    false,
-    true,
+  const dealt = strayed(campaign);
+  const at = placeOf(dealt, ABANDON_A_HERD);
+  const stages = apply(CATALOGUE, dealt, { type: 'take', at });
+  const after = outcome(stages);
+  const [taken, ...others] = retiledBy(stages);
+  expect(others).toEqual([]);
+  expect(holds(dealt, taken)).toBe(false);
+  expect([tileAt(dealt.tiles, taken)?.feature, tileAt(after.tiles, taken)?.feature]).toEqual([
+    DEER,
+    undefined,
   ]);
-  const said = refused(
-    answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, PREDATORS, ABANDON_A_HERD)),
-    answerRefusal(CATALOGUE, dealt, PREDATORS, ABANDON_A_HERD),
-  );
+  const mark = `feature-${tileKey(taken)}`;
+
+  await openSaved(page, dealt, campaign);
+  await restedOnDeal(page);
+  expect(await standing(page, mark)).toBe(true);
+
+  await take(page, at);
+
+  expect(await chronicleOf(page)).toEqual(after);
+  const left = await readings(page, ['deal', mark]);
+  expect([left('deal').standing, left(mark).standing]).toEqual([false, false]);
+
+  expect(problems).toEqual([]);
+});
+
+test('defending the herds pays the military the rules price', async ({ page }) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const campaign = wonCampaign();
+  const dealt = defensible(campaign);
+  const defend = placeOf(dealt, DEFEND_THE_HERDS);
   const [price] = answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, PREDATORS, DEFEND_THE_HERDS));
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: defend }));
   const stock = `reading-${price.resource}-value`;
@@ -125,14 +175,6 @@ test('abandoning a herd is refused while no herd stands inside the border and sa
   await restedOnDeal(page);
   const shown = await eventDealRead(page, dealt, PREDATORS, [stock]);
   expect(shown(stock).text).toBe(barReadingOn(dealt, price.resource));
-
-  await click(page, `deal-card-${abandon}`);
-  await expect.poll(() => ringed(page, `deal-card-${abandon}`)).toBe(true);
-  await click(page, `deal-card-${abandon}`);
-
-  await expect.poll(() => refusalLines(page)).toEqual(said);
-  expect(await standing(page, 'deal')).toBe(true);
-  expect(await chronicleOf(page)).toEqual(dealt);
 
   await take(page, defend);
 

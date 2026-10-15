@@ -23,12 +23,12 @@ import { buildingKind } from '../rules/map-kinds';
 import {
   addedToDrawPileTop,
   campPlaceable,
-  featureDealtNearest,
+  featureDealtNear,
   guardedCampPlaced,
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { type CampPlace, guarding, RAIDER } from './scripts';
+import { guarding, RAIDER } from './scripts';
 
 /** How many enemies a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -44,7 +44,8 @@ function wildfireTakes(turn: number): number {
   return 2 * (1 + Math.floor(turn / 5));
 }
 
-const RIVAL_CAMP: CampPlace = { fromCity: [3, 4], apart: 3 };
+/** How far apart from every camp standing a rival band's camp is placed. */
+const RIVAL_CAMP_APART = 3;
 
 const TABLES: Tables = {
   units: {
@@ -212,9 +213,7 @@ const TABLES: Tables = {
         'make-room': {
           cost: {},
           blocked: (catalogue, chronicle) =>
-            campPlaceable(catalogue, chronicle, RIVAL_CAMP.fromCity, RIVAL_CAMP.apart)
-              ? []
-              : ['no-camp-tile'],
+            campPlaceable(catalogue, chronicle, RIVAL_CAMP_APART) ? [] : ['no-camp-tile'],
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
           lands: (catalogue, chronicle) =>
             guardedCampPlaced(
@@ -222,8 +221,7 @@ const TABLES: Tables = {
               chronicle,
               'warrior',
               raiders(chronicle.turn),
-              RIVAL_CAMP.fromCity,
-              RIVAL_CAMP.apart,
+              RIVAL_CAMP_APART,
             ),
         },
       },
@@ -254,7 +252,7 @@ const TABLES: Tables = {
           cost: {},
           reads: () => ({}),
           lands: (catalogue, chronicle) => {
-            const dealt = featureDealtNearest(catalogue, chronicle, ['deer', 'cattle']);
+            const dealt = featureDealtNear(catalogue, chronicle, ['deer', 'cattle']);
             const { at } = dealt;
             return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
           },

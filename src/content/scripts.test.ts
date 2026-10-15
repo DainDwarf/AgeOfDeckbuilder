@@ -48,7 +48,6 @@ import { seedRng } from '../rules/rng';
 import { walked } from '../rules/stages';
 import { type Chronicle, withCityRows } from '../rules/state';
 import {
-  type CampPlace,
   campedOrRaided,
   guarding,
   NEUTRAL_GUARD,
@@ -1097,21 +1096,20 @@ test('a guard attacks the unit of the least health within its range', () => {
   expect(attacksOf(city, GUARDING)).toEqual([['4,0', '4,-1']]);
 });
 
-/** Where the camp-or-raid shape places its camp in these tests: three to four from the city, three apart. */
-const NEAR: CampPlace = { fromCity: [3, 4], apart: 3 };
+/** How far apart from every camp standing the camp-or-raid shape places its camp in these tests. */
+const APART = 3;
 
 test('a camp or a raid places a camp near the city with its warriors on and around it as the camp’s guards where a tile takes one, and enters them as a raid of the camp’s raiders where none does', () => {
   const open = cityOf(['urban'], { tiles: field(6) });
   const closed = cityOf(['urban'], { tiles: field(2) });
 
-  const placed = campedOrRaided(CATALOGUE, open, CAMP_KIND, 3, NEAR).chronicle;
-  const raided = campedOrRaided(CATALOGUE, closed, CAMP_KIND, 3, NEAR).chronicle;
+  const placed = campedOrRaided(CATALOGUE, open, CAMP_KIND, 3, APART).chronicle;
+  const raided = campedOrRaided(CATALOGUE, closed, CAMP_KIND, 3, APART).chronicle;
   const camps = placed.tiles.filter((tile) => tile.building === CAMP.building);
   const camp = { q: camps[0].q, r: camps[0].r };
 
   expect(camps).toHaveLength(1);
   expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
-  expect(distance(camp, CITY)).toBeLessThanOrEqual(4);
   expect(enemiesOf(placed)).toMatchObject(Array(3).fill({ script: GUARD_SCRIPT, camp }));
   expect(enemiesOf(placed).map((unit) => tileKey(unit.tile))).toContain(tileKey(camp));
   expect(raided.tiles.some((tile) => tile.building === CAMP.building)).toBe(false);

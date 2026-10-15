@@ -202,7 +202,7 @@ const TEXT = {
     'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',
   'card.floodplain': 'Floodplain',
   'rules.floodplain':
-    'Removes one improvement inside your border, a building once none stands, your city last',
+    'Removes one improvement near your city, a building inside your border once none stands, your city last',
   'card.sickness': 'Sickness',
   'rules.sickness': 'Kills one population',
   'card.misunderstandings': 'Misunderstandings',
@@ -211,7 +211,7 @@ const TEXT = {
   'rules.wolves': 'Kills one population',
   'card.rain-dance': 'Rain dance',
   'rules.rain-dance':
-    'Dries one [terrain:plain] or [terrain:forest] inside your border into [terrain:desert]',
+    'Dries one [terrain:plain] or [terrain:forest] near your city into [terrain:desert]',
   'card.embers': 'Embers',
   'rules.embers': 'Burns one [terrain:forest] near your city into [terrain:plain]',
   'card.tribute': 'Tribute',
@@ -249,10 +249,10 @@ const TEXT = {
   'event.flood': 'Flood',
   'answer.lose-the-fields': 'Lose the fields',
   'answer-rules.lose-the-fields':
-    'The flood removes {improvements} improvement, {buildings} building and {city} city inside your border',
+    'The flood removes {improvements} improvement near your city, {buildings} building and {city} city',
   'answer.settle-the-floodplain': 'Settle the floodplain',
   'answer-rules.settle-the-floodplain':
-    'Add [card:floodplain] to the discard pile. Each turn it stays in your hand, it removes one improvement inside your border, a building once none stands, your city last',
+    'Add [card:floodplain] to the discard pile. Each turn it stays in your hand, it removes one improvement near your city, a building inside your border once none stands, your city last',
   'answer.dig-channels': 'Dig channels',
   'answer-rules.dig-channels': 'Pay {production}[production]',
   'event.bad-air': 'Bad air and angry spirits',
@@ -272,7 +272,7 @@ const TEXT = {
   'event.predators': 'Predators',
   'answer.abandon-a-herd': 'Abandon a herd',
   'answer-rules.abandon-a-herd':
-    'The wolves remove {deer} [feature:deer] and {cattle} [feature:cattle] inside your border',
+    'The wolves remove {deer} [feature:deer] and {cattle} [feature:cattle] near your city',
   'answer.let-the-farmers-handle-it': 'Let the farmers handle it',
   'answer-rules.let-the-farmers-handle-it':
     'Add [card:wolves] to the discard pile. Each turn it stays in your hand, it kills one population',
@@ -281,7 +281,7 @@ const TEXT = {
   'event.drought': 'Drought',
   'answer.rain-dance': 'Rain dance',
   'answer-rules.rain-dance':
-    'Add [card:rain-dance] to the discard pile. Each turn it stays in your hand, it dries one [terrain:plain] or [terrain:forest] inside your border into [terrain:desert]',
+    'Add [card:rain-dance] to the discard pile. Each turn it stays in your hand, it dries one [terrain:plain] or [terrain:forest] near your city into [terrain:desert]',
   'answer.rationing': 'Rationing',
   'answer-rules.rationing': 'Pay {food}[food]',
   'answer.buy-grain': 'Buy grain',
@@ -308,7 +308,7 @@ const TEXT = {
   'answer-rules.hunt-it': 'Gain {food}[food]',
   'answer.follow-it': 'Follow it',
   'answer-rules.follow-it':
-    'One [terrain:forest] gains [feature:deer] or one [terrain:plain] gains [feature:cattle]',
+    'Near your city, one [terrain:forest] gains [feature:deer] or one [terrain:plain] gains [feature:cattle]',
   'capstone-name.first-shelter': 'The first shelter',
   'capstone-rules.first-shelter': 'Add [card:shelter] to the top of the draw pile',
   'capstone.title': 'Capstone',
@@ -350,8 +350,7 @@ const TEXT = {
   'refusal.hand': 'No other card in the hand',
   'refusal.turn-shown': 'The next event is already shown',
   'refusal.played-by-nothing': 'Cannot be played',
-  'refusal.no-deer-or-cattle': 'No deer or cattle inside your border',
-  'refusal.no-camp-tile': 'No tile near your city takes a camp',
+  'refusal.no-camp-tile': 'No tile takes a camp',
   'refusal.no-claim': 'Your city cannot claim that tile',
   'browse.draw-pile': 'Draw pile — {count}',
   'browse.discard-pile': 'Discard pile — {count}',

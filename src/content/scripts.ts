@@ -5,7 +5,6 @@ import {
   costOf,
   type NeutralScript,
   type ScriptAct,
-  type Span,
   type UnitScript,
   type UnitShare,
   workerAim,
@@ -379,25 +378,22 @@ export const VILLAGER: NeutralScript = {
   },
 };
 
-/** How far from the player's city a camp may be placed, and how far apart from every camp standing. */
-export type CampPlace = { readonly fromCity: Span; readonly apart: number };
-
 /**
- * A guarded camp placed near the player's city at the place named; where no tile takes a camp, the
- * same count entered as a raid of the camp's raiders.
+ * A guarded camp placed near the player's city, `apart` from every camp standing; where no tile takes
+ * a camp, the same count entered as a raid of the camp's raiders.
  */
 export function campedOrRaided(
   catalogue: Catalogue,
   chronicle: Chronicle,
   kind: string,
   count: number,
-  { fromCity, apart }: CampPlace,
+  apart: number,
 ): Landed {
-  if (!campPlaceable(catalogue, chronicle, fromCity, apart)) {
+  if (!campPlaceable(catalogue, chronicle, apart)) {
     const { raider } = ageOf(catalogue, chronicle.age).camp.scripts;
     return raided(catalogue, chronicle, count, [{ kind, script: raider, weight: 1 }]);
   }
-  return guardedCampPlaced(catalogue, chronicle, kind, count, fromCity, apart);
+  return guardedCampPlaced(catalogue, chronicle, kind, count, apart);
 }
 
 /** What a tile yields in every resource together. */

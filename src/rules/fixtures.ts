@@ -90,18 +90,16 @@ import {
   addedToDrawPileTop,
   campPlaceable,
   campsPlaced,
-  featureDealtNearest,
-  featureInside,
-  featureRemovalInside,
-  featuresRemovedInside,
+  featureDealtNear,
+  featureRemovalNear,
+  featuresRemovedNear,
   guardedCampPlaced,
   offered,
-  removalInside,
-  removedInside,
+  removalNear,
+  removedNear,
   showsNextLanding,
   spanEnded,
-  terraformedInside,
-  terraformedNearest,
+  terraformedNear,
   tileCharted,
   unitDamaged,
 } from './schedule';
@@ -179,22 +177,22 @@ export const TITHE = 2;
 /** How much higher each strike of the fixture's tithe sets its counter. */
 export const TITHE_RISE = 3;
 
-/** How many tiles inside the border the fixture's sprawl terraforms into urban at each strike. */
+/** How many tiles the fixture's sprawl terraforms into urban at each strike. */
 export const SPRAWL = 2;
 
 /** The terrains the fixture's sprawl terraforms. */
 const SPRAWLED: readonly Terrain[] = ['plain', 'forest'];
 
-/** How many things inside the border the fixture's deluge removes. */
+/** How many things the fixture's deluge removes. */
 export const DELUGE = 2;
 
-/** How many features inside the border the fixture's cull removes. */
+/** How many features the fixture's cull removes. */
 export const CULL = 2;
 
 /** The production the fixture's cull costs. */
 export const CULL_COST = 1;
 
-/** The features the fixture's cull removes, and whose absence inside the border blocks it. */
+/** The features the fixture's cull removes. */
 const CULLED: readonly FeatureId[] = ['PH_Fertile', 'PH_Game'];
 
 /** The production the fixture's explosion costs. */
@@ -212,7 +210,8 @@ export const AMBUSH = 3;
 /** How many warriors the fixture's encampment enters on and around the camp it places. */
 export const ENCAMPED = 3;
 
-const RIVALS = { fromCity: [3, 4], apart: 3 } as const;
+/** How far apart from every camp standing the fixture's encampment and siege place their camps. */
+const CAMPS_APART = 3;
 
 /** The fixture's building that gives to the tiles beside it. */
 export const WELL = 'PH_Well';
@@ -232,7 +231,7 @@ function raiders(turn: number): number {
 }
 
 function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
-  const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, [3, 5], 3);
+  const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, CAMPS_APART);
   let landing: Landed = placing;
   for (const camp of placing.placed) {
     landing = followed(landing, (left) => enteredOnCamp(catalogue, left, camp, [RAIDER_ROW]));
@@ -323,19 +322,10 @@ const EVENTS: Catalogue['events'] = {
       PH_Encampment: {
         cost: {},
         blocked: (catalogue, chronicle) =>
-          campPlaceable(catalogue, chronicle, RIVALS.fromCity, RIVALS.apart)
-            ? []
-            : ['no-camp-tile'],
+          campPlaceable(catalogue, chronicle, CAMPS_APART) ? [] : ['no-camp-tile'],
         reads: () => ({ warriors: ENCAMPED }),
         lands: (catalogue, chronicle) =>
-          guardedCampPlaced(
-            catalogue,
-            chronicle,
-            CAMP_KIND,
-            ENCAMPED,
-            RIVALS.fromCity,
-            RIVALS.apart,
-          ),
+          guardedCampPlaced(catalogue, chronicle, CAMP_KIND, ENCAMPED, CAMPS_APART),
       },
       PH_Truce: {
         cost: {},
@@ -350,7 +340,7 @@ const EVENTS: Catalogue['events'] = {
         cost: {},
         reads: () => ({}),
         lands: (catalogue, chronicle) =>
-          terraformedNearest(catalogue, chronicle, ['forest'], 'plain'),
+          terraformedNear(catalogue, chronicle, ['forest'], 'plain', 1),
       },
       PH_Firebreak: {
         cost: {},
@@ -365,7 +355,7 @@ const EVENTS: Catalogue['events'] = {
         cost: {},
         reads: () => ({}),
         lands: (catalogue, chronicle) => {
-          const dealt = featureDealtNearest(catalogue, chronicle, ['PH_Fertile', 'PH_Game']);
+          const dealt = featureDealtNear(catalogue, chronicle, ['PH_Fertile', 'PH_Game']);
           const { at } = dealt;
           return at === undefined ? dealt : followed(dealt, (left) => tileCharted(left, at));
         },
@@ -402,8 +392,8 @@ const EVENTS: Catalogue['events'] = {
     answers: {
       PH_Drown: {
         cost: {},
-        reads: (_catalogue, chronicle) => removalInside(chronicle, DELUGE),
-        lands: (_catalogue, chronicle) => removedInside(chronicle, DELUGE),
+        reads: (_catalogue, chronicle) => removalNear(chronicle, DELUGE),
+        lands: (_catalogue, chronicle) => removedNear(chronicle, DELUGE),
       },
       PH_Wade: {
         cost: {},
@@ -416,10 +406,8 @@ const EVENTS: Catalogue['events'] = {
     answers: {
       PH_Cull: {
         cost: { production: CULL_COST },
-        blocked: (catalogue, chronicle) =>
-          featureInside(catalogue, chronicle, CULLED) ? [] : ['no-deer-or-cattle'],
-        reads: (catalogue, chronicle) => featureRemovalInside(catalogue, chronicle, CULLED, CULL),
-        lands: (catalogue, chronicle) => featuresRemovedInside(catalogue, chronicle, CULLED, CULL),
+        reads: (catalogue, chronicle) => featureRemovalNear(catalogue, chronicle, CULLED, CULL),
+        lands: (catalogue, chronicle) => featuresRemovedNear(catalogue, chronicle, CULLED, CULL),
       },
       PH_Guard: {
         cost: {},
@@ -679,7 +667,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       cost: {},
       influence: 2,
       strikes: (catalogue, chronicle) =>
-        terraformedInside(catalogue, chronicle, SPRAWLED, 'urban', SPRAWL),
+        terraformedNear(catalogue, chronicle, SPRAWLED, 'urban', SPRAWL),
     },
     PH_Tithe: {
       kind: 'challenge',

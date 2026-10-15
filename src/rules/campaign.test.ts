@@ -54,7 +54,7 @@ import {
   victoryOf,
 } from './fixtures';
 import { readSave, writeSave } from './save';
-import { removedInside } from './schedule';
+import { removedNear } from './schedule';
 import type { CardId, Chronicle } from './state';
 
 function numbersOf(cards: readonly CampaignCard[]): number[] {
@@ -165,7 +165,7 @@ test('a card a technology unlocks that the collection already owns enters as new
  * command's stages are.
  */
 function removedAlone(alone: Chronicle): Chronicle {
-  return outcome(chartedAndRead(CATALOGUE, alone, removedInside(alone, 1).stages));
+  return outcome(chartedAndRead(CATALOGUE, alone, removedNear(alone, 1).stages));
 }
 
 /**

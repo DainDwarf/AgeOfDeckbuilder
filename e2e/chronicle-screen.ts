@@ -8,8 +8,12 @@ import {
   built,
   type CardKind,
   featurePlaced,
+  firstRefusal,
   gained,
   improvementPlaced,
+  made,
+  outside,
+  slotFree,
   terraformed,
 } from '../src/rules/cards';
 import {
@@ -40,10 +44,10 @@ import {
   tilesBeside,
   tileYield,
 } from '../src/rules/map';
-import { featureKind, improvementKind } from '../src/rules/map-kinds';
+import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
-import { addedToDrawPileTop, answerRefusal, campsPlaced, offered } from '../src/rules/schedule';
+import { addedToDrawPileTop, answerRefusal, offered } from '../src/rules/schedule';
 import { charted } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
 import {
@@ -1574,17 +1578,30 @@ export function unitEntered(chronicle: Chronicle, entering: Entering): Chronicle
 }
 
 /**
- * Seed 1's turn 1 on the campaign, a fresh one unless named, with one camp placed beside the city and
- * nobody entered with it, and the unit `planted` names entered on it; and the camp.
+ * Seed 1's turn 1 on the campaign, a fresh one unless named, with the age's camp built on the first
+ * tile beside the city outside its border that the camp stands on, its slot empty and nobody on it,
+ * and the unit `planted` names entered on it; and the camp.
  */
 export function campBeside(
   planted: (camp: TileCoords) => Entering,
   campaign?: Campaign,
 ): { chronicle: Chronicle; camp: TileCoords } {
-  const placing = campsPlaced(CATALOGUE, settledOn(1, [], campaign), 1, [1, 1], 1);
-  const [camp] = placing.placed;
-  if (camp === undefined) throw new Error('seed 1 places no camp beside its city');
-  const placed = charted(CATALOGUE, placing.chronicle);
+  const opened = settledOn(1, [], campaign);
+  const { city } = opened;
+  if (city === undefined) throw new Error('seed 1 settles no city');
+  const { building } = ageOf(CATALOGUE, opened.age).camp;
+  const { terrains } = buildingKind(CATALOGUE, building);
+  const camp = neighbours(city).find((at) => {
+    const tile = tileAt(opened.tiles, at);
+    return (
+      tile !== undefined &&
+      firstRefusal(made(CATALOGUE, tile, terrains), slotFree(tile), outside(opened, tile)) ===
+        undefined &&
+      unitAt(opened.units, tile) === undefined
+    );
+  });
+  if (camp === undefined) throw new Error('seed 1 has no tile beside its city a camp stands on');
+  const placed = charted(CATALOGUE, built(CATALOGUE, opened, camp, building).chronicle);
   return { chronicle: unitEntered(placed, planted(camp)), camp };
 }
 

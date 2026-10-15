@@ -217,7 +217,6 @@ export type Block =
   | 'hand'
   | 'turn-shown'
   | 'played-by-nothing'
-  | 'no-deer-or-cattle'
   | 'no-camp-tile'
   | TileBlock;
 

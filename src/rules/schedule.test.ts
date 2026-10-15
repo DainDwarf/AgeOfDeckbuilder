@@ -8,6 +8,7 @@ import {
   AMBUSH,
   aimedAt,
   assignTo,
+  besideTheNeutral,
   buildingAt,
   builtOn,
   CAMP,
@@ -32,6 +33,7 @@ import {
   heldBy,
   idsOf,
   madeOf,
+  NEUTRAL_TILE,
   NO_DEALS,
   NO_GROWTH,
   namesOf,
@@ -77,6 +79,9 @@ import {
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
 const SEEDS: readonly number[] = Array.from({ length: 40 }, (_, at) => at + 1);
+
+/** The seeds a test over a draw near the city runs: enough of them for its lightest tiles to be drawn. */
+const MANY_SEEDS: readonly number[] = Array.from({ length: 200 }, (_, at) => at + 1);
 
 /** What the events phase landed on one turn: the event it dealt, or no event for the capstone. */
 type Landing = { readonly turn: number; readonly event?: string };
@@ -659,8 +664,6 @@ test('an answer placing a camp near the city places one, and its raid enters a w
 
   expect(campsOf(dealt)).toEqual([]);
   expect(others).toEqual([]);
-  expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
-  expect(distance(camp, CITY)).toBeLessThanOrEqual(4);
   expect(warriors).toHaveLength(ENCAMPED);
   expect(warriors.map((warrior) => distance(warrior.tile, camp)).sort((a, b) => a - b)).toEqual([
     0,
@@ -668,20 +671,45 @@ test('an answer placing a camp near the city places one, and its raid enters a w
   ]);
 });
 
-test('an event placing a camp near the city is dealt where no tile near it takes a camp, its answer blocked there, and that answer landed there is a runtime error', () => {
+test('a camp placed near a city holding its own tile alone lands three tiles from it or further, the third ring the likeliest', () => {
+  const rings: number[] = [];
+
+  for (const seed of SEEDS) {
+    const city = cityOf(['urban'], {
+      ...NO_GROWTH,
+      tiles: field(6),
+      ...dueOn(2, 'PH_Rivals'),
+      rng: seedRng(seed),
+    });
+    const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
+    const [camp] = campsOf(outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 })));
+    rings.push(distance(camp, CITY));
+  }
+  const third = rings.filter((ring) => ring === 3).length;
+
+  expect(Math.min(...rings)).toBe(3);
+  expect(Math.max(...rings)).toBeGreaterThan(3);
+  expect(third).toBeGreaterThan(rings.length - third);
+});
+
+test('an event placing a camp near the city is dealt where no tile takes a camp, its answer read blocked there with its reason and its take refused with nothing paid, and that answer landed there is a runtime error', () => {
   const cramped = cityOf(['urban'], {
     ...NO_GROWTH,
     tiles: field(2),
     ...dueOn(2, 'PH_Rivals'),
   });
   const dealt = outcome(apply(CATALOGUE, cramped, { type: 'end-turn' }));
+  const encamping = { type: 'take', at: 0 } as const;
   const landing = eventOf(CATALOGUE, 'PH_Rivals').answers.PH_Encampment.lands(CATALOGUE, dealt);
 
   expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Rivals' }]);
+  expect(offered(CATALOGUE, dealt.deals[0])[encamping.at]).toBe('PH_Encampment');
   expect(answerRefusal(CATALOGUE, dealt, 'PH_Rivals', 'PH_Encampment')).toEqual({
     unaffordable: [],
     blocked: ['no-camp-tile'],
   });
+  expect(stagedBy(dealt, encamping)).toEqual(['refused']);
+  expect(outcome(apply(CATALOGUE, dealt, encamping))).toBe(dealt);
   expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
   expect(campsOf(landing.chronicle)).toEqual([]);
   expect(enemiesOf(landing.chronicle)).toEqual([]);
@@ -710,7 +738,7 @@ const CITY_IN_FOREST: Catalogue = catalogued({
   },
 });
 
-test('an answer terraforming near the city turns one tile of the terrain it names into another, of those nearest to the city a terraform reaches one drawn once from the seeded generator, every layer going with the old terrain or the feature and the population working it staying, and nothing where none stands', () => {
+test('an answer terraforming near the city turns one tile of the terrain it names that a terraform reaches into another, drawn near the city in one step of the seeded generator, every layer going with the old terrain or the feature and the population working it staying, and nothing where none stands', () => {
   const near = [
     { q: 2, r: 0 },
     { q: -2, r: 0 },
@@ -735,11 +763,10 @@ test('an answer terraforming near the city turns one tile of the terrain it name
         rng: seedRng(seed),
       }),
     );
-    const [struck, ...others] = near.filter((at) => terrainOf(landed, at) === 'plain');
+    const [struck, ...others] = [...near, far].filter((at) => terrainOf(landed, at) === 'plain');
     const key = tileKey(struck);
 
     expect(others).toEqual([]);
-    expect(terrainOf(landed, far)).toBe('forest');
     expect(landed.rng).toEqual(nextRng(dealt.rng).rng);
     expect(tileAt(landed.tiles, struck)).toEqual({
       ...tileAt(dealt.tiles, struck),
@@ -760,7 +787,7 @@ test('an answer terraforming near the city turns one tile of the terrain it name
     cityOf(['urban', 'forest'], {
       ...dueOn(2, 'PH_Wildfire'),
       drawPile: fullDraw(),
-      tiles: madeOf(field(5), 'forest', [worked, far]),
+      tiles: madeOf(field(5), 'forest', [worked]),
     }),
   );
   const bare = burnt(
@@ -778,7 +805,6 @@ test('an answer terraforming near the city turns one tile of the terrain it name
   expect(terrainOf(wooded.landed, CITY)).toBe('forest');
   expect(terrainOf(wooded.landed, far)).toBe('plain');
   expect(terrainOf(working.landed, worked)).toBe('plain');
-  expect(terrainOf(working.landed, far)).toBe('forest');
   expect(working.landed.assigned).toEqual(working.dealt.assigned);
   expect(working.landed.population).toBe(working.dealt.population);
   expect(stagedBy(bare.dealt, { type: 'take', at: 0 })).toEqual(['answer', 'taken']);
@@ -853,41 +879,34 @@ function outsideOf(dealt: Chronicle, chronicle: Chronicle): Tile[] {
   return chronicle.tiles.filter((tile) => !holds(dealt, tile));
 }
 
-test('a removal takes improvements inside the border while they stand, each drawn once from the seeded generator among all standing there, the city’s own tile included and a tile carrying several counting each, and leaves the buildings and every tile outside the border', () => {
-  const inside: [TileCoords, Laid][] = [
+test('a removal takes improvements while they stand, each drawn near the city, inside the border and out of it, the city’s own tile included and a tile carrying several counting each, and leaves every building', () => {
+  const laid: [TileCoords, Laid][] = [
     [CITY, { improvements: ['PH_Road'] }],
     [SOAKED, { improvements: ['PH_Road', 'PH_Trail'] }],
+    [BARN, { building: TILLAGE }],
+    [DRY, { improvements: ['PH_Road', 'PH_Rubble'], building: TILLAGE }],
   ];
-  const held = inside.map(([at]) => at);
-  const standing = improvementsOn(flooding(inside), held);
-  const leftOver = new Set<string>();
+  const carrying = [CITY, SOAKED, DRY];
+  const standing = improvementsOn(flooding(laid), carrying);
+  const taken = new Set<string>();
 
-  for (const seed of SEEDS) {
-    const city = flooding(
-      [
-        ...inside,
-        [BARN, { building: TILLAGE }],
-        [DRY, { improvements: ['PH_Road', 'PH_Rubble'], building: TILLAGE }],
-      ],
-      { rng: seedRng(seed) },
-    );
-    const { dealt, read, stages } = deluged(city);
+  for (const seed of MANY_SEEDS) {
+    const { dealt, read, stages } = deluged(flooding(laid, { rng: seedRng(seed) }));
     const landed = outcome(stages);
-    const left = improvementsOn(landed, held);
+    const left = improvementsOn(landed, carrying);
 
     expect(read).toEqual({ improvements: DELUGE, buildings: 0, city: 0 });
     expect(left).toHaveLength(standing.length - DELUGE);
     expect(standing).toEqual(expect.arrayContaining(left));
     expect(retiledOn(stages)).toHaveLength(DELUGE);
     expect(landed.rng).toEqual(steppedBy(dealt.rng, DELUGE));
-    expect(buildingAt(landed, BARN)).toBe(TILLAGE);
-    expect(outsideOf(dealt, landed)).toEqual(outsideOf(dealt, dealt));
-    leftOver.add(left.join());
+    expect([buildingAt(landed, BARN), buildingAt(landed, DRY)]).toEqual([TILLAGE, TILLAGE]);
+    for (const each of standing.filter((one) => !left.includes(one))) taken.add(each);
   }
-  expect(leftOver.size).toBeGreaterThan(1);
+  expect([...taken].sort()).toEqual([...standing].sort());
 });
 
-test('once no improvement stands inside the border, a removal takes a building there in its place, drawn once from the seeded generator among all standing there, and the city’s own building stands', () => {
+test('once no improvement stands, a removal takes a building inside the border in its place, drawn once from the seeded generator among all standing there, and the city’s own building stands', () => {
   const takenFrom = new Set<string>();
 
   for (const seed of SEEDS) {
@@ -918,11 +937,11 @@ test('once no improvement stands inside the border, a removal takes a building t
   expect(takenFrom.size).toBeGreaterThan(1);
 });
 
-test('once nothing else stands inside the border, a removal takes the city’s own building, drawing nothing for it, and the city falls on the spot', () => {
+test('once no improvement and no building inside the border stands, a removal takes the city’s own building, drawing nothing for it, and the city falls on the spot', () => {
   const { dealt, read, stages } = deluged(
     flooding([
       [SOAKED, { building: TILLAGE }],
-      [DRY, { improvements: ['PH_Road'] }],
+      [DRY, { building: TILLAGE }],
     ]),
   );
   const fallen = outcome(stages);
@@ -966,41 +985,23 @@ const CULLING = { type: 'take', at: 0 } as const;
 
 const { PH_Cull } = eventOf(CATALOGUE, 'PH_Prowl').answers;
 
-test('an answer blocked on the chronicle is dealt, read blocked with its reason, and its take refused with nothing paid, while the same answer is taken where the chronicle admits it', () => {
-  const bare = prowled([[DRY, { feature: 'PH_Fertile' }]]);
-  const herded = prowled([[SOAKED, { feature: 'PH_Fertile' }]]);
-  const [deal] = bare.deals;
-  if (deal === undefined) throw new Error('the prowl is not dealt');
-  const culled = outcome(apply(CATALOGUE, herded, CULLING));
-
-  expect(offered(CATALOGUE, deal)[CULLING.at]).toBe('PH_Cull');
-  expect(answerRefusal(CATALOGUE, bare, 'PH_Prowl', 'PH_Cull')).toEqual({
-    unaffordable: [],
-    blocked: ['no-deer-or-cattle'],
-  });
-  expect(stagedBy(bare, CULLING)).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, bare, CULLING))).toBe(bare);
-  expect(answerRefusal(CATALOGUE, herded, 'PH_Prowl', 'PH_Cull')).toEqual(NO_REFUSAL);
-  expect(culled.deals).toEqual([]);
-  expect(culled.resources.production).toBe(herded.resources.production - CULL_COST);
-  expect(featureOf(culled, SOAKED)).toBeUndefined();
-});
-
-test('a removal of features takes that many inside the border, each drawn once from the seeded generator among those standing there, the city’s own tile included, with every layer going with it, reads what it takes of each before it lands, and takes fewer where fewer stand and nothing where none does', () => {
-  const inside: [TileCoords, Laid][] = [
+test('a removal of features takes that many, each drawn near the city, inside the border and out of it, the city’s own tile included, with every layer going with it, reads what it takes of each before it lands, takes fewer where fewer stand and nothing where none does, and is refused by nothing', () => {
+  const laid: [TileCoords, Laid][] = [
     [CITY, { feature: 'PH_Fertile' }],
     [SOAKED, { feature: 'PH_Fertile', building: 'PH_Smokehouse' }],
     [BARN, { terrain: 'forest', feature: 'PH_Game', improvements: ['PH_Snare'] }],
+    [DRY, { feature: 'PH_Fertile', building: 'PH_Smokehouse' }],
   ];
-  const outside: [TileCoords, Laid] = [DRY, { feature: 'PH_Fertile', building: 'PH_Smokehouse' }];
+  const herds = laid.map(([at]) => at);
   const takenFrom = new Set<string>();
 
-  for (const seed of SEEDS) {
-    const dealt = prowled([...inside, outside], seed);
+  for (const seed of MANY_SEEDS) {
+    const dealt = prowled(laid, seed);
     const read = PH_Cull.reads(CATALOGUE, dealt);
     const stages = apply(CATALOGUE, dealt, CULLING);
     const landed = outcome(stages);
-    const bared = inside.map(([at]) => at).filter((at) => featureOf(landed, at) === undefined);
+    const bared = herds.filter((at) => featureOf(landed, at) === undefined);
+    const keys = new Set(bared.map(tileKey));
     const lost = (feature: FeatureId): number =>
       bared.filter((at) => featureOf(dealt, at) === feature).length;
 
@@ -1012,25 +1013,27 @@ test('a removal of features takes that many inside the border, each drawn once f
       expect(tileAt(landed.tiles, at)?.improvements).toEqual([]);
       expect(buildingAt(landed, at)).toBe(tileKey(at) === tileKey(CITY) ? 'PH_City' : undefined);
     }
-    for (const [at] of inside.filter(([at]) => !bared.includes(at))) {
-      expect(tileAt(landed.tiles, at)).toEqual(tileAt(dealt.tiles, at));
-    }
+    expect(landed.tiles.filter((tile) => !keys.has(tileKey(tile)))).toEqual(
+      dealt.tiles.filter((tile) => !keys.has(tileKey(tile))),
+    );
     expect(landed.assigned).toEqual(dealt.assigned);
-    expect(outsideOf(dealt, landed)).toEqual(outsideOf(dealt, dealt));
-    takenFrom.add(bared.map(tileKey).join());
+    for (const key of keys) takenFrom.add(key);
   }
-  expect(takenFrom.size).toBeGreaterThan(1);
+  expect([...takenFrom].sort()).toEqual(herds.map(tileKey).sort());
 
-  const one = prowled([[SOAKED, { feature: 'PH_Fertile' }], outside]);
-  const fewer = outcome(apply(CATALOGUE, one, CULLING));
-  const none = prowled([outside]);
+  const stray = prowled([[DRY, { feature: 'PH_Fertile' }]]);
+  const fewer = outcome(apply(CATALOGUE, stray, CULLING));
+  const none = prowled([]);
+  const culled = outcome(apply(CATALOGUE, none, CULLING));
 
-  expect(PH_Cull.reads(CATALOGUE, one)).toEqual({ PH_Fertile: 1, PH_Game: 0 });
-  expect(featureOf(fewer, SOAKED)).toBeUndefined();
-  expect(fewer.rng).toEqual(steppedBy(one.rng, 1));
-  expect(outsideOf(one, fewer)).toEqual(outsideOf(one, one));
+  expect(PH_Cull.reads(CATALOGUE, stray)).toEqual({ PH_Fertile: 1, PH_Game: 0 });
+  expect(featureOf(fewer, DRY)).toBeUndefined();
+  expect(fewer.rng).toEqual(steppedBy(stray.rng, 1));
+  expect(answerRefusal(CATALOGUE, none, 'PH_Prowl', 'PH_Cull')).toEqual(NO_REFUSAL);
   expect(PH_Cull.reads(CATALOGUE, none)).toEqual({ PH_Fertile: 0, PH_Game: 0 });
   expect(PH_Cull.lands(CATALOGUE, none)).toEqual(unchanged(none));
+  expect(culled.deals).toEqual([]);
+  expect(culled.resources.production).toBe(none.resources.production - CULL_COST);
 });
 
 /**
@@ -1050,27 +1053,29 @@ function sprawled(
   throw new Error('the sprawl strikes nothing');
 }
 
-/** The tiles beside the city a `ringed` city holds but `SOAKED` and `BARN`, laid as hills. */
-const HILLS_BESIDE: [TileCoords, Laid][] = neighbours(CITY)
-  .filter((at) => ![SOAKED, BARN].some((other) => tileKey(other) === tileKey(at)))
-  .map((at) => [at, { terrain: 'hills' }]);
+/** Every tile of a `laidOut` disc but the city's and the named ones, laid as hills. */
+function hillsBut(kept: readonly TileCoords[]): [TileCoords, Laid][] {
+  const named = new Set([CITY, ...kept].map(tileKey));
+  return field(3)
+    .filter((tile) => !named.has(tileKey(tile)))
+    .map(({ q, r }) => [{ q, r }, { terrain: 'hills' }]);
+}
 
-test('a challenge that terraforms strikes that many tiles of the terrains it names inside the border, each drawn once from the seeded generator among those standing there, the city’s own tile included, every layer going with the old terrain or the feature and the population working them staying, and fewer where fewer stand and nothing where none does', () => {
-  const inside: [TileCoords, Laid][] = [
+test('a challenge that terraforms strikes that many tiles of the terrains it names, each drawn near the city, inside the border and out of it, the city’s own tile included, every layer going with the old terrain or the feature and the population working them staying, and fewer where fewer stand and nothing where none does', () => {
+  const laid: [TileCoords, Laid][] = [
     [CITY, { terrain: 'plain' }],
     [SOAKED, { building: TILLAGE, improvements: ['PH_Road'] }],
     [BARN, { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' }],
+    [DRY, { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' }],
   ];
-  const outside: [TileCoords, Laid] = [
-    DRY,
-    { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' },
-  ];
-  const candidates = inside.map(([at]) => at);
+  const candidates = laid.map(([at]) => at);
+  const hills = hillsBut(candidates);
   const terraformedOn = new Set<string>();
 
-  for (const seed of SEEDS) {
-    const { city, held, left } = sprawled([...inside, ...HILLS_BESIDE, outside], seed);
+  for (const seed of MANY_SEEDS) {
+    const { city, held, left } = sprawled([...hills, ...laid], seed);
     const changed = candidates.filter((at) => terrainOf(left, at) === 'urban');
+    const keys = new Set(changed.map(tileKey));
 
     expect(changed).toHaveLength(SPRAWL);
     expect(namesOf(held)).toEqual(Array(SPRAWL).fill('retiled'));
@@ -1084,25 +1089,19 @@ test('a challenge that terraforms strikes that many tiles of the terrains it nam
         building: tileKey(at) === tileKey(CITY) ? 'PH_City' : undefined,
       });
     }
-    for (const at of candidates.filter((at) => !changed.includes(at))) {
-      expect(tileAt(left.tiles, at)).toEqual(tileAt(city.tiles, at));
-    }
-    for (const [at] of HILLS_BESIDE) expect(terrainOf(left, at)).toBe('hills');
+    expect(left.tiles.filter((tile) => !keys.has(tileKey(tile)))).toEqual(
+      city.tiles.filter((tile) => !keys.has(tileKey(tile))),
+    );
     expect(left.assigned).toEqual(city.assigned);
     expect(left.ending).toBeUndefined();
-    expect(outsideOf(city, left)).toEqual(outsideOf(city, city));
-    terraformedOn.add(changed.map(tileKey).join());
+    for (const key of keys) terraformedOn.add(key);
   }
-  expect(terraformedOn.size).toBeGreaterThan(1);
+  expect([...terraformedOn].sort()).toEqual(candidates.map(tileKey).sort());
 
-  const one = sprawled([[BARN, { terrain: 'hills' }], ...HILLS_BESIDE]);
-  const none = sprawled([
-    [SOAKED, { terrain: 'hills' }],
-    [BARN, { terrain: 'hills' }],
-    ...HILLS_BESIDE,
-  ]);
+  const one = sprawled([...hillsBut([DRY]), [DRY, { terrain: 'forest' }]]);
+  const none = sprawled(hillsBut([]));
 
-  expect(terrainOf(one.left, SOAKED)).toBe('urban');
+  expect(terrainOf(one.left, DRY)).toBe('urban');
   expect(namesOf(one.held)).toEqual(['retiled']);
   expect(one.left.rng).toEqual(steppedBy(one.city.rng, 1));
   expect(none.held).toEqual([]);
@@ -1116,18 +1115,16 @@ function featured(tiles: Tile[], feature: FeatureId, coords: TileCoords[]): Tile
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, feature } : tile));
 }
 
-/** How far from the city every plain of a `herded` disc carries a feature already. */
+/** How far from the city the tile the herd is dealt onto lies in the tests below: out of its sight. */
 const HERD = 3;
 
 /**
- * A city on a disc of plain out to five, forest on the named tiles, every plain within `HERD` of the
- * city carrying a feature already but the named ones, dealt the fixture's herd at the end of its turn.
+ * A city on a disc of plain out to five, forest on the named tiles, every plain carrying a feature
+ * already but the named ones, dealt the fixture's herd at the end of its turn.
  */
 function herded(open: TileCoords[], carrying: Carrying = {}, forest: TileCoords[] = []): Chronicle {
   const wanted = new Set([CITY, ...open, ...forest].map(tileKey));
-  const covered = field(5).filter(
-    (tile) => distance(tile, CITY) <= HERD && !wanted.has(tileKey(tile)),
-  );
+  const covered = field(5).filter((tile) => !wanted.has(tileKey(tile)));
   return cityOf(['urban'], {
     ...dueOn(2, 'PH_Herd'),
     drawPile: fullDraw(),
@@ -1151,35 +1148,58 @@ function snapshotOf(chronicle: Chronicle, at: TileCoords): Snapshot | undefined 
   return chronicle.snapshots.find((kept) => tileKey(kept) === tileKey(at));
 }
 
-test('a feature is dealt onto one of the tiles nearest the city carrying none, of a terrain one of the features named lies on, drawn once from the seeded generator among those equally near, the feature the one its terrain carries, and no other tile changes', () => {
-  const plain = [
-    { q: HERD, r: 0 },
-    { q: -HERD, r: 0 },
-  ];
-  const forest = [
-    { q: 0, r: HERD },
-    { q: 0, r: -HERD },
-  ];
-  const beyond = { q: HERD + 1, r: 0 };
-  const dealtOn = new Set<string>();
+test('a feature is dealt onto a tile carrying none, of a terrain one of the features named lies on, drawn near the city in one step of the seeded generator — each tile the likelier the nearer it lies, and the twelve a tile further together likelier than the one — the feature the one its terrain carries, and no other tile changes', () => {
+  const single = { q: 1, r: 0 };
+  const ring = field(2)
+    .filter((tile) => distance(tile, CITY) === 2)
+    .map(({ q, r }) => ({ q, r }));
+  const forest = ring.filter((_, at) => at % 2 === 0);
+  const open = [single, ...ring.filter((_, at) => at % 2 === 1)];
+  const dealtOn = new Map<string, number>();
 
-  for (const seed of SEEDS) {
-    const { dealt, landed } = followed(herded(plain, { rng: seedRng(seed) }, forest));
-    const [gained, ...others] = [...plain, ...forest].filter(
+  for (const seed of MANY_SEEDS) {
+    const { dealt, landed } = followed(herded(open, { rng: seedRng(seed) }, forest));
+    const [gained, ...others] = [single, ...ring].filter(
       (tile) => featureOf(landed, tile) !== undefined,
     );
-    const wooded = forest.some((tile) => tileKey(tile) === tileKey(gained));
+    const key = tileKey(gained);
+    const wooded = forest.some((tile) => tileKey(tile) === key);
 
     expect(others).toEqual([]);
     expect(featureOf(landed, gained)).toBe(wooded ? 'PH_Game' : 'PH_Fertile');
-    expect(featureOf(landed, beyond)).toBeUndefined();
     expect(landed.rng).toEqual(nextRng(dealt.rng).rng);
-    expect(landed.tiles.filter((tile) => tileKey(tile) !== tileKey(gained))).toEqual(
-      dealt.tiles.filter((tile) => tileKey(tile) !== tileKey(gained)),
+    expect(landed.tiles.filter((tile) => tileKey(tile) !== key)).toEqual(
+      dealt.tiles.filter((tile) => tileKey(tile) !== key),
     );
-    dealtOn.add(tileKey(gained));
+    dealtOn.set(key, (dealtOn.get(key) ?? 0) + 1);
   }
-  expect(dealtOn.size).toBe(plain.length + forest.length);
+  const onSingle = dealtOn.get(tileKey(single)) ?? 0;
+  const onRing = ring.map((tile) => dealtOn.get(tileKey(tile)) ?? 0);
+
+  for (const count of onRing) {
+    expect(count).toBeGreaterThan(0);
+    expect(count).toBeLessThan(onSingle);
+  }
+  expect(onRing.reduce((sum, count) => sum + count, 0)).toBeGreaterThan(onSingle);
+});
+
+test('a draw near the city lands on no tile the neutral holds, however near, and on a tile nobody holds, however far', () => {
+  const far = { q: -3, r: 0 };
+  const bare = new Set([NEUTRAL_TILE, far].map(tileKey));
+  const ground = plains(3).map((tile) =>
+    bare.has(tileKey(tile)) ? tile : { ...tile, feature: 'PH_Fertile' },
+  );
+  const opened = besideTheNeutral(dealing({ turn: 1, event: 'PH_Herd' }), ground);
+
+  expect(opened.deals).toEqual([{ of: 'event', event: 'PH_Herd' }]);
+  expect(opened.neutral?.held.map(tileKey)).toContain(tileKey(NEUTRAL_TILE));
+  for (const seed of SEEDS) {
+    const dealt = { ...opened, rng: seedRng(seed) };
+    const landed = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
+
+    expect(featureOf(landed, NEUTRAL_TILE)).toBeUndefined();
+    expect(featureOf(landed, far)).toBe('PH_Fertile');
+  }
 });
 
 test('a feature dealt where no tile of a terrain one of the features named lies on carries none is a runtime error, and draws nothing', () => {
@@ -1567,7 +1587,7 @@ test('a capture that meets a capstone’s condition ends the chronicle on the ca
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
-test('the siege places five camps around the city, apart from one another, a warrior on each', () => {
+test('the siege places five camps near the city, three tiles from it or further, apart from one another, a warrior on each', () => {
   const after = siegeLanded();
   const camps = campsOf(after);
   const warriors = enemiesOf(after);
@@ -1575,7 +1595,6 @@ test('the siege places five camps around the city, apart from one another, a war
   expect(camps).toHaveLength(5);
   for (const [at, camp] of camps.entries()) {
     expect(distance(camp, CITY)).toBeGreaterThanOrEqual(3);
-    expect(distance(camp, CITY)).toBeLessThanOrEqual(5);
     for (const other of camps.slice(at + 1)) {
       expect(distance(camp, other)).toBeGreaterThanOrEqual(3);
     }

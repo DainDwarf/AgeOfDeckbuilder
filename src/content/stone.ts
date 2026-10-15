@@ -27,23 +27,20 @@ import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
 import {
   campPlaceable,
-  featureInside,
-  featureRemovalInside,
-  featuresRemovedInside,
+  featureRemovalNear,
+  featuresRemovedNear,
   type Removal,
-  removalInside,
-  removedInside,
+  removalNear,
+  removedNear,
   rewarded,
   showsNextLanding,
-  terraformedInside,
-  terraformedNearest,
+  terraformedNear,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
 import { type Chronicle, cityRows, costsOf } from '../rules/state';
 import { relationsOf } from '../rules/units';
 import { NOMADIC } from './nomadic';
 import {
-  type CampPlace,
   campedOrRaided,
   NEUTRAL_GUARD,
   NEUTRAL_WAVE,
@@ -123,14 +120,14 @@ const ARCHIPELAGO_SCHEDULE: Schedule = {
   },
 };
 
-/** How many things inside the border the flood removes on this turn: one, and one more for every ten turns. */
+/** How many things the flood removes on this turn: one, and one more for every ten turns. */
 function floodRemoves(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
 
 /** What the flood would take on the chronicle as it stands. */
 function floodTakes(chronicle: Chronicle): Removal {
-  return removalInside(chronicle, floodRemoves(chronicle.turn));
+  return removalNear(chronicle, floodRemoves(chronicle.turn));
 }
 
 /** The production digging channels costs: three for each thing the flood would take, the city counted. */
@@ -174,7 +171,7 @@ function takenIn(catalogue: Catalogue, chronicle: Chronicle): Landed {
   return followed(landing, (left) => rewarded(catalogue, left, 'misunderstandings', 1));
 }
 
-/** The features the wolves take inside the border. */
+/** The features the wolves take. */
 const DEER_AND_CATTLE = ['deer', 'cattle'];
 
 /** How many herds the wolves take on this turn: one, and one more for every ten turns. */
@@ -182,12 +179,12 @@ function wolvesTake(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
 
-/** The military defending the herds costs: three for each herd the wolves would take, whatever the border holds. */
+/** The military defending the herds costs: three for each herd the wolves would take, whatever stands. */
 function defence(chronicle: Chronicle): number {
   return 3 * wolvesTake(chronicle.turn);
 }
 
-/** The terrains the drought dries inside the border. */
+/** The terrains the drought dries. */
 const PLAIN_AND_FOREST = ['plain', 'forest'];
 
 /** How hard the drought bites on this turn: one, and one more for every five turns. */
@@ -215,8 +212,8 @@ function grievers(turn: number): number {
   return 1 + Math.floor(turn / 10);
 }
 
-/** Where escalating the grievance places its camp. */
-const GRIEVANCE_CAMP: CampPlace = { fromCity: [3, 4], apart: 3 };
+/** How far apart from every camp standing escalating the grievance places its camp. */
+const GRIEVANCE_CAMP_APART = 3;
 
 /** What escalating the grievance does: declare war, place a camp, or raid. */
 const ESCALATIONS = ['war', 'camp', 'raid'] as const;
@@ -228,8 +225,7 @@ const ESCALATIONS = ['war', 'camp', 'raid'] as const;
 function escalation(catalogue: Catalogue, chronicle: Chronicle): (typeof ESCALATIONS)[number] {
   if (cityRows(chronicle, 'neutral') !== undefined && relationsOf(chronicle) === 'peace')
     return 'war';
-  const { fromCity, apart } = GRIEVANCE_CAMP;
-  return campPlaceable(catalogue, chronicle, fromCity, apart) ? 'camp' : 'raid';
+  return campPlaceable(catalogue, chronicle, GRIEVANCE_CAMP_APART) ? 'camp' : 'raid';
 }
 
 /** What the Tribute takes at its first strike, and how much more at each strike after. */
@@ -600,7 +596,7 @@ export const STONE: Slice = {
         kind: 'challenge',
         cost: {},
         influence: 3,
-        strikes: (_catalogue, chronicle) => removedInside(chronicle, 1),
+        strikes: (_catalogue, chronicle) => removedNear(chronicle, 1),
       },
       sickness: {
         kind: 'challenge',
@@ -625,14 +621,14 @@ export const STONE: Slice = {
         cost: {},
         influence: 3,
         strikes: (catalogue, chronicle) =>
-          terraformedInside(catalogue, chronicle, PLAIN_AND_FOREST, 'desert', 1),
+          terraformedNear(catalogue, chronicle, PLAIN_AND_FOREST, 'desert', 1),
       },
       embers: {
         kind: 'challenge',
         cost: {},
         influence: 3,
         strikes: (catalogue, chronicle) =>
-          terraformedNearest(catalogue, chronicle, ['forest'], 'plain'),
+          terraformedNear(catalogue, chronicle, ['forest'], 'plain', 1),
       },
       tribute: {
         kind: 'challenge',
@@ -681,8 +677,7 @@ export const STONE: Slice = {
           'lose-the-fields': {
             cost: {},
             reads: (_catalogue, chronicle) => floodTakes(chronicle),
-            lands: (_catalogue, chronicle) =>
-              removedInside(chronicle, floodRemoves(chronicle.turn)),
+            lands: (_catalogue, chronicle) => removedNear(chronicle, floodRemoves(chronicle.turn)),
           },
           'settle-the-floodplain': {
             cost: {},
@@ -733,17 +728,10 @@ export const STONE: Slice = {
         answers: {
           'abandon-a-herd': {
             cost: {},
-            blocked: (catalogue, chronicle) =>
-              featureInside(catalogue, chronicle, DEER_AND_CATTLE) ? [] : ['no-deer-or-cattle'],
             reads: (catalogue, chronicle) =>
-              featureRemovalInside(
-                catalogue,
-                chronicle,
-                DEER_AND_CATTLE,
-                wolvesTake(chronicle.turn),
-              ),
+              featureRemovalNear(catalogue, chronicle, DEER_AND_CATTLE, wolvesTake(chronicle.turn)),
             lands: (catalogue, chronicle) =>
-              featuresRemovedInside(
+              featuresRemovedNear(
                 catalogue,
                 chronicle,
                 DEER_AND_CATTLE,
@@ -813,7 +801,7 @@ export const STONE: Slice = {
                     chronicle,
                     'warrior',
                     grievers(chronicle.turn),
-                    GRIEVANCE_CAMP,
+                    GRIEVANCE_CAMP_APART,
                   );
               }
             },

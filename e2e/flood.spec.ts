@@ -7,7 +7,7 @@ import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
 import { answerOf } from '../src/rules/schedule';
 import { followed } from '../src/rules/stages';
-import type { Chronicle } from '../src/rules/state';
+import { type Chronicle, holderOf } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
@@ -27,21 +27,30 @@ import {
 /** The event the spec opens on. */
 const FLOOD = 'flood';
 
-/** The answer of the flood that removes what stands inside the border. */
+/** The answer of the flood that removes improvements near the city. */
 const LOSE_THE_FIELDS = 'lose-the-fields';
 
 /** The improvement the spec places on the city's tile. */
 const CLAY_PIT = 'clay-pit';
 
+/** Every improvement standing outside the neutral's border, each read with its tile. */
+function improvementsOutsideTheNeutral(chronicle: Chronicle): string[] {
+  return chronicle.tiles.flatMap((tile) =>
+    holderOf(chronicle, tile) === 'neutral'
+      ? []
+      : tile.improvements.map((improvement) => `${tileKey(tile)} ${improvement}`),
+  );
+}
+
 /**
  * The first seed's turn 1 from the campaign, settled bare, a clay pit placed on its city's tile, whose
- * first deal is the flood alone, losing the fields taking improvements alone: that chronicle stopped
- * on the deal, and the city's tile.
+ * first deal is the flood alone, the clay pit the one improvement outside the neutral's border and
+ * losing the fields taking improvements alone: that chronicle stopped on the deal, and the city's tile.
  */
 function flooding(campaign: Campaign): { dealt: Chronicle; city: TileCoords } {
   const [terrain] = improvementKind(CATALOGUE, CLAY_PIT).terrains;
   const { reads } = answerOf(CATALOGUE, FLOOD, LOSE_THE_FIELDS);
-  return firstSeed('deals the flood alone first, taking improvements alone', (seed) => {
+  return firstSeed('deals the flood alone first, taking the clay pit alone', (seed) => {
     const dealt = dealtAloneOn(seed, FLOOD, campaign, (settled) => {
       const city = cityTileOf(settled);
       return followed(terraformed(CATALOGUE, settled, city, terrain), (left) =>
@@ -49,8 +58,13 @@ function flooding(campaign: Campaign): { dealt: Chronicle; city: TileCoords } {
       ).chronicle;
     });
     if (dealt === undefined) return undefined;
+    const city = cityTileOf(dealt);
     const read = reads(CATALOGUE, dealt);
-    return read.buildings === 0 && read.city === 0 ? { dealt, city: cityTileOf(dealt) } : undefined;
+    const alone =
+      improvementsOutsideTheNeutral(dealt).join() === `${tileKey(city)} ${CLAY_PIT}` &&
+      read.buildings === 0 &&
+      read.city === 0;
+    return alone ? { dealt, city } : undefined;
   });
 }
 

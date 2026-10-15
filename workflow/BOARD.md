@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The near draw** — one draw of the rules picks every tile an event or a strike places onto or takes near the player's city, weighted an eighth per tile from the nearest tile the player's city holds and never a tile the neutral holds; no rule reads the border or a span to pick such a tile, but for the camp's three-tile standoff and the flood's buildings; Abandon a herd refused by nothing and Make room while no tile takes a camp; the fixture tests hold the draw, the coherence test passes and `e2e/predators.spec.ts` proves the wolves taking a herd outside the border. Doc-impact: `docs/CHRONICLE.md`, `docs/GLOSSARY.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/near-draw.md](board/near-draw.md)
 - **The long winter** — the first capstone: for a span the land outside the border gives nothing and hunger strikes every turn; what passes it is this line's question.
 - **The monument** — the second capstone: a building raised through a worker, the age ending the moment it stands, as the Shelter does.
 - **The siege** — the third capstone: raids every turn for a span, endured; the fixture's siege door walked by real content.
