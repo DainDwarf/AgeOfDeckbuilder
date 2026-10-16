@@ -24,6 +24,7 @@ import {
   type Catalogue,
   type Civilization,
   cardOf,
+  costOf,
   type Entering,
   earningOf,
   entered,
@@ -1338,10 +1339,14 @@ export function firstSeed<T>(complaint: string, answer: (seed: number) => T | un
   throw new Error(`no seed under a thousand ${complaint}`);
 }
 
-/** A card of a hand as the rules judge it: its kind, what it is aimed at, whether they would play it. */
+/**
+ * A card of a hand as the rules judge it: its kind, what it is aimed at, whether it has a cost, and
+ * whether they would play it.
+ */
 export type Judged = {
   readonly kind: CardKind;
   readonly aim: Aim['aim'];
+  readonly costs: boolean;
   readonly playable: boolean;
 };
 
@@ -1350,7 +1355,8 @@ export function inHand(chronicle: Chronicle, such: (card: Judged) => boolean): n
   return chronicle.hand.findIndex(({ id }) => {
     const card = cardOf(CATALOGUE, id);
     const judged = playable(refusalOf(CATALOGUE, chronicle, id));
-    return such({ kind: card.kind, aim: aimOf(card).aim, playable: judged });
+    const costs = costOf(CATALOGUE, id).length > 0;
+    return such({ kind: card.kind, aim: aimOf(card).aim, costs, playable: judged });
   });
 }
 

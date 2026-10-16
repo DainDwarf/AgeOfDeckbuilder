@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type Reckoning, reckoned } from '../src/rules/chronicle';
+import { arrived } from '../src/rules/city';
 import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -10,11 +11,16 @@ import { text } from '../src/ui/text';
 import {
   budget,
   chronicleOf,
+  endedTurn,
   endTurn,
   firstSeed,
   hungry,
+  inHand,
+  onScreen,
   openSaved,
+  playedOut,
   readings,
+  rested,
   settledOn,
   strikesInHand,
   watch,
@@ -108,6 +114,54 @@ test('the bar reads what ending the turn would do, a stock the strikes take past
   await endTurn(page);
   expect(await (await midway).jsonValue()).toEqual(READINGS.map(() => ''));
 
+  expect(await reckoningsShown(page)).toEqual(reckoningsOf(await chronicleOf(page)));
+
+  expect(problems).toEqual([]);
+});
+
+test('a card played leaves the bar reading what ending the turn would do through its play-out, on the chronicle the screen shows at each change', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: opened, index } = firstSeed(
+    'opens turn 2 on a card with a cost that plays at nothing the city can pay for, a unit card entering on the population arrived idle',
+    (seed) => {
+      const chronicle = endedTurn(arrived(settledOn(seed), 'player').chronicle);
+      const index = inHand(
+        chronicle,
+        ({ aim, costs, playable }) => aim === 'none' && costs && playable,
+      );
+      return index === -1 ? undefined : { chronicle, index };
+    },
+  );
+
+  await openSaved(page, opened);
+  const card = await onScreen(page, `hand-${index}`);
+  await page.mouse.click(card.x, card.y);
+  await rested(page);
+
+  const midway = page.waitForFunction(
+    ({ keys, stood }) => {
+      const scene = window.game?.scene.getScene<ChronicleScene>('ui');
+      if (scene?.playing !== true || JSON.stringify(scene.chronicle.resources) === stood) {
+        return undefined;
+      }
+      const shown = keys.map((key) => {
+        const reckoning = window.named?.(`reading-${key}-reckoning`)?.object as
+          | Phaser.GameObjects.Text
+          | undefined;
+        return { text: reckoning?.text, colour: reckoning?.style.color };
+      });
+      return { chronicle: scene.chronicle, shown };
+    },
+    { keys: READINGS, stood: JSON.stringify(opened.resources) },
+  );
+  await page.mouse.click(card.x, card.y);
+  const seen = await (await midway).jsonValue();
+  if (seen === undefined) throw new Error('waitForFunction resolved on no answer');
+  expect(seen.shown).toEqual(reckoningsOf(seen.chronicle));
+
+  await playedOut(page);
   expect(await reckoningsShown(page)).toEqual(reckoningsOf(await chronicleOf(page)));
 
   expect(problems).toEqual([]);

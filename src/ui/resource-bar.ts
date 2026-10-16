@@ -73,7 +73,7 @@ type Entry = Reading & {
 export type ResourceBar = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
-  /** Whether the screen stands on what the bar last rendered, or plays out past it. */
+  /** Whether the bar reads the reckoning of what it renders, or none. */
   live(on: boolean): void;
   /** Latches down the readings of these resources, and lets every other one back up. */
   latch(shown: ReadonlySet<Resource>): void;
@@ -149,12 +149,13 @@ export function createResourceBar(
     }
   };
 
-  /** Whether the screen stands on the chronicle last rendered, and that chronicle. */
+  /** Whether the bar reads the reckoning of the chronicle last rendered, and that chronicle. */
   let live = true;
   let rendered: Chronicle | undefined;
 
-  // Read only while the screen stands: a render mid play-out is of a chronicle the end of turn is
-  // still leaving, and its reckoning would count the income twice.
+  // Dead through the end of turn's play-out: on the chronicles it passes through, the reckoning reads
+  // the income again after the income, the strikes still in hand counted a second time, and the
+  // income alone after the discard.
   const reckon = (): void => {
     const read = live && rendered !== undefined ? reckoned(catalogue, rendered) : undefined;
     for (const entry of entries) {

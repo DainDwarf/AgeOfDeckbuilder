@@ -107,6 +107,22 @@ function samePlace(one: Place, other: Place): boolean {
   }
 }
 
+/** Whether the bar reads its reckoning through the command's play-out: the end of turn's it may not. */
+function reckonsThrough(command: Command): boolean {
+  switch (command.type) {
+    case 'end-turn':
+    case 'take':
+      return false;
+    case 'play':
+    case 'move':
+    case 'attack':
+    case 'assign':
+    case 'reassign':
+    case 'claim':
+      return true;
+  }
+}
+
 const LABEL_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '18px',
@@ -284,13 +300,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     /** The command played out, and whether its play-out ran to its end: none starts over another. */
     const playOut = async (command: Command): Promise<boolean> => {
       if (this.sequence !== undefined) return false;
-      return playStages(apply(CATALOGUE, this.current, command));
+      return playStages(apply(CATALOGUE, this.current, command), reckonsThrough(command));
     };
 
     // The button and the hand are dead for the whole play-out: a card played or hovered under it would
     // be animated, reverted, and kill the very tweens the stages wait on. A play-out the screen has let
     // go of commits nothing from its tail, and answers that it did not run to its end.
-    const playStages = async (stages: readonly Stage[]): Promise<boolean> => {
+    const playStages = async (stages: readonly Stage[], reckoning: boolean): Promise<boolean> => {
       logRuntimeErrors(stages);
       const after = outcome(stages);
       if (after !== this.current) this.payment = keepChronicle(this.choices, after);
@@ -301,7 +317,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       try {
         endTurn.live(false);
         hand.live(false);
-        bar.live(false);
+        bar.live(reckoning);
         dismiss();
 
         for (const stage of walked(stages)) {
@@ -343,7 +359,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const enterUnit = (entering: Entering): void => {
       jumpToEnd();
       const { stages } = entered(CATALOGUE, this.current, entering);
-      void playStages(chartedAndRead(CATALOGUE, this.current, stages));
+      const reckoning = true;
+      void playStages(chartedAndRead(CATALOGUE, this.current, stages), reckoning);
     };
 
     /**

@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The end of turn's reading stays up through a play** — a card played, a city act or a unit's move or attack leaves the resource bar's small signed readings standing through its play-out, each reading what the rules read on the chronicle the screen shows at that moment; the End turn press and a deal's choice take them down until the screen stands on the next hand. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/end-of-turn-reading-stays-up.md](board/end-of-turn-reading-stays-up.md)
 - **The region validator refuses a distance past the disc** — a camp's, a site's or the neutral's distance from the centre that lies past the disc's radius is refused when the catalogue is built, not at the launch as "dealt 10 times".
