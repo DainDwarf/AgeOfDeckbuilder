@@ -12,6 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Hunt and Gather lose the "[Worker]'s"** — the two cards' texts drop the "[Worker]'s" reference.
+- **Hunt and Gather lose the "[Worker]'s"** — Gather's text reads "Gain the tile's yield" and Hunt's reads "Remove deer or cattle. Gain 6 food", neither naming the worker. Doc-impact: none. [board/hunt-and-gather-lose-the-workers.md](board/hunt-and-gather-lose-the-workers.md)
 - **The attack seen before the death** — the fog hides the attack animation before a unit dies; the attack plays out before the fog covers it.
 - **A population badge on the city** — a number on the city showing its total population, Civ-style; losing the last population to income is not visible enough, and if the badge does not end the surprise of a sudden death, that moment gets a signal of its own.
