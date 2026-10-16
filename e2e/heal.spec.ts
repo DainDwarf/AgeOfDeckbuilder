@@ -9,7 +9,7 @@ import {
   aimed,
   campaignWith,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   dragOut,
   firstSeed,
@@ -36,7 +36,7 @@ test('the heal card played at a damaged warrior on the city’s tile heals it to
   const paid = firstSeed(`opens turn 1 on ${HEAL} in hand`, (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
     if (!idsOf(opened.hand).includes(HEAL)) return undefined;
-    const city = cityTileOf(opened);
+    const city = playerCityTile(opened);
     const standing = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: city });
     const hurt = unitDamaged(standing, city, full - 1).chronicle;
     const chronicle = gained(hurt, cardOf(CATALOGUE, HEAL).cost).chronicle;

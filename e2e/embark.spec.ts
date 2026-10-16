@@ -20,7 +20,7 @@ import {
   campaignWith,
   cardOnFace,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   disembarkingAt,
   dragOut,
@@ -61,7 +61,7 @@ function onShore<T>(made: (shore: Shore) => T | undefined): T {
   return firstSeed(`opens turn 1 on ${EMBARK} in hand with a shore near its city`, (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
     if (!idsOf(opened.hand).includes(EMBARK)) return undefined;
-    const city = cityTileOf(opened);
+    const city = playerCityTile(opened);
     const clear = (coord: TileCoords): boolean =>
       coord.r <= city.r + 1 && unitAt(opened.units, coord) === undefined;
     const nearest = [...opened.tiles].sort((a, b) => distance(a, city) - distance(b, city));

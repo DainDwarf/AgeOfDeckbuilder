@@ -15,7 +15,7 @@ import {
   campGround,
   campKind,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   consoleKey,
   counted,
   dragUnit,
@@ -69,7 +69,7 @@ function roundTrip(): {
   uncharted: TileCoords;
 } {
   const scouted = settledOn(1, [FIRST_SCOUT]);
-  const city = cityTileOf(scouted);
+  const city = playerCityTile(scouted);
   const before = new Set(scouted.snapshots.map(tileKey));
   for (const out of neighbours(city)) {
     const there = stepped(scouted, out);
@@ -170,7 +170,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
 }) => {
   const problems = watch(page);
   const run = roundTrip();
-  const city = cityTileOf(run.scouted);
+  const city = playerCityTile(run.scouted);
 
   await openSaved(page, run.scouted);
 
@@ -260,7 +260,7 @@ test('the map draws no river between two uncharted tiles, and draws one along a 
   // The map runs rivers, and every edge of them lies between two tiles nobody has charted yet.
   expect(await counted(page, 'river')).toBe(0);
 
-  await dragUnit(page, cityTileOf(run.scouted), run.landing);
+  await dragUnit(page, playerCityTile(run.scouted), run.landing);
   expect(await chronicleOf(page)).toEqual(run.stepped);
   expect(await counted(page, 'river')).toBe(riverRuns(run.stepped));
 

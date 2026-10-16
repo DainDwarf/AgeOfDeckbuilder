@@ -21,7 +21,7 @@ import {
   aimed,
   campaignWith,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   claimedAt,
   click,
   dragOut,
@@ -73,7 +73,7 @@ const LINE = text('panel.beside', { terrain: terrainName(GIVES.terrain) });
 function fisheryAdmitted(): Paid & { readonly beside: TileCoords } {
   return firstSeed(`opens turn 1 on ${EMBARK} in hand with ground to make coast`, (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
-    const city = cityTileOf(opened);
+    const city = playerCityTile(opened);
     if (!idsOf(opened.hand).includes(EMBARK) || unitAt(opened.units, city) !== undefined) {
       return undefined;
     }

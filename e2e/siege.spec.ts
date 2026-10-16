@@ -17,7 +17,7 @@ import {
   beforeTheLanding,
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   cleared,
   click,
   dragTiles,
@@ -78,7 +78,7 @@ function freeBeside(
 function struckAtTheLeader(
   landed: Chronicle,
 ): { chronicle: Chronicle; warrior: Unit; leader: Unit; led: Unit } | undefined {
-  const city = cityTileOf(landed);
+  const city = playerCityTile(landed);
   const guarded = unitEntered(cleared(landed), { type: WARRIOR, faction: 'player', tile: city });
   const at = freeBeside(guarded, city, LEADER, city);
   if (at === undefined) return undefined;

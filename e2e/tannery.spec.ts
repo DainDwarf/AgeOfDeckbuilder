@@ -7,7 +7,7 @@ import {
   aimed,
   campaignWith,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   claimedAt,
   click,
   dragOut,
@@ -43,7 +43,7 @@ function paidOnFeature(card: CardId, feature: string, building?: string): Paid {
   return paidOnGround(
     card,
     (opened) => {
-      for (const tile of neighbours(cityTileOf(opened))) {
+      for (const tile of neighbours(playerCityTile(opened))) {
         const claimed = claimedAt(opened, tile);
         if (claimed === undefined) continue;
         return { chronicle: onFeature(claimed, tile, feature, [], building), tile };

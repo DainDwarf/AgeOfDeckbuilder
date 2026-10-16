@@ -6,7 +6,7 @@ import { LOOK } from '../src/ui/look';
 import {
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   consoleKey,
   endedTurn,
   endTurn,
@@ -34,7 +34,7 @@ test('the player’s city wears a badge in the civilization’s colour reading i
   test.setTimeout(budget(1));
   const struck = hungry();
   const ended = endedTurn(struck);
-  const badge = badgeOn(tileKey(cityTileOf(struck)));
+  const badge = badgeOn(tileKey(playerCityTile(struck)));
   expect(ended.population).toBeLessThan(struck.population);
 
   await openSaved(page, struck);
@@ -60,7 +60,7 @@ test('the neutral’s city tile, uncharted, wears no badge, nor drawn under fog 
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const key = tileKey(neutral.city);
   const theirs = badgeOn(key);
-  const ours = badgeOn(tileKey(cityTileOf(opened)));
+  const ours = badgeOn(tileKey(playerCityTile(opened)));
   expect(inSight(CATALOGUE, opened).has(key)).toBe(false);
   expect(opened.snapshots.some((snapshot) => tileKey(snapshot) === key)).toBe(false);
 

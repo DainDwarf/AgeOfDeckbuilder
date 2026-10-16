@@ -13,7 +13,7 @@ import {
   beforeTheLanding,
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   cleared,
   click,
   drawnFaces,
@@ -49,7 +49,7 @@ function beforeTheWinter(campaign: Campaign): {
   return beforeTheLanding(
     'stands the turn before the long winter on a city whose terrain gives food',
     (before, landed) => {
-      const tile = tileAt(before.tiles, cityTileOf(before));
+      const tile = tileAt(before.tiles, playerCityTile(before));
       if (tile === undefined || (terrainKind(CATALOGUE, tile.terrain).yields.food ?? 0) === 0) {
         return undefined;
       }
@@ -66,7 +66,7 @@ test('the long winter’s landing raises its card, adds its Cold nights to the d
   test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { before, landed } = beforeTheWinter(campaign);
-  const city = cityTileOf(landed);
+  const city = playerCityTile(landed);
   const faces = drawnFaces(landed);
   const face = faces.find((drawn) => tileKey(drawn) === tileKey(city));
   if (face === undefined) throw new Error('the map draws no face of the city’s tile');

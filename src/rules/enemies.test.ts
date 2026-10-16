@@ -284,16 +284,16 @@ test('a chronicle that fell in the enemy phase captures no camp', () => {
 });
 
 test('a captured camp is silent: the raid enters on a camp still standing', () => {
-  const [kept, ...besieged] = CAMPS;
+  const [kept, ...captured] = CAMPS;
   const held = cityOf(['urban'], {
     tiles: camped(field(4), CAMPS),
-    units: besieged.map(worker),
+    units: captured.map(worker),
     ...RAID_ON_SECOND,
   });
 
   const raided = endedTurn(held, 'PH_Raid');
 
-  for (const camp of besieged) expect(buildingAt(raided, camp)).toBeUndefined();
+  for (const camp of captured) expect(buildingAt(raided, camp)).toBeUndefined();
   expect(buildingAt(raided, kept)).toBe(CAMP.building);
   expect(raided.units.find((unit) => unit.faction === 'enemy')?.tile).toEqual(kept);
 });

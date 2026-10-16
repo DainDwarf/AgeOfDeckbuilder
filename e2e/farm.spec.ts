@@ -12,7 +12,7 @@ import {
   browse,
   campaignWith,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   claimedAt,
   click,
   dragOut,
@@ -46,7 +46,7 @@ function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number
   return firstSeed('opens turn 1 on a farm to build beside the city', (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
     if (!idsOf(opened.hand).includes(FARM)) return undefined;
-    for (const tile of neighbours(cityTileOf(opened))) {
+    for (const tile of neighbours(playerCityTile(opened))) {
       const claimed = claimedAt(opened, tile);
       if (claimed === undefined) continue;
       const paid = gained(claimed, cost).chronicle;

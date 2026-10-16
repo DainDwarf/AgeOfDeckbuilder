@@ -13,7 +13,7 @@ import {
   campaignShown,
   chronicleButton,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   civilizationOpened,
   click,
   dragOut,
@@ -157,7 +157,7 @@ test('a pan dragged onto the Menu button carries the map the whole way, and open
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
-  const city = cityTileOf(await chronicleOf(page));
+  const city = playerCityTile(await chronicleOf(page));
   const button = await onScreen(page, 'menu-button');
   const travel = 80 * button.unit;
   // Straight below the button and inside the map's frame, where a press takes hold of the map.
@@ -185,7 +185,7 @@ test('the selected tile waits under the menu', async ({ page }) => {
 
   await openSaved(page, settledOn(1));
   const opened = await chronicleOf(page);
-  const city = tileKey(cityTileOf(opened));
+  const city = tileKey(playerCityTile(opened));
   await click(page, `tile-${city}`);
   await expect.poll(() => ringedTile(page)).toBe(city);
 

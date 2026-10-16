@@ -134,7 +134,7 @@ declare global {
 }
 
 /** The tile the city stands on, for a spec whose chronicle has settled it. */
-export function cityTileOf(chronicle: Chronicle): TileCoords {
+export function playerCityTile(chronicle: Chronicle): TileCoords {
   if (chronicle.city === undefined) throw new Error('the city of this chronicle stands nowhere');
   return chronicle.city;
 }
@@ -246,7 +246,7 @@ export function settledOn(
   choices = openingChoices(CATALOGUE, campaign),
 ): Chronicle {
   let settling = playedOn(launchedAs(seed, campaign, choices), 0, CENTRE);
-  const city = cityTileOf(settling);
+  const city = playerCityTile(settling);
   for (const card of onCity)
     settling = playedOn(settling, idsOf(settling.hand).indexOf(card), city);
   return outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
@@ -1406,7 +1406,7 @@ export function bareTile(chronicle: Chronicle): TileCoords {
   const seen = new Set(chronicle.snapshots.map(tileKey));
   const found = chronicle.tiles.find(
     (tile) =>
-      distance(tile, cityTileOf(chronicle)) === 2 &&
+      distance(tile, playerCityTile(chronicle)) === 2 &&
       seen.has(tileKey(tile)) &&
       tile.feature === undefined &&
       tile.building === undefined &&
@@ -1617,7 +1617,7 @@ export function landed(): {
     }
     if (turned.ending !== undefined || !idsOf(turned.hand).includes(SHELTER)) return undefined;
 
-    for (const tile of neighbours(cityTileOf(turned))) {
+    for (const tile of neighbours(playerCityTile(turned))) {
       const claimed = claimedAt(turned, tile);
       if (claimed === undefined) continue;
       const paid = gained(claimed, card.cost).chronicle;
@@ -1657,7 +1657,7 @@ export function workerStepped(
   return firstSeed(complaint, (seed) => {
     const entered = settledOn(seed, ['first-worker']);
     const [worker] = playersOf(entered);
-    for (const tile of neighbours(cityTileOf(entered))) {
+    for (const tile of neighbours(playerCityTile(entered))) {
       const move = { type: 'move', unit: worker.id, tile } as const;
       const stepped = outcome(apply(CATALOGUE, entered, move));
       if (stepped !== entered && keeps(stepped, tile)) return { entered, tile, stepped };
@@ -1864,7 +1864,7 @@ export function onDeer(
 ): { chronicle: Chronicle; tile: TileCoords } {
   const [feature] = improvementKind(CATALOGUE, TRAPPING).features ?? [];
   if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
-  const [tile] = neighbours(cityTileOf(chronicle));
+  const [tile] = neighbours(playerCityTile(chronicle));
   return { chronicle: onFeature(chronicle, tile, feature, improvements), tile };
 }
 
@@ -1935,7 +1935,7 @@ export function campKind(chronicle: Chronicle): string {
  */
 export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
   const stats = unitKind(CATALOGUE, campKind(chronicle));
-  const city = cityTileOf(chronicle);
+  const city = playerCityTile(chronicle);
   return chronicle.tiles
     .filter((tile) => distance(tile, city) === away && freeFor(chronicle, stats, tile))
     .map(({ q, r }) => ({ q, r }));
@@ -1956,7 +1956,7 @@ export function nearestUncharted(chronicle: Chronicle): TileCoords {
   let away = Infinity;
   for (const tile of chronicle.tiles) {
     if (seen.has(tileKey(tile))) continue;
-    const off = distance(tile, cityTileOf(chronicle));
+    const off = distance(tile, playerCityTile(chronicle));
     if (off >= away) continue;
     away = off;
     nearest = { q: tile.q, r: tile.r };

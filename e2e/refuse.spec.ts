@@ -12,7 +12,7 @@ import {
   bareWith,
   campaignWith,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   dragOut,
   firstSeed,
   inHand,
@@ -92,13 +92,13 @@ test('a press on a tile an aim refuses says one reason over it, and the card sta
   const { id } = opened.hand[index];
   const card = aimOf(cardOf(CATALOGUE, id));
   if (card.aim !== 'tile') throw new Error(`${id} is aimed at no tile`);
-  const tile = tileAt(opened.tiles, cityTileOf(opened));
+  const tile = tileAt(opened.tiles, playerCityTile(opened));
   if (tile === undefined) throw new Error('the city stands on no tile of the map');
   const block = refuses(CATALOGUE, opened, card, tile);
   if (block === undefined) throw new Error(`${id} admits the city's own tile`);
 
   await openSaved(page, opened);
-  const face = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const face = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
   await dragOut(page, index);
   await aimed(page);
   await page.mouse.click(face.x, face.y);

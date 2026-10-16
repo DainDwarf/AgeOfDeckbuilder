@@ -14,7 +14,7 @@ import {
   besideTiles,
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   consoleKey,
   counted,
@@ -192,7 +192,7 @@ test('a second left click on the city’s own tile enters city mode, and on any 
 }) => {
   const problems = watch(page);
   const bare = bareTurn();
-  const own = cityTileOf(bare);
+  const own = playerCityTile(bare);
   const near = firstClaim(bare);
 
   await openSaved(page, bare);
@@ -341,7 +341,7 @@ test('idle’s well fills while one population is idle over a tile the city hold
 }) => {
   const problems = watch(page);
   const bare = bareTurn();
-  const own = cityTileOf(bare);
+  const own = playerCityTile(bare);
   const unassigned = applied(bare, { type: 'assign', tile: own });
   const assigned = applied(unassigned, { type: 'assign', tile: own });
 
@@ -374,7 +374,7 @@ test('city mode marks every tile the population stands on, and a second click on
 }) => {
   const problems = watch(page);
   const bare = bareTurn();
-  const own = cityTileOf(bare);
+  const own = playerCityTile(bare);
   const unassigned = applied(bare, { type: 'assign', tile: own });
 
   await openSaved(page, bare);
@@ -418,7 +418,7 @@ test('a drag in city mode carries the population onto the tile the city holds an
 }) => {
   const problems = watch(page);
   const { chronicle, claimed } = oneClaimed();
-  const own = cityTileOf(chronicle);
+  const own = playerCityTile(chronicle);
   const carried = applied(chronicle, { type: 'reassign', from: own, to: claimed });
 
   await openSaved(page, chronicle);
@@ -444,7 +444,7 @@ test('a drag in city mode let go anywhere else changes nothing and leaves the se
 }) => {
   const problems = watch(page);
   const { chronicle, claimed } = oneClaimed();
-  const own = cityTileOf(chronicle);
+  const own = playerCityTile(chronicle);
   const outside = firstClaim(chronicle);
 
   await openSaved(page, chronicle);
@@ -478,7 +478,7 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
     'steps its first worker off the city',
     () => true,
   );
-  const own = cityTileOf(chronicle);
+  const own = playerCityTile(chronicle);
 
   await openSaved(page, chronicle);
   await page.keyboard.press('c');

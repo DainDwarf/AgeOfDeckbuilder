@@ -13,7 +13,7 @@ import {
   aimed,
   campaignWith,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   dragOut,
   firstSeed,
@@ -53,7 +53,7 @@ function paidAlongRiver(): { chronicle: Chronicle; tile: TileCoords; index: numb
   const [terrain] = improvementKind(CATALOGUE, IRRIGATION).terrains;
   return firstSeed('runs a river along a tile beside the city', (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
-    const tile = neighbours(cityTileOf(opened)).find((at) => runsAlong(opened.rivers, at));
+    const tile = neighbours(playerCityTile(opened)).find((at) => runsAlong(opened.rivers, at));
     if (tile === undefined) return undefined;
     const ground =
       tileAt(opened.tiles, tile)?.terrain === terrain

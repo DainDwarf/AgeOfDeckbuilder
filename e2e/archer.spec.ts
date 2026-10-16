@@ -12,7 +12,7 @@ import {
   budget,
   campKind,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   dragTiles,
   firstSeed,
@@ -44,7 +44,7 @@ function beyond(from: TileCoords, beside: TileCoords): TileCoords {
 function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidden: Unit } {
   return firstSeed('stands an enemy in sight two tiles from its city', (seed) => {
     const settled = settledOn(seed);
-    const city = cityTileOf(settled);
+    const city = playerCityTile(settled);
     const armed = unitEntered(settled, { type: ARCHER, faction: 'player', tile: city });
     const [archer] = playersOf(armed);
     const kind = campKind(armed);

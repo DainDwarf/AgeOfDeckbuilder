@@ -16,7 +16,7 @@ import {
   budget,
   campaignShown,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   consoleKey,
   enemiesOf,
@@ -98,7 +98,7 @@ async function standsOnSeed(page: Page, seed: number): Promise<void> {
 /** The first tile beside the city a warrior stands on with nobody on it. */
 function warriorGround(chronicle: Chronicle): TileCoords {
   const warrior = unitKind(CATALOGUE, WARRIOR);
-  const free = neighbours(cityTileOf(chronicle)).find((tile) => freeFor(chronicle, warrior, tile));
+  const free = neighbours(playerCityTile(chronicle)).find((tile) => freeFor(chronicle, warrior, tile));
   if (free === undefined) throw new Error('no tile beside the city takes a warrior');
   return free;
 }
@@ -336,7 +336,7 @@ test('unit on the chronicle screen enters the unit on the tile selected as the r
 }) => {
   const problems = watch(page);
   const stood = settledOn(1, ['first-worker']);
-  const city = cityTileOf(stood);
+  const city = playerCityTile(stood);
   const free = warriorGround(stood);
   const raider = ageOf(CATALOGUE, stood.age).camp.scripts.raider;
   const oracle = enteredOn(stood, enemyEntering(WARRIOR, raider, free));

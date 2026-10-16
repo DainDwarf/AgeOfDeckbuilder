@@ -14,7 +14,7 @@ import {
   barReadingOn,
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   dealtAloneOn,
   eventDealRead,
   firstDealtAlone,
@@ -112,7 +112,7 @@ function herdedAtHome(campaign: Campaign): { dealt: Chronicle; city: TileCoords 
     'deals the predators alone first, taking the deer on the city’s tile',
     (seed) => {
       const dealt = dealtAloneOn(seed, PREDATORS, campaign, (settled) => {
-        const city = cityTileOf(settled);
+        const city = playerCityTile(settled);
         const ground =
           tileAt(settled.tiles, city)?.terrain === terrain
             ? unchanged(settled)
@@ -120,7 +120,7 @@ function herdedAtHome(campaign: Campaign): { dealt: Chronicle; city: TileCoords 
         return followed(ground, (left) => featurePlaced(CATALOGUE, left, city, DEER)).chronicle;
       });
       if (dealt === undefined) return undefined;
-      const city = cityTileOf(dealt);
+      const city = playerCityTile(dealt);
       const at = placeOf(dealt, ABANDON_A_HERD);
       const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
       return tileAt(after.tiles, city)?.feature === undefined ? { dealt, city } : undefined;

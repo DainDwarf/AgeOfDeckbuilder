@@ -14,7 +14,7 @@ import {
   budget,
   campKind,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   endedTurn,
   endTurn,
   onScreen,
@@ -43,7 +43,7 @@ const PILLAGER = 'pillager';
  */
 function farmBeset(campaign: Campaign): { chronicle: Chronicle; farm: TileCoords } {
   const settled = settledOn(1, [], campaign);
-  const [farm] = neighbours(cityTileOf(settled));
+  const [farm] = neighbours(playerCityTile(settled));
   const [terrain] = buildingKind(CATALOGUE, FARM).terrains;
   const pillager = enemyEntering(campKind(settled), PILLAGER, farm);
   const farmed = followed(terraformed(CATALOGUE, settled, farm, terrain), (left) =>
@@ -102,7 +102,7 @@ test('an enemy on the city’s tile prepares the capture: the city’s tile wear
   const problems = watch(page);
   test.setTimeout(budget(1));
   const settled = settledOn(1);
-  const city = cityTileOf(settled);
+  const city = playerCityTile(settled);
   const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
   const chronicle = unitEntered(settled, enemyEntering(campKind(settled), raider, city));
   const key = tileKey(city);

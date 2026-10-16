@@ -15,7 +15,7 @@ import {
   campGround,
   campKind,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   claimedAt,
   dragBetween,
   dragOut,
@@ -124,7 +124,7 @@ function gatherStep(): Step {
 function workerStepsTo(side: (city: TileCoords) => TileCoords): Step {
   return workerStepped(
     'steps its first worker off the city onto the tile beside it along q',
-    (stepped, tile) => tileKey(tile) === tileKey(side(cityTileOf(stepped))),
+    (stepped, tile) => tileKey(tile) === tileKey(side(playerCityTile(stepped))),
   );
 }
 
@@ -135,7 +135,7 @@ function workerStepsTo(side: (city: TileCoords) => TileCoords): Step {
 function claimedEast(): { chronicle: Chronicle; claimed: TileCoords } {
   return firstSeed('claims the tile east of the city on its bare turn 1', (seed) => {
     const bare = settledOn(seed);
-    const claimed = eastOf(cityTileOf(bare));
+    const claimed = eastOf(playerCityTile(bare));
     const chronicle = claimedAt(bare, claimed);
     return chronicle === undefined ? undefined : { chronicle, claimed };
   });
@@ -202,7 +202,7 @@ test('the map is framed between the resource bar and the band, on the city', asy
   expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
   expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
 
-  const at = await onScreen(page, `tile-${tileKey(cityTileOf(OPENED))}`);
+  const at = await onScreen(page, `tile-${tileKey(playerCityTile(OPENED))}`);
   expect(Math.abs(at.x - (frame.x + frame.width / 2))).toBeLessThan(2);
   expect(Math.abs(at.y - (frame.y + frame.height / 2))).toBeLessThan(2);
 
@@ -269,7 +269,7 @@ test("a pan carries a panel row's tooltip along with the row", async ({ page }) 
 
   await openSaved(page, entered);
 
-  const tile = await onScreen(page, `tile-${tileKey(cityTileOf(entered))}`);
+  const tile = await onScreen(page, `tile-${tileKey(playerCityTile(entered))}`);
   await page.mouse.click(tile.x, tile.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('unit');
   await rested(page);
@@ -316,7 +316,7 @@ test('a drag on bare ground pans the map, and a drag from the unit moves it', as
   expect(after.y - before.y).toBeCloseTo(60, 0);
   expect(await chronicleOf(page)).toEqual(step.entered);
 
-  const city = await onScreen(page, `tile-${tileKey(cityTileOf(step.entered))}`);
+  const city = await onScreen(page, `tile-${tileKey(playerCityTile(step.entered))}`);
   const destination = await onScreen(page, `tile-${tileKey(step.tile)}`);
   await drag(page, city, { x: destination.x - city.x, y: destination.y - city.y });
   await playedOut(page);
@@ -335,7 +335,7 @@ test('a unit carried onto a lit tile the infopanel stands over and let go there 
 }) => {
   const problems = watch(page);
   const step = workerStepsTo(eastOf);
-  const city = cityTileOf(step.entered);
+  const city = playerCityTile(step.entered);
 
   await openSaved(page, step.entered);
 
@@ -363,7 +363,7 @@ test('a population carried in city mode onto a tile the infopanel stands over an
 }) => {
   const problems = watch(page);
   const { chronicle, claimed } = claimedEast();
-  const city = cityTileOf(chronicle);
+  const city = playerCityTile(chronicle);
 
   await openSaved(page, chronicle);
   await page.keyboard.press('c');
@@ -390,7 +390,7 @@ test('a unit carried onto a lit tile a pinned achievement stands over and let go
 }) => {
   const problems = watch(page);
   const step = workerStepsTo(westOf);
-  const city = cityTileOf(step.entered);
+  const city = playerCityTile(step.entered);
 
   const pin = pinnedRead(step.entered);
 

@@ -16,7 +16,7 @@ import {
   beforeTheLanding,
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   claimedAt,
   cleared,
   click,
@@ -75,7 +75,7 @@ function covered(chronicle: Chronicle): Chronicle {
  */
 function workedGround(landed: Chronicle): { chronicle: Chronicle; tile: TileCoords } | undefined {
   const { terrains } = buildingKind(CATALOGUE, FOUNDATIONS);
-  for (const tile of neighbours(cityTileOf(landed))) {
+  for (const tile of neighbours(playerCityTile(landed))) {
     const ground = tileAt(landed.tiles, tile);
     if (ground === undefined || ground.building !== undefined) continue;
     if (!terrains.includes(ground.terrain) || unitAt(landed.units, tile) !== undefined) continue;

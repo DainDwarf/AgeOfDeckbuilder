@@ -11,7 +11,7 @@ import { type Chronicle, holderOf } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   dealtAloneOn,
   eventDealRead,
   firstSeed,
@@ -52,13 +52,13 @@ function flooding(campaign: Campaign): { dealt: Chronicle; city: TileCoords } {
   const { reads } = answerOf(CATALOGUE, FLOOD, LOSE_THE_FIELDS);
   return firstSeed('deals the flood alone first, taking the clay pit alone', (seed) => {
     const dealt = dealtAloneOn(seed, FLOOD, campaign, (settled) => {
-      const city = cityTileOf(settled);
+      const city = playerCityTile(settled);
       return followed(terraformed(CATALOGUE, settled, city, terrain), (left) =>
         improvementPlaced(CATALOGUE, left, city, CLAY_PIT),
       ).chronicle;
     });
     if (dealt === undefined) return undefined;
-    const city = cityTileOf(dealt);
+    const city = playerCityTile(dealt);
     const read = reads(CATALOGUE, dealt);
     const alone =
       improvementsOutsideTheNeutral(dealt).join() === `${tileKey(city)} ${CLAY_PIT}` &&

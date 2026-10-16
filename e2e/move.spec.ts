@@ -6,7 +6,7 @@ import type { Chronicle } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   dragUnit,
   firstSeed,
@@ -33,7 +33,7 @@ function stepped(): { chronicle: Chronicle; first: TileCoords; second: TileCoord
   return firstSeed('crosses its first worker two tiles in two steps', (seed) => {
     const chronicle = settledOn(seed, ['first-worker']);
     const [worker] = playersOf(chronicle);
-    const city = cityTileOf(chronicle);
+    const city = playerCityTile(chronicle);
     for (const first of neighbours(city)) {
       const once = outcome(
         apply(CATALOGUE, chronicle, { type: 'move', unit: worker.id, tile: first }),
@@ -54,7 +54,7 @@ test('a unit crosses two tiles in two steps', async ({ page }) => {
   test.setTimeout(budget(2));
   const { chronicle, first, second } = stepped();
   const [worker] = playersOf(chronicle);
-  const city = cityTileOf(chronicle);
+  const city = playerCityTile(chronicle);
   const once = outcome(apply(CATALOGUE, chronicle, { type: 'move', unit: worker.id, tile: first }));
   const twice = outcome(apply(CATALOGUE, once, { type: 'move', unit: worker.id, tile: second }));
 

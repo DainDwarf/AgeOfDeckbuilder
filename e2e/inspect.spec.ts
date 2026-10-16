@@ -19,7 +19,7 @@ import { tileYield } from '../src/rules/yields';
 import { featureName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
-  cityTileOf,
+  playerCityTile,
   dragSlack,
   drawnFaces,
   firstSeed,
@@ -83,7 +83,7 @@ function besideOn<T>(
   chronicle: Chronicle,
   found: (tile: Tile) => T | undefined,
 ): Found<T> | undefined {
-  for (const at of neighbours(cityTileOf(chronicle))) {
+  for (const at of neighbours(playerCityTile(chronicle))) {
     const tile = tileAt(chronicle.tiles, at);
     if (tile === undefined) continue;
     const answer = found(tile);
@@ -108,13 +108,13 @@ function besideCity<T>(
  * river runs along either, and the west one is bare, so its terrain card is the only one it holds.
  */
 function stepsClear(chronicle: Chronicle): boolean {
-  const west = tileAt(chronicle.tiles, westOf(cityTileOf(chronicle)));
+  const west = tileAt(chronicle.tiles, westOf(playerCityTile(chronicle)));
   return (
     west !== undefined &&
     west.feature === undefined &&
     west.building === undefined &&
     west.improvements.length === 0 &&
-    !runsAlong(chronicle.rivers, cityTileOf(chronicle)) &&
+    !runsAlong(chronicle.rivers, playerCityTile(chronicle)) &&
     !runsAlong(chronicle.rivers, west)
   );
 }
@@ -278,7 +278,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   const entered = workerOnCity();
 
   await openSaved(page, entered);
-  const cityTile = tileKey(cityTileOf(entered));
+  const cityTile = tileKey(playerCityTile(entered));
   const city = await onScreen(page, `tile-${cityTile}`);
   expect(await shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();
@@ -314,7 +314,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   expect(await standing(page, 'menu')).toBe(false);
 
   // West of the city: the search leaves nothing on it, and it is clear of the panel the city raises.
-  const bareTile = tileKey(westOf(cityTileOf(entered)));
+  const bareTile = tileKey(westOf(playerCityTile(entered)));
   const bare = await onScreen(page, `tile-${bareTile}`);
   await page.mouse.click(bare.x, bare.y);
   await expect.poll(() => ringedTile(page)).toBe(bareTile);
@@ -333,7 +333,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
 
   // A click on another tile selects it, and the inspection standing on the last one is let go of.
   // West of the bare tile, so the panel standing east of it is not over the tile pressed.
-  const furtherTile = tileKey(westOf(westOf(cityTileOf(entered))));
+  const furtherTile = tileKey(westOf(westOf(playerCityTile(entered))));
   const further = await onScreen(page, `tile-${furtherTile}`);
   await page.mouse.click(further.x, further.y);
   await expect.poll(() => ringedTile(page)).toBe(furtherTile);
@@ -355,7 +355,7 @@ test('a right click inspects and never selects, shows no browser menu, and the i
 
   await openSaved(page, chronicle);
   const bare = await onScreen(page, `tile-${key}`);
-  const cityTile = tileKey(cityTileOf(chronicle));
+  const cityTile = tileKey(playerCityTile(chronicle));
   const city = await onScreen(page, `tile-${cityTile}`);
 
   await watchBrowserMenu(page);
@@ -405,8 +405,8 @@ test('a right press let go on the infopanel inspects nothing new, and a right cl
 }) => {
   const problems = watch(page);
   const chronicle = settledOn(1);
-  const cityTile = tileKey(cityTileOf(chronicle));
-  const westTile = tileKey(westOf(cityTileOf(chronicle)));
+  const cityTile = tileKey(playerCityTile(chronicle));
+  const westTile = tileKey(westOf(playerCityTile(chronicle)));
 
   await openSaved(page, chronicle);
   const seen = await readings(page, [`tile-${cityTile}`, `tile-${westTile}`]);

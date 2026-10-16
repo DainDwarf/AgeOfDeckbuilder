@@ -11,7 +11,7 @@ import {
   budget,
   campKind,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   dragTiles,
   firstSeed,
   freeFor,
@@ -28,10 +28,10 @@ import {
  * The first seed's turn 1 with a warrior of the player's entered on the city's tile and one enemy of
  * the camp's kind entered with the raider script on a tile beside it, and the two units.
  */
-function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
+function enemyBesideCity(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
   return firstSeed('stands an enemy beside its city', (seed) => {
     const settled = settledOn(seed);
-    const city = cityTileOf(settled);
+    const city = playerCityTile(settled);
     const guarded = entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city });
     const kind = campKind(settled);
     const stats = unitKind(CATALOGUE, kind);
@@ -56,7 +56,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, warrior, enemy } = besieged();
+  const { chronicle, warrior, enemy } = enemyBesideCity();
   const attacked = outcome(
     apply(CATALOGUE, chronicle, { type: 'attack', unit: warrior.id, tile: enemy.tile }),
   );

@@ -19,7 +19,7 @@ import {
   budget,
   cardOnFace,
   chronicleOf,
-  cityTileOf,
+  playerCityTile,
   click,
   cursorAt,
   dragBetween,
@@ -198,7 +198,7 @@ test('a unit carried stands through the right button pressed and let go off the 
   await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
-  const from = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const from = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
   const onto = await onScreen(page, `tile-${tileKey(tile)}`);
   const bare = await offCanvas(page);
 
@@ -462,7 +462,7 @@ test('a right click while a unit is carried inspects the tile under it and leave
 
   await openSaved(page, opened);
 
-  const city = cityTileOf(opened);
+  const city = playerCityTile(opened);
   const from = await onScreen(page, `tile-${tileKey(city)}`);
   const onto = await onScreen(page, `tile-${tileKey(tile)}`);
 
@@ -568,7 +568,7 @@ test('a right click inspects a tile while a card is selected, and the back key t
 
   // The city's own tile: the map centres on it, so the press lands clear of the hand and the bar,
   // and nothing stands on it this early, so the first card of its cycle is what is built there.
-  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const city = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
   await page.mouse.click(city.x, city.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await selected(page, unit, home)).toBe(true);
@@ -752,7 +752,7 @@ test('a click on the top of a card of the hand while the end of turn plays out s
   const frame = await mapFrame(page);
   const at = { x: top.x + top.width / 2, y: (top.y + frame.y + frame.height) / 2 };
 
-  await carriedTo(page, cityTileOf(opened), at, `the top of ${card}`);
+  await carriedTo(page, playerCityTile(opened), at, `the top of ${card}`);
   await page.mouse.move(button.x, button.y);
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
 
@@ -923,7 +923,7 @@ test('a left click anywhere on the infopanel reaches no tile under it, and lets 
 
   await openSaved(page, opened);
   const home = await onScreen(page, `hand-${index}`);
-  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const city = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
 
   /** The card aimed, then the city's tile inspected under the aim. */
   const aimedAndInspected = async (): Promise<void> => {
@@ -957,7 +957,7 @@ test('a click on a yield reading, a pile or the infopanel lets a unit being aime
 }) => {
   const problems = watch(page);
   const { entered: opened } = workerStepped('steps its first worker off the city', () => true);
-  const city = tileKey(cityTileOf(opened));
+  const city = tileKey(playerCityTile(opened));
 
   await openSaved(page, opened);
   const face = await onScreen(page, `tile-${city}`);
@@ -1021,7 +1021,7 @@ test('a click on the band or on the bar’s paper drops a selected tile and the 
 }) => {
   const problems = watch(page);
   const { opened, unit } = playableAtNothing();
-  const city = tileKey(cityTileOf(opened));
+  const city = tileKey(playerCityTile(opened));
 
   await openSaved(page, opened);
   const face = await onScreen(page, `tile-${city}`);
@@ -1060,7 +1060,7 @@ test('a press landed on the band and let go on the Menu button, then one landed 
 }) => {
   const problems = watch(page);
   const opened = settledOn(1);
-  const city = tileKey(cityTileOf(opened));
+  const city = tileKey(playerCityTile(opened));
 
   await openSaved(page, opened);
   const face = await onScreen(page, `tile-${city}`);
@@ -1090,7 +1090,7 @@ test('a press landed on one tile and let go on its neighbour inside the drag sla
 }) => {
   const problems = watch(page);
   const opened = settledOn(1);
-  const city = cityTileOf(opened);
+  const city = playerCityTile(opened);
   const face = `tile-${tileKey(city)}`;
 
   await openSaved(page, opened);
@@ -1150,7 +1150,7 @@ test('a drag that carries the map leaves a card aimed at the hand being aimed', 
   await page.mouse.click(home.x, home.y);
   await expect.poll(() => standing(page, 'aim-point')).toBe(true);
 
-  const city = await onScreen(page, `tile-${tileKey(cityTileOf(opened))}`);
+  const city = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
   await dragBetween(page, city, { x: city.x + 120 * city.unit, y: city.y - 80 * city.unit });
   await rested(page);
   expect(await standing(page, 'aim-point')).toBe(true);
