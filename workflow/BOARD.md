@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The victory ledger's silent lines** — a trophy or challenge that gives no influence is not shown; a challenge that does not pay on defeat keeps its line, influence shown, the whole line struck through.
+- **The victory ledger's silent lines** — the ending's ledger has no row for a card that carries no influence; a challenge kept to a defeat keeps its row, greyed, reading what its copies would have paid, the whole row struck through; Continue and the launch warning list the same rows, and the warning rises when there is one; proven by `e2e/ending.spec.ts`. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/META-SCREENS.md`. [board/ledger-silent-lines.md](board/ledger-silent-lines.md)
 - **Hunt and Gather lose the "[Worker]'s"** — the two cards' texts drop the "[Worker]'s" reference.
 - **The attack seen before the death** — the fog hides the attack animation before a unit dies; the attack plays out before the fog covers it.
 - **A population badge on the city** — a number on the city showing its total population, Civ-style; losing the last population to income is not visible enough, and if the badge does not end the surprise of a sudden death, that moment gets a signal of its own.
