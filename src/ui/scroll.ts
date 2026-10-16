@@ -25,6 +25,22 @@ export function reachOf(room: number, holds: number): number {
   return Math.max(0, holds - room);
 }
 
+/** A scrollbar's thumb on a track as tall as its frame: how long it is, and where its top stands at an offset. */
+export type Thumb = { readonly length: number; top(offset: number): number };
+
+/**
+ * The thumb of a frame's scrollbar over a scroll reaching this far, in whole units; none where the
+ * room holds the panel whole.
+ */
+export function thumbOf(frame: Box, reach: number): Thumb | undefined {
+  if (reach <= 0) return undefined;
+  const length = Math.round((frame.height * frame.height) / (frame.height + reach));
+  return {
+    length,
+    top: (offset) => Math.round(frame.y + (offset / reach) * (frame.height - length)),
+  };
+}
+
 export type Scroll = {
   /** How far it is scrolled: zero at its first line, its reach at its last. */
   readonly offset: number;

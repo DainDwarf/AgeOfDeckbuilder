@@ -18,6 +18,7 @@ import {
   panKeys,
   pannedToEndsThenTapped,
   plantCampaign,
+  reading,
   readings,
   readOrder,
   rested,
@@ -49,6 +50,10 @@ const COLLECTION_PANEL = 'collection-panel';
 const COLLECTION_FRAME = `${COLLECTION_PANEL}-frame`;
 const CIVILIZATIONS_PANEL = 'civilizations-panel';
 const CIVILIZATIONS_FRAME = `${CIVILIZATIONS_PANEL}-frame`;
+
+/** The thumbs of the collection mode's two panels' scrollbars. */
+const COLLECTION_THUMB = `${COLLECTION_PANEL}-thumb`;
+const CIVILIZATIONS_THUMB = `${CIVILIZATIONS_PANEL}-thumb`;
 
 /** A new campaign that has learned every technology the Stone Age's achievements earn, each with its needs. */
 function stoneAgeLearned(): Campaign {
@@ -225,12 +230,13 @@ test('on the collection screen the pointer on a stack is no hand, a right click 
   expect(problems).toEqual([]);
 });
 
-test('on a campaign holding the Stone Age’s technologies the collection panel opens at its top holding more than its room; the wheel over it, a press held on it and the keys that pan up and down with the pointer on it move it and stop it at its first line and its last, and the wheel and those keys over the civilizations panel and the keys that pan left and right move it nothing', async ({
+test('on a campaign holding the Stone Age’s technologies the collection panel opens at its top holding more than its room, its scrollbar’s thumb at the frame’s top, and the civilizations panel wears no scrollbar; the wheel over it, a press held on it and the keys that pan up and down with the pointer on it move it and stop it at its first line and its last, the thumb following it down and back, and the wheel and those keys over the civilizations panel and the keys that pan left and right move it nothing', async ({
   page,
 }) => {
   const problems = watch(page);
   const { down, up } = panKeys();
   const offset = (): Promise<number> => offsetOf(page, COLLECTION_PANEL);
+  const thumbTop = async (): Promise<number> => (await reading(page, COLLECTION_THUMB)).place.y;
 
   await plantCampaign(page, stoneAgeLearned());
   await openCollection(page);
@@ -239,6 +245,8 @@ test('on a campaign holding the Stone Age’s technologies the collection panel 
     CIVILIZATIONS_PANEL,
     COLLECTION_FRAME,
     CIVILIZATIONS_FRAME,
+    COLLECTION_THUMB,
+    CIVILIZATIONS_THUMB,
   ]);
   const { overflow } = opened(COLLECTION_PANEL).scrolled;
   expect(opened(COLLECTION_PANEL).scrolled.offset).toBe(0);
@@ -246,14 +254,21 @@ test('on a campaign holding the Stone Age’s technologies the collection panel 
   expect(opened(CIVILIZATIONS_PANEL).scrolled).toEqual({ offset: 0, overflow: 0 });
   const frame = opened(COLLECTION_FRAME).onScreen;
   const beside = opened(CIVILIZATIONS_FRAME).onScreen;
+  const frameTop =
+    opened(COLLECTION_FRAME).place.y -
+    opened(COLLECTION_FRAME).boundsOnScreen.height / frame.unit / 2;
+  expect(opened(COLLECTION_THUMB).place.y).toBeCloseTo(frameTop);
+  expect(opened(CIVILIZATIONS_THUMB).standing).toBe(false);
 
   await wheel(page, 120, COLLECTION_FRAME);
   await expect.poll(offset).toBeGreaterThan(0);
   expect(await offset()).toBeLessThan(overflow);
   await wheel(page, 4000, COLLECTION_FRAME);
   await expect.poll(offset).toBe(overflow);
+  expect(await thumbTop()).toBeGreaterThan(frameTop);
   await wheel(page, -4000, COLLECTION_FRAME);
   await expect.poll(offset).toBe(0);
+  expect(await thumbTop()).toBeCloseTo(frameTop);
   await wheel(page, 120, CIVILIZATIONS_FRAME);
   await rested(page);
   await rested(page);

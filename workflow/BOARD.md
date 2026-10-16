@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The collection's scrollbar** — every panel holding more than its frame wears a scrollbar down its right edge, a track the frame's height and on it a bar as long as the room's share of what the panel holds, standing as far down the track as the panel is scrolled, answering no press of its own; a panel the room holds whole wears none; `e2e/collection.spec.ts` proves it on the collection panel. Doc-impact: `docs/META-SCREENS.md`. [board/collection-scrollbar.md](board/collection-scrollbar.md)
 - **The victory ledger's silent lines** — a trophy or challenge that gives no influence is not shown; a challenge that does not pay on defeat keeps its line, influence shown, the whole line struck through.
 - **Hunt and Gather lose the "[Worker]'s"** — the two cards' texts drop the "[Worker]'s" reference.
 - **The attack seen before the death** — the fog hides the attack animation before a unit dies; the attack plays out before the fog covers it.

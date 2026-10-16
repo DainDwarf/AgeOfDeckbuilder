@@ -71,6 +71,8 @@ export type Look = {
   readonly deckCounts: number;
   /** The edge between the two panels of the collection screen. */
   readonly panelDivide: number;
+  readonly scrollbarTrack: number;
+  readonly scrollbarThumb: number;
   /** The strength a stack of the collection stands at whose every copy the deck holds. */
   readonly whollyHeld: number;
   /** The edge around the city section's row of a deck. */
@@ -150,6 +152,8 @@ export const LOOK: Look = {
   regionEdge: 0x0d1014,
   deckCounts: 0x9aa1a9,
   panelDivide: 0x2c3340,
+  scrollbarTrack: 0x2c3340,
+  scrollbarThumb: 0x9aa1a9,
   whollyHeld: 0.5,
   cityRowEdge: 0xd4d7db,
   modeButtonEdge: 0x5c6068,

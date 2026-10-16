@@ -13,7 +13,7 @@ import {
   whileUp,
 } from './design-space';
 import { LOOK } from './look';
-import { createScroll, heldAt, pointInBox, reachOf } from './scroll';
+import { createScroll, heldAt, pointInBox, reachOf, thumbOf } from './scroll';
 import type { Answers, Point } from './stack';
 
 /**
@@ -229,12 +229,14 @@ export function createPanel(
    * pointer that may hold still, and each time it moves.
    */
   let moved = true;
+  const reach = reachOf(frame.height, foot - frame.y);
+  const bar = scrollbarOf(scene, on, name, frame, reach);
   const scroll = createScroll((offset) => {
     root.setY(-offset);
+    bar?.stand(offset);
     follow();
     moved = true;
   });
-  const reach = reachOf(frame.height, foot - frame.y);
   root.setData('overflow', reach);
   scroll.reach(reach);
   scroll.stand(offset);
@@ -353,6 +355,47 @@ export function createPanel(
       unheard();
       zone.destroy();
       root.destroy();
+      bar?.down();
+    },
+  };
+}
+
+/** A panel's scrollbar, its thumb standing where an offset puts it. */
+type Scrollbar = { stand(offset: number): void; down(): void };
+
+/**
+ * The scrollbar down the right edge of a panel's frame over a scroll reaching this far, drawn over
+ * the panel and answering no press; none where the room holds the panel whole.
+ */
+function scrollbarOf(
+  scene: Phaser.Scene,
+  on: Stratum,
+  name: string,
+  frame: Box,
+  reach: number,
+): Scrollbar | undefined {
+  const thumbAt = thumbOf(frame, reach);
+  if (thumbAt === undefined) return undefined;
+  const width = 8;
+  const x = frame.x + frame.width - 4 - width;
+  const track = scene.add
+    .graphics({ x, y: frame.y })
+    .setName(`${name}-track`)
+    .fillStyle(LOOK.scrollbarTrack)
+    .fillRoundedRect(0, 0, width, frame.height, width / 2);
+  const thumb = scene.add
+    .graphics({ x, y: thumbAt.top(0) })
+    .setName(`${name}-thumb`)
+    .fillStyle(LOOK.scrollbarThumb)
+    .fillRoundedRect(0, 0, width, thumbAt.length, width / 2);
+  on.layer.add([track, thumb]);
+  return {
+    stand(offset) {
+      thumb.setY(thumbAt.top(offset));
+    },
+    down() {
+      track.destroy();
+      thumb.destroy();
     },
   };
 }

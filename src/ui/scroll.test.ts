@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import type { Box } from './design-space';
-import { createScroll, heldAt, PAN_SPEED, reachOf, type Scroll } from './scroll';
+import { createScroll, heldAt, PAN_SPEED, reachOf, type Scroll, thumbOf } from './scroll';
 
 /** A panel's frame: its first line stands at its top. */
 const FRAME: Box = { x: 0, y: 100, width: 400, height: 300 };
@@ -104,6 +104,26 @@ test('a panel laid again at the offset it stood at stands there, and one now hol
   expect(stood).toBeGreaterThan(100);
   expect(again.offset).toBe(stood);
   expect(shorter.offset).toBe(100);
+});
+
+test('a panel holding more than its room wears a thumb as long as the room’s share of what it holds, at the frame’s top at its first line, at the frame’s bottom at its last, and at the offset’s share between; one its room holds whole wears none', () => {
+  const holds = 1200;
+  const { scroll } = panelHolding(holds);
+  const reach = reachOf(FRAME.height, holds);
+  const thumb = thumbOf(FRAME, reach);
+  if (thumb === undefined) throw new Error('a panel holding more than its room wears no thumb');
+
+  expect(thumb.length).toBe((FRAME.height * FRAME.height) / holds);
+  expect(thumb.top(scroll.offset)).toBe(FRAME.y);
+
+  scroll.wheel(reach / 3);
+  expect(thumb.top(scroll.offset) - FRAME.y).toBe((FRAME.height - thumb.length) / 3);
+
+  scroll.wheel(5000);
+  expect(thumb.top(scroll.offset) + thumb.length).toBe(FRAME.y + FRAME.height);
+
+  expect(thumbOf(FRAME, reachOf(FRAME.height, FRAME.height))).toBeUndefined();
+  expect(thumbOf(FRAME, reachOf(FRAME.height, FRAME.height - 20))).toBeUndefined();
 });
 
 test('a card scrolled out of its panel answers nothing at the place it would stand, and the card scrolled in answers where it stands', () => {
