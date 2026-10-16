@@ -970,6 +970,18 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
         `the region ${name} keeps its camps ${region.campFromCentre} from the centre, within the first steps' reach of ${reach}`,
       );
     }
+    if (region.campFromCentre > region.radius) {
+      refuse(
+        content,
+        `the region ${name} keeps its camps ${region.campFromCentre} from the centre, past the disc's radius of ${region.radius}`,
+      );
+    }
+    if (region.siteFromCentre > region.radius) {
+      refuse(
+        content,
+        `the region ${name} keeps its sites ${region.siteFromCentre} from the centre, past the disc's radius of ${region.radius}`,
+      );
+    }
     const band = region.neutralFromCentre;
     if (band === undefined) continue;
     neutralBuilding(content, age, `the age ${id}, whose region ${name} deals the neutral's city,`);
@@ -977,6 +989,12 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
       refuse(
         content,
         `the region ${name} keeps the neutral's city ${band.least} from the centre, nearer than the first steps' edge at ${reach}`,
+      );
+    }
+    if (band.least > region.radius || band.most > region.radius) {
+      refuse(
+        content,
+        `the region ${name} keeps the neutral's city from ${band.least} to ${band.most} of the centre, past the disc's radius of ${region.radius}`,
       );
     }
     if (band.most < band.least) {

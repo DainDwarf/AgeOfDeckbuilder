@@ -1059,6 +1059,35 @@ test('a catalogue whose region’s camps keep within the centre part’s reach p
   expect(catalogued(seeing)).toBe(seeing);
 });
 
+test('a catalogue whose region keeps its camps, its sites or the neutral’s city, at either end of its band, further from the centre than the disc’s radius is refused, and one keeping them at the radius is not', () => {
+  const disc = AGE_REGIONS[REGION];
+  const clearing = AGE_REGIONS[CLEARING];
+  const placed = (region: Partial<Region>): Catalogue =>
+    changed(regioned({ [REGION]: { ...disc, ...region } }));
+  const banded = (least: number, most: number): Catalogue =>
+    changed(regioned({ [CLEARING]: { ...clearing, neutralFromCentre: { least, most } } }));
+  const { radius } = disc;
+  const edge = clearing.radius;
+
+  expect(() => catalogued(placed({ campFromCentre: radius + 1 }))).toThrow(
+    `fixture: the region ${REGION} keeps its camps ${radius + 1} from the centre, past the disc's radius of ${radius}`,
+  );
+  expect(() => catalogued(placed({ siteFromCentre: radius + 1 }))).toThrow(
+    `fixture: the region ${REGION} keeps its sites ${radius + 1} from the centre, past the disc's radius of ${radius}`,
+  );
+  for (const [least, most] of [
+    [edge + 1, edge + 1],
+    [edge, edge + 1],
+  ]) {
+    expect(() => catalogued(banded(least, most))).toThrow(
+      `fixture: the region ${CLEARING} keeps the neutral's city from ${least} to ${most} of the centre, past the disc's radius of ${edge}`,
+    );
+  }
+  expect(catalogued(placed({ campFromCentre: radius })).version).toBe('fixture');
+  expect(catalogued(placed({ siteFromCentre: radius })).version).toBe('fixture');
+  expect(catalogued(banded(edge, edge)).version).toBe('fixture');
+});
+
 test('a catalogue whose camp deals a reward it does not hold, a reward in copies below one, or no reward at all, is refused', () => {
   const loot = encamped({ rewards: { ...CAMP.rewards, PH_Loot: 1 } });
   const none = encamped({ rewards: {} });
