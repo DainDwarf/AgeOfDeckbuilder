@@ -4,12 +4,12 @@ import type { Campaign } from '../src/rules/campaign';
 import { bonusCarried, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
-import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { unitDamaged } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { standsOn, type Unit, unitAt } from '../src/rules/units';
+import { type Unit, unitAt } from '../src/rules/units';
 import { capstoneFace } from '../src/ui/face';
 import { capstoneLore } from '../src/ui/lore';
 import { text, victoryLine } from '../src/ui/text';
@@ -22,6 +22,7 @@ import {
   click,
   dragTiles,
   enemiesOf,
+  freeFor,
   onScreen,
   openSaved,
   panelRows,
@@ -65,10 +66,7 @@ function freeBeside(
   const seen = inSight(CATALOGUE, chronicle);
   return neighbours(around).find(
     (tile) =>
-      tileKey(tile) !== tileKey(kept) &&
-      seen.has(tileKey(tile)) &&
-      standsOn(CATALOGUE, stats, false, tileAt(chronicle.tiles, tile)) &&
-      unitAt(chronicle.units, tile) === undefined,
+      tileKey(tile) !== tileKey(kept) && seen.has(tileKey(tile)) && freeFor(chronicle, stats, tile),
   );
 }
 

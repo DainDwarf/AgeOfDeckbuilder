@@ -60,7 +60,14 @@ import {
   idle,
   playable,
 } from '../src/rules/state';
-import { actsAsEnemy, relationsOf, standsOn, type Unit, unitAt } from '../src/rules/units';
+import {
+  actsAsEnemy,
+  relationsOf,
+  standsOn,
+  type Unit,
+  type UnitStats,
+  unitAt,
+} from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Name } from '../src/ui/card-face';
@@ -1871,13 +1878,16 @@ export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
   const stats = unitKind(CATALOGUE, campKind(chronicle));
   const city = cityTileOf(chronicle);
   return chronicle.tiles
-    .filter(
-      (tile) =>
-        distance(tile, city) === away &&
-        standsOn(CATALOGUE, stats, false, tile) &&
-        unitAt(chronicle.units, tile) === undefined,
-    )
+    .filter((tile) => distance(tile, city) === away && freeFor(chronicle, stats, tile))
     .map(({ q, r }) => ({ q, r }));
+}
+
+/** Whether a unit of the kind stands on the tile ashore with nobody on it. */
+export function freeFor(chronicle: Chronicle, stats: UnitStats, tile: TileCoords): boolean {
+  return (
+    standsOn(CATALOGUE, stats, false, tileAt(chronicle.tiles, tile)) &&
+    unitAt(chronicle.units, tile) === undefined
+  );
 }
 
 /** The tile nearest the city that has never been in sight: the closest dark ground to press on. */

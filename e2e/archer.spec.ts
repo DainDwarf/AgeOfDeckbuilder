@@ -4,10 +4,10 @@ import { terraformed } from '../src/rules/cards';
 import { ageOf, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
-import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
-import { standsOn, type Unit, unitAt } from '../src/rules/units';
+import { type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
   campKind,
@@ -16,6 +16,7 @@ import {
   click,
   dragTiles,
   firstSeed,
+  freeFor,
   litTiles,
   marksIn,
   openSaved,
@@ -50,8 +51,7 @@ function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidde
     const stats = unitKind(CATALOGUE, kind);
     const { raider } = ageOf(CATALOGUE, armed.age).camp.scripts;
     const enemyOn = (chronicle: Chronicle, tile: TileCoords): Chronicle | undefined =>
-      standsOn(CATALOGUE, stats, false, tileAt(chronicle.tiles, tile)) &&
-      unitAt(chronicle.units, tile) === undefined
+      freeFor(chronicle, stats, tile)
         ? unitEntered(chronicle, enemyEntering(kind, raider, tile))
         : undefined;
 

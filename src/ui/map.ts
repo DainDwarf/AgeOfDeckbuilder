@@ -1610,8 +1610,8 @@ export function createMapView(
 
   /**
    * One stage on units: the frame comes to hold the tiles it plays on, and the motion starts once it
-   * does. A stage with no tile drawn live on the chronicle it leaves moves neither marker nor frame
-   * and is answered with nothing, so the scene renders the state it ends on.
+   * does. A stage with no tile drawn live on the map as it stands or on the chronicle it leaves moves
+   * neither marker nor frame and is answered with nothing, so the scene renders the state it ends on.
    */
   const staged = (
     tiles: readonly TileCoords[],
@@ -1619,7 +1619,8 @@ export function createMapView(
     motion: () => Promise<void> | undefined,
   ): Promise<void> | undefined => {
     const watched = drawing(chronicle).live;
-    if (!tiles.some((tile) => watched.has(tileKey(tile)))) return undefined;
+    const plays = tiles.some((tile) => live.has(tileKey(tile)) || watched.has(tileKey(tile)));
+    if (!plays) return undefined;
     return heldThen(tiles, chronicle, motion);
   };
 

@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The attack seen before the death** — a stage on units plays where any of its tiles is drawn live on the map as it stands or as the stage leaves it, and the map draws what the stage leaves once it has played, so an attack that kills the unit whose sight alone held its tiles is seen before the fog covers them. Doc-impact: `docs/CHRONICLE-SCREEN.md`. [board/the-attack-seen-before-the-death.md](board/the-attack-seen-before-the-death.md)
 - **A population badge on the city** — a number on the city showing its total population, Civ-style; losing the last population to income is not visible enough, and if the badge does not end the surprise of a sudden death, that moment gets a signal of its own.

@@ -3,10 +3,10 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, entered, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
-import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
-import { standsOn, type Unit, unitAt } from '../src/rules/units';
+import { type Unit, unitAt } from '../src/rules/units';
 import {
   budget,
   campKind,
@@ -14,6 +14,7 @@ import {
   cityTileOf,
   dragTiles,
   firstSeed,
+  freeFor,
   openSaved,
   playersOf,
   ringedTile,
@@ -34,11 +35,7 @@ function besieged(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
     const guarded = entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city });
     const kind = campKind(settled);
     const stats = unitKind(CATALOGUE, kind);
-    const beside = neighbours(city).find(
-      (tile) =>
-        standsOn(CATALOGUE, stats, false, tileAt(guarded.chronicle.tiles, tile)) &&
-        unitAt(guarded.chronicle.units, tile) === undefined,
-    );
+    const beside = neighbours(city).find((tile) => freeFor(guarded.chronicle, stats, tile));
     if (beside === undefined) return undefined;
     const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
     const beset = entered(CATALOGUE, guarded.chronicle, enemyEntering(kind, raider, beside));

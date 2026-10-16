@@ -4,11 +4,10 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, type Entering, entered, unitKind } from '../src/rules/catalogue';
 import { apply, chartedAndRead, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
-import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
+import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { readSave } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
-import { standsOn, unitAt } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
@@ -22,6 +21,7 @@ import {
   consoleKey,
   enemiesOf,
   enter,
+  freeFor,
   heldSave,
   launchedAs,
   marksIn,
@@ -98,11 +98,7 @@ async function standsOnSeed(page: Page, seed: number): Promise<void> {
 /** The first tile beside the city a warrior stands on with nobody on it. */
 function warriorGround(chronicle: Chronicle): TileCoords {
   const warrior = unitKind(CATALOGUE, WARRIOR);
-  const free = neighbours(cityTileOf(chronicle)).find(
-    (tile) =>
-      standsOn(CATALOGUE, warrior, false, tileAt(chronicle.tiles, tile)) &&
-      unitAt(chronicle.units, tile) === undefined,
-  );
+  const free = neighbours(cityTileOf(chronicle)).find((tile) => freeFor(chronicle, warrior, tile));
   if (free === undefined) throw new Error('no tile beside the city takes a warrior');
   return free;
 }

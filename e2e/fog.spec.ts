@@ -1,13 +1,17 @@
 import { expect, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf } from '../src/rules/catalogue';
+import { ageOf, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import { unitDamaged } from '../src/rules/schedule';
 import { charted, chartedAt, inSight } from '../src/rules/sight';
+import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { reachable } from '../src/rules/units';
+import { reachable, type UnitStats } from '../src/rules/units';
 import {
+  budget,
   campGround,
   campKind,
   chronicleOf,
@@ -18,12 +22,14 @@ import {
   drawnFaces,
   enter,
   firstSeed,
+  freeFor,
   glyphs,
   glyphsOf,
   marksIn,
   nearestUncharted,
   openSaved,
   playersOf,
+  readings,
   rested,
   ringedTile,
   riverRuns,
@@ -31,6 +37,7 @@ import {
   shownCard,
   shows,
   standing,
+  stoppedTurn,
   tileOnScreen,
   unitEntered,
   watch,
@@ -38,6 +45,9 @@ import {
 
 /** The settle card that enters the scout. */
 const FIRST_SCOUT = 'first-scout';
+
+/** The unit kind that card enters. */
+const SCOUT = 'scout';
 
 /** The chronicle the step leaves, or none where the rules refuse the move. */
 function stepped(chronicle: Chronicle, to: TileCoords): Chronicle | undefined {
@@ -110,6 +120,46 @@ function riverUncharted(): { scouted: Chronicle; landing: TileCoords; stepped: C
       const moved = stepped(scouted, tile);
       if (moved !== undefined && riverRuns(moved) > 0)
         return { scouted, landing: tile, stepped: moved };
+    }
+    return undefined;
+  });
+}
+
+/**
+ * The first seed's turn 1 with a lone scout entered out of the city's sight, taken down to the damage
+ * of an enemy of the camp's kind entered beside it as a raider, whose end of turn attacks it on tiles
+ * the attack leaves out of sight; and the scout's tile.
+ */
+function attackedUnseen(): { chronicle: Chronicle; alone: TileCoords } {
+  return firstSeed('attacks a scout where its sight alone holds the tiles', (seed) => {
+    const settled = settledOn(seed);
+    const citySees = inSight(CATALOGUE, settled);
+    const kind = campKind(settled);
+    const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
+    const scout = unitKind(CATALOGUE, SCOUT);
+    const enemy = unitKind(CATALOGUE, kind);
+    const unseenFor = (stats: UnitStats, at: TileCoords): boolean =>
+      !citySees.has(tileKey(at)) && freeFor(settled, stats, at);
+
+    for (const { q, r } of settled.tiles) {
+      const alone = { q, r };
+      if (!unseenFor(scout, alone)) continue;
+      const beside = neighbours(alone).find((at) => unseenFor(enemy, at));
+      if (beside === undefined) continue;
+      const entered = unitEntered(
+        unitEntered(settled, { type: SCOUT, faction: 'player', tile: alone }),
+        enemyEntering(kind, raider, beside),
+      );
+      const chronicle = unitDamaged(entered, alone, scout.health - enemy.damage).chronicle;
+      const unseen = [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))].some(
+        (stage) => {
+          if (stage.kind !== 'group' || stage.name !== 'attack') return false;
+          if (tileKey(stage.target) !== tileKey(alone)) return false;
+          const left = inSight(CATALOGUE, stage.chronicle);
+          return !left.has(tileKey(stage.attacker)) && !left.has(tileKey(alone));
+        },
+      );
+      if (unseen) return { chronicle, alone };
     }
     return undefined;
   });
@@ -213,6 +263,43 @@ test('the map draws no river between two uncharted tiles, and draws one along a 
   await dragUnit(page, cityTileOf(run.scouted), run.landing);
   expect(await chronicleOf(page)).toEqual(run.stepped);
   expect(await counted(page, 'river')).toBe(riverRuns(run.stepped));
+
+  expect(problems).toEqual([]);
+});
+
+test('an attack that kills the unit whose sight alone held its tiles plays before the fog covers them', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle: stood, alone } = attackedUnseen();
+  const mark = `unit-${tileKey(alone)}`;
+  const scrim = `fog-${tileKey(alone)}`;
+  expect(playersOf(outcome(apply(CATALOGUE, stood, { type: 'end-turn' })))).toEqual([]);
+
+  await openSaved(page, stood);
+
+  // A slow runner draws the shrink in a frame or two: the catch holds the map's tweens the frame it
+  // sees the scout's mark shrinking.
+  const caught = page.waitForFunction(
+    (names) => {
+      const marker = window.named?.(names.mark)?.object as Phaser.GameObjects.Container | undefined;
+      if (marker === undefined || marker.scale <= 0 || marker.scale >= 1) return undefined;
+      window.game?.scene.getScene('map').tweens.pauseAll();
+      return { fogged: window.named?.(names.scrim) !== undefined };
+    },
+    { mark, scrim },
+  );
+  const ended = stoppedTurn(page);
+  expect(await (await caught).jsonValue()).toEqual({ fogged: false });
+
+  await page.evaluate(() => {
+    window.game?.scene.getScene('map').tweens.resumeAll();
+  });
+  await ended;
+  const after = await readings(page, [mark, scrim]);
+  expect(after(scrim).standing).toBe(true);
+  expect(after(mark).standing).toBe(false);
 
   expect(problems).toEqual([]);
 });
