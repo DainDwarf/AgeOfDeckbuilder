@@ -16,7 +16,6 @@ import {
   budget,
   campaignShown,
   chronicleOf,
-  playerCityTile,
   click,
   consoleKey,
   enemiesOf,
@@ -27,6 +26,7 @@ import {
   marksIn,
   openLaunch,
   openSaved,
+  playerCityTile,
   playing,
   readNames,
   rested,
@@ -98,7 +98,9 @@ async function standsOnSeed(page: Page, seed: number): Promise<void> {
 /** The first tile beside the city a warrior stands on with nobody on it. */
 function warriorGround(chronicle: Chronicle): TileCoords {
   const warrior = unitKind(CATALOGUE, WARRIOR);
-  const free = neighbours(playerCityTile(chronicle)).find((tile) => freeFor(chronicle, warrior, tile));
+  const free = neighbours(playerCityTile(chronicle)).find((tile) =>
+    freeFor(chronicle, warrior, tile),
+  );
   if (free === undefined) throw new Error('no tile beside the city takes a warrior');
   return free;
 }

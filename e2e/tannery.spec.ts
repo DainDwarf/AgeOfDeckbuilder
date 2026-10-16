@@ -7,7 +7,6 @@ import {
   aimed,
   campaignWith,
   chronicleOf,
-  playerCityTile,
   claimedAt,
   click,
   dragOut,
@@ -19,6 +18,7 @@ import {
   paidOnGround,
   playedOn,
   playedOut,
+  playerCityTile,
   watch,
 } from './chronicle-screen';
 

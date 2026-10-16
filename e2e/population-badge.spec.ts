@@ -6,7 +6,6 @@ import { LOOK } from '../src/ui/look';
 import {
   budget,
   chronicleOf,
-  playerCityTile,
   consoleKey,
   endedTurn,
   endTurn,
@@ -14,6 +13,7 @@ import {
   hungry,
   neutralCampaign,
   openSaved,
+  playerCityTile,
   readings,
   rested,
   settledOn,

@@ -6,12 +6,12 @@ import type { Chronicle } from '../src/rules/state';
 import {
   budget,
   chronicleOf,
-  playerCityTile,
   click,
   dragUnit,
   firstSeed,
   openSaved,
   playedOut,
+  playerCityTile,
   playersOf,
   ringedTile,
   settledOn,

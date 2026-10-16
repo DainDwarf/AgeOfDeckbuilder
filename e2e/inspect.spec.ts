@@ -19,7 +19,6 @@ import { tileYield } from '../src/rules/yields';
 import { featureName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
-  playerCityTile,
   dragSlack,
   drawnFaces,
   firstSeed,
@@ -29,6 +28,7 @@ import {
   openSaved,
   panelMovement,
   panelRows,
+  playerCityTile,
   reading,
   readings,
   rested,
