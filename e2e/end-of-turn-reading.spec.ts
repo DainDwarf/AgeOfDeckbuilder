@@ -1,9 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { cardOf, strikeOf } from '../src/rules/catalogue';
 import { type Reckoning, reckoned } from '../src/rules/chronicle';
-import { arrived } from '../src/rules/city';
 import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -12,13 +10,13 @@ import { text } from '../src/ui/text';
 import {
   budget,
   chronicleOf,
-  endedTurn,
   endTurn,
   firstSeed,
-  hazardsAdded,
+  hungry,
   openSaved,
   readings,
   settledOn,
+  strikesInHand,
   watch,
 } from './chronicle-screen';
 
@@ -61,32 +59,6 @@ function reckoningOf(read: Reckoning | undefined, key: BarReading): Painted {
     case 'culture':
       return painted(read.stocks[key], read.pastNothing.has(key));
   }
-}
-
-/** Whether the hand holds a card that strikes. */
-function strikesInHand(chronicle: Chronicle): boolean {
-  return chronicle.hand.some(({ id }) => strikeOf(cardOf(CATALOGUE, id)) !== undefined);
-}
-
-/**
- * The first seed's turn 2, one population arrived idle, the hazard drawn at a counter past the food
- * the turn holds and earns: its strike takes a population, and the city stands after it.
- */
-function hungry(): Chronicle {
-  return firstSeed('draws a strike past its food, the city standing after it', (seed) => {
-    const peopled = arrived(settledOn(seed), 'player').chronicle;
-    const next = endedTurn(peopled);
-    const earned = reckoned(CATALOGUE, next);
-    if (earned === undefined) return undefined;
-    const past = next.resources.food + earned.stocks.food + 1;
-    const drawn = endedTurn(hazardsAdded(peopled, [past]));
-    if (!strikesInHand(drawn)) return undefined;
-    const read = reckoned(CATALOGUE, drawn);
-    if (read === undefined || !read.pastNothing.has('food') || read.population >= 0) {
-      return undefined;
-    }
-    return endedTurn(drawn).ending === undefined ? drawn : undefined;
-  });
 }
 
 test('on a quiet turn the bar reads after each stock what the income brings it, and nothing after idle', async ({

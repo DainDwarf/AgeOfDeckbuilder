@@ -28,6 +28,7 @@ import {
   type Chronicle,
   type CityFaction,
   type Cost,
+  cityRows,
   cityTileOf,
   holderOf,
   type Snapshot,
@@ -46,6 +47,7 @@ import {
   hexagon,
   onLetGoOffCanvas,
   onResize,
+  ownBoxOf,
   renderFactor,
   type Stratum,
   thingUnder,
@@ -78,6 +80,14 @@ const FACTION_COLOURS: Record<Faction, number> = {
 const CITY_COLOURS: Record<CityFaction, number> = {
   player: LOOK.civilization,
   neutral: LOOK.neutral,
+};
+
+/** Every city faction, read off the table every one of them must hold a colour in. */
+const CITY_FACTIONS = Object.keys(CITY_COLOURS) as CityFaction[];
+
+const CITY_BADGE_INKS: Record<CityFaction, number> = {
+  player: LOOK.civilizationBadgeInk,
+  neutral: LOOK.neutralBadgeInk,
 };
 
 // No corner of the hull, shifted by half its size, lands on the corner before it: Phaser's stroke
@@ -123,6 +133,15 @@ const THRESHOLD_STYLE = {
 };
 const THRESHOLD_GLYPH = 8;
 const THRESHOLD_GAP = 3;
+
+/**
+ * A city's badge: how far right of and below its tile's middle its centre stands, how tall it is,
+ * the pad on each side of its number, and how the number reads.
+ */
+const BADGE_OFF = 12;
+const BADGE_HEIGHT = 14;
+const BADGE_PAD = 3;
+const BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '10px', fontStyle: 'bold' };
 
 /** How heavy the ring around either city's own tile is, against the one every other tile takes. */
 const CITY_RING = 4;
@@ -402,6 +421,36 @@ function thresholdMark(
   return scene.add.container(x, y, [number, glyph]).setName('threshold');
 }
 
+/**
+ * The one way a city's own tile wears its population: the number on a pill in that city's colour at
+ * the tile's lower-right corner, a disc until the number needs more room, widening about its middle.
+ */
+function populationBadge(
+  scene: Phaser.Scene,
+  coord: TileCoords,
+  whose: CityFaction,
+  population: number,
+  resolution: number,
+): Phaser.GameObjects.GameObject[] {
+  const { x, y } = positionOf(coord);
+  const at = { x: x + BADGE_OFF, y: y + BADGE_OFF };
+  const key = tileKey(coord);
+  const number = addText(scene, at.x, at.y, String(population), {
+    ...BADGE_STYLE,
+    color: css(CITY_BADGE_INKS[whose]),
+  })
+    .setResolution(resolution)
+    .setOrigin(0.5, 0.5)
+    .setName(`population-${key}-number`);
+  const width = Math.max(BADGE_HEIGHT, ownBoxOf(number).width + 2 * BADGE_PAD);
+  const pill = scene.add
+    .rectangle(at.x, at.y, width, BADGE_HEIGHT, CITY_COLOURS[whose])
+    .setRounded(BADGE_HEIGHT / 2)
+    .setStrokeStyle(1.5, LOOK.mapOutline)
+    .setName(`population-${key}`);
+  return [pill, number];
+}
+
 /** The one way a held tile with nobody on it is dimmed: a scrim over it and all it carries. */
 function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
@@ -589,6 +638,7 @@ export function createMapView(
   const improvements = group(strata.buildings, 'improvements');
   const built = group(strata.buildings, 'buildings');
   const marks = group(strata.units, 'units');
+  const badges = group(strata.units, 'badges');
   const fog = group(strata.fog, 'fog');
   const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
@@ -741,7 +791,7 @@ export function createMapView(
     zoom = next;
     place();
     if (zoom === was) return;
-    paintThreshold();
+    paintAtZoom();
     rescale?.();
   };
 
@@ -1042,20 +1092,43 @@ export function createMapView(
   };
 
   /**
-   * The culture threshold on the tile that wears it: what the selection changes, and nothing else.
-   * A text is rasterised once and scaled after, so the map's own zoom goes into the resolution it is
-   * raised at, and it is raised again whenever that zoom changes.
+   * The resolution a text on the map is raised at: it is rasterised once and scaled after, so the
+   * map's own zoom goes into it, and every such text is raised again whenever that zoom changes.
    */
+  const atZoom = (): number => Math.ceil(renderFactor() * zoom);
+
+  /** The culture threshold on the tile that wears it: what the selection changes, and nothing else. */
   const paintThreshold = (): void => {
     wipe(thresholds);
     if (threshold === undefined) return;
-    const resolution = Math.ceil(renderFactor() * zoom);
-    thresholds.add(thresholdMark(scene, threshold.tile, threshold.cost, resolution));
+    thresholds.add(thresholdMark(scene, threshold.tile, threshold.cost, atZoom()));
+  };
+
+  /**
+   * Each city's badge on its own tile, where the map draws that tile live, on the chronicle it
+   * stands on: a growth, a take and a capture change the number, so this follows every render.
+   */
+  const paintBadges = (): void => {
+    wipe(badges);
+    const current = shown;
+    if (current === undefined) return;
+    for (const whose of CITY_FACTIONS) {
+      const tile = cityTileOf(current, whose);
+      const rows = cityRows(current, whose);
+      if (tile === undefined || rows === undefined || !live.has(tileKey(tile))) continue;
+      badges.add(populationBadge(scene, tile, whose, rows.population, atZoom()));
+    }
+  };
+
+  /** Every text the map raises at its own zoom, raised again. */
+  const paintAtZoom = (): void => {
+    paintThreshold();
+    paintBadges();
   };
 
   // The map scene re-rasterises every text it holds at its own factor when the window changes, and
-  // subscribed to that at its create, ahead of the map: this raises the threshold again after it.
-  onResize(scene, paintThreshold);
+  // subscribed to that at its create, ahead of the map: this raises the map's own again after it.
+  onResize(scene, paintAtZoom);
 
   /**
    * City mode's tiles repainted on the chronicle the map stands on: a mark under every tile the
@@ -1271,6 +1344,7 @@ export function createMapView(
       }),
     );
 
+    paintBadges();
     paintCityMarks();
     paintYields();
     lightUnit(selection);

@@ -41,6 +41,10 @@ export type Look = {
   /** The disc a pinned plate wears on its corner. */
   readonly pinMark: number;
   readonly thresholdInk: number;
+  /** The ink the population badge on the player's city's tile reads in. */
+  readonly civilizationBadgeInk: number;
+  /** The ink the population badge on the neutral's city's tile reads in. */
+  readonly neutralBadgeInk: number;
   readonly settlePhase: number;
   readonly panelFill: number;
   readonly panelEdge: number;
@@ -127,6 +131,8 @@ export const LOOK: Look = {
   pinEdge: 0x0d1014,
   pinMark: 0xb4453c,
   thresholdInk: 0xf2f6ff,
+  civilizationBadgeInk: 0x0d1014,
+  neutralBadgeInk: 0xd4d7db,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,

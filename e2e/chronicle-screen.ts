@@ -28,11 +28,20 @@ import {
   earningOf,
   entered,
   type InfluenceCard,
+  strikeOf,
   technologyOf,
   unitKind,
 } from '../src/rules/catalogue';
-import { admitted, apply, countOn, launched, outcome, refusalOf } from '../src/rules/chronicle';
-import { claimable, cultureThreshold, growthThreshold } from '../src/rules/city';
+import {
+  admitted,
+  apply,
+  countOn,
+  launched,
+  outcome,
+  reckoned,
+  refusalOf,
+} from '../src/rules/chronicle';
+import { arrived, claimable, cultureThreshold, growthThreshold } from '../src/rules/city';
 import {
   CENTRE,
   distance,
@@ -1420,6 +1429,32 @@ export function hazardsAdded(chronicle: Chronicle, steps: readonly number[]): Ch
   return adding;
 }
 
+/** Whether the hand holds a card that strikes. */
+export function strikesInHand(chronicle: Chronicle): boolean {
+  return chronicle.hand.some(({ id }) => strikeOf(cardOf(CATALOGUE, id)) !== undefined);
+}
+
+/**
+ * The first seed's turn 2, one population arrived idle, the hazard drawn at a counter past the food
+ * the turn holds and earns: its strike takes a population, and the city stands after it.
+ */
+export function hungry(): Chronicle {
+  return firstSeed('draws a strike past its food, the city standing after it', (seed) => {
+    const peopled = arrived(settledOn(seed), 'player').chronicle;
+    const next = endedTurn(peopled);
+    const earned = reckoned(CATALOGUE, next);
+    if (earned === undefined) return undefined;
+    const past = next.resources.food + earned.stocks.food + 1;
+    const drawn = endedTurn(hazardsAdded(peopled, [past]));
+    if (!strikesInHand(drawn)) return undefined;
+    const read = reckoned(CATALOGUE, drawn);
+    if (read === undefined || !read.pastNothing.has('food') || read.population >= 0) {
+      return undefined;
+    }
+    return endedTurn(drawn).ending === undefined ? drawn : undefined;
+  });
+}
+
 /**
  * How many stacks each pile of `overflowingPiles` holds at least: four lines of a browse, which
  * reach past its frame further than a drag of a spec's travels.
@@ -1738,6 +1773,23 @@ export function campaignWith(cards: readonly CardId[]): Campaign {
     campaign = addedTo(CATALOGUE, campaign, civilization, card);
   }
   return campaign;
+}
+
+/** The age whose content names the neutral. */
+export function neutralAge(): string {
+  const found = Object.keys(CATALOGUE.ages).find((age) => ageOf(CATALOGUE, age).neutral);
+  if (found === undefined) throw new Error('no age of the catalogue names the neutral');
+  return found;
+}
+
+/** A new campaign with the technology that unlocks the age naming the neutral learned with its needs. */
+export function neutralCampaign(): Campaign {
+  const age = neutralAge();
+  const unlocker = Object.keys(CATALOGUE.technologies).find(
+    (id) => ageUnlockedBy(CATALOGUE, id) === age,
+  );
+  if (unlocker === undefined) throw new Error(`no technology unlocks the age ${age}`);
+  return learnedWithNeeds(CATALOGUE, freshCampaign(CATALOGUE), [unlocker]);
 }
 
 /** The card of the catalogue aimed at the hand. */

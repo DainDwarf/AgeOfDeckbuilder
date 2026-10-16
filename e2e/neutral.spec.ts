@@ -1,14 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import {
-  ageOf,
-  ageUnlockedBy,
-  cardOf,
-  neutralOf,
-  neutralWorkerKind,
-  unitKind,
-} from '../src/rules/catalogue';
+import { ageOf, cardOf, neutralOf, neutralWorkerKind, unitKind } from '../src/rules/catalogue';
 import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
 import { bordered, warDeclared, yielded } from '../src/rules/city';
 import {
@@ -20,7 +13,6 @@ import {
   tilesBeside,
 } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
-import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
@@ -29,7 +21,6 @@ import { tileYield } from '../src/rules/yields';
 import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
-import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   admits,
   aimed,
@@ -52,6 +43,8 @@ import {
   litTiles,
   mapFrame,
   marksIn,
+  neutralAge,
+  neutralCampaign,
   onScreen,
   openSaved,
   paidFor,
@@ -77,21 +70,9 @@ import {
 /** The warning a step onto a tile the neutral holds raises at peace. */
 const WARNING = 'move-warning';
 
-/** The age whose content names the neutral. */
-const AGE = (() => {
-  const found = Object.keys(CATALOGUE.ages).find((age) => ageOf(CATALOGUE, age).neutral);
-  if (found === undefined) throw new Error('no age of the catalogue names the neutral');
-  return found;
-})();
+const AGE = neutralAge();
 
-/** A new campaign with the technology that unlocks the age learned with its needs. */
-const CAMPAIGN = (() => {
-  const unlocker = Object.keys(CATALOGUE.technologies).find(
-    (id) => ageUnlockedBy(CATALOGUE, id) === AGE,
-  );
-  if (unlocker === undefined) throw new Error(`no technology unlocks the age ${AGE}`);
-  return learnedWithNeeds(CATALOGUE, freshCampaign(CATALOGUE), [unlocker]);
-})();
+const CAMPAIGN = neutralCampaign();
 
 /**
  * Carries the map by right-button drags from the middle of its frame, a third of the frame at most
