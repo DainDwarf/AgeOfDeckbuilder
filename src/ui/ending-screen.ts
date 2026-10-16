@@ -153,22 +153,24 @@ function drawEnding(
   return { screen, button: button.face };
 }
 
-/** One row of the ledger: what it reads, the influence it paid, and whether it reads greyed. */
-export type LedgerRow = CountedLine & { readonly influence: number; readonly greyed: boolean };
+/**
+ * One row of the ledger: what it reads, the influence it reads, and whether it was kept to an ending
+ * that did not pay it.
+ */
+export type LedgerRow = CountedLine & { readonly influence: number; readonly unpaid: boolean };
 
 /**
- * An influence card a ledger row reads: its copies, and, on a chronicle that has ended, whether that
- * ending paid it and what its copies paid.
+ * An influence card a ledger row reads: its copies, the influence they carry, and, on a chronicle
+ * that has ended, whether that ending paid it.
  */
-export type LedgerCard = HeldCopies &
-  (
+export type LedgerCard = HeldCopies & { readonly influence: number } & (
     | { readonly ended: false }
-    | { readonly ended: true; readonly paid: boolean; readonly influence: number }
+    | { readonly ended: true; readonly paid: boolean }
   );
 
 /**
- * The ledger's rows: one per achievement of the age reached, then one per influence card kept in
- * the collection's order, one an ending did not pay greyed.
+ * The ledger's rows: one per achievement of the age reached, then one per influence card kept that
+ * carries influence, in the collection's order.
  */
 export function ledgerRowsOf(
   catalogue: Catalogue,
@@ -179,23 +181,24 @@ export function ledgerRowsOf(
   const reached = achievements.map((id): LedgerRow => {
     const { technology, influence } = achievementOf(catalogue, age, id);
     const achievement = technologyName(technology);
-    return { reads: text('achievement.reached', { achievement }), influence, greyed: false };
+    return { reads: text('achievement.reached', { achievement }), influence, unpaid: false };
   });
-  const kept = inCollectionOrder(catalogue, cards, cardName).map(
+  const carrying = cards.filter(({ influence }) => influence > 0);
+  const kept = inCollectionOrder(catalogue, carrying, cardName).map(
     (card): LedgerRow => ({
       reads: cardName(card.id),
       copies: card.copies,
-      influence: card.ended ? card.influence : 0,
-      greyed: card.ended && !card.paid,
+      influence: card.influence,
+      unpaid: card.ended && !card.paid,
     }),
   );
   return [...reached, ...kept];
 }
 
 /**
- * The ledger of what the chronicle paid, from `top` down: its rows, each with the influence it paid
- * at its end where it paid any, then the influence paid in all, under a rule where a row stands over
- * it.
+ * The ledger of what the chronicle paid, from `top` down: its rows, each with its influence at its
+ * end where it reads any, a row kept unpaid greyed and crossed out end to end, then the influence
+ * paid in all, under a rule where a row stands over it.
  */
 function ledgerOf(
   scene: Phaser.Scene,
@@ -218,7 +221,7 @@ function ledgerOf(
   const parts: Part[] = [];
   let y = top + pitch / 2;
   rows.forEach((row, at) => {
-    const ink = row.greyed ? { ...style(false), color: css(LOOK.unpaidInk) } : style(false);
+    const ink = row.unpaid ? { ...style(false), color: css(LOOK.unpaidInk) } : style(false);
     const line = laidLine(scene, row, ink, `ending-row-${at}`);
     line.place(left, y - line.height / 2);
     parts.push(...line.parts);
@@ -228,6 +231,14 @@ function ledgerOf(
         .setOrigin(1, 0.5)
         .setName(`ending-row-${at}-influence`);
       parts.push(diamond(number.x - number.width - 18, y), number);
+    }
+    if (row.unpaid) {
+      parts.push(
+        scene.add
+          .rectangle(left, y, width, 2, LOOK.unpaidInk)
+          .setOrigin(0, 0.5)
+          .setName(`ending-row-${at}-crossed`),
+      );
     }
     y += pitch;
   });

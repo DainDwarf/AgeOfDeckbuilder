@@ -62,7 +62,10 @@ export type Look = {
   readonly unknownInk: number;
   readonly greyedFill: number;
   readonly greyedInk: number;
-  /** The ink a row of the ending screen's ledger reads in for a card kept that this ending does not pay. */
+  /**
+   * The ink a row of the ending screen's ledger reads in for a card kept that this ending does not
+   * pay, and the line that crosses that row out.
+   */
   readonly unpaidInk: number;
   /** The strength an option of the launch screen rests at while another of its row is selected. */
   readonly unselected: number;

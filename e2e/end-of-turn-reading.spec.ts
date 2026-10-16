@@ -17,6 +17,7 @@ import {
   firstSeed,
   hazardsAdded,
   openSaved,
+  readings,
   settledOn,
   watch,
 } from './chronicle-screen';
@@ -25,21 +26,13 @@ import {
 const READINGS: readonly BarReading[] = [...RESOURCES, 'idle'];
 
 /** What a reading's reckoning reads, and the ink it reads in. */
-type Painted = { text: string; colour: string };
+type Painted = { text: string | undefined; colour: string | undefined };
 
 /** What each reading's reckoning reads on the screen, in one question to the page. */
-function reckoningsShown(page: Page): Promise<Painted[]> {
-  return page.evaluate(
-    (keys) =>
-      keys.map((key) => {
-        const shown = window.named?.(`reading-${key}-reckoning`)?.object as
-          | Phaser.GameObjects.Text
-          | undefined;
-        if (shown === undefined) throw new Error(`the ${key} reading reads no reckoning`);
-        return { text: shown.text, colour: String(shown.style.color) };
-      }),
-    READINGS,
-  );
+async function reckoningsShown(page: Page): Promise<Painted[]> {
+  const names = READINGS.map((key) => `reading-${key}-reckoning`);
+  const seen = await readings(page, names);
+  return names.map((name) => ({ text: seen(name).text, colour: seen(name).ink }));
 }
 
 /** What each reading's reckoning reads by the rules: what ending the turn on the chronicle would do. */

@@ -238,14 +238,16 @@ test('an ended chronicle pays the influence of every trophy it kept in any pile,
   ]);
   expect(paidFallen.cards).toEqual([
     { id: 'PH_Spoils', copies: 3, paid: true, influence: 3 * gainOf('PH_Spoils') },
-    { id: 'PH_Ordeal', copies: 2, paid: false, influence: 0 },
+    { id: 'PH_Ordeal', copies: 2, paid: false, influence: 2 * gainOf('PH_Ordeal') },
     { id: 'PH_Cache', copies: 1, paid: true, influence: gainOf('PH_Cache') },
   ]);
   for (const [paid, without] of [
     [paidWon, bare.victory],
     [paidFallen, bare.defeat],
   ] as const) {
-    const fromCards = paid.cards.reduce((sum, { influence }) => sum + influence, 0);
+    const fromCards = paid.cards
+      .filter((card) => card.paid)
+      .reduce((sum, { influence }) => sum + influence, 0);
     expect(paid.achievements).toEqual(without.achievements);
     expect(paid.influence).toBe(without.influence + fromCards);
     expect(paid.campaign).toEqual({

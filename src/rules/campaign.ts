@@ -375,19 +375,25 @@ export type HeldCopies = { readonly id: CardId; readonly copies: number };
 
 /**
  * The influence cards the chronicle holds in any pile, the draw pile, the hand, the discard pile and
- * the exhaust pile, each once with its content and its copies, in the order first met there.
+ * the exhaust pile, each once with its content, its copies and the influence they carry, in the order
+ * first met there.
  */
 export function influenceCardsIn(
   catalogue: Catalogue,
   chronicle: Chronicle,
-): (HeldCopies & { readonly card: InfluenceCard })[] {
+): (HeldCopies & { readonly card: InfluenceCard; readonly influence: number })[] {
   const held = new Map<CardId, { card: InfluenceCard; copies: number }>();
   for (const { id } of cardsInPiles(chronicle)) {
     const card = influenceCardOf(cardOf(catalogue, id));
     if (card === undefined) continue;
     held.set(id, { card, copies: (held.get(id)?.copies ?? 0) + 1 });
   }
-  return [...held].map(([id, { card, copies }]) => ({ id, card, copies }));
+  return [...held].map(([id, { card, copies }]) => ({
+    id,
+    card,
+    copies,
+    influence: copies * card.influence,
+  }));
 }
 
 /** Whether an influence card kept to the ending pays on that outcome: a challenge on victory alone. */
@@ -407,7 +413,10 @@ export type Payment = {
   readonly achievements: readonly string[];
   readonly technologies: readonly string[];
   readonly entered: readonly CampaignCard[];
-  /** Every influence card it kept, with its copies, whether this ending paid it, and what they paid. */
+  /**
+   * Every influence card it kept, with its copies, the influence they carry, and whether this ending
+   * paid it.
+   */
   readonly cards: readonly (HeldCopies & { readonly paid: boolean; readonly influence: number })[];
 };
 
@@ -433,11 +442,13 @@ export function paidInto(catalogue: Catalogue, campaign: Campaign, chronicle: Ch
     achievements.push(id);
     learned.push(technology);
   }
-  const cards = influenceCardsIn(catalogue, chronicle).map(({ id, card, copies }) => {
-    const paysHere = paysOn(card, ending.outcome);
-    return { id, copies, paid: paysHere, influence: paysHere ? copies * card.influence : 0 };
-  });
-  const fromCards = cards.reduce((sum, { influence }) => sum + influence, 0);
+  const cards = influenceCardsIn(catalogue, chronicle).map(({ id, card, copies, influence }) => ({
+    id,
+    copies,
+    paid: paysOn(card, ending.outcome),
+    influence,
+  }));
+  const fromCards = cards.reduce((sum, { paid, influence }) => sum + (paid ? influence : 0), 0);
   return {
     campaign: { ...paid, influence: paid.influence + fromCards },
     influence: paid.influence + fromCards - campaign.influence,

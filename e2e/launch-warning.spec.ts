@@ -12,6 +12,7 @@ import {
   chronicleRaised,
   click,
   heldSave,
+  influenceCardGaining,
   launchedAs,
   launchScreenOver,
   onScreen,
@@ -22,7 +23,6 @@ import {
   settledOn,
   standing,
   storedUnder,
-  trophyGaining,
   watch,
   wonCampaign,
 } from './chronicle-screen';
@@ -139,7 +139,7 @@ test('Launch over a saved chronicle that has reached no achievement and holds on
   const saved = addedToDrawPileTop(
     CATALOGUE,
     settledOn(1),
-    trophyGaining((influence) => influence === 0),
+    influenceCardGaining('trophy', (influence) => influence === 0),
   ).chronicle;
   expect(reachedIn(saved)).toEqual([]);
 

@@ -27,6 +27,7 @@ import {
   type Entering,
   earningOf,
   entered,
+  type InfluenceCard,
   technologyOf,
   unitKind,
 } from '../src/rules/catalogue';
@@ -82,6 +83,7 @@ type PageReading = {
   standing: boolean;
   count: number;
   text: string | undefined;
+  ink: string | undefined;
   dimmed: boolean | undefined;
   selected: boolean | undefined;
   card: string | undefined;
@@ -121,12 +123,15 @@ export function cityTileOf(chronicle: Chronicle): TileCoords {
   return chronicle.city;
 }
 
-/** The first trophy of the catalogue whose influence `gains` holds of. */
-export function trophyGaining(gains: (influence: number) => boolean): CardId {
+/** The first influence card of the catalogue of that kind whose influence `gains` holds of. */
+export function influenceCardGaining(
+  kind: InfluenceCard['kind'],
+  gains: (influence: number) => boolean,
+): CardId {
   const found = Object.entries(CATALOGUE.cards).find(
-    ([, card]) => card.kind === 'trophy' && gains(card.influence),
+    ([, card]) => card.kind === kind && gains(card.influence),
   );
-  if (found === undefined) throw new Error('the catalogue holds no such trophy');
+  if (found === undefined) throw new Error(`the catalogue holds no such ${kind}`);
   return found[0];
 }
 
@@ -417,6 +422,9 @@ export async function readNames(page: Page): Promise<void> {
         standing: object !== undefined,
         count: all.length,
         text: (object as Phaser.GameObjects.Text | undefined)?.text,
+        ink: (object as Partial<Phaser.GameObjects.Text> | undefined)?.style?.color as
+          | string
+          | undefined,
         dimmed: data('dimmed') as boolean | undefined,
         selected: data('selected') as boolean | undefined,
         card: object === undefined ? undefined : (data('card') as string),
@@ -1079,6 +1087,8 @@ export type Reading = {
   readonly standing: boolean;
   readonly count: number;
   readonly text: string | undefined;
+  /** The ink a text reads in; an object that is no text answers nothing. */
+  readonly ink: string | undefined;
   readonly dimmed: boolean | undefined;
   /** Whether a launch screen's option stands selected. */
   readonly selected: boolean | undefined;
@@ -1115,6 +1125,7 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
       return answered.count;
     },
     text: answered?.text,
+    ink: answered?.ink,
     dimmed: answered?.dimmed,
     selected: answered?.selected,
     card: answered?.card,

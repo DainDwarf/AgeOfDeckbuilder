@@ -6,7 +6,7 @@ import {
   type CampaignCivilization,
   influenceCardsIn,
 } from '../rules/campaign';
-import { achievementOf, type Catalogue } from '../rules/catalogue';
+import type { Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
 import { type Chronicle, onSettlePhase } from '../rules/state';
 import { standBrowse } from './browse';
@@ -87,25 +87,17 @@ type Option = {
 /**
  * What the chronicle would pay at its ending, read as its ending screen's ledger reads it without
  * the influence: each achievement it has reached under its technology's name, then each influence
- * card it holds in the collection's order.
+ * card it holds that carries influence, in the collection's order.
  */
 function unpaidOf(catalogue: Catalogue, chronicle: Chronicle): CountedLine[] {
   const reached = chronicle.achievements.filter(({ reached }) => reached).map(({ id }) => id);
-  const held = influenceCardsIn(catalogue, chronicle).map(({ id, copies }) => ({
+  const held = influenceCardsIn(catalogue, chronicle).map(({ id, copies, influence }) => ({
     id,
     copies,
+    influence,
     ended: false as const,
   }));
   return ledgerRowsOf(catalogue, chronicle.age, reached, held);
-}
-
-/** Whether an achievement the chronicle has reached or an influence card it holds gains influence. */
-function gainsInfluence(catalogue: Catalogue, chronicle: Chronicle): boolean {
-  return (
-    chronicle.achievements.some(
-      ({ id, reached }) => reached && achievementOf(catalogue, chronicle.age, id).influence > 0,
-    ) || influenceCardsIn(catalogue, chronicle).some(({ card }) => card.influence > 0)
-  );
 }
 
 /** What Continue reads under its label: where the chronicle stands, then what it would pay. */
@@ -402,9 +394,8 @@ export class LaunchScreen extends Phaser.Scene {
 }
 
 /**
- * Continue over Launch at the room's bottom right, Launch opening the chronicle on the choices as
- * they stand, through the launch warning where the saved chronicle has something it would pay;
- * Continue greyed and answering no press while the save holds no chronicle.
+ * Continue over Launch at the room's bottom right: Launch through the launch warning where Continue
+ * reads anything under where the chronicle stands, Continue greyed while the save holds none.
  */
 function buttonsOf(
   { scene, catalogue }: Laying,
@@ -420,8 +411,9 @@ function buttonsOf(
   answersPress(launch);
   onClick(launch, () => {
     const held = savedOpening();
-    if (held === undefined || !gainsInfluence(catalogue, held.resumed)) open(choices());
-    else warnOfLaunch(scene, unpaidOf(catalogue, held.resumed), () => open(choices()));
+    const unpaid = held === undefined ? [] : unpaidOf(catalogue, held.resumed);
+    if (unpaid.length === 0) open(choices());
+    else warnOfLaunch(scene, unpaid, () => open(choices()));
   });
   const launchLabel = addText(scene, middle, launchY, text('launch.button'), LABEL_STYLE)
     .setOrigin(0.5)
