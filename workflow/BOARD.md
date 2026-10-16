@@ -12,4 +12,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The end of turn's reading stays up through a play** — the resource bar's small signed readings go down from the End turn press alone, as the page says, and stay up through a card played or a city act, changing once the play-out has landed, instead of blinking out on every play.
 - **The region validator refuses a distance past the disc** — a camp's, a site's or the neutral's distance from the centre that lies past the disc's radius is refused when the catalogue is built, not at the launch as "dealt 10 times".
