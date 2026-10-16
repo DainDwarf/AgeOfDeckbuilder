@@ -443,10 +443,17 @@ function populationBadge(
     .setOrigin(0.5, 0.5)
     .setName(`population-${key}-number`);
   const width = Math.max(BADGE_HEIGHT, ownBoxOf(number).width + 2 * BADGE_PAD);
+  const fill = CITY_COLOURS[whose];
+  const box = { x: -width / 2, y: -BADGE_HEIGHT / 2, width, height: BADGE_HEIGHT };
+  const radius = BADGE_HEIGHT / 2;
   const pill = scene.add
-    .rectangle(at.x, at.y, width, BADGE_HEIGHT, CITY_COLOURS[whose])
-    .setRounded(BADGE_HEIGHT / 2)
-    .setStrokeStyle(1.5, LOOK.mapOutline)
+    .graphics()
+    .setPosition(at.x, at.y)
+    .fillStyle(fill)
+    .fillRoundedRect(box.x, box.y, box.width, box.height, radius)
+    .lineStyle(1.5, LOOK.mapOutline)
+    .strokeRoundedRect(box.x, box.y, box.width, box.height, radius)
+    .setData('fill', fill)
     .setName(`population-${key}`);
   return [pill, number];
 }

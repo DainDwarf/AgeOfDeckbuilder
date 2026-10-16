@@ -449,7 +449,11 @@ export async function readNames(page: Page): Promise<void> {
           () =>
             (found().object as Partial<Phaser.GameObjects.Components.Visible>).visible as boolean,
         ),
-        fill: answer(() => (found().object as Partial<Phaser.GameObjects.Shape>).fillColor),
+        fill: answer(
+          () =>
+            (found().object as Partial<Phaser.GameObjects.Shape>).fillColor ??
+            (data('fill') as number | undefined),
+        ),
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
@@ -1112,7 +1116,10 @@ export type Reading = {
   /** What the card of a thing a name names stands, by its kind and id. */
   readonly reference: { kind: string; id: string } | undefined;
   readonly shows: boolean;
-  /** What the object is painted; an object that carries no fill answers nothing. */
+  /**
+   * What the object is painted, a drawn one's fill read from its data; an object that carries no
+   * fill answers nothing.
+   */
   readonly fill: number | undefined;
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
