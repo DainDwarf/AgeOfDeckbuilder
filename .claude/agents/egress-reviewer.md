@@ -20,7 +20,8 @@ Check each and report only what fails:
 - **Done-condition satisfied** — the board line's condition, read literally, is now true.
 - **No new trap** — no non-local interdependency, no behaviour a reader cannot see from the file it lives in, no trap for a session without today's context.
 - **Trinity respected** — every doc-impact page updated, or its absence justified; no design page was edited down to match the code; the board line is gone; no `TODO` entered the code.
-- **Design honoured** — the diff does what the design pages say, with the terms `docs/GLOSSARY.md` names. A synonym for a glossary term is a finding. A behaviour the design does not cover is a finding unless the report you were handed lists it as a deviation.
+- **Design honoured** — the diff does what the design pages say, with the terms `docs/GLOSSARY.md` names. A synonym for a glossary term, in the term's own sense, is a finding; the same word in another of its meanings is plain English. A behaviour the design does not cover is a finding unless the report you were handed lists it as a deviation.
+- **At altitude** — a `docs/` sentence the diff adds or changes names no number the content holds, no list of cases, no example naming a piece of content, and no door for content that does not exist.
 - **No handholding** — no guard rail, warning, or safety net against a move in play, and no press refused until the player has done something else first; a warning stands only where a press discards what the player earned and would otherwise keep, or declares war, as `DOGMAS.md` → _Design principles_ says.
 - **No re-copy** — a helper, a value or a block the tree already holds, or that the diff writes twice, is blocking; name the one it repeats.
 - **Data coherent** — a declaration the diff adds to the catalogue or to a region is refused by the validator for a value out of its range, an empty list, or a draw it can deal twice; a value the validator never reads is blocking.
