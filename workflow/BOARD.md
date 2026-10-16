@@ -11,5 +11,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; a trial of where military comes from: military taken off the Hearth's yield and flint giving it in place of production.
 
 ## Lines
-
-- **The archipelago's schedule** — the archipelago's schedule names the Stone Age's three trials, the catalogue's coherence test passes and the age page says both regions name the same trials. Doc-impact: `docs/ages/STONE.md`. [board/archipelago-schedule.md](board/archipelago-schedule.md)

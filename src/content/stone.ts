@@ -119,7 +119,7 @@ const TEMPERATE_SCHEDULE: Schedule = {
 const ARCHIPELAGO_SCHEDULE: Schedule = {
   spacing: [5, 8],
   window: [26, 34],
-  capstones: ['first-shelter'],
+  capstones: ['long-winter', 'monument', 'siege'],
   entries: {
     'rival-band': 1,
     'stone-wildfire': 1,
