@@ -324,12 +324,7 @@ export function tileRefusal(
   };
 }
 
-/**
- * What the city's act on a tile sends — the second left click on the selection in city mode: an
- * assign on a tile the city holds, a claim on one it may claim, and nothing at all on a tile it has
- * no act on or when the rules refuse the act. The one decision both the chronicle screen and `apply`
- * answer that click by.
- */
+/** The chronicle screen and `apply` both answer the city-mode click by this, and by nothing else. */
 export function cityCommand(
   catalogue: Catalogue,
   chronicle: Chronicle,
