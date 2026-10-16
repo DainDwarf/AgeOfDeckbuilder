@@ -12,4 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A population badge on the city** — a number on the city showing its total population, Civ-style; losing the last population to income is not visible enough, and if the badge does not end the surprise of a sudden death, that moment gets a signal of its own.
+- **A population badge on the city** — the player's city's tile and the neutral's each wear their population in a badge at the tile's lower-right corner, drawn where the tile is drawn live; the proof spec reads the player's through a strike's take and the neutral's with the veils off. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`. [board/population-badge.md](board/population-badge.md)
