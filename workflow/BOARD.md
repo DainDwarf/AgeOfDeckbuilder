@@ -12,4 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The region validator refuses a distance past the disc** — a camp's, a site's or the neutral's distance from the centre that lies past the disc's radius is refused when the catalogue is built, not at the launch as "dealt 10 times".
+- **The region validator refuses a distance past the disc** — the catalogue refuses a region whose camps, whose sites or whose neutral's city, at either end of its band, keep further from the centre than the disc's radius, with a test on the fixture proving the three refusals and the three at the radius itself passing; the launch's "dealt 10 times" stays for the shortfall a terrain causes. Doc-impact: `docs/MAP.md`. [board/region-distance-past-the-disc.md](board/region-distance-past-the-disc.md)
