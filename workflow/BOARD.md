@@ -11,7 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The deck flag** — `--deck` on `npm run sim` alone: a JSON, inline or in a file, holding only the deck a chronicle's launch needs, played in place of the campaign's; the `sim` skill gains it.
+- **The civilization flag** — `--civilization` on `npm run sim` hands in the civilization played, a JSON inline or in a file in the content's own format, its city section and its deck, in place of the campaign's first, played as written and carried whole on the cell's record; the name form is gone and the `sim` skill says so. Doc-impact: `docs/SIMULATOR.md`. [board/the-civilization-flag.md](board/the-civilization-flag.md)
 - **The builder** — the persona that works the land and the border; its gambits are served as sentences to strike at its intake.
 - **The warlord** — the persona that fields units and goes for the camps; its gambits are served at its intake, the floor of population a unit card leaves among them.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
