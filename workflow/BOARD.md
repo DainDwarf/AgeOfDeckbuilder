@@ -11,7 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The driver and the idle persona** — `npm run sim` loads through Vite's module runner as the forge does, takes a cell, walks each chronicle gambit by gambit under a turn cap and a cap on the commands a turn takes, plays the idle persona, prints a persona's sentences, traces one seed, and writes a skeleton row — the cell, the seed, the ending and its turn, the time; both caps' numbers are its intake's, the turn cap a flag defaulting near 60.
+- **The driver and the idle persona** — `npm run sim` loads through Vite's module runner as the forge does, takes a cell whose age and region flags learn what reaches them, walks each chronicle gambit by gambit, plays the idle persona, stops a chronicle at the turn cap, at 100 commands landed in one turn, on a `runtime-error` or on a decision no command lands, prints a persona's sentences, traces one seed and writes a skeleton row; the launch from a campaign, the opening choices, the module-runner boot and the runtime-error walk each stand in one place the screen, the specs and the simulator share; its test runs on the fixture catalogue. Doc-impact: `docs/SIMULATOR.md`. [board/driver-and-idle-persona.md](board/driver-and-idle-persona.md)
 - **The row** — every column [`../docs/SIMULATOR.md`](../docs/SIMULATOR.md) foresees, the fixed turns the stocks are read at, and one column answering each entry of [`BALANCE.md`](BALANCE.md).
 - **The fold** — the second verb: tables from one file of rows, and two files compared seed by seed where their cells pair.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count.
