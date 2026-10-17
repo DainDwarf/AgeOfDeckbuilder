@@ -11,7 +11,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The row** — the row reads the chronicle as it ended and what the flow did on the way: the influence the ending paid, the capstone drawn and its turn, the stocks, the population, the tiles held, the neutral's population, the units standing and the units killed each by faction and kind, the cards played with their count and the cards in the piles never played, every deal with the entry taken and its turn, and every achievement's count and the turn it was reached; the header is fixed per cell, the fixed columns one value each and the variable ones one cell each in `learned`'s shape; the `sim` skill reports the new columns. Doc-impact: [`../docs/SIMULATOR.md`](../docs/SIMULATOR.md). [board/the-row.md](board/the-row.md)
 - **The fold** — the second verb: tables from one file of rows, and two files compared seed by seed where their cells pair; the `sim` skill gains the verb.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The deck's edits** — copies bought and cards added or removed in the cell's campaign, by flags or a deck file, through the door the forge builds its campaign by, so the forge gains them too; the `sim` skill gains them.

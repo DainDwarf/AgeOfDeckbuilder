@@ -1,10 +1,22 @@
 import { appendFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CATALOGUE } from '../src/content/catalogue';
-import { type Campaign, type Choices, civilizationIn, openingChoices } from '../src/rules/campaign';
+import {
+  type Campaign,
+  type Choices,
+  civilizationIn,
+  openingChoices,
+  paidInto,
+} from '../src/rules/campaign';
 import { type Catalogue, scheduleOf } from '../src/rules/catalogue';
-import { launchedFromCampaign } from '../src/rules/chronicle';
+import { countOn, launchedFromCampaign } from '../src/rules/chronicle';
+import type { TileCoords } from '../src/rules/map';
+import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
+import { offered } from '../src/rules/schedule';
+import { type Change, plays, type Sequence, walked } from '../src/rules/stages';
+import { type Chronicle, cardsInPiles, type Deal } from '../src/rules/state';
+import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, readFlags, stringFlag, wholeFlag } from './flags';
 import { learnedWithNeeds, technologiesReaching, technologyUnlocking } from './learned-with-needs';
 import { PERSONAS } from './personas';
@@ -29,7 +41,15 @@ const FLAGS = {
   personas: { type: 'boolean' },
 } as const;
 
-const HEADER = 'age,region,civilization,learned,persona,seed,ending,cause,turn,ms';
+/** One column of a row: its name in the header, and what the chronicle reads in it. */
+type Column = readonly [name: string, value: string | number];
+
+/** Every faction, in the header's order. */
+const FACTIONS = Object.keys({
+  player: true,
+  enemy: true,
+  neutral: true,
+} satisfies Record<Faction, true>) as Faction[];
 
 /** What a chronicle of the cell is launched on and played by. */
 type Cell = {
@@ -83,10 +103,14 @@ export function simulated(
           appendFileSync(path, `${line}\n`);
         };
   if (path !== undefined) writeFileSync(path, '');
-  write(HEADER);
   for (let seed = 1; seed <= seeds; seed++) {
-    const { walked, ms } = chronicleOf(catalogue, cell, seed, turnCap);
-    write(rowOf(cell, seed, walked.end, ms));
+    const { launch, walked, ms } = chronicleOf(catalogue, cell, seed, turnCap);
+    const columns = [
+      ...cellColumns(cell, seed, walked.end, ms),
+      ...chronicleColumns(catalogue, cell.campaign, launch, walked),
+    ];
+    if (seed === 1) write(columns.map(([name]) => name).join(','));
+    write(columns.map(([, value]) => value).join(','));
   }
 }
 
@@ -116,32 +140,138 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
   return { choices: { age, region, civilization }, campaign, persona };
 }
 
-/** The seed's chronicle of the cell launched and walked by its persona, and the whole milliseconds it took. */
+/**
+ * The seed's chronicle of the cell launched, then walked by its persona, and the whole milliseconds
+ * it took.
+ */
 function chronicleOf(
   catalogue: Catalogue,
   { choices, campaign, persona }: Cell,
   seed: number,
   turnCap: number,
-): { readonly walked: Walked; readonly ms: number } {
-  const launch = Date.now();
-  const launched = launchedFromCampaign(catalogue, campaign, choices, seed);
-  const walked = playedBy(catalogue, PERSONAS[persona], launched, turnCap);
-  return { walked, ms: Date.now() - launch };
+): { readonly launch: Sequence; readonly walked: Walked; readonly ms: number } {
+  const started = Date.now();
+  const launch = launchedFromCampaign(catalogue, campaign, choices, seed);
+  const walked = playedBy(catalogue, PERSONAS[persona], launch, turnCap);
+  return { launch, walked, ms: Date.now() - started };
 }
 
-function rowOf({ choices, campaign, persona }: Cell, seed: number, end: End, ms: number): string {
+function cellColumns(
+  { choices, campaign, persona }: Cell,
+  seed: number,
+  end: End,
+  ms: number,
+): Column[] {
   return [
-    choices.age,
-    choices.region,
-    choices.civilization,
-    campaign.technologies.join(' '),
-    persona,
-    seed,
-    end.outcome,
-    causeOf(end) ?? '',
-    end.turn,
-    ms,
-  ].join(',');
+    ['age', choices.age],
+    ['region', choices.region],
+    ['civilization', choices.civilization],
+    ['learned', campaign.technologies.join(' ')],
+    ['persona', persona],
+    ['seed', seed],
+    ['ending', end.outcome],
+    ['cause', causeOf(end) ?? ''],
+    ['turn', end.turn],
+    ['ms', ms],
+  ];
+}
+
+/**
+ * The columns a row reads off a chronicle walked from its launch on the campaign: what its ending
+ * paid, the chronicle it was left on, and what the launch and every command landed did on the way.
+ */
+export function chronicleColumns(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  launch: Sequence,
+  { chronicle, end, landed }: Walked,
+): Column[] {
+  const stages = [...launch.stages, ...landed.flatMap((command) => command.stages)];
+  const played = plays(stages).map(({ card }) => card);
+  const killed: Unit[] = [];
+  const reachedOn = new Map<string, number>();
+  for (const stage of walked(stages)) {
+    if (stage.kind !== 'change') continue;
+    if (stage.name === 'killed') killed.push(unitKilled(stage));
+    if (stage.name !== 'reached') continue;
+    for (const [at, { id, reached }] of stage.chronicle.achievements.entries()) {
+      if (reached && !stage.before.achievements[at].reached) {
+        reachedOn.set(id, stage.chronicle.turn);
+      }
+    }
+  }
+  const deals = landed.flatMap(({ turn, command, stages: resolved }) =>
+    command.type === 'take'
+      ? [`${turn}:${dealTaken(catalogue, resolved[0].before.deals[0], command.at)}`]
+      : [],
+  );
+  const unplayed = new Set(cardsInPiles(chronicle).map(({ id }) => id));
+  for (const card of played) unplayed.delete(card);
+
+  return [
+    ['influence', influencePaid(catalogue, campaign, chronicle, end)],
+    ['capstone', chronicle.timeline.capstone.id],
+    ['capstone-turn', chronicle.timeline.capstone.turn],
+    ...RESOURCES.map((resource): Column => [resource, chronicle.resources[resource]]),
+    ['population', chronicle.population],
+    ['held', chronicle.held.length],
+    ['neutral-population', chronicle.neutral?.population ?? ''],
+    ...FACTIONS.map((faction): Column => [`units:${faction}`, byKind(chronicle.units, faction)]),
+    ...FACTIONS.map((faction): Column => [`killed:${faction}`, byKind(killed, faction)]),
+    ['played', counted(played)],
+    ['unplayed', [...unplayed].join(' ')],
+    ['deals', deals.join(' ')],
+    ...chronicle.achievements.flatMap((held): Column[] => [
+      [`count:${held.id}`, countOn(catalogue, chronicle, held)],
+      [`reached:${held.id}`, reachedOn.get(held.id) ?? ''],
+    ]),
+  ];
+}
+
+/** What the ending paid into the campaign, and nothing for a stop, which pays nothing. */
+function influencePaid(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  chronicle: Chronicle,
+  end: End,
+): number | '' {
+  switch (end.outcome) {
+    case 'victory':
+    case 'defeat':
+      return paidInto(catalogue, campaign, chronicle).influence;
+    case 'stopped':
+      return '';
+  }
+}
+
+/** The unit a `killed` change killed: the one standing on its tile on the chronicle it was raised on. */
+function unitKilled({ before, tile }: Change & { readonly tile: TileCoords }): Unit {
+  const unit = unitAt(before.units, tile);
+  if (unit === undefined) throw new Error('a unit killed on a tile no unit stood on');
+  return unit;
+}
+
+/** The deal and the entry taken of it, by its place in the order dealt. */
+function dealTaken(catalogue: Catalogue, deal: Deal, at: number): string {
+  const entry = offered(catalogue, deal)[at];
+  switch (deal.of) {
+    case 'event':
+      return `${deal.event}>${entry}`;
+    case 'capture':
+      return `${deal.building}>${entry}`;
+  }
+}
+
+/** The faction's units, by kind with their count. */
+function byKind(units: readonly Unit[], faction: Faction): string {
+  return counted(units.filter((unit) => unit.faction === faction).map(({ stats }) => stats.type));
+}
+
+/** Each name once, in the order first met, with the times it is met: `name:2 other:1`. */
+function counted(names: readonly string[]): string {
+  const counts = new Map<string, number>();
+  for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
+  return [...counts].map(([name, count]) => `${name}:${count}`).join(' ');
 }
 
 /** The defeat's cause or the stop's, and nothing for a victory. */

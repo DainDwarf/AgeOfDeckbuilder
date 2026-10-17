@@ -11,7 +11,7 @@ One job: run `npm run sim` on the cell asked for and hand back what it printed. 
 
 1. **Name the cell from the question.** `--age`, `--region`, `--civilization`, `--persona` and `--seeds`, each defaulting to what the launch screen opens on, the idle and 20; the age and the region learn what reaches them, and a technology named after the flags learns more. `--turns <n>` moves the turn cap off 60. `--personas` prints every persona as its sentences.
 2. **Write the rows to the scratchpad**, `--out <scratchpad>/<cell>.csv`, never into the tree. A run past a few seconds goes in the background; its end resumes the turn.
-3. **Report what the rows say, counted**: the endings and their causes, the turns, the stops with their seeds. Then stop.
+3. **Report what the rows say, counted**: the endings and their causes, the turns, the stops with their seeds; the achievements reached and on which turns, the influence paid, the stocks and population the city ended on, the cards never played, the deals' entries taken, the units killed. Then stop.
 4. **Replay a seed worth a look** with `--trace <seed>` on the same cell, the seed read off its row. The trace names the gambit behind every command.
 
 ## Rules

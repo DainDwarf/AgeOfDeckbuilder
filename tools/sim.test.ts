@@ -4,30 +4,44 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
-import { victoryTechnologyOf } from '../src/rules/catalogue';
-import { launchedFromCampaign } from '../src/rules/chronicle';
+import { paidInto } from '../src/rules/campaign';
+import { ageOf, victoryTechnologyOf } from '../src/rules/catalogue';
+import { countOn, launchedFromCampaign } from '../src/rules/chronicle';
+import { growthThreshold } from '../src/rules/city';
 import {
   AGE,
+  AMBUSH,
+  achieved,
   CATALOGUE,
   CENSUS,
   CITY,
   CIVILIZATION_ID,
+  CROWD,
+  CROWD_NEED,
   cityOf,
   dealing,
+  FEAST,
   field,
   fullDraw,
   GRANARY,
+  HOARD,
   QUIET,
   REGION,
+  reaching,
   regionsUnlocked,
   standing,
+  UPHEAVAL,
 } from '../src/rules/fixtures';
 import { neighbours } from '../src/rules/map';
+import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
+import { offered } from '../src/rules/schedule';
 import { unchanged } from '../src/rules/stages';
+import { cardsInPiles } from '../src/rules/state';
+import type { Faction } from '../src/rules/units';
 import { PERSONAS } from './personas';
-import { simulated } from './sim-body';
-import { type Persona, playedBy } from './sim-driver';
+import { chronicleColumns, simulated } from './sim-body';
+import { type Persona, playedBy, type Walked } from './sim-driver';
 
 /** What the simulator prints on the fixture's content, or on the content handed in. */
 function printed(args: readonly string[], catalogue = CATALOGUE): string[] {
@@ -46,16 +60,50 @@ function rowsOf(lines: readonly string[]): Record<string, string>[] {
   });
 }
 
-test('the idle walks each seed of the cell to the chronicle’s ending, one row per seed, the row reading the cell, the seed, and the ending with its cause and its turn', () => {
+/** The names a cell lists, each as many times as the number beside it, sorted. */
+function namesListed(cell: string): string[] {
+  if (cell === '') return [];
+  return cell
+    .split(' ')
+    .flatMap((entry) => {
+      const [name, times] = entry.split(':');
+      return Array<string>(Number(times)).fill(name);
+    })
+    .sort();
+}
+
+/** The cards the play commands played, by id: each the card of the hand it named when it was sent. */
+function cardsPlayed(landed: Walked['landed']): string[] {
+  return landed.flatMap(({ command, stages }) =>
+    command.type === 'play' ? [stages[0].before.hand[command.index].id] : [],
+  );
+}
+
+test('the idle walks each seed of the cell to the chronicle’s ending, one row per seed, the row reading the cell, the seed, the ending with its cause and its turn, what the ending paid, the chronicle it left and what its commands did on the way', () => {
   const rows = rowsOf(printed(['--seeds', '2']));
   const campaign = freshCampaign(CATALOGUE);
   const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
+  const walks = [1, 2].map((seed) => ({
+    seed,
+    ...playedBy(
+      CATALOGUE,
+      PERSONAS.idle,
+      launchedFromCampaign(CATALOGUE, campaign, choices, seed),
+      60,
+    ),
+  }));
+  const listing = (column: string): boolean =>
+    ['ms', 'played', 'deals'].includes(column) || /^(units|killed|reached):/.test(column);
 
-  expect(rows.map(({ ms, ...row }) => row)).toEqual(
-    [1, 2].map((seed) => {
-      const launched = launchedFromCampaign(CATALOGUE, campaign, choices, seed);
-      const { ending } = playedBy(CATALOGUE, PERSONAS.idle, launched, 60).chronicle;
+  expect(
+    rows.map((row) =>
+      Object.fromEntries(Object.entries(row).filter(([column]) => !listing(column))),
+    ),
+  ).toEqual(
+    walks.map(({ seed, chronicle, landed }) => {
+      const { ending } = chronicle;
       if (ending === undefined) throw new Error(`the idle brings seed ${seed} to no ending`);
+      const played = cardsPlayed(landed);
       return {
         age: AGE,
         region: REGION,
@@ -66,10 +114,106 @@ test('the idle walks each seed of the cell to the chronicle’s ending, one row 
         ending: ending.outcome,
         cause: 'cause' in ending ? ending.cause : '',
         turn: `${ending.turn}`,
+        influence: `${paidInto(CATALOGUE, campaign, chronicle).influence}`,
+        capstone: chronicle.timeline.capstone.id,
+        'capstone-turn': `${chronicle.timeline.capstone.turn}`,
+        ...Object.fromEntries(
+          RESOURCES.map((resource) => [resource, `${chronicle.resources[resource]}`]),
+        ),
+        population: `${chronicle.population}`,
+        held: `${chronicle.held.length}`,
+        'neutral-population': `${chronicle.neutral?.population ?? ''}`,
+        unplayed: [...new Set(cardsInPiles(chronicle).map(({ id }) => id))]
+          .filter((id) => !played.includes(id))
+          .join(' '),
+        ...Object.fromEntries(
+          chronicle.achievements.map((held) => [
+            `count:${held.id}`,
+            `${countOn(CATALOGUE, chronicle, held)}`,
+          ]),
+        ),
       };
     }),
   );
-  for (const { ms } of rows) expect(ms).toMatch(/^\d+$/);
+  for (const [at, row] of rows.entries()) {
+    const { chronicle, landed } = walks[at];
+    const factions: Record<Faction, true> = { player: true, enemy: true, neutral: true };
+    for (const faction of Object.keys(factions) as Faction[]) {
+      expect(namesListed(row[`units:${faction}`])).toEqual(
+        chronicle.units
+          .filter((unit) => unit.faction === faction)
+          .map(({ stats }) => stats.type)
+          .sort(),
+      );
+    }
+    expect(namesListed(row.played)).toEqual(cardsPlayed(landed).sort());
+    expect(row.ms).toMatch(/^\d+$/);
+  }
+});
+
+test('an achievement the launch reaches reads the settle phase’s turn, and one reached as the turn moves the turn it moved to', () => {
+  const { achievements } = ageOf(CATALOGUE, AGE);
+  const early = achieved({
+    [FEAST]: { ...achievements[FEAST], count: () => 1, need: 1 },
+    [HOARD]: { ...achievements[HOARD], count: (_catalogue, chronicle) => chronicle.turn, need: 3 },
+  });
+  const [row] = rowsOf(printed(['--seeds', '1'], early));
+
+  expect([row[`reached:${FEAST}`], row[`reached:${HOARD}`]]).toEqual(['0', '3']);
+});
+
+test('an achievement reached during an end of turn, before the turn moves, reads the turn the end of turn was on, not the one it left', () => {
+  const crowding = (food: number) =>
+    reaching([GRANARY], {
+      population: CROWD_NEED - 1,
+      resources: { food, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    });
+  const city = crowding(growthThreshold(crowding(0), 'player'));
+  const ending: Persona = [{ sentence: 'End the turn', command: () => ({ type: 'end-turn' }) }];
+  const launch = unchanged(city);
+  const walk = playedBy(CATALOGUE, ending, launch, city.turn + 1);
+  const columns = Object.fromEntries(
+    chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, walk),
+  );
+
+  expect(walk.chronicle.turn).not.toBe(city.turn);
+  expect(columns[`reached:${CROWD}`]).toBe(city.turn);
+});
+
+test('a unit killed is read under its faction by kind, and a deal taken with the entry taken and the turn it was taken on', () => {
+  const enemy = standing('enemy', UPHEAVAL, { health: AMBUSH }, 0, 0);
+  const ambushed = cityOf(['urban', 'plain'], {
+    ...dealing({ turn: 2, event: 'PH_Upheaval' }),
+    units: [enemy],
+  });
+  const ambushing: Persona = [
+    {
+      sentence: 'While a deal stands, take the ambush',
+      command: (catalogue, chronicle) => {
+        const [deal] = chronicle.deals;
+        if (deal === undefined) return undefined;
+        return { type: 'take', at: offered(catalogue, deal).indexOf('PH_Ambush') };
+      },
+    },
+    { sentence: 'End the turn', command: () => ({ type: 'end-turn' }) },
+  ];
+  const launch = unchanged(ambushed);
+  const columns = Object.fromEntries(
+    chronicleColumns(
+      CATALOGUE,
+      freshCampaign(CATALOGUE),
+      launch,
+      playedBy(CATALOGUE, ambushing, launch, 3),
+    ),
+  );
+
+  expect([columns['killed:player'], columns['killed:enemy'], columns['killed:neutral']]).toEqual([
+    '',
+    `${enemy.stats.type}:1`,
+    '',
+  ]);
+  expect(columns.deals).toBe('2:PH_Upheaval>PH_Ambush');
+  expect(columns.influence).toBe('');
 });
 
 test('a cell learns the victory of every age before its own and the technology that unlocks its region, then the technologies named; its region is the age’s first reached without it unless named', () => {
@@ -158,7 +302,18 @@ test('the simulator run on the game’s content writes the header and one row pe
     const out = join(folder, 'rows.csv');
     run(['--seeds', '1', '--out', out]);
     const [header, ...rows] = readFileSync(out, 'utf8').trimEnd().split('\n');
-    expect(header).toBe('age,region,civilization,learned,persona,seed,ending,cause,turn,ms');
+    expect(header).toMatch(
+      new RegExp(
+        [
+          '^age,region,civilization,learned,persona,seed,ending,cause,turn,ms,',
+          'influence,capstone,capstone-turn,',
+          'food,production,military,money,science,culture,population,held,neutral-population,',
+          'units:player,units:enemy,units:neutral,killed:player,killed:enemy,killed:neutral,',
+          'played,unplayed,deals',
+          '(,count:([^,]+),reached:\\2)*$',
+        ].join(''),
+      ),
+    );
     expect(rows).toHaveLength(1);
   } finally {
     rmSync(folder, { recursive: true, force: true });

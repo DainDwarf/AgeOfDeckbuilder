@@ -27,11 +27,12 @@ export type End =
       readonly during?: Group['name'];
     };
 
-/** A command landed, the turn the chronicle stood on when it was sent, and the gambit behind it. */
+/** A command landed, the turn the chronicle stood on when it was sent, the gambit behind it, and its stages. */
 export type LandedCommand = {
   readonly turn: number;
   readonly gambit: string;
   readonly command: Command;
+  readonly stages: readonly Stage[];
 };
 
 /** A chronicle walked: the chronicle it was left on, how it came to its end, and every command landed. */
@@ -72,7 +73,7 @@ export function playedBy(
     const { gambit, command, stages } = decided;
     const after = outcome(stages);
     if (after !== chronicle) {
-      landed.push({ turn: chronicle.turn, gambit, command });
+      landed.push({ turn: chronicle.turn, gambit, command, stages });
       chronicle = after;
       if (after.ending !== undefined) continue;
     }
