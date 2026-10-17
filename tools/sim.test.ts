@@ -53,9 +53,16 @@ function printed(args: readonly string[], catalogue = CATALOGUE): string[] {
   return lines;
 }
 
-/** The rows printed, each by its column's name. */
+/** The cell's record, the first line printed, read back. */
+function recordRead([line]: readonly string[]): Record<string, unknown> {
+  const json = /^# (\{.*\})$/.exec(line)?.[1];
+  if (json === undefined) throw new Error(`the first line holds no record: ${line}`);
+  return JSON.parse(json);
+}
+
+/** The rows printed after the record, each by its column's name. */
 function rowsOf(lines: readonly string[]): Record<string, string>[] {
-  const [header, ...rows] = lines;
+  const [, header, ...rows] = lines;
   const columns = header.split(',');
   return rows.map((row) => {
     const values = row.split(',');
@@ -82,8 +89,9 @@ function cardsPlayed(landed: Driven['landed']): string[] {
   );
 }
 
-test('the idle drives each seed of the cell to the chronicle’s ending, one row per seed, the row reading the cell, the seed, the ending with its cause and its turn, what the ending paid, the chronicle it left and what its commands did on the way', () => {
-  const rows = rowsOf(printed(['--seeds', '2']));
+test('the idle drives each seed of the cell to the chronicle’s ending, the cell printed first as the command that made it, then one row per seed, the row reading the seed, the ending with its cause and its turn, what the ending paid, the chronicle it left and what its commands did on the way', () => {
+  const lines = printed(['--seeds', '2']);
+  const rows = rowsOf(lines);
   const campaign = freshCampaign(CATALOGUE);
   const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
   const turnCap = 60;
@@ -100,6 +108,9 @@ test('the idle drives each seed of the cell to the chronicle’s ending, one row
     ['ms', 'played', 'unplayed', 'deals'].includes(column) ||
     /^(units|killed|reached):/.test(column);
 
+  expect(lines[0]).toBe(
+    `# ${JSON.stringify({ ...choices, learned: [], persona: 'idle', turns: turnCap, seeds: 2 })}`,
+  );
   expect(
     rows.map((row) =>
       Object.fromEntries(Object.entries(row).filter(([column]) => !listing(column))),
@@ -109,12 +120,6 @@ test('the idle drives each seed of the cell to the chronicle’s ending, one row
       const { ending } = chronicle;
       if (ending === undefined) throw new Error(`the idle brings seed ${seed} to no ending`);
       return {
-        age: AGE,
-        region: REGION,
-        civilization: CIVILIZATION_ID,
-        learned: '',
-        persona: 'idle',
-        'turn-cap': `${turnCap}`,
         seed: `${seed}`,
         ending: ending.outcome,
         cause: 'cause' in ending ? ending.cause : '',
@@ -252,23 +257,26 @@ test('a capture’s deal taken is read with the building captured, the reward ta
 
 test('a cell learns the victory of every age before its own and the technology that unlocks its region, then the technologies named; its region is the age’s first reached without it unless named', () => {
   const unlocking = regionsUnlocked({ [GRANARY]: REGION });
-  const [aged] = rowsOf(
+  const aged = recordRead(
     printed(['--age', QUIET, '--region', REGION, '--seeds', '1', CENSUS], unlocking),
   );
-  const [first] = rowsOf(printed(['--seeds', '1'], unlocking));
+  const first = recordRead(printed(['--seeds', '1'], unlocking));
 
-  expect(aged.learned).toBe(`${victoryTechnologyOf(unlocking, AGE)} ${GRANARY} ${CENSUS}`);
+  expect(aged.learned).toEqual([victoryTechnologyOf(unlocking, AGE), GRANARY, CENSUS]);
   expect(first.region).not.toBe(REGION);
-  expect(first.learned).toBe('');
-  expect(rowsOf(printed(['--region', REGION, '--seeds', '1'], unlocking))[0].learned).toBe(GRANARY);
+  expect(first.learned).toEqual([]);
+  expect(recordRead(printed(['--region', REGION, '--seeds', '1'], unlocking)).learned).toEqual([
+    GRANARY,
+  ]);
 });
 
 test('a chronicle standing on the turn cap’s turn is stopped there, the turns before it played', () => {
-  const [row] = rowsOf(printed(['--seeds', '1', '--turns', '2']));
+  const lines = printed(['--seeds', '1', '--turns', '2']);
+  const [row] = rowsOf(lines);
   const { end, landed } = playedBy(CATALOGUE, PERSONAS.idle, unchanged(cityOf(['urban'])), 1);
 
-  expect([row['turn-cap'], row.ending, row.cause, row.turn]).toEqual([
-    '2',
+  expect([recordRead(lines).turns, row.ending, row.cause, row.turn]).toEqual([
+    2,
     'stopped',
     'turn-cap',
     '2',
@@ -332,19 +340,24 @@ test('a command whose stages hold a runtime error stops the chronicle on the one
   expect(driven.chronicle.deals).toEqual([]);
 });
 
-test('the simulator run on the game’s content writes the header and one row per seed, and its trace one line per command landed and one for the ending or the stop', () => {
+test('the simulator run on the game’s content writes the cell’s record, the header and one row per seed, and its trace the record carrying the seed traced, one line per command landed and one for the ending or the stop', () => {
   const entry = fileURLToPath(new URL('./sim.ts', import.meta.url));
   const run = (args: readonly string[]): string =>
     execFileSync(process.execPath, [entry, ...args], { encoding: 'utf8' });
+  const record = (closing: string): RegExp =>
+    new RegExp(
+      `^# \\{"age":"[^"]+","region":"[^"]+","civilization":"[^"]+","learned":\\[[^\\]]*\\],"persona":"idle","turns":60,${closing}\\}$`,
+    );
   const folder = mkdtempSync(join(tmpdir(), 'sim-'));
   try {
     const out = join(folder, 'rows.csv');
     run(['--seeds', '1', '--out', out]);
-    const [header, ...rows] = readFileSync(out, 'utf8').trimEnd().split('\n');
+    const [cell, header, ...rows] = readFileSync(out, 'utf8').trimEnd().split('\n');
+    expect(cell).toMatch(record('"seeds":1'));
     expect(header).toMatch(
       new RegExp(
         [
-          '^age,region,civilization,learned,persona,turn-cap,seed,ending,cause,turn,ms,',
+          '^seed,ending,cause,turn,ms,',
           'influence,capstone,capstone-turn,',
           'food,production,military,money,science,culture,population,held,neutral-population,',
           'units:player,units:enemy,units:neutral,killed:player,killed:enemy,killed:neutral,',
@@ -358,7 +371,8 @@ test('the simulator run on the game’s content writes the header and one row pe
     rmSync(folder, { recursive: true, force: true });
   }
 
-  const trace = run(['--trace', '1']).trimEnd().split('\n');
+  const [traced, ...trace] = run(['--trace', '1']).trimEnd().split('\n');
+  expect(traced).toMatch(record('"trace":1'));
   const last = trace.pop();
   for (const line of trace) expect(line).toMatch(/^turn \d+ \| [^|]+ \| \{.+\}$/);
   expect(last).toMatch(/^turn \d+ \| (victory|defeat \S+|stopped \S+( during \S+)?)$/);

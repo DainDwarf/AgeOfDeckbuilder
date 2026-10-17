@@ -65,8 +65,9 @@ export function sim(args: readonly string[]): void {
 
 /**
  * The simulator run on the content, on the command line's arguments: the personas printed, one seed
- * traced, or one row per seed of the cell written, the header first, each row as its chronicle ends,
- * to `--out` or else printed. A refusal is thrown before anything is written.
+ * traced after the cell's record, or one row per seed of the cell written, the record then the header
+ * first, each row as its chronicle ends, to `--out` or else printed. A refusal is thrown before
+ * anything is written.
  */
 export function simulated(
   catalogue: Catalogue,
@@ -87,6 +88,7 @@ export function simulated(
   if (traced !== undefined) {
     if (out !== undefined)
       throw new Error(`--out beside --trace: the trace writes no row\n${USAGE}`);
+    print(recordOf(cell, turnCap, { trace: traced }));
     const { driven } = chronicleOf(catalogue, cell, traced, turnCap);
     for (const { turn, gambit, command } of driven.landed) {
       print(`turn ${turn} | ${gambit} | ${JSON.stringify(command)}`);
@@ -103,10 +105,15 @@ export function simulated(
           appendFileSync(path, `${line}\n`);
         };
   if (path !== undefined) writeFileSync(path, '');
+  write(recordOf(cell, turnCap, { seeds }));
   for (let seed = 1; seed <= seeds; seed++) {
     const { launch, driven, ms } = chronicleOf(catalogue, cell, seed, turnCap);
-    const columns = [
-      ...cellColumns(cell, turnCap, seed, driven.end, ms),
+    const columns: Column[] = [
+      ['seed', seed],
+      ['ending', driven.end.outcome],
+      ['cause', causeOf(driven.end) ?? ''],
+      ['turn', driven.end.turn],
+      ['ms', ms],
       ...chronicleColumns(catalogue, cell.campaign, launch, driven),
     ];
     if (seed === 1) write(columns.map(([name]) => name).join(','));
@@ -156,26 +163,15 @@ function chronicleOf(
   return { launch, driven, ms: Date.now() - started };
 }
 
-function cellColumns(
+/** The cell as the command that made it, one comment line of JSON, the campaign's technologies whole. */
+function recordOf(
   { choices, campaign, persona }: Cell,
-  turnCap: number,
-  seed: number,
-  end: End,
-  ms: number,
-): Column[] {
-  return [
-    ['age', choices.age],
-    ['region', choices.region],
-    ['civilization', choices.civilization],
-    ['learned', campaign.technologies.join(' ')],
-    ['persona', persona],
-    ['turn-cap', turnCap],
-    ['seed', seed],
-    ['ending', end.outcome],
-    ['cause', causeOf(end) ?? ''],
-    ['turn', end.turn],
-    ['ms', ms],
-  ];
+  turns: number,
+  run: { readonly seeds: number } | { readonly trace: number },
+): string {
+  const { age, region, civilization } = choices;
+  const learned = campaign.technologies;
+  return `# ${JSON.stringify({ age, region, civilization, learned, persona, turns, ...run })}`;
 }
 
 /**
