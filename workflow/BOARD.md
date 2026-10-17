@@ -11,7 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The fold** — the second verb: tables from one file of rows, and two files compared seed by seed where their cells pair; the `sim` skill gains the verb.
+- **The fold** — the rows are queried in place with DuckDB's command line, the `sim` skill holding the recipes, each checked running: one file's endings and numbers, a listing unpacked, a cut by a condition, two files joined on the seed; the row gains its `turn-cap` column and the deals listing takes the `name:number` shape every other listing has, `npm test` passing on it; the project's settings allow `duckdb`. Doc-impact: `docs/SIMULATOR.md`. [board/fold.md](board/fold.md)
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The deck's edits** — copies bought and cards added or removed in the cell's campaign, by flags or a deck file, through the door the forge builds its campaign by, so the forge gains them too; the `sim` skill gains them.
 - **The builder** — the persona that works the land and the border; its gambits are served as sentences to strike at its intake.
