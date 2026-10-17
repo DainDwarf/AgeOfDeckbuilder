@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { newCampaign, paidInto } from '../rules/campaign';
+import { newCampaign } from '../rules/campaign';
 import { ageOf, firstRegion, merged, type Region } from '../rules/catalogue';
 import {
   AGE,
@@ -7,14 +7,13 @@ import {
   CIVILIZATION_ID,
   CLEARING,
   GRANARY,
-  hoardedVictory,
   QUIET,
   REGION,
   REGIONS,
   regionsUnlocked,
   SLICES,
 } from '../rules/fixtures';
-import { clustersOf, openingChoices, RING, ringOf, withAge } from './launch-layout';
+import { clustersOf, RING, ringOf, withAge } from './launch-layout';
 
 /** A fixture region whose shares are these, in this order. */
 function sharing(...shares: [string, number][]): Region {
@@ -23,41 +22,6 @@ function sharing(...shares: [string, number][]): Region {
     biomeShares: shares.map(([biome, share]) => ({ biome, share })),
   };
 }
-
-test('the launch screen opens on a new campaign on the first age, its first region and the campaign’s civilization', () => {
-  expect(openingChoices(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID))).toEqual({
-    age: AGE,
-    region: firstRegion(CATALOGUE, AGE),
-    civilization: CIVILIZATION_ID,
-  });
-});
-
-test('the launch screen opens on the furthest age the campaign has reached, and that age’s first region', () => {
-  const { campaign } = paidInto(
-    CATALOGUE,
-    newCampaign(CATALOGUE, CIVILIZATION_ID),
-    hoardedVictory(),
-  );
-  expect(openingChoices(CATALOGUE, campaign)).toEqual({
-    age: QUIET,
-    region: firstRegion(CATALOGUE, QUIET),
-    civilization: CIVILIZATION_ID,
-  });
-});
-
-test('the launch screen opens on the first region of the age the campaign has reached, the first listed not reached passed over', () => {
-  const catalogue = regionsUnlocked({ [GRANARY]: REGION });
-  const opened = newCampaign(catalogue, CIVILIZATION_ID);
-  const { campaign } = paidInto(catalogue, opened, hoardedVictory());
-
-  expect(firstRegion(catalogue, AGE)).toBe(REGION);
-  expect(openingChoices(catalogue, opened)).toEqual({
-    age: AGE,
-    region: CLEARING,
-    civilization: CIVILIZATION_ID,
-  });
-  expect(openingChoices(catalogue, campaign).region).toBe(REGION);
-});
 
 test('selecting another age keeps the region where that age holds one of its name', () => {
   const choices = { age: AGE, region: CLEARING, civilization: CIVILIZATION_ID };

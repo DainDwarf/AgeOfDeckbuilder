@@ -168,6 +168,22 @@ export function* walked(stages: readonly Stage[]): Generator<Stage> {
   }
 }
 
+/** A `runtime-error` among stages, and the group holding it nearest, where one does. */
+export type RuntimeError = { readonly during: Group['name'] | undefined };
+
+/** Every `runtime-error` among the stages, in the order the walk plays them. */
+export function runtimeErrors(stages: readonly Stage[]): RuntimeError[] {
+  const among = (stage: Stage, during: Group['name'] | undefined): RuntimeError[] => {
+    switch (stage.kind) {
+      case 'change':
+        return stage.name === 'runtime-error' ? [{ during }] : [];
+      case 'group':
+        return stage.stages.flatMap((held) => among(held, stage.name));
+    }
+  };
+  return stages.flatMap((stage) => among(stage, undefined));
+}
+
 /** Whether a stage settles its chronicle as it plays: a change, or a group holding nothing. */
 export function leaf(stage: Stage): boolean {
   switch (stage.kind) {

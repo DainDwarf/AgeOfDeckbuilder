@@ -4,7 +4,9 @@ import {
   agesReached,
   type Campaign,
   type CampaignCivilization,
+  type Choices,
   influenceCardsIn,
+  openingChoices,
 } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import { biomeKind } from '../rules/map-kinds';
@@ -28,14 +30,14 @@ import {
   UI_FONT,
 } from './design-space';
 import { ledgerRowsOf } from './ending-screen';
-import { clustersOf, openingChoices, withAge } from './launch-layout';
+import { clustersOf, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
 import { type CountedLine, laidLine } from './menu';
 import { backRaisesMenu, resetMenu, warnOfLaunch } from './menu-scene';
 import { ROOM, wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
-import { type Choices, campaignHeld, type Opening, savedOpening } from './save-entry';
+import { campaignHeld, type Opening, savedOpening } from './save-entry';
 import { inspectedThrough, type Laying, layingOf } from './stack';
 import { ageName, regionName, type TextKey, text } from './text';
 

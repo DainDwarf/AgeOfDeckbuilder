@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { available } from '../src/rules/campaign';
+import { available, openingChoices } from '../src/rules/campaign';
 import { earningOf, technologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
-import { openingChoices } from '../src/ui/launch-layout';
 import { achievementGoal, regionName, technologyName, text } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {

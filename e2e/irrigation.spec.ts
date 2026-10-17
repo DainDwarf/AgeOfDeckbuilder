@@ -1,13 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { civilizationIn, removedFrom } from '../src/rules/campaign';
+import { civilizationIn, openingChoices, removedFrom } from '../src/rules/campaign';
 import { gained, terraformed } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
 import { neighbours, runsAlong, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
 import { unchanged } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { openingChoices } from '../src/ui/launch-layout';
 import { improvementName, text } from '../src/ui/text';
 import {
   aimed,

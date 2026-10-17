@@ -1,9 +1,9 @@
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parseArgs } from 'node:util';
 import { CATALOGUE } from '../src/content/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { saveFileName, writeSaveFile } from '../src/rules/save-file';
+import { readFlags, stringFlag, wholeFlag } from './flags';
 import { learnedWithNeeds, technologiesEarnedIn } from './learned-with-needs';
 
 const USAGE = [
@@ -22,15 +22,7 @@ const FLAGS = {
  * what it learned printed. A refusal is thrown, nothing written.
  */
 export function forgeSave(args: readonly string[]): void {
-  // Non-strict, so a bare `--list` reads `true`; an unknown flag is then accepted and refused below.
-  const { values, positionals } = parseArgs({
-    args: [...args],
-    options: FLAGS,
-    strict: false,
-    allowPositionals: true,
-  });
-  const unknown = Object.keys(values).find((flag) => !Object.hasOwn(FLAGS, flag));
-  if (unknown !== undefined) throw new Error(`no flag --${unknown}\n${USAGE}`);
+  const { values, positionals } = readFlags(args, FLAGS, USAGE);
 
   if (values.list !== undefined) {
     console.log(technologiesByAge(typeof values.list === 'string' ? values.list : undefined));
@@ -38,10 +30,8 @@ export function forgeSave(args: readonly string[]): void {
   }
   if (positionals.length === 0) throw new Error(USAGE);
 
-  const influence = influenceOf(values.influence);
-  const named = values.out ?? saveFileName(new Date());
-  if (typeof named !== 'string') throw new Error(`--out names no path\n${USAGE}`);
-  const out = resolve(named);
+  const influence = wholeFlag(values, 'influence', 0, USAGE);
+  const out = resolve(stringFlag(values, 'out', USAGE) ?? saveFileName(new Date()));
 
   const fresh = freshCampaign(CATALOGUE);
   const learned = learnedWithNeeds(CATALOGUE, fresh, positionals);
@@ -52,15 +42,6 @@ export function forgeSave(args: readonly string[]): void {
     console.log(`learned ${technology}`);
   }
   console.log(`wrote ${out}`);
-}
-
-function influenceOf(flag: string | boolean | undefined): number | undefined {
-  if (flag === undefined) return undefined;
-  const influence = Number(flag);
-  if (typeof flag !== 'string' || !/^\d+$/.test(flag) || !Number.isSafeInteger(influence)) {
-    throw new Error(`--influence is not a non-negative integer: ${flag}\n${USAGE}`);
-  }
-  return influence;
 }
 
 /**

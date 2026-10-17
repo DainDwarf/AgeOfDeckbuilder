@@ -1,11 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { openingChoices } from '../src/rules/campaign';
 import { catalogued } from '../src/rules/catalogue';
+import { launchedFromCampaign } from '../src/rules/chronicle';
 import { freshCampaign, type Save, writeSave } from '../src/rules/save';
 import { readSaveFile, writeSaveFile } from '../src/rules/save-file';
 import { bound, DEFAULTS, STORED } from '../src/ui/bindings';
-import { openingChoices } from '../src/ui/launch-layout';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
@@ -14,7 +15,6 @@ import {
   click,
   counted,
   heldSave,
-  launchedIn,
   onScreen,
   openSaved,
   plantCampaign,
@@ -214,7 +214,7 @@ test('Import save on a save file whose chronicle names a content version the gam
   const unshipped = catalogued({ ...CATALOGUE, version: `${CATALOGUE.version}-unshipped` });
   const campaign = freshCampaign(unshipped);
   const choices = openingChoices(unshipped, campaign);
-  const chronicle = launchedIn(unshipped, campaign, choices, 1);
+  const { chronicle } = launchedFromCampaign(unshipped, campaign, choices, 1);
   const { civilization } = choices;
   const file = writeSaveFile(unshipped, campaign, { chronicle, civilization });
   const read = readSaveFile(CATALOGUE, file);

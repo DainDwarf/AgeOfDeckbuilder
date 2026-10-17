@@ -1,26 +1,11 @@
-/** What the launch screen computes before it draws: the choices it opens on and keeps, and each region's ring. */
+/** What the launch screen computes before it draws: the choices it keeps, and each region's ring. */
 
-import { agesReached, type Campaign, regionsReached } from '../rules/campaign';
+import { type Campaign, type Choices, regionsReached } from '../rules/campaign';
 import { ageOf, type Catalogue } from '../rules/catalogue';
 import type { MapRegion } from '../rules/map-kinds';
-import type { Choices } from './save-entry';
 
 /** How many hexagons stand around a region's middle one. */
 export const RING = 6;
-
-/**
- * The choices the launch screen opens on: the furthest age the campaign has reached, that age's
- * first region the campaign has reached, and the campaign's first civilization.
- */
-export function openingChoices(catalogue: Catalogue, campaign: Campaign): Choices {
-  const age = agesReached(catalogue, campaign).at(-1);
-  const [civilization] = Object.keys(campaign.civilizations);
-  if (age === undefined || civilization === undefined) {
-    throw new Error('the campaign has reached no age or owns no civilization');
-  }
-  const [region] = regionsReached(catalogue, campaign, age);
-  return { age, region, civilization };
-}
 
 /**
  * The choices with another age selected: the region kept where that age holds one of its name, and

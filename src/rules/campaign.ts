@@ -131,6 +131,27 @@ export function regionsReached(catalogue: Catalogue, campaign: Campaign, age: st
   );
 }
 
+/** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign. */
+export type Choices = {
+  readonly age: string;
+  readonly region: string;
+  readonly civilization: string;
+};
+
+/**
+ * The choices the launch screen opens on: the furthest age the campaign has reached, that age's
+ * first region the campaign has reached, and the campaign's first civilization.
+ */
+export function openingChoices(catalogue: Catalogue, campaign: Campaign): Choices {
+  const age = agesReached(catalogue, campaign).at(-1);
+  const [civilization] = Object.keys(campaign.civilizations);
+  if (age === undefined || civilization === undefined) {
+    throw new Error('the campaign has reached no age or owns no civilization');
+  }
+  const [region] = regionsReached(catalogue, campaign, age);
+  return { age, region, civilization };
+}
+
 /** The number a campaign's first card is dealt. */
 export const FIRST_CARD_NUMBER = 1;
 

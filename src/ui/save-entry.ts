@@ -1,5 +1,5 @@
 import { CATALOGUE } from '../content/catalogue';
-import type { Campaign, Payment } from '../rules/campaign';
+import type { Campaign, Choices, Payment } from '../rules/campaign';
 import {
   type ChronicleSave,
   freshCampaign,
@@ -11,13 +11,6 @@ import {
 import { readSaveFile, type SaveFileRead, writeSaveFile } from '../rules/save-file';
 import type { Chronicle } from '../rules/state';
 import { store, stored, unstore } from './storage';
-
-/** What a chronicle is launched on: an age, one of its regions and a civilization of the campaign. */
-export type Choices = {
-  readonly age: string;
-  readonly region: string;
-  readonly civilization: string;
-};
 
 /**
  * What the chronicle screen opens on: the choices a chronicle begins on, and either the one resumed

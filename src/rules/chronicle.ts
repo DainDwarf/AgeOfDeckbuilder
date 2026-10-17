@@ -1,4 +1,4 @@
-import { available } from './campaign';
+import { available, type Campaign, type Choices, civilizationIn } from './campaign';
 import {
   actionSpent,
   aimOf,
@@ -289,6 +289,26 @@ export function launched(
     { tiles, rivers, centre },
     timeline,
     learned,
+  );
+}
+
+/**
+ * A chronicle launched from the campaign on the choices, as the launch screen launches one: on the
+ * campaign's civilization of that name, with the technologies the campaign has learned.
+ */
+export function launchedFromCampaign(
+  catalogue: Catalogue,
+  campaign: Campaign,
+  { age, region, civilization }: Choices,
+  seed: number,
+): Sequence {
+  return launched(
+    catalogue,
+    age,
+    region,
+    seed,
+    civilizationIn(catalogue, campaign, civilization),
+    campaign.technologies,
   );
 }
 

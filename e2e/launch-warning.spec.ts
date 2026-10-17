@@ -1,11 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { type Choices, openingChoices } from '../src/rules/campaign';
 import { achievementOf, firstAge } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
-import { openingChoices, withAge } from '../src/ui/launch-layout';
-import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
+import { withAge } from '../src/ui/launch-layout';
+import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { technologyName, text } from '../src/ui/text';
 import {
   chronicleOf,

@@ -11,7 +11,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The driver and the idle persona** — `npm run sim` loads through Vite's module runner as the forge does, takes a cell whose age and region flags learn what reaches them, walks each chronicle gambit by gambit, plays the idle persona, stops a chronicle at the turn cap, at 100 commands landed in one turn, on a `runtime-error` or on a decision no command lands, prints a persona's sentences, traces one seed and writes a skeleton row; the launch from a campaign, the opening choices, the module-runner boot and the runtime-error walk each stand in one place the screen, the specs and the simulator share; its test runs on the fixture catalogue; a `sim` skill runs it and reports its numbers. Doc-impact: `docs/SIMULATOR.md`. [board/driver-and-idle-persona.md](board/driver-and-idle-persona.md)
 - **The row** — every column [`../docs/SIMULATOR.md`](../docs/SIMULATOR.md) foresees, the fixed turns the stocks are read at, and one column answering each entry of [`BALANCE.md`](BALANCE.md).
 - **The fold** — the second verb: tables from one file of rows, and two files compared seed by seed where their cells pair; the `sim` skill gains the verb.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.

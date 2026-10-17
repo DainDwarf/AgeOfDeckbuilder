@@ -2,7 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { expect, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { addedTo, bought, type Campaign, civilizationIn, paidInto } from '../src/rules/campaign';
+import {
+  addedTo,
+  bought,
+  type Campaign,
+  type Choices,
+  civilizationIn,
+  openingChoices,
+  paidInto,
+} from '../src/rules/campaign';
 import {
   aimOf,
   built,
@@ -21,7 +29,6 @@ import {
   achievementOf,
   ageOf,
   ageUnlockedBy,
-  type Catalogue,
   type Civilization,
   cardOf,
   costOf,
@@ -37,7 +44,7 @@ import {
   admitted,
   apply,
   countOn,
-  launched,
+  launchedFromCampaign,
   outcome,
   reckoned,
   refusalOf,
@@ -83,11 +90,10 @@ import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
-import { openingChoices } from '../src/ui/launch-layout';
 import type { BarReading } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import type { PileKind } from '../src/ui/piles';
-import { type Choices, SAVE_ENTRY } from '../src/ui/save-entry';
+import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, eventName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
@@ -196,35 +202,15 @@ export function reachedByClaims(campaign: Campaign): Chronicle {
 }
 
 /**
- * The chronicle the rules launch on the seed on the catalogue's content, as the launch screen
- * launches one from the campaign on the choices.
- */
-export function launchedIn(
-  catalogue: Catalogue,
-  campaign: Campaign,
-  choices: Choices,
-  seed: number,
-): Chronicle {
-  return launched(
-    catalogue,
-    choices.age,
-    choices.region,
-    seed,
-    civilizationIn(catalogue, campaign, choices.civilization),
-    campaign.technologies,
-  ).chronicle;
-}
-
-/**
- * The chronicle `launchedIn` launches on the game's content from the campaign, a new one unless one
- * is given, on the choices given, or those the launch screen opens on over it.
+ * The chronicle the rules launch on the seed on the game's content from the campaign, a new one
+ * unless one is given, on the choices given, or those the launch screen opens on over it.
  */
 export function launchedAs(
   seed: number,
   campaign = freshCampaign(CATALOGUE),
   choices = openingChoices(CATALOGUE, campaign),
 ): Chronicle {
-  return launchedIn(CATALOGUE, campaign, choices, seed);
+  return launchedFromCampaign(CATALOGUE, campaign, choices, seed).chronicle;
 }
 
 /**

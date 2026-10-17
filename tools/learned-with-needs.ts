@@ -1,5 +1,25 @@
 import { type Campaign, learnedInto } from '../src/rules/campaign';
-import { ageOf, type Catalogue, technologyOf } from '../src/rules/catalogue';
+import { ageOf, type Catalogue, technologyOf, victoryTechnologyOf } from '../src/rules/catalogue';
+
+/**
+ * The technologies that reach the age: the victory's technology of every age before it, in the order
+ * of history. An age the catalogue does not hold is refused.
+ */
+export function technologiesReaching(catalogue: Catalogue, age: string): string[] {
+  ageOf(catalogue, age);
+  const ages = Object.keys(catalogue.ages);
+  return ages.slice(0, ages.indexOf(age)).map((before) => victoryTechnologyOf(catalogue, before));
+}
+
+/**
+ * The technology that unlocks the region by its name, the first the catalogue lists where several do,
+ * and nothing where none does.
+ */
+export function technologyUnlocking(catalogue: Catalogue, region: string): string | undefined {
+  return Object.keys(catalogue.technologies).find(
+    (id) => technologyOf(catalogue, id).unlocks.region === region,
+  );
+}
 
 /** The technologies the age's achievements earn, in the order the catalogue's technologies table lists them. */
 export function technologiesEarnedIn(catalogue: Catalogue, age: string): string[] {

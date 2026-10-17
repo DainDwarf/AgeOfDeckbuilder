@@ -1,9 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { openingChoices } from '../src/rules/campaign';
 import { tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import { type Chronicle, cardsInPiles } from '../src/rules/state';
-import { openingChoices } from '../src/ui/launch-layout';
 import {
   aimed,
   bareAimable,

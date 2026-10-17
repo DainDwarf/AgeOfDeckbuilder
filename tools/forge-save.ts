@@ -1,25 +1,5 @@
-import { fileURLToPath } from 'node:url';
-import { createServer, createServerModuleRunner } from 'vite';
+import { runBody } from './vite-boot.ts';
 
-// Plain Node resolves no extensionless import, so everything that imports `src/` is loaded through
-// Vite's module runner; this file imports `vite` and `node:*` alone.
-const server = await createServer({
-  configFile: false,
-  root: fileURLToPath(new URL('..', import.meta.url)),
-  server: { middlewareMode: true, hmr: false, watch: null },
-  logLevel: 'error',
-});
-const runner = createServerModuleRunner(server.environments.ssr, { hmr: false });
-try {
-  const { forgeSave } = await runner.import<typeof import('./forge-save-body')>(
-    '/tools/forge-save-body.ts',
-  );
+await runBody<typeof import('./forge-save-body')>('/tools/forge-save-body.ts', ({ forgeSave }) => {
   forgeSave(process.argv.slice(2));
-} catch (error) {
-  // A refusal, the rules' or the tool's, is a plain `Error`; anything else is a defect.
-  console.error(error instanceof Error && error.constructor === Error ? error.message : error);
-  process.exitCode = 1;
-} finally {
-  await runner.close();
-  await server.close();
-}
+});

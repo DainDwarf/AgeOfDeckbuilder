@@ -10,6 +10,7 @@ import {
   dealt,
   learnedInto,
   newCampaign,
+  openingChoices,
   paidInto,
   pinned,
   priceOf,
@@ -24,6 +25,7 @@ import {
   cardAge,
   cardOf,
   catalogued,
+  firstRegion,
   influenceOf,
   technologyOf,
 } from './catalogue';
@@ -366,6 +368,41 @@ test('a region a technology unlocks is reached once that technology is learned, 
     expect(regionsReached(catalogue, opened, age)).toEqual([CLEARING]);
     expect(regionsReached(catalogue, campaign, age)).toEqual([REGION, CLEARING]);
   }
+});
+
+test('the launch screen opens on a new campaign on the first age, its first region and the campaign’s civilization', () => {
+  expect(openingChoices(CATALOGUE, newCampaign(CATALOGUE, CIVILIZATION_ID))).toEqual({
+    age: AGE,
+    region: firstRegion(CATALOGUE, AGE),
+    civilization: CIVILIZATION_ID,
+  });
+});
+
+test('the launch screen opens on the furthest age the campaign has reached, and that age’s first region', () => {
+  const { campaign } = paidInto(
+    CATALOGUE,
+    newCampaign(CATALOGUE, CIVILIZATION_ID),
+    hoardedVictory(),
+  );
+  expect(openingChoices(CATALOGUE, campaign)).toEqual({
+    age: QUIET,
+    region: firstRegion(CATALOGUE, QUIET),
+    civilization: CIVILIZATION_ID,
+  });
+});
+
+test('the launch screen opens on the first region of the age the campaign has reached, the first listed not reached passed over', () => {
+  const catalogue = regionsUnlocked({ [GRANARY]: REGION });
+  const opened = newCampaign(catalogue, CIVILIZATION_ID);
+  const { campaign } = paidInto(catalogue, opened, hoardedVictory());
+
+  expect(firstRegion(catalogue, AGE)).toBe(REGION);
+  expect(openingChoices(catalogue, opened)).toEqual({
+    age: AGE,
+    region: CLEARING,
+    civilization: CIVILIZATION_ID,
+  });
+  expect(openingChoices(catalogue, campaign).region).toBe(REGION);
 });
 
 test('a chronicle paid in a second time is refused: the technology its achievement earns is already learned', () => {

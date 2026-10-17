@@ -1,10 +1,10 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { openingChoices } from '../src/rules/campaign';
 import { ageOf, ageUnlockedBy, firstAge, victoryTechnologyOf } from '../src/rules/catalogue';
 import { freshCampaign } from '../src/rules/save';
 import { browseOf } from '../src/ui/collection-layout';
 import { cardFaceAtStart, kindTooltip } from '../src/ui/face';
-import { openingChoices } from '../src/ui/launch-layout';
 import { ageName, cardName, civilizationName, text } from '../src/ui/text';
 import type { Reference } from '../src/ui/text-run';
 import {

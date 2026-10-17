@@ -1,12 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import { pinned, unpinned } from '../src/rules/campaign';
+import { openingChoices, pinned, unpinned } from '../src/rules/campaign';
 import { achievementOf, firstAge } from '../src/rules/catalogue';
 import { countOn } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { openingChoices, withAge } from '../src/ui/launch-layout';
+import { withAge } from '../src/ui/launch-layout';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import {
   aimed,

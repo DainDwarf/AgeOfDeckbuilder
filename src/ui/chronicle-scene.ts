@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
-import { civilizationIn, type Payment } from '../rules/campaign';
+import type { Choices, Payment } from '../rules/campaign';
 import { entersOn, playedThrough, refuses, throughRefusal } from '../rules/cards';
 import { costOf, type Entering, entered } from '../rules/catalogue';
 import {
@@ -9,7 +9,7 @@ import {
   type Command,
   chartedAndRead,
   declaresWar,
-  launched,
+  launchedFromCampaign,
   outcome,
   type PlayCommand,
   refusalOf,
@@ -18,7 +18,7 @@ import {
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
 import { type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
-import { leaf, type Stage, walked } from '../rules/stages';
+import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
 import { type Unit, unitOf } from '../rules/units';
 import { createBand } from './band';
@@ -58,7 +58,7 @@ import { createPinnedAchievements } from './pinned-achievement';
 import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { createResourceBar } from './resource-bar';
-import { type Choices, campaignHeld, keepChronicle, type Opening } from './save-entry';
+import { campaignHeld, keepChronicle, type Opening } from './save-entry';
 import { createShownEvent } from './shown-event';
 import { createSmallCards } from './small-card';
 import { createStanding } from './standing';
@@ -75,19 +75,11 @@ type Part = {
   play?(stage: Stage): Promise<void> | undefined;
 };
 
-/**
- * Every `runtime-error` among the stages, on the console with the group holding it where one does.
- */
+/** Every `runtime-error` among the stages, on the console with the group holding it where one does. */
 function logRuntimeErrors(stages: readonly Stage[]): void {
-  const lines = (stage: Stage, during: string): string[] => {
-    switch (stage.kind) {
-      case 'change':
-        return stage.name === 'runtime-error' ? [`runtime-error${during}`] : [];
-      case 'group':
-        return stage.stages.flatMap((held) => lines(held, ` during ${stage.name}`));
-    }
-  };
-  for (const line of stages.flatMap((stage) => lines(stage, ''))) console.error(line);
+  for (const { during } of runtimeErrors(stages)) {
+    console.error(during === undefined ? 'runtime-error' : `runtime-error during ${during}`);
+  }
 }
 
 /** Where a press landed or was let go: on a thing, on a drawn tile, or beside the things. */
@@ -171,16 +163,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
    * seed is the one place entropy enters the game: `src/rules/` draws only from the seed it is handed.
    */
   private begin(typed: number | undefined): Chronicle {
-    const { age, region, civilization } = this.choices;
     const seed = typed === undefined ? (Math.random() * 2 ** 32) | 0 : typed;
-    const campaign = campaignHeld();
-    const { stages, chronicle } = launched(
+    const { stages, chronicle } = launchedFromCampaign(
       CATALOGUE,
-      age,
-      region,
+      campaignHeld(),
+      this.choices,
       seed,
-      civilizationIn(CATALOGUE, campaign, civilization),
-      campaign.technologies,
     );
     logRuntimeErrors(stages);
     keepChronicle(this.choices, chronicle);
