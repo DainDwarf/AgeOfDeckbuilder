@@ -1362,29 +1362,45 @@ export function misfitIn(
   }
 }
 
+/** What keeps a city section's building and card out of the content, and nothing where they fit. */
+export function cityMisfit(
+  catalogue: Catalogue,
+  building: string,
+  card: CardId,
+): string | undefined {
+  if (!Object.hasOwn(catalogue.buildings, building)) return `names no building ${building}`;
+  const ground = groundNamed(buildingKind(catalogue, building));
+  if (ground !== undefined) return `names the building ${building}, which names ${ground}`;
+  return cardMisfitIn(catalogue, 'city', card);
+}
+
+function cardMisfitIn(
+  catalogue: Catalogue,
+  section: CivilizationSection,
+  card: CardId,
+): string | undefined {
+  return Object.hasOwn(catalogue.cards, card)
+    ? misfitIn(catalogue, section, card)
+    : `names no card ${card}`;
+}
+
 /** What keeps a civilization out of the content, said of it under the name given, and nothing where it fits. */
 export function civilizationMisfit(
   catalogue: Catalogue,
   { city, settle, cards }: Civilization,
   named: string,
 ): string | undefined {
-  if (!Object.hasOwn(catalogue.buildings, city.building)) {
-    return `${named} names no building ${city.building}`;
-  }
-  const cityNames = groundNamed(buildingKind(catalogue, city.building));
-  if (cityNames !== undefined) return `${named}'s city ${city.building} names ${cityNames}`;
+  const misfit = cityMisfit(catalogue, city.building, city.card);
+  if (misfit !== undefined) return `${named} ${misfit}`;
   if (city.sight < 0) return `${named}'s city sees ${city.sight}`;
   if (city.idle < 0) return `${named}'s city opens with ${city.idle} idle`;
   const sections = [
-    ['city', [city.card]],
     ['settle', settle],
     ['cards', cards],
   ] as const;
   for (const [section, held] of sections) {
     for (const card of held) {
-      const misfit = Object.hasOwn(catalogue.cards, card)
-        ? misfitIn(catalogue, section, card)
-        : `names no card ${card}`;
+      const misfit = cardMisfitIn(catalogue, section, card);
       if (misfit !== undefined) return `${named} ${misfit}`;
     }
   }

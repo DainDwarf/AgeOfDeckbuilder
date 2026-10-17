@@ -16,6 +16,7 @@ import {
   cardMade,
   cardOf,
   checkContent,
+  cityMisfit,
   civilizationOf,
   eventOf,
   firstCivilization,
@@ -346,12 +347,7 @@ function campaignOf(
     const cardsHeld = sectionOf('cards', cards);
 
     let cityHeld: CampaignCivilization['city'];
-    const cityMisfit = !Object.hasOwn(catalogue.buildings, section.building)
-      ? `names no building ${section.building}`
-      : !Object.hasOwn(catalogue.cards, cityCard.card.id)
-        ? `names no card ${cityCard.card.id}`
-        : misfitIn(catalogue, 'city', cityCard.card.id);
-    if (stands(citySlot, cityMisfit)) {
+    if (stands(citySlot, cityMisfit(catalogue, section.building, cityCard.card.id))) {
       cityHeld = { ...section, card: cityCard.card };
     } else {
       const authored = Object.hasOwn(catalogue.civilizations, name)

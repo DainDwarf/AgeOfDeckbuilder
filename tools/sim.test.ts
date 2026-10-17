@@ -212,7 +212,7 @@ test('a civilization handed in, inline or in a file, is the one the chronicles a
       [JSON.stringify({ ...handed, cards: ['PH_None'] }), /names no card PH_None/],
       [JSON.stringify({ ...handed, settle: [card] }), new RegExp(`${card} in its settle section`)],
       [city({ building: 'PH_None' }), /names no building PH_None/],
-      [city({ building: 'PH_Mill' }), /city PH_Mill names the river/],
+      [city({ building: 'PH_Mill' }), /names the building PH_Mill, which names the river/],
       [city({ card }), new RegExp(`${card} in its city section`)],
       [city({ sight: -1 }), /city sees -1/],
       [city({ idle: -1 }), /city opens with -1 idle/],

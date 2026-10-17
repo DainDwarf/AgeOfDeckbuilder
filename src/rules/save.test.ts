@@ -1018,7 +1018,7 @@ test('a copy of a hazard or of a camp’s reward is dropped from the collection,
   });
 });
 
-test('a city section whose building or card the catalogue does not hold, or whose card is not a settle card, is the one its civilization was authored with again, its card a new card', () => {
+test('a city section whose building the catalogue does not hold or names ground, whose card the catalogue does not hold, or whose card is not a settle card, is the one its civilization was authored with again, its card a new card', () => {
   const held = campaign();
   const restored = withCivilization({ ...held, nextCard: held.nextCard + 1 }, (civilization) => ({
     ...civilization,
@@ -1038,6 +1038,12 @@ test('a city section whose building or card the catalogue does not hold, or whos
   expect(cityRead({ building: 'PH_Fort' })).toEqual({
     campaign: restored,
     dropped: [`fixture: the save's ${CIVILIZATION_AT}.city names no building PH_Fort`],
+  });
+  expect(cityRead({ building: 'PH_Mill' })).toEqual({
+    campaign: restored,
+    dropped: [
+      `fixture: the save's ${CIVILIZATION_AT}.city names the building PH_Mill, which names the river`,
+    ],
   });
   expect(cityRead({ card: { ...card, id: 'PH_Unheld' } })).toEqual({
     campaign: restored,
