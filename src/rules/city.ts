@@ -40,7 +40,7 @@ import { tileYield } from './yields';
  */
 export function warDeclared(chronicle: Chronicle): Landed {
   if (chronicle.relations !== 'peace') return unchanged(chronicle);
-  return landedAs(change('relations', { ...chronicle, relations: 'hostile' }));
+  return landedAs(change('relations', { ...chronicle, relations: 'hostile' }, chronicle));
 }
 
 /**
@@ -128,7 +128,12 @@ export function yielded(
   const resources = { ...city.resources };
   for (const resource of RESOURCES) resources[resource] += yields[resource] ?? 0;
   return landedAs(
-    changeOn('stock', { q: at.q, r: at.r }, withCityRows(chronicle, whose, { resources })),
+    changeOn(
+      'stock',
+      { q: at.q, r: at.r },
+      withCityRows(chronicle, whose, { resources }),
+      chronicle,
+    ),
   );
 }
 
@@ -141,7 +146,7 @@ export function costPaid(chronicle: Chronicle, whose: CityFaction, costs: readon
   if (city === undefined || costs.length === 0) return unchanged(chronicle);
   const resources = { ...city.resources };
   for (const { resource, amount } of costs) resources[resource] -= amount;
-  return landedAs(change('stock', withCityRows(chronicle, whose, { resources })));
+  return landedAs(change('stock', withCityRows(chronicle, whose, { resources }), chronicle));
 }
 
 /**
@@ -159,7 +164,11 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined) return unchanged(chronicle);
   return landedAs(
-    change('population', withCityRows(chronicle, whose, { population: city.population + 1 })),
+    change(
+      'population',
+      withCityRows(chronicle, whose, { population: city.population + 1 }),
+      chronicle,
+    ),
   );
 }
 
@@ -189,8 +198,8 @@ function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: C
   const fewer = withCityRows(chronicle, whose, { population: city.population - 1 });
   const taken = landedAs(
     uncovered === undefined
-      ? change('population', fewer)
-      : { kind: 'change', name: 'population', uncovered, chronicle: fewer },
+      ? change('population', fewer, chronicle)
+      : { kind: 'change', name: 'population', uncovered, before: chronicle, chronicle: fewer },
   );
   if (whose !== 'player' || city.population > 1) return taken;
   return followed(taken, (left) => fall(left, 'population'));
@@ -238,6 +247,7 @@ export function grow(chronicle: Chronicle, whose: CityFaction): Landed {
       withCityRows(chronicle, whose, {
         resources: { ...city.resources, food: city.resources.food - threshold },
       }),
+      chronicle,
     ),
   );
   return followed(spent, (left) => arrived(left, whose));
@@ -402,6 +412,7 @@ function assigned(chronicle: Chronicle, whose: CityFaction, tile: TileCoords): L
       withCityRows(chronicle, whose, {
         assigned: off.length < city.assigned.length ? off : [...off, at],
       }),
+      chronicle,
     ),
   );
 }
@@ -432,6 +443,7 @@ export function claim(
       withCityRows(chronicle, whose, {
         resources: { ...city.resources, culture: city.resources.culture - threshold },
       }),
+      chronicle,
     ),
   );
   return followed(paid, (left) => bordered(left, whose, tile));
@@ -447,7 +459,12 @@ export function bordered(chronicle: Chronicle, whose: CityFaction, tile: TileCoo
   if (city === undefined) return unchanged(chronicle);
   const taken = { q: tile.q, r: tile.r };
   const held = landedAs(
-    changeOn('held', taken, withCityRows(chronicle, whose, { held: [...city.held, taken] })),
+    changeOn(
+      'held',
+      taken,
+      withCityRows(chronicle, whose, { held: [...city.held, taken] }),
+      chronicle,
+    ),
   );
   if (idle(city) <= 0) return held;
   return followed(held, (left) => assigned(left, whose, taken));
@@ -479,7 +496,9 @@ export function neutralClaims(catalogue: Catalogue, chronicle: Chronicle): Seque
       neutral.script.claims(catalogue, left, offered),
     );
     if (landing === undefined) {
-      return followed<Stage>(claiming, (standing) => landedAs(change('runtime-error', standing)));
+      return followed<Stage>(claiming, (standing) =>
+        landedAs(change('runtime-error', standing, standing)),
+      );
     }
     claiming = followed<Stage>(claiming, () => grouped({ name: 'claim' }, landing));
   }
@@ -502,7 +521,7 @@ export function neutralAssigns(catalogue: Catalogue, chronicle: Chronicle): Sequ
     chosen.length > city.population ||
     chosen.some((tile) => !held.has(tileKey(tile)))
   ) {
-    return landedAs(change('runtime-error', chronicle));
+    return landedAs(change('runtime-error', chronicle, chronicle));
   }
   const worked = new Set(city.assigned.map(tileKey));
   const moving = [
@@ -525,7 +544,7 @@ export function neutralEntered(catalogue: Catalogue, chronicle: Chronicle): Land
   const id = neutral.script.enters(catalogue, chronicle, neutral.ratio);
   if (id === undefined) return unchanged(chronicle);
   if (!neutral.ratio.some(({ card }) => card === id)) {
-    return landedAs(change('runtime-error', chronicle));
+    return landedAs(change('runtime-error', chronicle, chronicle));
   }
   const card = unitCardOf(catalogue, id);
   return (
@@ -558,7 +577,7 @@ export function neutralPlayed(
     tileKey(unit.tile) !== tileKey(at) ||
     holderOf(chronicle, at) !== 'neutral'
   ) {
-    return landedAs(change('runtime-error', chronicle));
+    return landedAs(change('runtime-error', chronicle, chronicle));
   }
   if (aim.refuses(catalogue, chronicle, tile, 'neutral') !== undefined) return unchanged(chronicle);
   const playing = neutralPaid(catalogue, chronicle, id, [], (left) =>

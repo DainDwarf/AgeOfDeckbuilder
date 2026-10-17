@@ -1484,11 +1484,16 @@ export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: En
   };
   const dealt = (unit: Unit): Landed =>
     landedAs(
-      changeOn('enter', entering.tile, {
-        ...chronicle,
-        nextUnit: chronicle.nextUnit + 1,
-        units: [...chronicle.units, unit],
-      }),
+      changeOn(
+        'enter',
+        entering.tile,
+        {
+          ...chronicle,
+          nextUnit: chronicle.nextUnit + 1,
+          units: [...chronicle.units, unit],
+        },
+        chronicle,
+      ),
     );
 
   switch (entering.faction) {

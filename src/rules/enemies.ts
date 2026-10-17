@@ -186,10 +186,15 @@ function waveSent(chronicle: Chronicle, { at, guards, script, wave }: WaveOwner)
       .map((unit) => unit.id),
   );
   return landedAs(
-    changeOn('wave-sent', at, {
-      ...chronicle,
-      units: chronicle.units.map((unit) => (leaving.has(unit.id) ? { ...unit, script } : unit)),
-    }),
+    changeOn(
+      'wave-sent',
+      at,
+      {
+        ...chronicle,
+        units: chronicle.units.map((unit) => (leaving.has(unit.id) ? { ...unit, script } : unit)),
+      },
+      chronicle,
+    ),
   );
 }
 
@@ -432,7 +437,7 @@ export function enteredAround(
   camp: TileCoords,
   rows: readonly EnemyEntry[],
 ): Landed {
-  if (rows.length === 0) return landedAs(change('runtime-error', chronicle));
+  if (rows.length === 0) return landedAs(change('runtime-error', chronicle, chronicle));
   return enteredAs(catalogue, chronicle, camp, rows, camp);
 }
 
@@ -504,8 +509,8 @@ export function raided(
   chronicle: Chronicle,
   rows: readonly EnemyEntry[],
 ): Landed {
-  if (rows.length === 0) return landedAs(change('runtime-error', chronicle));
+  if (rows.length === 0) return landedAs(change('runtime-error', chronicle, chronicle));
   const door = raidEntry(catalogue, chronicle, rows[0].kind);
-  if (door === undefined) return landedAs(change('runtime-error', chronicle));
+  if (door === undefined) return landedAs(change('runtime-error', chronicle, chronicle));
   return enteredAs(catalogue, door.chronicle, door.entry, rows, undefined);
 }

@@ -92,7 +92,7 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
   const schedule = scheduleOf(catalogue, chronicle.age, chronicle.region);
   if (turn === timeline.capstone.turn) {
     const rolled = landedAs(
-      change('rolled', { ...chronicle, timeline: rolledFrom(schedule, timeline, turn) }),
+      change('rolled', { ...chronicle, timeline: rolledFrom(schedule, timeline, turn) }, chronicle),
     );
     const { lands } = capstoneOf(catalogue, timeline.capstone.id);
     return grouped(
@@ -104,12 +104,16 @@ export function events(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
   if (turn !== timeline.next) return unchanged(chronicle);
   const { picked: event, rng } = pickWeighted(timeline.rng, Object.entries(schedule.entries));
   const rolled = landedAs(
-    change('rolled', { ...chronicle, timeline: rolledFrom(schedule, { ...timeline, rng }, turn) }),
+    change(
+      'rolled',
+      { ...chronicle, timeline: rolledFrom(schedule, { ...timeline, rng }, turn) },
+      chronicle,
+    ),
   );
   return grouped(
     { name: 'deal' },
     followed(rolled, (left) =>
-      landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] })),
+      landedAs(change('dealt', { ...left, deals: [...left.deals, { of: 'event', event }] }, left)),
     ),
   );
 }
@@ -132,7 +136,7 @@ export function showsNextLanding(): Aim & { readonly aim: 'none' } {
     aim: 'none',
     blocked: (_catalogue, chronicle) => (turnShown(chronicle) === undefined ? [] : ['turn-shown']),
     effect: (_catalogue, paid) =>
-      landedAs(change('shown', { ...paid, shownTurn: nextLanding(paid) })),
+      landedAs(change('shown', { ...paid, shownTurn: nextLanding(paid) }, paid)),
   };
 }
 
@@ -217,7 +221,7 @@ export function rewarded(
 ): Landed {
   const made = Array.from({ length: copies }, () => cardMade(catalogue, card));
   return landedAs(
-    change('added', { ...chronicle, discardPile: [...chronicle.discardPile, ...made] }),
+    change('added', { ...chronicle, discardPile: [...chronicle.discardPile, ...made] }, chronicle),
   );
 }
 
@@ -243,7 +247,7 @@ export function capstoneReading(
 
 /** A content defect met in play, followed through as the one change saying so. */
 function runtimeError(chronicle: Chronicle): Landed {
-  return landedAs(change('runtime-error', chronicle));
+  return landedAs(change('runtime-error', chronicle, chronicle));
 }
 
 /**
@@ -255,7 +259,7 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
   if (target === undefined) return unchanged(chronicle);
   const units = damaged(chronicle.units, target, amount);
   const killed = units.length < chronicle.units.length;
-  return landedAs(changeOn(killed ? 'killed' : 'damaged', at, { ...chronicle, units }));
+  return landedAs(changeOn(killed ? 'killed' : 'damaged', at, { ...chronicle, units }, chronicle));
 }
 
 /**
@@ -263,7 +267,7 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
  * chronicle's charting takes it.
  */
 export function tileCharted(chronicle: Chronicle, at: TileCoords): Landed {
-  return landedAs(changeOn('charted', at, chronicle));
+  return landedAs(changeOn('charted', at, chronicle, chronicle));
 }
 
 /** How much a tile weighs in a draw near the player's city for each tile it lies from the nearest tile that city holds. */
@@ -508,7 +512,9 @@ export function addedToDrawPileTop(
   set: Counters = {},
 ): Landed {
   const made = cardMade(catalogue, card, set);
-  return landedAs(change('added', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }));
+  return landedAs(
+    change('added', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }, chronicle),
+  );
 }
 
 /**

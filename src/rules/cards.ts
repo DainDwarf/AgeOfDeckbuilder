@@ -204,10 +204,14 @@ function countersSetAt(
     return unchanged(chronicle);
   }
   return landedAs(
-    change('counters-set', {
-      ...chronicle,
-      hand: chronicle.hand.map((held, place) => (place === at ? reset : held)),
-    }),
+    change(
+      'counters-set',
+      {
+        ...chronicle,
+        hand: chronicle.hand.map((held, place) => (place === at ? reset : held)),
+      },
+      chronicle,
+    ),
   );
 }
 
@@ -334,12 +338,17 @@ export function throughWorker(
  */
 export function actionSpent(paid: Chronicle, at: TileCoords): Landed {
   const acting = unitAt(paid.units, at);
-  if (acting === undefined) return landedAs(change('runtime-error', paid));
+  if (acting === undefined) return landedAs(change('runtime-error', paid, paid));
   return landedAs(
-    changeOn('action-spent', at, {
-      ...paid,
-      units: paid.units.map((unit) => (unit.id === acting.id ? spentAction(unit) : unit)),
-    }),
+    changeOn(
+      'action-spent',
+      at,
+      {
+        ...paid,
+        units: paid.units.map((unit) => (unit.id === acting.id ? spentAction(unit) : unit)),
+      },
+      paid,
+    ),
   );
 }
 
@@ -404,7 +413,7 @@ function stepped(
     effect: (catalogue, paid, at, through) => {
       const stepping = through === undefined ? undefined : unitAt(paid.units, through);
       if (through === undefined || stepping === undefined) {
-        return landedAs(change('runtime-error', paid));
+        return landedAs(change('runtime-error', paid, paid));
       }
       return steppedOnto(paid, stepping, at, embarking, move(catalogue, stepping));
     },
@@ -432,6 +441,7 @@ export function steppedOnto(
         name: 'move',
         from: stepping.tile,
         to: tile,
+        before: left,
         chronicle: {
           ...left,
           units: left.units.map((unit) =>
@@ -738,22 +748,22 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
   landing = followed(landing, (left) =>
     alone(left.held)
       ? unchanged(left)
-      : landedAs(changeOn('held', city, { ...left, held: [city] })),
+      : landedAs(changeOn('held', city, { ...left, held: [city] }, left)),
   );
   landing = followed(landing, (left) =>
     left.population === population
       ? unchanged(left)
-      : landedAs(change('population', { ...left, population })),
+      : landedAs(change('population', { ...left, population }, left)),
   );
   landing = followed(landing, (left) =>
     alone(left.assigned)
       ? unchanged(left)
-      : landedAs(changeOn('assigned', city, { ...left, assigned: [city] })),
+      : landedAs(changeOn('assigned', city, { ...left, assigned: [city] }, left)),
   );
   return followed(landing, (left) =>
     left.city !== undefined && tileKey(left.city) === key
       ? unchanged(left)
-      : landedAs(changeOn('settled', city, { ...left, city })),
+      : landedAs(changeOn('settled', city, { ...left, city }, left)),
   );
 }
 
@@ -764,10 +774,15 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
 export function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Landed {
   const key = tileKey(at);
   const laid = landedAs(
-    changeOn('retiled', at, {
-      ...paid,
-      tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)),
-    }),
+    changeOn(
+      'retiled',
+      at,
+      {
+        ...paid,
+        tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)),
+      },
+      paid,
+    ),
   );
   return followed(laid, (left) => {
     const { city, citySection } = left;
@@ -870,10 +885,15 @@ export function terraformed(
       return unchanged(left);
     }
     return landedAs(
-      changeOn('killed', at, {
-        ...left,
-        units: left.units.filter((unit) => unit.id !== standing.id),
-      }),
+      changeOn(
+        'killed',
+        at,
+        {
+          ...left,
+          units: left.units.filter((unit) => unit.id !== standing.id),
+        },
+        left,
+      ),
     );
   });
 }
@@ -888,10 +908,17 @@ export function refreshed(paid: Chronicle, at: TileCoords): Landed {
     return unchanged(paid);
   }
   return landedAs(
-    changeOn('refreshed', at, {
-      ...paid,
-      units: paid.units.map((unit) => (unit.id === marching.id ? refreshedMovePoints(unit) : unit)),
-    }),
+    changeOn(
+      'refreshed',
+      at,
+      {
+        ...paid,
+        units: paid.units.map((unit) =>
+          unit.id === marching.id ? refreshedMovePoints(unit) : unit,
+        ),
+      },
+      paid,
+    ),
   );
 }
 
@@ -905,23 +932,33 @@ export function healed(catalogue: Catalogue, paid: Chronicle, at: TileCoords): L
   const health = fullHealth(catalogue, hurt.stats);
   if (hurt.stats.health >= health) return unchanged(paid);
   return landedAs(
-    changeOn('healed', at, {
-      ...paid,
-      units: paid.units.map((unit) =>
-        unit.id === hurt.id ? { ...unit, stats: { ...unit.stats, health } } : unit,
-      ),
-    }),
+    changeOn(
+      'healed',
+      at,
+      {
+        ...paid,
+        units: paid.units.map((unit) =>
+          unit.id === hurt.id ? { ...unit, stats: { ...unit.stats, health } } : unit,
+        ),
+      },
+      paid,
+    ),
   );
 }
 
 /** The card a recall brings back: it leaves the discard pile for the back of the hand. */
 export function recalled(paid: Chronicle, at: number): Landed {
   return landedAs(
-    changeFrom('recalled', [at], {
-      ...paid,
-      hand: [...paid.hand, paid.discardPile[at]],
-      discardPile: paid.discardPile.filter((_, index) => index !== at),
-    }),
+    changeFrom(
+      'recalled',
+      [at],
+      {
+        ...paid,
+        hand: [...paid.hand, paid.discardPile[at]],
+        discardPile: paid.discardPile.filter((_, index) => index !== at),
+      },
+      paid,
+    ),
   );
 }
 
@@ -932,15 +969,20 @@ export function recalled(paid: Chronicle, at: number): Landed {
 export function discarded(chronicle: Chronicle, places: readonly number[]): Landed {
   if (places.length === 0) return unchanged(chronicle);
   if (places.some((at) => chronicle.hand[at] === undefined)) {
-    return landedAs(change('runtime-error', chronicle));
+    return landedAs(change('runtime-error', chronicle, chronicle));
   }
   const leaving = chronicle.hand.map((_, at) => at).filter((at) => places.includes(at));
   return landedAs(
-    changeFrom('discarded', leaving, {
-      ...chronicle,
-      hand: chronicle.hand.filter((_, at) => !places.includes(at)),
-      discardPile: [...chronicle.discardPile, ...leaving.map((at) => chronicle.hand[at])],
-    }),
+    changeFrom(
+      'discarded',
+      leaving,
+      {
+        ...chronicle,
+        hand: chronicle.hand.filter((_, at) => !places.includes(at)),
+        discardPile: [...chronicle.discardPile, ...leaving.map((at) => chronicle.hand[at])],
+      },
+      chronicle,
+    ),
   );
 }
 
@@ -949,7 +991,7 @@ export function gained(paid: Chronicle, gain: Partial<Resources>): Landed {
   if (costsOf(gain).length === 0) return unchanged(paid);
   const resources = { ...paid.resources };
   for (const resource of RESOURCES) resources[resource] += gain[resource] ?? 0;
-  return landedAs(change('stock', { ...paid, resources }));
+  return landedAs(change('stock', { ...paid, resources }, paid));
 }
 
 /**
@@ -963,10 +1005,14 @@ export function shocked(chronicle: Chronicle, resource: Resource, amount: number
     left === stock
       ? unchanged(chronicle)
       : landedAs(
-          change('stock', {
-            ...chronicle,
-            resources: { ...chronicle.resources, [resource]: left },
-          }),
+          change(
+            'stock',
+            {
+              ...chronicle,
+              resources: { ...chronicle.resources, [resource]: left },
+            },
+            chronicle,
+          ),
         );
   if (stock >= amount) return struck;
   const uncovered = { resource, amount: amount - stock };

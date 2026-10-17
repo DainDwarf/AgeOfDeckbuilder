@@ -1,30 +1,43 @@
 import type { TileCoords } from './map';
 import type { CardId, Chronicle, Cost, DefeatCause } from './state';
 
-/**
- * One row of the chronicle moved, and the chronicle it leaves. `stock` carries the tile if one
- * yielded it; `population` carries, where it pays for a stock taken past nothing, the resource and
- * how much of it the stock did not cover; `discarded`, `exhausted`, `recalled` and `banished` carry
- * where their cards came out of, indices into the pile as it stood before — the hand, the discard
- * pile for `recalled` — and a `discarded` or an `exhausted` card lies on top of its pile in the
- * chronicle the change leaves, in the order of the places.
- */
-export type Change = { readonly kind: 'change'; readonly chronicle: Chronicle } & (
+/** One row of the chronicle moved, on the chronicle it was raised on, leaving the one it carries. */
+export type Change = {
+  readonly kind: 'change';
+  readonly before: Chronicle;
+  readonly chronicle: Chronicle;
+} & (
   | { readonly name: PlainChange }
-  | { readonly name: PlacedChange; readonly places: readonly number[] }
-  | { readonly name: 'stock'; readonly tile?: TileCoords }
-  | { readonly name: 'population'; readonly uncovered?: Cost }
+  | {
+      readonly name: PlacedChange;
+      /**
+       * Indices into the pile in `before`, the discard pile for `recalled` and the hand for the rest;
+       * a `discarded` or an `exhausted` card lies on top of its pile, in the order of the places.
+       */
+      readonly places: readonly number[];
+    }
+  | {
+      readonly name: 'stock';
+      /** The tile that yielded it, where one did. */
+      readonly tile?: TileCoords;
+    }
+  | {
+      readonly name: 'population';
+      /** Where it pays for a stock taken past nothing: the resource and what the stock did not cover. */
+      readonly uncovered?: Cost;
+    }
   | { readonly name: TiledChange; readonly tile: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
 );
 
 /**
- * A name for why, over the stages it holds, and the chronicle it leaves: its last stage's, or the one
- * it was handed or left where it holds none, a draw of the generator that raised no stage riding on
- * it either way.
+ * A name for why over the stages it holds, raised on its first stage's `before` and leaving its last
+ * stage's chronicle, or, holding none, the one it was handed for both; a draw of the generator that
+ * raised no stage rides on the one it leaves either way.
  */
 export type Group = {
   readonly kind: 'group';
+  readonly before: Chronicle;
   readonly chronicle: Chronicle;
   readonly stages: readonly Stage[];
 } & GroupHead;
@@ -37,7 +50,7 @@ type GroupHead =
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
   | { readonly name: 'capture'; readonly tile: TileCoords };
 
-/** The one step a command resolves as, a change or a group, each carrying the chronicle it leaves. */
+/** The one step a command resolves as, a change or a group, each on a chronicle and leaving one. */
 export type Stage = Change | Group;
 
 /** What a card is played at: nothing, a tile, a unit, a card of the discard pile or of the hand. */
@@ -134,24 +147,30 @@ type PlainGroup =
   | 'answer'
   | 'reward';
 
-export function change(name: PlainChange | 'stock' | 'population', chronicle: Chronicle): Change {
-  return { kind: 'change', name, chronicle };
+export function change(
+  name: PlainChange | 'stock' | 'population',
+  chronicle: Chronicle,
+  before: Chronicle,
+): Change {
+  return { kind: 'change', name, before, chronicle };
 }
 
 export function changeOn(
   name: TiledChange | 'stock',
   tile: TileCoords,
   chronicle: Chronicle,
+  before: Chronicle,
 ): Change {
-  return { kind: 'change', name, tile, chronicle };
+  return { kind: 'change', name, tile, before, chronicle };
 }
 
 export function changeFrom(
   name: PlacedChange,
   places: readonly number[],
   chronicle: Chronicle,
+  before: Chronicle,
 ): Change {
-  return { kind: 'change', name, places, chronicle };
+  return { kind: 'change', name, places, before, chronicle };
 }
 
 /** Every stage of the tree in order, a group before the stages it holds. */
@@ -236,13 +255,53 @@ export function followed<S extends Stage>(
 
 /** A group over what a sequence raised, leaving the chronicle it left: the one stage it answers. */
 export function grouped(head: GroupHead, over: Sequence): Sequence<Group> {
-  const group: Group = { kind: 'group', chronicle: over.chronicle, stages: over.stages, ...head };
+  const group: Group = {
+    kind: 'group',
+    before: over.stages[0]?.before ?? over.chronicle,
+    chronicle: over.chronicle,
+    stages: over.stages,
+    ...head,
+  };
   return { stages: [group], chronicle: group.chronicle };
+}
+
+/**
+ * The stages with every one raised on the chronicle the leaf before it left, the first on `started`,
+ * once a pass has rebuilt the chronicles they leave; a draw of the generator that raised no stage
+ * rides on no stage's `before`.
+ */
+export function raisedOn(started: Chronicle, stages: readonly Stage[]): Stage[] {
+  let left = started;
+  const atLeaf = <Leaf extends Stage>(stage: Leaf): Leaf => {
+    const before = left;
+    left = stage.chronicle;
+    return stage.before === before ? stage : { ...stage, before };
+  };
+  const raise = (stage: Stage): Stage => {
+    switch (stage.kind) {
+      case 'change':
+        return atLeaf(stage);
+      case 'group': {
+        if (stage.stages.length === 0) return atLeaf(stage);
+        const held = stage.stages.map(raise);
+        const before = held[0].before;
+        if (before === stage.before && held.every((child, at) => child === stage.stages[at])) {
+          return stage;
+        }
+        return { ...stage, before, stages: held };
+      }
+    }
+  };
+  return stages.map(raise);
 }
 
 /** A defeat, the one `ended` of it: the chronicle records what ended it and on which turn. */
 export function fall(chronicle: Chronicle, cause: DefeatCause): Landed {
   return landedAs(
-    change('ended', { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } }),
+    change(
+      'ended',
+      { ...chronicle, ending: { outcome: 'defeat', cause, turn: chronicle.turn } },
+      chronicle,
+    ),
   );
 }

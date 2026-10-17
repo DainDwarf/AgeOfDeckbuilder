@@ -71,7 +71,7 @@ import { terrainKind } from './map-kinds';
 import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
-import { type Change, type Stage, walked } from './stages';
+import { type Change, leaf, type Stage, walked } from './stages';
 import { type CardId, type Chronicle, type ChronicleAchievement, idle } from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
@@ -148,6 +148,34 @@ test('growth is staged on the food stock the income leaves, after the income and
     'turn',
     'refreshed',
   ]);
+});
+
+test('every stage of an end of turn is raised on the chronicle the leaf before it left, the first on the one the turn was ended on and a group on its first stage’s, and a refused command is one group raised on the chronicle it leaves', () => {
+  const city = cityOf(['urban', 'plain'], {
+    tiles: camped(field(3), [{ q: -3, r: 3 }]),
+    population: 2,
+    resources: { food: 6, production: 0, military: 0, money: 0, science: 0, culture: 0 },
+    drawPile: fullDraw(),
+    units: [worker({ q: 1, r: 1 }), standing('enemy', { q: 3, r: 0 }, { move: MOVE_POINT })],
+  });
+  const stages = apply(CATALOGUE, city, { type: 'end-turn' });
+
+  let left = city;
+  for (const stage of walked(stages)) {
+    expect(stage.before).toBe(left);
+    if (stage.kind === 'group' && stage.stages.length > 0) {
+      expect(stage.before).toBe(stage.stages[0].before);
+    }
+    if (leaf(stage)) left = stage.chronicle;
+  }
+  expect(namesOf(stages)).toEqual(expect.arrayContaining(['grow', 'attack', 'turn', 'drawn']));
+
+  const ended = outcome(stages);
+  const [refusal, ...more] = apply(CATALOGUE, ended, { type: 'take', at: 0 });
+  expect(more).toEqual([]);
+  expect(refusal).toMatchObject({ kind: 'group', name: 'refused', stages: [] });
+  expect(refusal.before).toBe(ended);
+  expect(refusal.chronicle).toBe(ended);
 });
 
 test('the hand holds five cards on turn 1, and five again after every turn', () => {

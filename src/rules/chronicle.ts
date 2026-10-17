@@ -100,8 +100,8 @@ import {
   grouped,
   type Landed,
   landedAs,
-  leaf,
   plays,
+  raisedOn,
   type Sequence,
   type Stage,
   unchanged,
@@ -243,7 +243,7 @@ export function beginChronicle(
     if (building !== camp.building) continue;
     guarded = followed(guarded, (left) => enteredOnCamp(catalogue, left, { q, r }, camp.opening));
   }
-  const stood = charting(catalogue, begun, guarded.stages);
+  const stood = raisedOn(begun, charting(catalogue, begun, guarded.stages));
   const seen = stood.length === 0 ? charted(catalogue, guarded.chronicle) : outcome(stood);
   const raised = reachedOn(catalogue, seen, () => true);
   return {
@@ -339,7 +339,7 @@ function conditionsRead(
   started: Chronicle,
   stages: readonly Stage[],
 ): Stage[] {
-  if (started.ending !== undefined) return [...stages];
+  if (started.ending !== undefined) return raisedOn(started, stages);
   const { passes, fails } = capstoneOf(catalogue, started.timeline.capstone.id);
   // The events phase lands the capstone in the command whose tick reaches its turn, so a command
   // started on that turn or after starts past the landing.
@@ -436,7 +436,7 @@ function conditionsRead(
     }
     return walked;
   };
-  const read = walk(stages);
+  const read = raisedOn(started, walk(stages));
   const left = outcome(read);
   if (left.ending !== undefined) return read;
 
@@ -447,13 +447,14 @@ function conditionsRead(
     if (held.reached || tallies === undefined) continue;
     const tally = tallies(catalogue, started, read, held.tally);
     if (sameTally(tally, held.tally)) continue;
-    standing = {
+    const counted = {
       ...standing,
       achievements: standing.achievements.map((other, place) =>
         place === at ? { ...other, tally } : other,
       ),
     };
-    tallied.push(change('tallied', standing));
+    tallied.push(change('tallied', counted, standing));
+    standing = counted;
   }
   const keepsTally = ({ tallies }: Achievement): boolean => tallies !== undefined;
   return [...read, ...tallied, ...reachedOn(catalogue, standing, keepsTally)];
@@ -485,13 +486,14 @@ function reachedOn(
     const achievement = achievementOf(catalogue, standing.age, held.id);
     if (!reads(achievement)) continue;
     if (countOn(catalogue, standing, held) < achievement.need) continue;
-    standing = {
+    const reached = {
       ...standing,
       achievements: standing.achievements.map((held, other) =>
         other === at ? { ...held, reached: true } : held,
       ),
     };
-    raised.push(change('reached', standing));
+    raised.push(change('reached', reached, standing));
+    standing = reached;
   }
   return raised;
 }
@@ -592,13 +594,12 @@ function onGround(chronicle: Chronicle, at: TileCoords | undefined, ground: Play
  */
 export function unitsKilledBy(kind: string): Required<Pick<Achievement, 'tallies' | 'count'>> {
   return {
-    tallies: (catalogue, started, stages, tally) => {
+    tallies: (catalogue, _started, stages, tally) => {
       unitKind(catalogue, kind);
-      let before = started;
       let counted = 0;
       for (const stage of walked(stages)) {
         if (stage.kind === 'group' && stage.name === 'attack') {
-          const attacker = unitAt(before.units, stage.attacker);
+          const attacker = unitAt(stage.before.units, stage.attacker);
           const killed = stage.stages.some(
             (held) => held.kind === 'change' && held.name === 'killed',
           );
@@ -606,7 +607,6 @@ export function unitsKilledBy(kind: string): Required<Pick<Achievement, 'tallies
             counted += 1;
           }
         }
-        if (leaf(stage)) before = stage.chronicle;
       }
       return counted === 0 ? tally : { ...tally, killed: (tally.killed ?? 0) + counted };
     },
@@ -624,20 +624,18 @@ export function gainedFrom(
   terrain: Terrain,
 ): Required<Pick<Achievement, 'tallies' | 'count'>> {
   return {
-    tallies: (catalogue, started, stages, tally) => {
+    tallies: (catalogue, _started, stages, tally) => {
       terrainKind(catalogue, terrain);
-      let before = started;
       let gained = 0;
       for (const stage of walked(stages)) {
         if (
           stage.kind === 'change' &&
           stage.name === 'stock' &&
           stage.tile !== undefined &&
-          tileAt(before.tiles, stage.tile)?.terrain === terrain
+          tileAt(stage.before.tiles, stage.tile)?.terrain === terrain
         ) {
-          gained += stage.chronicle.resources[resource] - before.resources[resource];
+          gained += stage.chronicle.resources[resource] - stage.before.resources[resource];
         }
-        if (leaf(stage)) before = stage.chronicle;
       }
       return gained === 0 ? tally : { ...tally, gained: (tally.gained ?? 0) + gained };
     },
@@ -651,19 +649,17 @@ export function gainedFrom(
  */
 export function drawPileEmptied(): Required<Pick<Achievement, 'tallies' | 'count'>> {
   return {
-    tallies: (_catalogue, started, stages, tally) => {
-      let before = started;
+    tallies: (_catalogue, _started, stages, tally) => {
       let counted = 0;
       for (const stage of walked(stages)) {
         if (
           stage.kind === 'change' &&
           stage.name === 'drawn' &&
-          before.drawPile.length > 0 &&
+          stage.before.drawPile.length > 0 &&
           stage.chronicle.drawPile.length === 0
         ) {
           counted += 1;
         }
-        if (leaf(stage)) before = stage.chronicle;
       }
       return counted === 0 ? tally : { ...tally, emptied: (tally.emptied ?? 0) + counted };
     },
@@ -851,7 +847,7 @@ function course(chronicle: Chronicle, steps: readonly ((left: Chronicle) => Sequ
 
 /** One change where a step moved its row, and nothing where it left the chronicle as it stood. */
 function moved(name: 'drawn' | 'shuffled', before: Chronicle, after: Chronicle): Landed {
-  return after === before ? unchanged(before) : landedAs(change(name, after));
+  return after === before ? unchanged(before) : landedAs(change(name, after, before));
 }
 
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
@@ -959,10 +955,10 @@ function openedUnlessDealt(catalogue: Catalogue, chronicle: Chronicle): Sequence
 }
 
 function ticked(chronicle: Chronicle): Sequence<Group> {
-  let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }));
+  let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }, chronicle));
   if (onSettlePhase(chronicle) && chronicle.hand.length > 0) {
     tick = followed(tick, (left) =>
-      landedAs(changeFrom('banished', everyPlace(left.hand), { ...left, hand: [] })),
+      landedAs(changeFrom('banished', everyPlace(left.hand), { ...left, hand: [] }, left)),
     );
   }
   for (const unit of chronicle.units) {
@@ -977,12 +973,17 @@ function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
     return unchanged(chronicle);
   }
   return landedAs(
-    changeOn('refreshed', unit.tile, {
-      ...chronicle,
-      units: chronicle.units.map((other) =>
-        other.id === unit.id ? refreshedAction(refreshedMovePoints(other)) : other,
-      ),
-    }),
+    changeOn(
+      'refreshed',
+      unit.tile,
+      {
+        ...chronicle,
+        units: chronicle.units.map((other) =>
+          other.id === unit.id ? refreshedAction(refreshedMovePoints(other)) : other,
+        ),
+      },
+      chronicle,
+    ),
   );
 }
 
@@ -997,7 +998,7 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence 
   const id = offered(catalogue, deal)[at];
   if (id === undefined) return refused(chronicle);
 
-  const taken = landedAs(change('taken', { ...chronicle, deals: waiting }));
+  const taken = landedAs(change('taken', { ...chronicle, deals: waiting }, chronicle));
   switch (deal.of) {
     case 'event': {
       if (!playable(answerRefusal(catalogue, chronicle, deal.event, id))) {
@@ -1034,7 +1035,11 @@ function drawn(chronicle: Chronicle): Landed {
 
 /** The capstone passed: the chronicle records the turn it ended on, and ends there. */
 function victory(chronicle: Chronicle): Change {
-  return change('ended', { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } });
+  return change(
+    'ended',
+    { ...chronicle, ending: { outcome: 'victory', turn: chronicle.turn } },
+    chronicle,
+  );
 }
 
 export function refusalOf(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Refusal {
@@ -1104,19 +1109,21 @@ function playedAway(catalogue: Catalogue, chronicle: Chronicle, index: number): 
   const lying = lyingAs(catalogue, chronicle.hand[index]);
   switch (goesTo(cardOf(catalogue, lying.id))) {
     case 'discard-pile':
-      return changeFrom('discarded', [index], {
-        ...chronicle,
-        hand,
-        discardPile: [...chronicle.discardPile, lying],
-      });
+      return changeFrom(
+        'discarded',
+        [index],
+        { ...chronicle, hand, discardPile: [...chronicle.discardPile, lying] },
+        chronicle,
+      );
     case 'exhaust-pile':
-      return changeFrom('exhausted', [index], {
-        ...chronicle,
-        hand,
-        exhaustPile: [...chronicle.exhaustPile, lying],
-      });
+      return changeFrom(
+        'exhausted',
+        [index],
+        { ...chronicle, hand, exhaustPile: [...chronicle.exhaustPile, lying] },
+        chronicle,
+      );
     case 'nowhere':
-      return changeFrom('banished', [index], { ...chronicle, hand });
+      return changeFrom('banished', [index], { ...chronicle, hand }, chronicle);
   }
 }
 
@@ -1239,6 +1246,7 @@ function crossed(chronicle: Chronicle, unit: Unit, landing: Landing): Landed {
       name: 'move',
       from: unit.tile,
       to: landing.tile,
+      before: left,
       chronicle: {
         ...left,
         units: left.units.map((other) =>
@@ -1402,12 +1410,17 @@ function landingOrder(city: CityFaction | undefined): number {
 /** Whether the unit carries a prepare, set as named: the one `prepare` change. */
 function carriedPrepare(chronicle: Chronicle, preparing: Unit, prepared: boolean): Landed {
   return landedAs(
-    changeOn('prepare', preparing.tile, {
-      ...chronicle,
-      units: chronicle.units.map((unit) =>
-        unit.id === preparing.id ? withPrepare(unit, prepared) : unit,
-      ),
-    }),
+    changeOn(
+      'prepare',
+      preparing.tile,
+      {
+        ...chronicle,
+        units: chronicle.units.map((unit) =>
+          unit.id === preparing.id ? withPrepare(unit, prepared) : unit,
+        ),
+      },
+      chronicle,
+    ),
   );
 }
 
@@ -1481,7 +1494,7 @@ function scriptedActs(
           !canAttack(acting, target, away, relationsOf(standing)) ||
           !inOwnSight(catalogue, standing.tiles, acting, target.tile)
         ) {
-          return landedAs(change('runtime-error', standing));
+          return landedAs(change('runtime-error', standing, standing));
         }
         return followed<Stage>(blow(catalogue, unchanged(standing), acting, target), acts);
       }
@@ -1506,7 +1519,7 @@ function prepared(catalogue: Catalogue, chronicle: Chronicle, unit: Unit): Lande
       pillaged(catalogue, chronicle, tile) !== undefined
     )
   ) {
-    return landedAs(change('runtime-error', chronicle));
+    return landedAs(change('runtime-error', chronicle, chronicle));
   }
   return followed(actionSpent(chronicle, unit.tile), (left) => carriedPrepare(left, unit, true));
 }
@@ -1524,7 +1537,7 @@ function scriptedStepped(
   const stepping = unitOf(chronicle.units, id);
   const move = stepping === undefined ? undefined : stepMove(catalogue, chronicle, stepping, to);
   if (stepping === undefined || move === undefined) {
-    return landedAs(change('runtime-error', chronicle));
+    return landedAs(change('runtime-error', chronicle, chronicle));
   }
   return steppedOnto(chronicle, stepping, to, !stepping.embarked, move);
 }
@@ -1590,10 +1603,14 @@ function captured(
           (left) => fallenWith(left, takes),
           (left) =>
             landedAs(
-              change('dealt', {
-                ...left,
-                deals: [...left.deals, { of: 'capture', building, rewards }],
-              }),
+              change(
+                'dealt',
+                {
+                  ...left,
+                  deals: [...left.deals, { of: 'capture', building, rewards }],
+                },
+                left,
+              ),
             ),
         ]),
       );
@@ -1644,14 +1661,19 @@ function capturedByTheEnemies(
 /** The enemy made the camp's on the tile it stands on, under the script named: the one `camp-joined`. */
 function campJoined(chronicle: Chronicle, joining: Unit, script: string): Landed {
   return landedAs(
-    changeOn('camp-joined', joining.tile, {
-      ...chronicle,
-      units: chronicle.units.map((unit) =>
-        unit.id === joining.id && unit.faction === 'enemy'
-          ? { ...unit, script, camp: joining.tile }
-          : unit,
-      ),
-    }),
+    changeOn(
+      'camp-joined',
+      joining.tile,
+      {
+        ...chronicle,
+        units: chronicle.units.map((unit) =>
+          unit.id === joining.id && unit.faction === 'enemy'
+            ? { ...unit, script, camp: joining.tile }
+            : unit,
+        ),
+      },
+      chronicle,
+    ),
   );
 }
 
@@ -1665,7 +1687,7 @@ function fallenWith(chronicle: Chronicle, takes: Captured): Landed {
     case 'site':
       return unchanged(chronicle);
     case 'neutral-city':
-      return landedAs(change('neutral-fallen', { ...chronicle, neutral: undefined }));
+      return landedAs(change('neutral-fallen', { ...chronicle, neutral: undefined }, chronicle));
   }
 }
 
