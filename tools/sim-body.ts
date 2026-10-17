@@ -124,8 +124,8 @@ function chronicleOf(
   turnCap: number,
 ): { readonly walked: Walked; readonly ms: number } {
   const launch = Date.now();
-  const { chronicle } = launchedFromCampaign(catalogue, campaign, choices, seed);
-  const walked = playedBy(catalogue, PERSONAS[persona], chronicle, turnCap);
+  const launched = launchedFromCampaign(catalogue, campaign, choices, seed);
+  const walked = playedBy(catalogue, PERSONAS[persona], launched, turnCap);
   return { walked, ms: Date.now() - launch };
 }
 

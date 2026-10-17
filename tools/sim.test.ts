@@ -24,6 +24,7 @@ import {
 } from '../src/rules/fixtures';
 import { neighbours } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
+import { unchanged } from '../src/rules/stages';
 import { PERSONAS } from './personas';
 import { simulated } from './sim-body';
 import { type Persona, playedBy } from './sim-driver';
@@ -52,8 +53,8 @@ test('the idle walks each seed of the cell to the chronicle’s ending, one row 
 
   expect(rows.map(({ ms, ...row }) => row)).toEqual(
     [1, 2].map((seed) => {
-      const { chronicle } = launchedFromCampaign(CATALOGUE, campaign, choices, seed);
-      const { ending } = playedBy(CATALOGUE, PERSONAS.idle, chronicle, 60).chronicle;
+      const launched = launchedFromCampaign(CATALOGUE, campaign, choices, seed);
+      const { ending } = playedBy(CATALOGUE, PERSONAS.idle, launched, 60).chronicle;
       if (ending === undefined) throw new Error(`the idle brings seed ${seed} to no ending`);
       return {
         age: AGE,
@@ -86,7 +87,7 @@ test('a cell learns the victory of every age before its own and the technology t
 
 test('a chronicle standing on the turn cap’s turn is stopped there, the turns before it played', () => {
   const [row] = rowsOf(printed(['--seeds', '1', '--turns', '2']));
-  const { end, landed } = playedBy(CATALOGUE, PERSONAS.idle, cityOf(['urban']), 1);
+  const { end, landed } = playedBy(CATALOGUE, PERSONAS.idle, unchanged(cityOf(['urban'])), 1);
 
   expect([row.ending, row.cause, row.turn]).toEqual(['stopped', 'turn-cap', '2']);
   expect(end).toEqual({ outcome: 'stopped', cause: 'turn-cap', turn: 1 });
@@ -109,7 +110,7 @@ test('a hundred commands landed in one turn stop the chronicle on the hundredth'
     { sentence: 'End the turn', command: () => ({ type: 'end-turn' }) },
   ];
   const city = cityOf(['urban', 'plain', 'plain'], { population: 2, assigned: [CITY, worked] });
-  const { end, landed } = playedBy(CATALOGUE, shuffling, city, 60);
+  const { end, landed } = playedBy(CATALOGUE, shuffling, unchanged(city), 60);
 
   expect(end).toEqual({ outcome: 'stopped', cause: 'command-cap', turn: city.turn });
   expect(landed).toHaveLength(100);
@@ -117,16 +118,16 @@ test('a hundred commands landed in one turn stop the chronicle on the hundredth'
 
 test('a decision where every gambit’s command is dropped stops the chronicle as stuck', () => {
   const ending: Persona = [{ sentence: 'End the turn', command: () => ({ type: 'end-turn' }) }];
-  const { chronicle } = launchedFromCampaign(
+  const launched = launchedFromCampaign(
     CATALOGUE,
     freshCampaign(CATALOGUE),
     { age: AGE, region: REGION, civilization: CIVILIZATION_ID },
     1,
   );
-  const walked = playedBy(CATALOGUE, ending, chronicle, 60);
+  const walked = playedBy(CATALOGUE, ending, launched, 60);
 
   expect(walked.end).toEqual({ outcome: 'stopped', cause: 'stuck', turn: 0 });
-  expect(walked.chronicle).toBe(chronicle);
+  expect(walked.chronicle).toBe(launched.chronicle);
 });
 
 test('a command whose stages hold a runtime error stops the chronicle on the one it left, naming the group it happened during', () => {
@@ -136,7 +137,7 @@ test('a command whose stages hold a runtime error stops the chronicle on the one
     drawPile: fullDraw(),
     units: neighbours(CITY).map((tile) => standing('player', tile)),
   });
-  const walked = playedBy(CATALOGUE, PERSONAS.idle, raided, 60);
+  const walked = playedBy(CATALOGUE, PERSONAS.idle, unchanged(raided), 60);
 
   expect(walked.end).toEqual({
     outcome: 'stopped',

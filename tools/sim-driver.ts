@@ -1,6 +1,6 @@
 import type { Catalogue } from '../src/rules/catalogue';
 import { apply, type Command, outcome } from '../src/rules/chronicle';
-import { type Group, runtimeErrors, type Stage } from '../src/rules/stages';
+import { type Group, runtimeErrors, type Sequence, type Stage } from '../src/rules/stages';
 import type { Chronicle, Ending } from '../src/rules/state';
 
 /** One condition and one command, and the sentence the persona is printed as. */
@@ -42,18 +42,18 @@ export type Walked = {
 };
 
 /**
- * The chronicle walked by the persona from where it stands to its ending, or to its stop: on the turn
- * cap's turn, at the command cap landed in one turn, on a `runtime-error` among a command's stages, and
- * on a decision where no gambit's command lands.
+ * The chronicle the launch left walked by the persona to its ending, or to its stop: on the turn cap's
+ * turn, at the command cap landed in one turn, on a `runtime-error` among the launch's stages or a
+ * command's, and on a decision where no gambit's command lands.
  */
 export function playedBy(
   catalogue: Catalogue,
   persona: Persona,
-  start: Chronicle,
+  launch: Sequence,
   turnCap: number,
 ): Walked {
   const landed: LandedCommand[] = [];
-  let chronicle = start;
+  let chronicle = launch.chronicle;
   let thisTurn = 0;
   const stopped = (cause: StopCause, during?: Group['name']): Walked => ({
     chronicle,
@@ -61,6 +61,8 @@ export function playedBy(
     end: { outcome: 'stopped', cause, turn: chronicle.turn, during },
   });
 
+  const [raised] = runtimeErrors(launch.stages);
+  if (raised !== undefined) return stopped('runtime-error', raised.during);
   for (;;) {
     if (chronicle.ending !== undefined) return { chronicle, landed, end: chronicle.ending };
     if (chronicle.turn >= turnCap) return stopped('turn-cap');
