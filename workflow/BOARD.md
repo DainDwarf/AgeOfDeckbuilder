@@ -6,8 +6,17 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made; its shape is settled in [`board/simulator.md`](board/simulator.md).
 - **The stand-ins' doors** — the fixture content that opens a door no real content walks through — the recall, the road, the siege capstone with its second script and its span, and whatever else the search finds — reassessed one by one: the door kept for content the design foresees, or the mechanism and its fixture cut together.
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play, the findings kept in [`BALANCE.md`](BALANCE.md) first among them; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; a trial of where military comes from: military taken off the Hearth's yield and flint giving it in place of production.
 
 ## Lines
+
+- **The driver and the idle persona** — `npm run sim` loads through Vite's module runner as the forge does, takes a cell, walks each chronicle gambit by gambit under a turn cap and a cap on the commands a turn takes, plays the idle persona, prints a persona's sentences, traces one seed, and writes a skeleton row — the cell, the seed, the ending and its turn, the time; both caps' numbers are its intake's, the turn cap a flag defaulting near 60.
+- **The row** — every column [`../docs/SIMULATOR.md`](../docs/SIMULATOR.md) foresees, the fixed turns the stocks are read at, and one column answering each entry of [`BALANCE.md`](BALANCE.md).
+- **The fold** — the second verb: tables from one file of rows, and two files compared seed by seed where their cells pair.
+- **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count.
+- **The deck's edits** — copies bought and cards added or removed in the cell's campaign, by flags or a deck file, through the door the forge builds its campaign by, so the forge gains them too.
+- **The builder** — the persona that works the land and the border; its gambits are served as sentences to strike at its intake.
+- **The warlord** — the persona that fields units and goes for the camps; its gambits are served at its intake, the floor of population a unit card leaves among them.
+- **The profile** — a builder's hundred seeds profiled and what the profile justifies landed: the reachability cache, the end of turn's cost per `apply`, the split of a sweep across processes; a rules change among them is its own commit under its own review.
+- **The sweep** — a knob sweep over the cell's own parameters, one cell per value, and the ablation of one gambit at a time, one cell per gambit.

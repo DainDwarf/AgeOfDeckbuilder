@@ -12,6 +12,7 @@ What the game **is**: the standing design. Not a journal of how it came to be �
 - [`ages/`](ages/NOMADIC.md) — one content page per age, under the design pages' legend: what the age is made of, with no number on it. [`ages/NOMADIC.md`](ages/NOMADIC.md) is the first, [`ages/STONE.md`](ages/STONE.md) the second.
 - [`GLOSSARY.md`](GLOSSARY.md) — the closed vocabulary of gameplay terms and the synonyms each one forbids.
 - [`PHASER.md`](PHASER.md) — the platform: what Phaser 4.2.1 does that its bundled pages do not say, each fact with its source in the pinned package.
+- [`SIMULATOR.md`](SIMULATOR.md) — the headless simulator: what it plays, what a persona may read, and what its numbers can say.
 - [`ASSET-SOURCES.md`](ASSET-SOURCES.md) — where free art, sound, music and fonts come from, with each site's licence terms. Browsed for creativity fuel; used when the look is built.
 
 Domain pages (standing knowledge of the genre, the platform, the audience — each claim naming its source) are added here when there is a domain to describe.

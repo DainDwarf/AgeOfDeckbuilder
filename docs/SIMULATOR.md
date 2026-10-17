@@ -1,0 +1,31 @@
+# Simulator
+
+> The headless simulator: the tool that plays chronicles through the rules from the terminal and reports numbers. A tool page beside [`PHASER.md`](PHASER.md), not a design page: the game it plays is [`DESIGN.md`](DESIGN.md)'s, and the rules it plays by are [`CHRONICLE.md`](CHRONICLE.md)'s.
+
+## What it is
+
+A consumer of the rules through their public API: `apply` in a loop keeping the last stage's chronicle and reading the flow for what happened; no hook, field or flag lands in the rules or the content for it. It is a CLI under `tools/`, `npm run sim`, and its tests are Vitest on the fixture catalogue. It runs only when asked and reports numbers, never a diagnosis: a row says what happened, and the reading of why is the user's. No measurement runs on CI and none is committed.
+
+It is not a player made of search: no within-turn search, no lookahead over turns, no value model over the map, no oracle of any kind. Why: a turn offers more orderings than a search can keep, and a value model is blind to whatever it does not name.
+
+## The persona and the gambit
+
+A **persona** is a stance a player could hold, written as an ordered list of **gambits**. A gambit is one condition and one command: read top down on every decision, the first gambit whose condition holds answers the command, the driver sends it through `apply`, reads the chronicle it leaves, and starts again from the top; the persona's last gambit ends the turn. A command refused or changing nothing is dropped and the walk goes on. A turn caps the commands it takes, and a chronicle runs to its ending or to a turn cap, since the schedule has no last turn.
+
+A gambit reads the chronicle the way the screen does and never opens a closure: it asks the rules' own question functions, the ones the screen asks, or plays a candidate command on the chronicle and reads the one it leaves, the game being pure. A trial whose chronicle carries another generator than the one it started on drew from it, which the player could not see, and the gambit reads nothing of that trial. A gambit weighs candidates one ply deep and no further. The one currency a gambit may sum is a tile's yield, every resource together, as the neutral's script sums it. A reserve a gambit keeps is derived, never a constant: the dearest a card in hand or an answer the region's schedule could deal asks of that resource on this chronicle.
+
+No gambit names a card, a building, an event or a capstone: it reads kinds, aims, costs, blocks, yields and counts. A persona plays with the player's knowledge, the charted tiles and what is in sight, and reads the whole map nowhere. Every choice a gambit makes is deterministic on the seed: ties fall in tile order, and a gambit that draws draws from a generator seeded from the chronicle's seed, never from the chronicle's own.
+
+Personas are lists in code, and the simulator prints a persona as its sentences. A second stance is a second persona, never a knob that makes the first optimal: where a persona is plainly wrong in one spot the trace shows it, and whether that is the persona's defect or the content's lesson is the user's reading.
+
+One gambit sits on top of any persona when asked, the **goal**: among the commands the persona would take, prefer the one that raises a named technology's achievement count. It answers whether a player going for a goal reaches it, and on which turn.
+
+## The cell, the row, the fold
+
+A **cell** is an age, a region, a campaign and the civilization launched on it, a persona and a seed count. The campaign is built through the rules as the forge builds one: a technology learned with its needs, copies bought and the deck edited. Seeds pair across cells: seed _n_ is the same map and timeline under every persona and deck, so a comparison between cells is a per-seed diff.
+
+One CSV **row** per chronicle, flushed as it lands: the cell and the seed, the ending and its turn, the city's stocks and population over the turns, the cards played and never played, every deal with the answer taken, every achievement's count and the turn it was reached, the capstone drawn, the enemies killed, and the time the chronicle took. A separate **fold** turns a file of rows into tables and compares two files seed by seed where their cells pair. One seed replays with a **trace** naming the gambit behind every command. A **sweep** emits one cell per value of a knob of the cell's own, and an **ablation** one cell per gambit switched off.
+
+## What its numbers say
+
+It separates decks that differ in kind and reports how a deck fares as distributions of endings, failure modes and goals reached. It does not rank decks that differ by a copy or two: at a hundred seeds a rate carries about ten points of binomial error, the map and the timeline vary with the seed, and a persona plays a deck its own way.
