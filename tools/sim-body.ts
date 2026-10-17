@@ -106,7 +106,7 @@ export function simulated(
   for (let seed = 1; seed <= seeds; seed++) {
     const { launch, driven, ms } = chronicleOf(catalogue, cell, seed, turnCap);
     const columns = [
-      ...cellColumns(cell, seed, driven.end, ms),
+      ...cellColumns(cell, turnCap, seed, driven.end, ms),
       ...chronicleColumns(catalogue, cell.campaign, launch, driven),
     ];
     if (seed === 1) write(columns.map(([name]) => name).join(','));
@@ -158,6 +158,7 @@ function chronicleOf(
 
 function cellColumns(
   { choices, campaign, persona }: Cell,
+  turnCap: number,
   seed: number,
   end: End,
   ms: number,
@@ -168,6 +169,7 @@ function cellColumns(
     ['civilization', choices.civilization],
     ['learned', campaign.technologies.join(' ')],
     ['persona', persona],
+    ['turn-cap', turnCap],
     ['seed', seed],
     ['ending', end.outcome],
     ['cause', causeOf(end) ?? ''],
@@ -200,13 +202,14 @@ export function chronicleColumns(
       }
     }
   }
-  const deals = landed.flatMap(({ turn, command, stages: resolved }) =>
+  const deals = landed.flatMap(({ turn, command, stages: resolved }): [string, number][] =>
     command.type === 'take'
-      ? [`${turn}:${dealTaken(catalogue, resolved[0].before.deals[0], command.at)}`]
+      ? [[dealTaken(catalogue, resolved[0].before.deals[0], command.at), turn]]
       : [],
   );
-  const unplayed = new Set(cardsInPiles(chronicle).map(({ id }) => id));
-  for (const card of played) unplayed.delete(card);
+  const unplayed = cardsInPiles(chronicle)
+    .map(({ id }) => id)
+    .filter((id) => !played.includes(id));
 
   return [
     ['influence', influencePaid(catalogue, campaign, chronicle, end)],
@@ -219,8 +222,8 @@ export function chronicleColumns(
     ...FACTIONS.map((faction): Column => [`units:${faction}`, byKind(chronicle.units, faction)]),
     ...FACTIONS.map((faction): Column => [`killed:${faction}`, byKind(killed, faction)]),
     ['played', counted(played)],
-    ['unplayed', [...unplayed].join(' ')],
-    ['deals', deals.join(' ')],
+    ['unplayed', counted(unplayed)],
+    ['deals', listingOf(deals)],
     ...chronicle.achievements.flatMap((held): Column[] => [
       [`count:${held.id}`, countOn(catalogue, chronicle, held)],
       [`reached:${held.id}`, reachedOn.get(held.id) ?? ''],
@@ -271,7 +274,12 @@ function byKind(units: readonly Unit[], faction: Faction): string {
 function counted(names: readonly string[]): string {
   const counts = new Map<string, number>();
   for (const name of names) counts.set(name, (counts.get(name) ?? 0) + 1);
-  return [...counts].map(([name, count]) => `${name}:${count}`).join(' ');
+  return listingOf(counts);
+}
+
+/** Each name with its number: `name:2 other:1`. */
+function listingOf(entries: Iterable<readonly [name: string, number: number]>): string {
+  return [...entries].map(([name, number]) => `${name}:${number}`).join(' ');
 }
 
 /** The defeat's cause or the stop's, and nothing for a victory. */

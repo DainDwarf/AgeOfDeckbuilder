@@ -86,33 +86,35 @@ test('the idle drives each seed of the cell to the chronicle’s ending, one row
   const rows = rowsOf(printed(['--seeds', '2']));
   const campaign = freshCampaign(CATALOGUE);
   const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
+  const turnCap = 60;
   const drives = [1, 2].map((seed) => ({
     seed,
     ...playedBy(
       CATALOGUE,
       PERSONAS.idle,
       launchedFromCampaign(CATALOGUE, campaign, choices, seed),
-      60,
+      turnCap,
     ),
   }));
   const listing = (column: string): boolean =>
-    ['ms', 'played', 'deals'].includes(column) || /^(units|killed|reached):/.test(column);
+    ['ms', 'played', 'unplayed', 'deals'].includes(column) ||
+    /^(units|killed|reached):/.test(column);
 
   expect(
     rows.map((row) =>
       Object.fromEntries(Object.entries(row).filter(([column]) => !listing(column))),
     ),
   ).toEqual(
-    drives.map(({ seed, chronicle, landed }) => {
+    drives.map(({ seed, chronicle }) => {
       const { ending } = chronicle;
       if (ending === undefined) throw new Error(`the idle brings seed ${seed} to no ending`);
-      const played = cardsPlayed(landed);
       return {
         age: AGE,
         region: REGION,
         civilization: CIVILIZATION_ID,
         learned: '',
         persona: 'idle',
+        'turn-cap': `${turnCap}`,
         seed: `${seed}`,
         ending: ending.outcome,
         cause: 'cause' in ending ? ending.cause : '',
@@ -126,9 +128,6 @@ test('the idle drives each seed of the cell to the chronicle’s ending, one row
         population: `${chronicle.population}`,
         held: `${chronicle.held.length}`,
         'neutral-population': `${chronicle.neutral?.population ?? ''}`,
-        unplayed: [...new Set(cardsInPiles(chronicle).map(({ id }) => id))]
-          .filter((id) => !played.includes(id))
-          .join(' '),
         ...Object.fromEntries(
           chronicle.achievements.map((held) => [
             `count:${held.id}`,
@@ -149,7 +148,14 @@ test('the idle drives each seed of the cell to the chronicle’s ending, one row
           .sort(),
       );
     }
-    expect(namesListed(row.played)).toEqual(cardsPlayed(landed).sort());
+    const played = cardsPlayed(landed);
+    expect(namesListed(row.played)).toEqual([...played].sort());
+    expect(namesListed(row.unplayed)).toEqual(
+      cardsInPiles(chronicle)
+        .map(({ id }) => id)
+        .filter((id) => !played.includes(id))
+        .sort(),
+    );
     expect(row.ms).toMatch(/^\d+$/);
   }
 });
@@ -185,8 +191,11 @@ test('an achievement reached during an end of turn, before the turn moves, reads
 
 test('a unit killed is read under its faction by kind, and a deal taken with the entry taken and the turn it was taken on', () => {
   const enemy = standing('enemy', UPHEAVAL, { health: AMBUSH }, 0, 0);
+  const event = 'PH_Upheaval';
+  const answer = 'PH_Ambush';
+  const turn = 2;
   const ambushed = cityOf(['urban', 'plain'], {
-    ...dealing({ turn: 2, event: 'PH_Upheaval' }),
+    ...dealing({ turn, event }),
     units: [enemy],
   });
   const ambushing: Persona = [
@@ -195,7 +204,7 @@ test('a unit killed is read under its faction by kind, and a deal taken with the
       command: (catalogue, chronicle) => {
         const [deal] = chronicle.deals;
         if (deal === undefined) return undefined;
-        return { type: 'take', at: offered(catalogue, deal).indexOf('PH_Ambush') };
+        return { type: 'take', at: offered(catalogue, deal).indexOf(answer) };
       },
     },
     { sentence: 'End the turn', command: () => ({ type: 'end-turn' }) },
@@ -215,7 +224,7 @@ test('a unit killed is read under its faction by kind, and a deal taken with the
     `${enemy.stats.type}:1`,
     '',
   ]);
-  expect(columns.deals).toBe('2:PH_Upheaval>PH_Ambush');
+  expect(columns.deals).toBe(`${event}>${answer}:${turn}`);
   expect(columns.influence).toBe('');
 });
 
@@ -238,7 +247,7 @@ test('a capture’s deal taken is read with the building captured, the reward ta
   );
   const [first] = Object.keys(CAMP.rewards);
 
-  expect(columns.deals).toBe(`${capturing.turn}:${CAMP.building}>${first}`);
+  expect(columns.deals).toBe(`${CAMP.building}>${first}:${capturing.turn}`);
 });
 
 test('a cell learns the victory of every age before its own and the technology that unlocks its region, then the technologies named; its region is the age’s first reached without it unless named', () => {
@@ -258,7 +267,12 @@ test('a chronicle standing on the turn cap’s turn is stopped there, the turns 
   const [row] = rowsOf(printed(['--seeds', '1', '--turns', '2']));
   const { end, landed } = playedBy(CATALOGUE, PERSONAS.idle, unchanged(cityOf(['urban'])), 1);
 
-  expect([row.ending, row.cause, row.turn]).toEqual(['stopped', 'turn-cap', '2']);
+  expect([row['turn-cap'], row.ending, row.cause, row.turn]).toEqual([
+    '2',
+    'stopped',
+    'turn-cap',
+    '2',
+  ]);
   expect(end).toEqual({ outcome: 'stopped', cause: 'turn-cap', turn: 1 });
   expect(landed).toEqual([]);
 });
@@ -330,7 +344,7 @@ test('the simulator run on the game’s content writes the header and one row pe
     expect(header).toMatch(
       new RegExp(
         [
-          '^age,region,civilization,learned,persona,seed,ending,cause,turn,ms,',
+          '^age,region,civilization,learned,persona,turn-cap,seed,ending,cause,turn,ms,',
           'influence,capstone,capstone-turn,',
           'food,production,military,money,science,culture,population,held,neutral-population,',
           'units:player,units:enemy,units:neutral,killed:player,killed:enemy,killed:neutral,',

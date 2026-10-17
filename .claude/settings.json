@@ -22,6 +22,7 @@
       "PowerShell(npx tsc*)",
       "PowerShell(npx biome*)",
       "PowerShell(node *)",
+      "PowerShell(duckdb *)",
       "PowerShell(Invoke-WebRequest http://localhost:5173*)",
       "PowerShell(Invoke-WebRequest -Uri http://localhost:5173*)",
       "Skill(todo)",
