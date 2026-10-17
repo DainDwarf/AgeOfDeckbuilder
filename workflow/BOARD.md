@@ -11,7 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The deck's edits** — copies bought and cards added or removed in the cell's campaign, by flags or a deck file, through the door the forge builds its campaign by, so the forge gains them too; the `sim` skill gains them.
+- **The deck flag** — `--deck` on `npm run sim` alone: a JSON, inline or in a file, holding only the deck a chronicle's launch needs, played in place of the campaign's; the `sim` skill gains it.
 - **The builder** — the persona that works the land and the border; its gambits are served as sentences to strike at its intake.
 - **The warlord** — the persona that fields units and goes for the camps; its gambits are served at its intake, the floor of population a unit card leaves among them.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
