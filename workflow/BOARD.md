@@ -11,6 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The cell beside the rows** — the run's parameters, the age, the region, the civilization, the technologies learned, the persona and the turn cap, leave the row, which keeps the seed and what the chronicle did, and are written once where a file found later reads its cell whole, the deck among them, which no file name can carry.
 - **The deck flag** — `--deck` on `npm run sim` alone: a JSON, inline or in a file, holding only the deck a chronicle's launch needs, played in place of the campaign's; the `sim` skill gains it.
 - **The builder** — the persona that works the land and the border; its gambits are served as sentences to strike at its intake.
 - **The warlord** — the persona that fields units and goes for the camps; its gambits are served at its intake, the floor of population a unit card leaves among them.
