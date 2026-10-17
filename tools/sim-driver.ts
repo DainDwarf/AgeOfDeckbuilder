@@ -16,7 +16,7 @@ export type Persona = readonly Gambit[];
 /** What stops a chronicle short of its ending. */
 export type StopCause = 'turn-cap' | 'command-cap' | 'runtime-error' | 'stuck';
 
-/** How a walk came to its end, and the turn it came on: the chronicle's ending, or its stop. */
+/** How a chronicle driven came to its end, and the turn it came on: the chronicle's ending, or its stop. */
 export type End =
   | Ending
   | {
@@ -35,15 +35,15 @@ export type LandedCommand = {
   readonly stages: readonly Stage[];
 };
 
-/** A chronicle walked: the chronicle it was left on, how it came to its end, and every command landed. */
-export type Walked = {
+/** A chronicle driven: the chronicle it was left on, how it came to its end, and every command landed. */
+export type Driven = {
   readonly chronicle: Chronicle;
   readonly end: End;
   readonly landed: readonly LandedCommand[];
 };
 
 /**
- * The chronicle the launch left walked by the persona to its ending, or to its stop: on the turn cap's
+ * The chronicle the launch left driven by the persona to its ending, or to its stop: on the turn cap's
  * turn, at the command cap landed in one turn, on a `runtime-error` among the launch's stages or a
  * command's, and on a decision where no gambit's command lands.
  */
@@ -52,11 +52,11 @@ export function playedBy(
   persona: Persona,
   launch: Sequence,
   turnCap: number,
-): Walked {
+): Driven {
   const landed: LandedCommand[] = [];
   let chronicle = launch.chronicle;
   let thisTurn = 0;
-  const stopped = (cause: StopCause, during?: Group['name']): Walked => ({
+  const stopped = (cause: StopCause, during?: Group['name']): Driven => ({
     chronicle,
     landed,
     end: { outcome: 'stopped', cause, turn: chronicle.turn, during },

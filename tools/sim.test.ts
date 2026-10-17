@@ -12,12 +12,14 @@ import {
   AGE,
   AMBUSH,
   achieved,
+  CAMP,
   CATALOGUE,
   CENSUS,
   CITY,
   CIVILIZATION_ID,
   CROWD,
   CROWD_NEED,
+  camped,
   cityOf,
   dealing,
   FEAST,
@@ -25,6 +27,7 @@ import {
   fullDraw,
   GRANARY,
   HOARD,
+  NO_GROWTH,
   QUIET,
   REGION,
   reaching,
@@ -41,7 +44,7 @@ import { cardsInPiles } from '../src/rules/state';
 import type { Faction } from '../src/rules/units';
 import { PERSONAS } from './personas';
 import { chronicleColumns, simulated } from './sim-body';
-import { type Persona, playedBy, type Walked } from './sim-driver';
+import { type Driven, type Persona, playedBy } from './sim-driver';
 
 /** What the simulator prints on the fixture's content, or on the content handed in. */
 function printed(args: readonly string[], catalogue = CATALOGUE): string[] {
@@ -73,17 +76,17 @@ function namesListed(cell: string): string[] {
 }
 
 /** The cards the play commands played, by id: each the card of the hand it named when it was sent. */
-function cardsPlayed(landed: Walked['landed']): string[] {
+function cardsPlayed(landed: Driven['landed']): string[] {
   return landed.flatMap(({ command, stages }) =>
     command.type === 'play' ? [stages[0].before.hand[command.index].id] : [],
   );
 }
 
-test('the idle walks each seed of the cell to the chronicle’s ending, one row per seed, the row reading the cell, the seed, the ending with its cause and its turn, what the ending paid, the chronicle it left and what its commands did on the way', () => {
+test('the idle drives each seed of the cell to the chronicle’s ending, one row per seed, the row reading the cell, the seed, the ending with its cause and its turn, what the ending paid, the chronicle it left and what its commands did on the way', () => {
   const rows = rowsOf(printed(['--seeds', '2']));
   const campaign = freshCampaign(CATALOGUE);
   const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
-  const walks = [1, 2].map((seed) => ({
+  const drives = [1, 2].map((seed) => ({
     seed,
     ...playedBy(
       CATALOGUE,
@@ -100,7 +103,7 @@ test('the idle walks each seed of the cell to the chronicle’s ending, one row 
       Object.fromEntries(Object.entries(row).filter(([column]) => !listing(column))),
     ),
   ).toEqual(
-    walks.map(({ seed, chronicle, landed }) => {
+    drives.map(({ seed, chronicle, landed }) => {
       const { ending } = chronicle;
       if (ending === undefined) throw new Error(`the idle brings seed ${seed} to no ending`);
       const played = cardsPlayed(landed);
@@ -136,7 +139,7 @@ test('the idle walks each seed of the cell to the chronicle’s ending, one row 
     }),
   );
   for (const [at, row] of rows.entries()) {
-    const { chronicle, landed } = walks[at];
+    const { chronicle, landed } = drives[at];
     const factions: Record<Faction, true> = { player: true, enemy: true, neutral: true };
     for (const faction of Object.keys(factions) as Faction[]) {
       expect(namesListed(row[`units:${faction}`])).toEqual(
@@ -171,12 +174,12 @@ test('an achievement reached during an end of turn, before the turn moves, reads
   const city = crowding(growthThreshold(crowding(0), 'player'));
   const ending: Persona = [{ sentence: 'End the turn', command: () => ({ type: 'end-turn' }) }];
   const launch = unchanged(city);
-  const walk = playedBy(CATALOGUE, ending, launch, city.turn + 1);
+  const driven = playedBy(CATALOGUE, ending, launch, city.turn + 1);
   const columns = Object.fromEntries(
-    chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, walk),
+    chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, driven),
   );
 
-  expect(walk.chronicle.turn).not.toBe(city.turn);
+  expect(driven.chronicle.turn).not.toBe(city.turn);
   expect(columns[`reached:${CROWD}`]).toBe(city.turn);
 });
 
@@ -214,6 +217,28 @@ test('a unit killed is read under its faction by kind, and a deal taken with the
   ]);
   expect(columns.deals).toBe('2:PH_Upheaval>PH_Ambush');
   expect(columns.influence).toBe('');
+});
+
+test('a capture’s deal taken is read with the building captured, the reward taken and the turn it was taken on', () => {
+  const camp = { q: 4, r: 0 };
+  const capturing = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: camped(field(4), [camp]),
+    drawPile: fullDraw(),
+    units: [standing('player', camp)],
+  });
+  const launch = unchanged(capturing);
+  const columns = Object.fromEntries(
+    chronicleColumns(
+      CATALOGUE,
+      freshCampaign(CATALOGUE),
+      launch,
+      playedBy(CATALOGUE, PERSONAS.idle, launch, capturing.turn + 1),
+    ),
+  );
+  const [first] = Object.keys(CAMP.rewards);
+
+  expect(columns.deals).toBe(`${capturing.turn}:${CAMP.building}>${first}`);
 });
 
 test('a cell learns the victory of every age before its own and the technology that unlocks its region, then the technologies named; its region is the age’s first reached without it unless named', () => {
@@ -268,10 +293,10 @@ test('a decision where every gambit’s command is dropped stops the chronicle a
     { age: AGE, region: REGION, civilization: CIVILIZATION_ID },
     1,
   );
-  const walked = playedBy(CATALOGUE, ending, launched, 60);
+  const driven = playedBy(CATALOGUE, ending, launched, 60);
 
-  expect(walked.end).toEqual({ outcome: 'stopped', cause: 'stuck', turn: 0 });
-  expect(walked.chronicle).toBe(launched.chronicle);
+  expect(driven.end).toEqual({ outcome: 'stopped', cause: 'stuck', turn: 0 });
+  expect(driven.chronicle).toBe(launched.chronicle);
 });
 
 test('a command whose stages hold a runtime error stops the chronicle on the one it left, naming the group it happened during', () => {
@@ -281,16 +306,16 @@ test('a command whose stages hold a runtime error stops the chronicle on the one
     drawPile: fullDraw(),
     units: neighbours(CITY).map((tile) => standing('player', tile)),
   });
-  const walked = playedBy(CATALOGUE, PERSONAS.idle, unchanged(raided), 60);
+  const driven = playedBy(CATALOGUE, PERSONAS.idle, unchanged(raided), 60);
 
-  expect(walked.end).toEqual({
+  expect(driven.end).toEqual({
     outcome: 'stopped',
     cause: 'runtime-error',
     turn: 2,
     during: 'answer',
   });
-  expect(walked.landed.map(({ command }) => command.type)).toEqual(['end-turn', 'take']);
-  expect(walked.chronicle.deals).toEqual([]);
+  expect(driven.landed.map(({ command }) => command.type)).toEqual(['end-turn', 'take']);
+  expect(driven.chronicle.deals).toEqual([]);
 });
 
 test('the simulator run on the game’s content writes the header and one row per seed, and its trace one line per command landed and one for the ending or the stop', () => {

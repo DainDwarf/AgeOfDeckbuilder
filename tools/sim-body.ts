@@ -20,7 +20,7 @@ import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, readFlags, stringFlag, wholeFlag } from './flags';
 import { learnedWithNeeds, technologiesReaching, technologyUnlocking } from './learned-with-needs';
 import { PERSONAS } from './personas';
-import { type End, playedBy, type Walked } from './sim-driver';
+import { type Driven, type End, playedBy } from './sim-driver';
 
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <name>] [--persona <name>]',
@@ -87,11 +87,11 @@ export function simulated(
   if (traced !== undefined) {
     if (out !== undefined)
       throw new Error(`--out beside --trace: the trace writes no row\n${USAGE}`);
-    const { walked } = chronicleOf(catalogue, cell, traced, turnCap);
-    for (const { turn, gambit, command } of walked.landed) {
+    const { driven } = chronicleOf(catalogue, cell, traced, turnCap);
+    for (const { turn, gambit, command } of driven.landed) {
       print(`turn ${turn} | ${gambit} | ${JSON.stringify(command)}`);
     }
-    print(`turn ${walked.end.turn} | ${endRead(walked.end)}`);
+    print(`turn ${driven.end.turn} | ${endRead(driven.end)}`);
     return;
   }
 
@@ -104,10 +104,10 @@ export function simulated(
         };
   if (path !== undefined) writeFileSync(path, '');
   for (let seed = 1; seed <= seeds; seed++) {
-    const { launch, walked, ms } = chronicleOf(catalogue, cell, seed, turnCap);
+    const { launch, driven, ms } = chronicleOf(catalogue, cell, seed, turnCap);
     const columns = [
-      ...cellColumns(cell, seed, walked.end, ms),
-      ...chronicleColumns(catalogue, cell.campaign, launch, walked),
+      ...cellColumns(cell, seed, driven.end, ms),
+      ...chronicleColumns(catalogue, cell.campaign, launch, driven),
     ];
     if (seed === 1) write(columns.map(([name]) => name).join(','));
     write(columns.map(([, value]) => value).join(','));
@@ -141,7 +141,7 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
 }
 
 /**
- * The seed's chronicle of the cell launched, then walked by its persona, and the whole milliseconds
+ * The seed's chronicle of the cell launched, then driven by its persona, and the whole milliseconds
  * it took.
  */
 function chronicleOf(
@@ -149,11 +149,11 @@ function chronicleOf(
   { choices, campaign, persona }: Cell,
   seed: number,
   turnCap: number,
-): { readonly launch: Sequence; readonly walked: Walked; readonly ms: number } {
+): { readonly launch: Sequence; readonly driven: Driven; readonly ms: number } {
   const started = Date.now();
   const launch = launchedFromCampaign(catalogue, campaign, choices, seed);
-  const walked = playedBy(catalogue, PERSONAS[persona], launch, turnCap);
-  return { launch, walked, ms: Date.now() - started };
+  const driven = playedBy(catalogue, PERSONAS[persona], launch, turnCap);
+  return { launch, driven, ms: Date.now() - started };
 }
 
 function cellColumns(
@@ -177,14 +177,14 @@ function cellColumns(
 }
 
 /**
- * The columns a row reads off a chronicle walked from its launch on the campaign: what its ending
+ * The columns a row reads off a chronicle driven from its launch on the campaign: what its ending
  * paid, the chronicle it was left on, and what the launch and every command landed did on the way.
  */
 export function chronicleColumns(
   catalogue: Catalogue,
   campaign: Campaign,
   launch: Sequence,
-  { chronicle, end, landed }: Walked,
+  { chronicle, end, landed }: Driven,
 ): Column[] {
   const stages = [...launch.stages, ...landed.flatMap((command) => command.stages)];
   const played = plays(stages).map(({ card }) => card);
