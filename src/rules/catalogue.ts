@@ -711,26 +711,8 @@ export function catalogued(content: Catalogue): Catalogue {
     if (becomes !== undefined) cardOf(content, becomes);
   }
   for (const [id, civilization] of Object.entries(content.civilizations)) {
-    const { city } = civilization;
-    const cityNames = groundNamed(buildingKind(content, city.building));
-    if (cityNames !== undefined) {
-      refuse(content, `the civilization ${id}'s city ${city.building} names ${cityNames}`);
-    }
-    if (city.sight < 0) refuse(content, `the civilization ${id}'s city sees ${city.sight}`);
-    if (city.idle < 0) {
-      refuse(content, `the civilization ${id}'s city opens with ${city.idle} idle`);
-    }
-    const sections = [
-      ['city', [city.card]],
-      ['settle', civilization.settle],
-      ['cards', civilization.cards],
-    ] as const;
-    for (const [section, cards] of sections) {
-      for (const card of cards) {
-        const misfit = misfitIn(content, section, card);
-        if (misfit !== undefined) refuse(content, `the civilization ${id} ${misfit}`);
-      }
-    }
+    const misfit = civilizationMisfit(content, civilization, `the civilization ${id}`);
+    if (misfit !== undefined) refuse(content, misfit);
   }
 
   const dealtBy = new Map<string, string>();
@@ -1378,6 +1360,35 @@ export function misfitIn(
     case 'settle':
       return kind === 'settle' ? undefined : `holds the ${kind} ${card} in its ${section} section`;
   }
+}
+
+/** What keeps a civilization out of the content, said of it under the name given, and nothing where it fits. */
+export function civilizationMisfit(
+  catalogue: Catalogue,
+  { city, settle, cards }: Civilization,
+  named: string,
+): string | undefined {
+  if (!Object.hasOwn(catalogue.buildings, city.building)) {
+    return `${named} names no building ${city.building}`;
+  }
+  const cityNames = groundNamed(buildingKind(catalogue, city.building));
+  if (cityNames !== undefined) return `${named}'s city ${city.building} names ${cityNames}`;
+  if (city.sight < 0) return `${named}'s city sees ${city.sight}`;
+  if (city.idle < 0) return `${named}'s city opens with ${city.idle} idle`;
+  const sections = [
+    ['city', [city.card]],
+    ['settle', settle],
+    ['cards', cards],
+  ] as const;
+  for (const [section, held] of sections) {
+    for (const card of held) {
+      const misfit = Object.hasOwn(catalogue.cards, card)
+        ? misfitIn(catalogue, section, card)
+        : `names no card ${card}`;
+      if (misfit !== undefined) return `${named} ${misfit}`;
+    }
+  }
+  return undefined;
 }
 
 /** The event an id names; an event the catalogue does not hold is refused. */

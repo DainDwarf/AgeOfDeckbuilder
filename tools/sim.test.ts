@@ -1,12 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from 'vitest';
 import { paidInto } from '../src/rules/campaign';
-import { ageOf, victoryTechnologyOf } from '../src/rules/catalogue';
-import { countOn, launchedFromCampaign } from '../src/rules/chronicle';
+import { ageOf, type Civilization, victoryTechnologyOf } from '../src/rules/catalogue';
+import { countOn, launched, launchedFromCampaign } from '../src/rules/chronicle';
 import { growthThreshold } from '../src/rules/city';
 import {
   AGE,
@@ -16,6 +16,7 @@ import {
   CATALOGUE,
   CENSUS,
   CITY,
+  CIVILIZATION,
   CIVILIZATION_ID,
   CROWD,
   CROWD_NEED,
@@ -162,6 +163,69 @@ test('the idle drives each seed of the cell to the chronicle’s ending, the cel
         .sort(),
     );
     expect(row.ms).toMatch(/^\d+$/);
+  }
+});
+
+test('a civilization handed in, inline or in a file, is the one the chronicles are launched on, its city section and its deck as written, and the record carries it whole; a misfit is refused before anything is printed', () => {
+  const handed: Civilization = {
+    city: { ...CIVILIZATION.city, idle: CIVILIZATION.city.idle + 1 },
+    settle: [],
+    cards: CIVILIZATION.cards.filter((_, at) => at % 2 === 0),
+  };
+  const inline = JSON.stringify(handed);
+  const lines = printed(['--seeds', '1', '--civilization', inline]);
+  const launch = launched(CATALOGUE, AGE, REGION, 1, handed, []);
+  const driven = playedBy(CATALOGUE, PERSONAS.idle, launch, 60);
+  const untimed = (row: Record<string, string>): Record<string, string> =>
+    Object.fromEntries(Object.entries(row).filter(([column]) => column !== 'ms'));
+
+  expect(recordRead(lines).civilization).toEqual(handed);
+  expect(rowsOf(lines)[0]).toMatchObject({
+    ending: driven.end.outcome,
+    turn: `${driven.end.turn}`,
+    ...Object.fromEntries(
+      chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, driven).map(
+        ([column, value]) => [column, `${value}`],
+      ),
+    ),
+  });
+  expect(recordRead(printed(['--trace', '1', '--civilization', inline])).civilization).toEqual(
+    handed,
+  );
+
+  const folder = mkdtempSync(join(tmpdir(), 'sim-'));
+  try {
+    const file = join(folder, 'civilization.json');
+    writeFileSync(file, JSON.stringify({ name: 'unread', ...handed }));
+    const fromFile = printed(['--seeds', '1', '--civilization', file]);
+    expect(recordRead(fromFile)).toEqual(recordRead(lines));
+    expect(rowsOf(fromFile).map(untimed)).toEqual(rowsOf(lines).map(untimed));
+
+    const [card] = handed.cards;
+    const city = (field: Partial<Civilization['city']>): string =>
+      JSON.stringify({ ...handed, city: { ...handed.city, ...field } });
+    const misfits: [string, RegExp][] = [
+      [join(folder, 'none.json'), /names no file/],
+      [folder, /names no file/],
+      ['{"city"', /is not JSON/],
+      [JSON.stringify({ city: handed.city, settle: handed.settle }), /holds no civilization/],
+      [JSON.stringify({ ...handed, cards: ['PH_None'] }), /names no card PH_None/],
+      [JSON.stringify({ ...handed, settle: [card] }), new RegExp(`${card} in its settle section`)],
+      [city({ building: 'PH_None' }), /names no building PH_None/],
+      [city({ building: 'PH_Mill' }), /city PH_Mill names the river/],
+      [city({ card }), new RegExp(`${card} in its city section`)],
+      [city({ sight: -1 }), /city sees -1/],
+      [city({ idle: -1 }), /city opens with -1 idle/],
+    ];
+    for (const [value, refusal] of misfits) {
+      const seen: string[] = [];
+      expect(() =>
+        simulated(CATALOGUE, ['--civilization', value], (line) => seen.push(line)),
+      ).toThrow(refusal);
+      expect(seen).toEqual([]);
+    }
+  } finally {
+    rmSync(folder, { recursive: true, force: true });
   }
 });
 

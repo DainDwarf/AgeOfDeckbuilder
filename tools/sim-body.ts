@@ -1,15 +1,14 @@
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CATALOGUE } from '../src/content/catalogue';
+import { type Campaign, civilizationIn, openingChoices, paidInto } from '../src/rules/campaign';
 import {
-  type Campaign,
-  type Choices,
-  civilizationIn,
-  openingChoices,
-  paidInto,
-} from '../src/rules/campaign';
-import { type Catalogue, scheduleOf } from '../src/rules/catalogue';
-import { countOn, launchedFromCampaign } from '../src/rules/chronicle';
+  type Catalogue,
+  type Civilization,
+  civilizationMisfit,
+  scheduleOf,
+} from '../src/rules/catalogue';
+import { countOn, launched } from '../src/rules/chronicle';
 import type { TileCoords } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
@@ -23,7 +22,7 @@ import { PERSONAS } from './personas';
 import { type Driven, type End, playedBy } from './sim-driver';
 
 const USAGE = [
-  'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <name>] [--persona <name>]',
+  'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
   '                      [--seeds <n>] [--turns <n>] [--out <path>] [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
@@ -53,8 +52,12 @@ const FACTIONS = Object.keys({
 
 /** What a chronicle of the cell is launched on and played by. */
 type Cell = {
-  readonly choices: Choices;
+  readonly age: string;
+  readonly region: string;
   readonly campaign: Campaign;
+  readonly civilization: Civilization;
+  /** The civilization as the record carries it: whole where it was handed in, by name otherwise. */
+  readonly recorded: string | Civilization;
   readonly persona: string;
 };
 
@@ -124,7 +127,8 @@ export function simulated(
 /**
  * The cell the flags name: the age and the region, each defaulting to what the launch screen opens on,
  * on a new campaign that has learned what reaches them, then the technologies named, each with its
- * needs; the civilization, the campaign's first unless named; and the persona, the idle unless named.
+ * needs; the civilization, the campaign's first unless one is handed in; and the persona, the idle
+ * unless named.
  */
 function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
   const fresh = freshCampaign(catalogue);
@@ -138,13 +142,75 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
     ...(unlocking === undefined ? [] : [unlocking]),
     ...positionals,
   ]);
-  const civilization = stringFlag(values, 'civilization', USAGE) ?? opening.civilization;
-  civilizationIn(catalogue, campaign, civilization);
+  const handedIn = stringFlag(values, 'civilization', USAGE);
+  const civilization =
+    handedIn === undefined
+      ? civilizationIn(catalogue, campaign, opening.civilization)
+      : civilizationHandedIn(catalogue, handedIn);
+  const recorded = handedIn === undefined ? opening.civilization : civilization;
   const persona = stringFlag(values, 'persona', USAGE) ?? 'idle';
   if (!Object.hasOwn(PERSONAS, persona)) {
     throw new Error(`no persona ${persona}; the personas: ${Object.keys(PERSONAS).join(', ')}`);
   }
-  return { choices: { age, region, civilization }, campaign, persona };
+  return { age, region, campaign, civilization, recorded, persona };
+}
+
+/**
+ * The civilization `--civilization` hands in: the JSON itself where the value opens on `{`, and the
+ * text of the file it names otherwise, read in the content's shape; a field the shape does not name
+ * goes unread.
+ */
+function civilizationHandedIn(catalogue: Catalogue, value: string): Civilization {
+  const inline = value.startsWith('{');
+  if (!inline && statSync(value, { throwIfNoEntry: false })?.isFile() !== true) {
+    throw new Error(`--civilization names no file ${value}\n${USAGE}`);
+  }
+  const text = inline ? value : readFileSync(value, 'utf8');
+  let read: unknown;
+  try {
+    read = JSON.parse(text);
+  } catch {
+    throw new Error(`--civilization is not JSON: ${text}\n${USAGE}`);
+  }
+  const civilization = inContentShape(read);
+  if (civilization === undefined) {
+    throw new Error(
+      `--civilization holds no civilization {"city":{"building":<id>,"sight":<n>,"idle":<n>,"card":<id>},"settle":[<id>...],"cards":[<id>...]}\n${USAGE}`,
+    );
+  }
+  const misfit = civilizationMisfit(catalogue, civilization, '--civilization');
+  if (misfit !== undefined) throw new Error(misfit);
+  return civilization;
+}
+
+/** The civilization a value read from JSON holds, its fields alone, and nothing where it holds none. */
+function inContentShape(read: unknown): Civilization | undefined {
+  if (!isObject(read) || !isObject(read.city)) return undefined;
+  const { building, sight, idle, card } = read.city;
+  const { settle, cards } = read;
+  if (
+    typeof building !== 'string' ||
+    !isInteger(sight) ||
+    !isInteger(idle) ||
+    typeof card !== 'string' ||
+    !isIds(settle) ||
+    !isIds(cards)
+  ) {
+    return undefined;
+  }
+  return { city: { building, sight, idle, card }, settle, cards };
+}
+
+function isObject(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value);
+}
+
+function isIds(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((id) => typeof id === 'string');
 }
 
 /**
@@ -153,23 +219,22 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
  */
 function chronicleOf(
   catalogue: Catalogue,
-  { choices, campaign, persona }: Cell,
+  { age, region, campaign, civilization, persona }: Cell,
   seed: number,
   turnCap: number,
 ): { readonly launch: Sequence; readonly driven: Driven; readonly ms: number } {
   const started = Date.now();
-  const launch = launchedFromCampaign(catalogue, campaign, choices, seed);
+  const launch = launched(catalogue, age, region, seed, civilization, campaign.technologies);
   const driven = playedBy(catalogue, PERSONAS[persona], launch, turnCap);
   return { launch, driven, ms: Date.now() - started };
 }
 
 /** The cell as the command that made it, one comment line of JSON, the campaign's technologies whole. */
 function recordOf(
-  { choices, campaign, persona }: Cell,
+  { age, region, campaign, recorded: civilization, persona }: Cell,
   turns: number,
   run: { readonly seeds: number } | { readonly trace: number },
 ): string {
-  const { age, region, civilization } = choices;
   const learned = campaign.technologies;
   return `# ${JSON.stringify({ age, region, civilization, learned, persona, turns, ...run })}`;
 }
