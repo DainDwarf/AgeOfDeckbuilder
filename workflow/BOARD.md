@@ -6,8 +6,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The stand-ins' doors** — the fixture content that opens a door no real content walks through — the recall, the road, the siege capstone with its second script and its span, and whatever else the search finds — reassessed one by one: the door kept for content the design foresees, or the mechanism and its fixture cut together.
 - **The headless simulator** — a consumer of the rules that runs only when asked and reports numbers, not diagnoses, tuned across the two ages; the reachability cache and the end of turn's cost per `apply` are looked at when it is made.
+- **The stand-ins' doors** — the fixture content that opens a door no real content walks through — the recall, the road, the siege capstone with its second script and its span, and whatever else the search finds — reassessed one by one: the door kept for content the design foresees, or the mechanism and its fixture cut together.
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play, the findings kept in [`BALANCE.md`](BALANCE.md) first among them; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; a trial of where military comes from: military taken off the Hearth's yield and flint giving it in place of production.
 
 ## Lines
