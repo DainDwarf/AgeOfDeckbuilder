@@ -1,6 +1,6 @@
 # The driver and the idle persona
 
-**Line:** The driver and the idle persona — `npm run sim` loads through Vite's module runner as the forge does, takes a cell whose age and region flags learn what reaches them, walks each chronicle gambit by gambit, plays the idle persona, stops a chronicle at the turn cap, at 100 commands landed in one turn, on a `runtime-error` or on a decision no command lands, prints a persona's sentences, traces one seed and writes a skeleton row; the launch from a campaign, the opening choices, the module-runner boot and the runtime-error walk each stand in one place the screen, the specs and the simulator share; its test runs on the fixture catalogue. Doc-impact: `docs/SIMULATOR.md`.
+**Line:** The driver and the idle persona — `npm run sim` loads through Vite's module runner as the forge does, takes a cell whose age and region flags learn what reaches them, walks each chronicle gambit by gambit, plays the idle persona, stops a chronicle at the turn cap, at 100 commands landed in one turn, on a `runtime-error` or on a decision no command lands, prints a persona's sentences, traces one seed and writes a skeleton row; the launch from a campaign, the opening choices, the module-runner boot and the runtime-error walk each stand in one place the screen, the specs and the simulator share; its test runs on the fixture catalogue; a `sim` skill runs it and reports its numbers. Doc-impact: `docs/SIMULATOR.md`.
 
 **Spec:** `docs/SIMULATOR.md`, and the root files the tool touches.
 
@@ -44,11 +44,40 @@ The row's header, verbatim: `age,region,civilization,learned,persona,seed,ending
 
 The trace: one line per landed command, the turn, the gambit's sentence and the command in the rules' words, in that order; then one line for the ending or the stop with its cause and turn, a runtime error's naming the group it happened during. No player-facing sentence: the tool is read in a terminal.
 
+`.claude/skills/sim/SKILL.md`, whole, verbatim:
+
+```
+---
+name: sim
+description: Run the headless simulator on a cell and report its numbers. Use whenever asked to simulate, measure, run the sim, play a cell or a persona headlessly, trace a seed, or how a persona fares on an age, a region or a deck.
+---
+
+# Sim
+
+One job: run `npm run sim` on the cell asked for and hand back what it printed. The reading of why is the user's.
+
+## Procedure
+
+1. **Name the cell from the question.** `--age`, `--region`, `--civilization`, `--persona` and `--seeds`, each defaulting to what the launch screen opens on, the idle and 20; the age and the region learn what reaches them, and a technology named after the flags learns more. `--turns <n>` moves the turn cap off 60. `--personas` prints every persona as its sentences.
+2. **Write the rows to the scratchpad**, `--out <scratchpad>/<cell>.csv`, never into the tree. A run past a few seconds goes in the background; its end resumes the turn.
+3. **Report what the rows say, counted**: the endings and their causes, the turns, the stops with their seeds. Then stop.
+4. **Replay a seed worth a look** with `--trace <seed>` on the same cell, the seed read off its row. The trace names the gambit behind every command.
+
+## Rules
+
+- Numbers, never a diagnosis: no reading of why, no balance recommendation, no fix. A surprising number is said as the number, and the next measurement is offered.
+- A stop is an error to investigate, never a result. A row whose ending is `stopped` is reported first, with its seed and cause, and its trace is the next measurement.
+- Which seed to replay is read off the rows; a run is never repeated in search of one.
+- No script over the rows or the rules. A question the command cannot answer is a flag to add, reported for a board line.
+- No measurement runs on CI and none is committed.
+- A content variant is its own run, in its own process: the edit, the run, then `git checkout <file>` and `git status --porcelain <file>` printing nothing, unless the user is tuning, in which case the edit stays on the tree and the hand-back says so. Two files are compared seed by seed: the same seed is the same map.
+```
+
 **Doc-impact:** `docs/SIMULATOR.md`.
 
 **Scope:**
 
-- In: the entry `npm run sim`, booted through Vite's module runner as the forge is; the cell flags with their defaults; the campaign built from a fresh one through `tools/learned-with-needs.ts`, the list handed it being the victory technology of every age before the cell's age in age order, the technology that unlocks the region where one does, then the positionals; the driver, which walks a persona's gambits as the page says; the idle persona; the four stops; one CSV row per chronicle, header first, flushed as each lands, to the terminal or to `--out`; `--trace <seed>`, which walks that one seed of the cell, prints the trace to the terminal and writes no row; `--personas`, which prints every persona as its numbered sentences; the four moves the reconcile chose.
+- In: the entry `npm run sim`, booted through Vite's module runner as the forge is; the cell flags with their defaults; the campaign built from a fresh one through `tools/learned-with-needs.ts`, the list handed it being the victory technology of every age before the cell's age in age order, the technology that unlocks the region where one does, then the positionals; the driver, which walks a persona's gambits as the page says; the idle persona; the four stops; one CSV row per chronicle, header first, flushed as each lands, to the terminal or to `--out`; `--trace <seed>`, which walks that one seed of the cell, prints the trace to the terminal and writes no row; `--personas`, which prints every persona as its numbered sentences; the four moves the reconcile chose; the `sim` skill, as written above, which the fold, the goal, the deck's edits and the sweep extend in their own lines.
 - The walk: on every decision the gambits are read top down; the first whose condition holds has its command sent through `apply`; a command that leaves the chronicle as it stood is dropped and the reading goes on to the next gambit; a command that changed it counts as landed, the chronicle it left is kept, and the reading starts again from the top. A landed end of turn resets the turn's count. The take gambit's "not refused" is read through the rules' refusal of an answer, and a reward is never refused.
 - The stops, each noted in the row's `cause`: `turn-cap` when the chronicle stands on the cap's turn before any command on it, so turns 1 to the cap less one are played and the row's turn reads the cap; `command-cap` when the hundredth command of one turn has landed; `runtime-error` when a landed command's stages hold one, the chronicle it left kept; `stuck` on a decision where every gambit's command was dropped, the last gambit's included. A chronicle that ended, in victory or defeat, is never stopped: its ending is the row's.
 - Defaults are the launch screen's, read on the fresh campaign before anything is learned: the age the last reached, so the first age; the region the first of the chosen age the campaign has reached once the age's unlocks are learned; the civilization the campaign's first. An age or a region the catalogue does not hold is refused through the rules' own lookups; an age the campaign cannot reach by any technology, or a region no technology unlocks that the age does not list, is refused by those too. A persona name no list holds is refused, the refusal naming the personas. `--out` beside `--trace` is refused: the trace writes no row. A flag no table holds is refused as the forge refuses one.
@@ -80,7 +109,7 @@ The trace: one line per landed command, the turn, the gambit's sentence and the 
 2. `tools/` — the boot both entries use; `tools/forge-save.ts` reduced to naming its body through it; the forge's test green.
 3. `tools/` — the simulator's body: the cell from the flags, the campaign through `learned-with-needs.ts`, the driver, the idle persona as its three gambits with their sentences, the four stops, the row writer, the trace, the personas print; its entry; `"sim"` in `package.json`'s scripts.
 4. `tools/` — the test on the fixture catalogue: the idle walks a seed to its ending or stop and the row reads the cell, the seed, the ending, the cause, the turn; a chronicle standing on the cap's turn is stopped as `turn-cap`; a test persona that reassigns one population between two held tiles for ever is stopped as `command-cap` on the hundredth; a persona whose only gambit ends the turn is stopped as `stuck` on the settle phase; a landed command whose stages hold a `runtime-error` stops the chronicle as `runtime-error`. One test through the entry on the game's content with a seed count of 1, asserting the header, the row count and the trace's line shape, no number.
-5. `docs/SIMULATOR.md`, `CLAUDE.md`, `DOGMAS.md` — the sentences above.
+5. `docs/SIMULATOR.md`, `CLAUDE.md`, `DOGMAS.md` — the sentences above; `.claude/skills/sim/SKILL.md` — the skill, verbatim.
 6. `workflow/BOARD.md` — the line deleted, this file with it.
 
 **Verify:** `npm run check`, `npm test`, `npm run lint`. Spec: `e2e/launch.spec.ts`, the one that walks the moved launch most directly. CI proves on the push every spec that launches a chronicle or reads the opening choices, among them `boot`, `settle`, `continue`, `resume`, `manage-save`, `menu`, `pin`, `press`, `reference`, `archipelago`, `irrigation`, `launch-warning`, `city-mode`, `controls`, `console`, listed for the hand-back and never run.
