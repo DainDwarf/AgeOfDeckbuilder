@@ -15,13 +15,14 @@ The line; the design pages, `docs/GLOSSARY.md` and `DOGMAS.md` where they touch 
 
 ## 2. Challenge
 
-Five checks, in order; stop at the first that decides the line's fate:
+Six checks, in order; stop at the first that decides the line's fate:
 
 1. **Conflict.** Does it contradict a decision in a design page or a rule in `DOGMAS.md`? Surface it. Changing a decision is valid work — the done-condition is then the docs edit — but silently violating one is not. The dossier is held to the same check as the line: its Plan and its Verify are read against `DOGMAS.md` before it is written.
-2. **Completability.** Can a done-condition be written — a state of the repo someone can check? If not, the line is docs content (a standing fact, a domain claim) or an idea: route it there and delete the line. A content line's checkable state is the content standing in its catalogue, the catalogue's coherence test passing and its age page saying so — never a test on the content: its numbers are tuning and change. A mechanism the content needs is held by one test on a fixture, and is its own line where it is a real boundary.
-3. **Scope.** Can one ship session hold the whole thing? Split only on a real abstraction boundary, never to defer the hard part; each part becomes its own line, and this pass dossiers the first.
-4. **Novelty.** For a content line — an answer, a card, anything the rules resolve — does this content do something no content of its kind has done before? Then the mechanism is named in the dossier and gets its one test on the fixture: in this line where it is the one small helper the content needs, in a line ahead of it where it is a real boundary. A content line that reads as content alone and carries a mechanism unnamed is the shape this check catches.
-5. **Doc-impact.** Name the `docs/` pages the work will change, or "none".
+2. **Wheel.** For a line that builds a tool, a script, an analysis or a format: name the tool on the machine or in the ecosystem that does the job, and say why it does not serve, before any design. A job such a tool does becomes a skill recipe, not code. A line that names the thing to build — "a verb", "a tool" — is the shape this check catches: the name is the todo's, not a decision.
+3. **Completability.** Can a done-condition be written — a state of the repo someone can check? If not, the line is docs content (a standing fact, a domain claim) or an idea: route it there and delete the line. A content line's checkable state is the content standing in its catalogue, the catalogue's coherence test passing and its age page saying so — never a test on the content: its numbers are tuning and change. A mechanism the content needs is held by one test on a fixture, and is its own line where it is a real boundary.
+4. **Scope.** Can one ship session hold the whole thing? Split only on a real abstraction boundary, never to defer the hard part; each part becomes its own line, and this pass dossiers the first.
+5. **Novelty.** For a content line — an answer, a card, anything the rules resolve — does this content do something no content of its kind has done before? Then the mechanism is named in the dossier and gets its one test on the fixture: in this line where it is the one small helper the content needs, in a line ahead of it where it is a real boundary. A content line that reads as content alone and carries a mechanism unnamed is the shape this check catches.
+6. **Doc-impact.** Name the `docs/` pages the work will change, or "none".
 
 ## 3. Discuss
 
