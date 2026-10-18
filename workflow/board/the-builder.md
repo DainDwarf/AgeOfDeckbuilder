@@ -2,11 +2,15 @@
 
 **Line:** The builder — `--persona builder` drives a chronicle through the nineteen gambits below, `--personas` prints them as written, every command it sends is one the rules can be asked declares no war, and each gambit's choice has its test on the fixture. Doc-impact: `docs/SIMULATOR.md`.
 
-**Spec:** `docs/SIMULATOR.md` _The persona and the gambit_, three edits, and the persona's sentences, which are what `--personas` prints and what the trace names, written out here so the implementer authors none.
+**Spec:** `docs/SIMULATOR.md` _The persona and the gambit_, four edits, and the persona's sentences, which are what `--personas` prints and what the trace names, written out here so the implementer authors none.
 
 The sentence "No gambit names a card, a building, an event or a capstone: it reads kinds, aims, costs, blocks, yields and counts." becomes:
 
 > No gambit names a card, a building, a unit kind, an event or a capstone: it reads kinds, aims, costs, blocks, yields and counts, and a unit by what it does, a worker or one that attacks.
+
+The sentence "The one currency a gambit may sum is a tile's yield, every resource together, as the neutral's script sums it." becomes:
+
+> A gambit carries no value model. What it prefers is its sentence, an order of readings, the first deciding and the next of equals; where it must add, it adds a yield or the stocks with every resource counted as one, as the neutral's script sums a yield; no weight stands between two resources or two readings, and no number is scored over the map. Why: a weight is tuned beside the content and competes with it, and a sentence is read in the trace and struck.
 
 The paragraph ending "whether that is the persona's defect or the content's lesson is the user's reading." gains after it:
 
@@ -42,7 +46,7 @@ No player-facing sentence: nothing of this reaches the screen.
 
 **Doc-impact:** `docs/SIMULATOR.md`.
 
-**Scope:** In: the persona in `tools/personas.ts`, its sentences above, one test per gambit's choice on the fixture catalogue in `tools/sim.test.ts`, the page's three edits, and ahead of all of it the one inert commit moving the sum of a tile's yield, every resource together, out of `src/content/scripts.ts` into the rules beside the yield it sums, the script reading it from there and nothing else of the script changing. Out: the goal gambit, the warlord and the population floor a unit card leaves, which stay their own lines; the `sim` skill, whose step 1 already names `--persona` and `--personas`; `CLAUDE.md`'s command table, still true; a card aimed at a tile that no worker plays, such as a trophy claiming a tile, which the builder never plays; embarking, so no building on the coast; March, Heal and Calendar, which the builder never plays.
+**Scope:** In: the persona in `tools/personas.ts`, its sentences above, one test per gambit's choice on the fixture catalogue in `tools/sim.test.ts`, the page's four edits, and ahead of all of it the one inert commit moving the sum of a tile's yield, every resource together, out of `src/content/scripts.ts` into the rules beside the yield it sums, the script reading it from there and nothing else of the script changing. Out: the goal gambit, the warlord and the population floor a unit card leaves, which stay their own lines; the `sim` skill, whose step 1 already names `--persona` and `--personas`; `CLAUDE.md`'s command table, still true; a card aimed at a tile that no worker plays, such as a trophy claiming a tile, which the builder never plays; embarking, so no building on the coast; March, Heal and Calendar, which the builder never plays.
 
 How each gambit reads, decided here:
 
