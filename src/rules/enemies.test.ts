@@ -28,7 +28,6 @@ import {
   camping,
   cityOf,
   claimOf,
-  culture,
   dealing,
   deepBut,
   EMBARKED_MOVE,
@@ -49,6 +48,7 @@ import {
   namesOf,
   neutralStanding,
   only,
+  onlyStocks,
   onTheNeutralCity,
   opening,
   plains,
@@ -136,7 +136,7 @@ test('a camp captured at the end of the turn leaves its tile claimed like any ot
   const besieging = ringed(3, {
     ...NO_GROWTH,
     tiles: camped(field(3), [camp]),
-    resources: culture(20),
+    resources: onlyStocks({ culture: 20 }),
     drawPile: fullDraw(),
     units: [standing('player', camp)],
   });
@@ -157,7 +157,7 @@ test('a site’s tile is claimed like any other, and a unit of the player’s st
   const sited = ringed(3, {
     ...NO_GROWTH,
     tiles: builtOn(madeOf(field(3), 'hills', [site]), SITE, [site]),
-    resources: culture(20),
+    resources: onlyStocks({ culture: 20 }),
     drawPile: fullDraw(),
     units: [standing('player', site)],
   });

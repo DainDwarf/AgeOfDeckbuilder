@@ -1676,6 +1676,12 @@ export function madeOf(tiles: Tile[], terrain: Terrain, coords: TileCoords[]): T
   return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, terrain } : tile));
 }
 
+/** The same tiles, with the named ones carrying the feature. */
+export function featured(tiles: Tile[], feature: FeatureId, coords: TileCoords[]): Tile[] {
+  const named = new Set(coords.map(tileKey));
+  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, feature } : tile));
+}
+
 /** The same tiles with every one but the named ones made deep, which nothing crosses. */
 export function deepBut(tiles: Tile[], kept: TileCoords[]): Tile[] {
   const named = new Set(kept.map(tileKey));
@@ -1848,9 +1854,9 @@ export function ringed(
  */
 export const NO_GROWTH: Carrying = { population: 99 };
 
-/** What the city holds to claim with, and nothing besides. */
-export function culture(amount: number): Resources {
-  return { food: 0, production: 0, military: 0, money: 0, science: 0, culture: amount };
+/** The stocks named, and nothing of every other resource. */
+export function onlyStocks(named: Partial<Resources>): Resources {
+  return { food: 0, production: 0, military: 0, money: 0, science: 0, culture: 0, ...named };
 }
 
 /** What the city pays for the worker card, and nothing besides. */

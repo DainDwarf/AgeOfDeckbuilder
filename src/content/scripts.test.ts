@@ -15,7 +15,6 @@ import {
   camped,
   camping,
   cityOf,
-  culture,
   deepBut,
   EMBARKED_MOVE,
   endedTurn,
@@ -28,6 +27,7 @@ import {
   NEUTRAL_TILE,
   neutralStanding,
   only,
+  onlyStocks,
   onTheNeutralCity,
   plains,
   SCRIPT,
@@ -979,7 +979,7 @@ function workerAround(
   const opened = besideTheNeutral({ catalogue: content, age: AGE }, ground);
   const holding = withCityRows(opened, 'neutral', {
     held: [NEUTRAL_TILE, ...held],
-    resources: { ...culture(0), production },
+    resources: onlyStocks({ production }),
   });
   return withUnits({ ...holding, rng: seedRng(seed) }, units);
 }

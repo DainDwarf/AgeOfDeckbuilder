@@ -21,7 +21,6 @@ import {
   CULL_COST,
   camped,
   cityOf,
-  culture,
   DELUGE,
   dealing,
   deepBut,
@@ -29,6 +28,7 @@ import {
   EXPLOSION,
   endedTurn,
   enemiesOf,
+  featured,
   field,
   fullDraw,
   heldBy,
@@ -39,6 +39,7 @@ import {
   NO_GROWTH,
   namesOf,
   only,
+  onlyStocks,
   opening,
   PLAYED,
   plains,
@@ -642,7 +643,7 @@ test('an answer declaring cases names the one the chronicle it is dealt on meets
     outcome(
       apply(
         CATALOGUE,
-        cityOf(['urban'], { ...EXODUS_DUE, ...NO_GROWTH, resources: { ...culture(0), food } }),
+        cityOf(['urban'], { ...EXODUS_DUE, ...NO_GROWTH, resources: onlyStocks({ food }) }),
         { type: 'end-turn' },
       ),
     );
@@ -1112,12 +1113,6 @@ test('a challenge that terraforms strikes that many tiles of the terrains it nam
   expect(none.left.tiles).toEqual(none.city.tiles);
   expect(none.left.rng).toEqual(none.city.rng);
 });
-
-/** The same tiles, with the named ones carrying the feature. */
-function featured(tiles: Tile[], feature: FeatureId, coords: TileCoords[]): Tile[] {
-  const named = new Set(coords.map(tileKey));
-  return tiles.map((tile) => (named.has(tileKey(tile)) ? { ...tile, feature } : tile));
-}
 
 /** How far from the city the tile the herd is dealt onto lies in the tests below: out of its sight. */
 const HERD = 3;

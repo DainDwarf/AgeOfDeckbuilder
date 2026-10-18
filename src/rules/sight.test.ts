@@ -8,10 +8,10 @@ import {
   CIVILIZATION,
   camping,
   claimOf,
-  culture,
   EMBARKED_MOVE,
   NO_DEALS,
   namesOf,
+  onlyStocks,
   opening,
   plains,
   QUIET,
@@ -397,7 +397,7 @@ test('a snapshot keeps the city whose border its tile stands inside: taken again
   const bordered = outcome(
     apply(
       CATALOGUE,
-      { ...city, resources: culture(cultureThreshold(city, 'player')) },
+      { ...city, resources: onlyStocks({ culture: cultureThreshold(city, 'player') }) },
       claimOf(claimed),
     ),
   );
@@ -407,7 +407,7 @@ test('a snapshot keeps the city whose border its tile stands inside: taken again
     held: [neutralCity, off(2, 0)],
     population: 1,
     assigned: [neutralCity],
-    resources: culture(0),
+    resources: onlyStocks({}),
   });
   const fogged = left[left.length - 1];
   const ticked = outcome(apply(CATALOGUE, fogged, { type: 'end-turn' }));

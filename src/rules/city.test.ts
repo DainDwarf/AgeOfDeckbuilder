@@ -40,7 +40,6 @@ import {
   changed,
   cityOf,
   claimOf,
-  culture,
   EMBARKED_MOVE,
   endedTurn,
   enemyPhaseOf,
@@ -58,6 +57,7 @@ import {
   NO_GROWTH,
   namesOf,
   neutralStanding,
+  onlyStocks,
   onTheNeutralCity,
   opening,
   plains,
@@ -228,7 +228,7 @@ test('six free claims make the next claim cost fourteen culture', () => {
     chronicle = outcome(apply(CATALOGUE, chronicle, aimedAt(tile)));
   }
   const next = { q: 2, r: 0 };
-  const paying: Chronicle = { ...chronicle, resources: culture(14) };
+  const paying: Chronicle = { ...chronicle, resources: onlyStocks({ culture: 14 }) };
 
   expect(chronicle.held).toHaveLength(7);
   expect(tileCost(chronicle, next)).toEqual([{ resource: 'culture', amount: 14 }]);
@@ -252,7 +252,7 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
 });
 
 test('a claim costs twice the tiles the city holds, its own counted', () => {
-  let chronicle = alone({ resources: culture(60) });
+  let chronicle = alone({ resources: onlyStocks({ culture: 60 }) });
   const tiles = [...neighbours(CITY), { q: 2, r: 0 }];
 
   const paid = tiles.map((tile) => {
@@ -667,7 +667,7 @@ test('the city’s own tile unassigned yields nothing at income, like any other'
 });
 
 test('a claim pays its culture, takes the tile inside the border, and puts one idle population on it', () => {
-  const city = alone({ resources: culture(3) });
+  const city = alone({ resources: onlyStocks({ culture: 3 }) });
   const tile = { q: 1, r: 0 };
 
   const stages = apply(CATALOGUE, city, claimOf(tile));
@@ -686,7 +686,7 @@ test('a claim pays its culture, takes the tile inside the border, and puts one i
 });
 
 test('a claim made with nobody idle takes the tile with no population on it', () => {
-  const full = alone({ resources: culture(2), population: 1 });
+  const full = alone({ resources: onlyStocks({ culture: 2 }), population: 1 });
 
   const after = outcome(apply(CATALOGUE, full, claimOf({ q: 1, r: 0 })));
 
@@ -698,7 +698,7 @@ test('a claim made with nobody idle takes the tile with no population on it', ()
 });
 
 test('a claimed tile the population stands on yields at the next income', () => {
-  const city = alone({ ...NO_GROWTH, resources: culture(2) });
+  const city = alone({ ...NO_GROWTH, resources: onlyStocks({ culture: 2 }) });
   const claimed = outcome(apply(CATALOGUE, city, claimOf({ q: 1, r: 0 })));
 
   const bare = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
@@ -710,7 +710,7 @@ test('a claimed tile the population stands on yields at the next income', () => 
 });
 
 test('a claim on a tile the border does not touch, off the map, or already held is refused', () => {
-  const city = ringed(3, { resources: culture(20) });
+  const city = ringed(3, { resources: onlyStocks({ culture: 20 }) });
 
   expect(stagedBy(city, claimOf({ q: 3, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, city, claimOf({ q: 3, r: 0 })))).toBe(city);
@@ -720,7 +720,7 @@ test('a claim on a tile the border does not touch, off the map, or already held 
 
 test('a claim the city cannot pay for is refused, and one it can just pay for goes through', () => {
   const penniless = alone();
-  const exact = alone({ resources: culture(2) });
+  const exact = alone({ resources: onlyStocks({ culture: 2 }) });
 
   expect(stagedBy(penniless, claimOf({ q: 1, r: 0 }))).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, penniless, claimOf({ q: 1, r: 0 })))).toBe(penniless);
@@ -765,7 +765,10 @@ test('a unit that charts that tile makes it a claim the city can make', () => {
 
 test('a camp’s tile touching the border is no claim of the city’s', () => {
   const camp = { q: 2, r: 0 };
-  const city = ringed(3, { tiles: camped(field(3), [camp]), resources: culture(20) });
+  const city = ringed(3, {
+    tiles: camped(field(3), [camp]),
+    resources: onlyStocks({ culture: 20 }),
+  });
 
   expect(claimable(CATALOGUE, city, 'player').map(tileKey)).not.toContain(tileKey(camp));
   expect(tileRefusal(CATALOGUE, city, camp)).toBeUndefined();
@@ -778,7 +781,7 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
   const occupied = { q: 2, r: 0 };
   const stood = { q: 0, r: 2 };
   const city = ringed(3, {
-    resources: culture(20),
+    resources: onlyStocks({ culture: 20 }),
     units: [standing('enemy', occupied), standing('player', stood)],
   });
 
@@ -794,7 +797,7 @@ test('a tile an enemy occupies is no claim of the city’s, and a unit of the pl
 });
 
 test('a city-mode click assigns on a tile the city holds and claims on any other', () => {
-  const city = alone({ resources: culture(2) });
+  const city = alone({ resources: onlyStocks({ culture: 2 }) });
 
   expect(cityCommand(CATALOGUE, city, CITY)).toEqual(assignTo(CITY));
   expect(cityCommand(CATALOGUE, city, { q: 1, r: 0 })).toEqual(claimOf({ q: 1, r: 0 }));
@@ -803,7 +806,7 @@ test('a city-mode click assigns on a tile the city holds and claims on any other
 
 test('a city-mode click is refused for the culture it costs, and a tile off the border refuses nothing', () => {
   const city = alone();
-  const paid = alone({ resources: culture(2) });
+  const paid = alone({ resources: onlyStocks({ culture: 2 }) });
 
   expect(tileCost(city, { q: 1, r: 0 })).toEqual([{ resource: 'culture', amount: 2 }]);
   expect(tileRefusal(CATALOGUE, city, { q: 1, r: 0 })).toEqual({
@@ -816,7 +819,7 @@ test('a city-mode click is refused for the culture it costs, and a tile off the 
 });
 
 test('a tile the city neither holds nor can claim is no act of the city’s, and refuses a claim', () => {
-  const city = ringed(3, { resources: culture(20) });
+  const city = ringed(3, { resources: onlyStocks({ culture: 20 }) });
 
   expect(tileRefusal(CATALOGUE, city, { q: 3, r: 0 })).toBeUndefined();
   expect(tileRefusal(CATALOGUE, city, { q: 9, r: 9 })).toBeUndefined();
@@ -841,8 +844,8 @@ test('a city-mode click on a held tile nobody stands on is refused while nobody 
 
 test('a claim waits while the city can pay for a tile it may claim, and none waits where the border touches nothing', () => {
   const penniless = alone();
-  const paying = alone({ resources: culture(2) });
-  const boxedIn = cityOf(['urban'], { resources: culture(20) });
+  const paying = alone({ resources: onlyStocks({ culture: 2 }) });
+  const boxedIn = cityOf(['urban'], { resources: onlyStocks({ culture: 20 }) });
 
   expect(claimWaiting(CATALOGUE, penniless)).toBe(false);
   expect(claimWaiting(CATALOGUE, paying)).toBe(true);
@@ -943,7 +946,7 @@ test('at the growth phase the neutral’s food at its growth threshold is spent 
 
 test('a tile the neutral holds is no claim of the city’s, though it touches the border', () => {
   const opened = besideTheNeutral();
-  const city = { ...opened, resources: culture(20) };
+  const city = { ...opened, resources: onlyStocks({ culture: 20 }) };
 
   expect(claimable(CATALOGUE, city, 'player').map(tileKey)).not.toContain(tileKey(NEUTRAL_TILE));
   expect(tileRefusal(CATALOGUE, city, NEUTRAL_TILE)).toBeUndefined();
@@ -963,9 +966,10 @@ function neutralHolding(
 const NO_NEUTRAL_GROWTH = madeOf(plains(3), 'hills', [NEUTRAL_TILE]);
 
 test('at the enemy phase, after the waves and before any enemy acts, the neutral’s city claims tile after tile while its culture pays the threshold as it then stands, each its own claim group taking the tile its script chooses, its idle population standing on the first and the second left with none', () => {
-  const chronicle = withUnits(neutralHolding({ population: 2, resources: culture(5) }), [
-    standing('enemy', { q: -3, r: 0 }),
-  ]);
+  const chronicle = withUnits(
+    neutralHolding({ population: 2, resources: onlyStocks({ culture: 5 }) }),
+    [standing('enemy', { q: -3, r: 0 })],
+  );
 
   const stages = apply(CATALOGUE, chronicle, { type: 'end-turn' });
   const phase = heldBy(stages, 'enemy-phase');
@@ -998,7 +1002,7 @@ test('at the enemy phase, after the waves and before any enemy acts, the neutral
 
 /** What the neutral pays for a unit and takes nothing more: the stocks of the fixture's warrior card. */
 function military(amount: number): Resources {
-  return { ...culture(0), military: amount };
+  return onlyStocks({ military: amount });
 }
 
 test('where the neutral acts, after the waves, its units act first in unit order, then its city claims, then it enters one unit, all before any enemy acts', () => {
@@ -1177,7 +1181,7 @@ test('a chronicle launched on a region dealing the neutral’s city opens with o
 });
 
 /** What the neutral pays for the fixture's farm, and nothing besides. */
-const FARM_COST: Resources = { ...culture(0), ...cardOf(WORKING, 'PH_Farm').cost };
+const FARM_COST: Resources = onlyStocks(cardOf(WORKING, 'PH_Farm').cost);
 
 /**
  * `besideTheNeutral` in the first age as the fixture's own content opens it, no worker standing, the
@@ -1243,7 +1247,7 @@ test('a worker of the neutral’s plays nothing, and acts no more that phase, wh
   const holding = (resources: Resources, tile: TileCoords): Chronicle =>
     workingBeside({ held: [NEUTRAL_TILE, tile], resources }, [neutralWorker(tile)], ground);
 
-  expect(enemyPhaseOf(holding(culture(0), plain), everyWorkerPlays('PH_Farm'))).toEqual([]);
+  expect(enemyPhaseOf(holding(onlyStocks({}), plain), everyWorkerPlays('PH_Farm'))).toEqual([]);
   expect(enemyPhaseOf(holding(plenty, plain), everyWorkerPlays('PH_Mine'))).toEqual([]);
   expect(enemyPhaseOf(holding(plenty, hills), everyWorkerPlays('PH_Mine'))).toEqual([
     'neutral-played',
@@ -1311,7 +1315,7 @@ test('the neutral enters a unit of a worker kind under its workers’ script', (
     }),
   );
   const chronicle = workingBeside(
-    { population: 2, resources: { ...culture(0), ...cardOf(WORKING, 'PH_Worker').cost } },
+    { population: 2, resources: onlyStocks(cardOf(WORKING, 'PH_Worker').cost) },
     [],
     NO_NEUTRAL_GROWTH,
   );
@@ -1330,7 +1334,7 @@ test('the neutral enters a unit of a worker kind under its workers’ script', (
 
 test('a neutral’s script choosing a tile it was not offered raises a runtime error at the enemy phase, its city claiming nothing more that phase, and the enemies act on', () => {
   const straying = neutralScripted({ claims: () => CITY });
-  const chronicle = withUnits(neutralHolding({ resources: culture(5) }), [
+  const chronicle = withUnits(neutralHolding({ resources: onlyStocks({ culture: 5 }) }), [
     standing('enemy', { q: -3, r: 0 }),
   ]);
 
@@ -1349,7 +1353,7 @@ test('the neutral’s city claims no tile the player holds nor one a unit of ano
   const [enemyOn, ...playersOn] = neighbours(NEUTRAL_TILE).filter(
     (tile) => tileKey(tile) !== tileKey(CITY),
   );
-  const boxedIn = withUnits(neutralHolding({ resources: culture(20) }), [
+  const boxedIn = withUnits(neutralHolding({ resources: onlyStocks({ culture: 20 }) }), [
     standing('enemy', enemyOn, { move: 0 }),
     ...playersOn.map((tile) => standing('player', tile)),
   ]);
@@ -1390,14 +1394,14 @@ function neutralClaimed(
 }
 
 test('the neutral’s city claims tiles the player never charted, and its claims chart nothing', () => {
-  const { uncharted } = neutralClaimed(neutralHolding({ resources: culture(100) }));
+  const { uncharted } = neutralClaimed(neutralHolding({ resources: onlyStocks({ culture: 100 }) }));
 
   expect(uncharted).not.toEqual([]);
 });
 
 test('a tile the neutral’s city claims in the player’s sight is charted inside its border, and one in fog keeps the border it was last seen inside', () => {
   const { inSight: seen, inFog } = neutralClaimed(
-    neutralHolding({ resources: culture(100) }, { reach: 3 }),
+    neutralHolding({ resources: onlyStocks({ culture: 100 }) }, { reach: 3 }),
   );
 
   expect(seen).not.toEqual([]);
@@ -1407,7 +1411,7 @@ test('a tile the neutral’s city claims in the player’s sight is charted insi
 });
 
 test('the same claim on the same chronicle gives the same chronicle back', () => {
-  const city = ringed(3, { resources: culture(20) });
+  const city = ringed(3, { resources: onlyStocks({ culture: 20 }) });
   const untouched = structuredClone(city);
 
   expect(outcome(apply(CATALOGUE, city, claimOf({ q: 2, r: 0 })))).toEqual(

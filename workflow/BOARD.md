@@ -11,7 +11,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The builder** — `--persona builder` drives a chronicle through the nineteen gambits the dossier writes, `--personas` prints them as written, every command it sends is one the rules can be asked declares no war, and each gambit's choice has its test on the fixture. Doc-impact: `docs/SIMULATOR.md`. [board/the-builder.md](board/the-builder.md)
 - **The warlord** — the persona that fields units and goes for the camps; its gambits are served at its intake, the floor of population a unit card leaves among them.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The profile** — a builder's hundred seeds profiled and what the profile justifies landed: the reachability cache, the end of turn's cost per `apply`, the split of a sweep across processes; a rules change among them is its own commit under its own review.
