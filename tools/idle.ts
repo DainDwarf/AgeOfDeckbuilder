@@ -21,7 +21,7 @@ export function refusedEntry(
 }
 
 /** The first entry of the deal standing that is not refused, taken, and nothing where none stands. */
-export function firstTaken(catalogue: Catalogue, chronicle: Chronicle): Command | undefined {
+function firstTaken(catalogue: Catalogue, chronicle: Chronicle): Command | undefined {
   const [deal] = chronicle.deals;
   if (deal === undefined) return undefined;
   const at = offered(catalogue, deal).findIndex(

@@ -42,12 +42,12 @@ import {
   type Unit,
 } from '../src/rules/units';
 import { tileYield, worthOf } from '../src/rules/yields';
-import { firstTaken, refusedEntry, TURN_ENDED } from './idle';
+import { refusedEntry, TURN_ENDED } from './idle';
 import type { Gambit, Persona } from './sim-driver';
 
 export const BUILDER: Persona = [
   declaringNoWar(
-    'While a deal stands, take the entry whose trial brings no defeat, no unit acting as an enemy and no card that strikes, of those the one losing the least population and then leaving the most stock together, and the first not refused where none qualifies',
+    'While a deal stands, take the entry whose trial brings no defeat, no unit acting as an enemy and no card that strikes, of those the one losing the least population and then leaving the most stock together, and where none qualifies the first not refused, one bringing defeat last',
     dealTaken,
   ),
   declaringNoWar(
@@ -80,7 +80,7 @@ export const BUILDER: Persona = [
     workerSentToPlay,
   ),
   declaringNoWar(
-    'Play through a worker the card that places something, on the tile where it adds the most food to the yield, the most of everything of equals, the nearest the city of equals, one adding nothing still played',
+    'Play through a worker the card that places something, on the tile where it adds the most food to the yield, the most of everything of equals, the nearest the city of equals, one adding nothing still played, never one lowering it',
     placed,
   ),
   declaringNoWar(
@@ -240,23 +240,27 @@ function* dealTaken(catalogue: Catalogue, chronicle: Chronicle): Generator<Comma
   if (deal === undefined) return;
   const enemies = actingAsEnemies(chronicle);
   const striking = strikingCards(catalogue, chronicle);
-  const qualified = offered(catalogue, deal).flatMap((id, at): Ranked<Command>[] => {
+  const entries = offered(catalogue, deal).flatMap((id, at) => {
     if (refusedEntry(catalogue, chronicle, deal, id)) return [];
     const command: Command = { type: 'take', at };
-    const after = trial(catalogue, chronicle, command);
-    if (
+    return [{ command, after: trial(catalogue, chronicle, command) }];
+  });
+  yield* ranked(
+    entries.flatMap(({ command, after }): Ranked<Command>[] =>
       after === undefined ||
       after.ending?.outcome === 'defeat' ||
       actingAsEnemies(after) > enemies ||
       strikingCards(catalogue, after) > striking
-    ) {
-      return [];
-    }
-    return [{ item: command, rank: [-after.population, -worthOf(after.resources)] }];
-  });
-  yield* ranked(qualified);
-  const first = firstTaken(catalogue, chronicle);
-  if (first !== undefined) yield first;
+        ? []
+        : [{ item: command, rank: [-after.population, -worthOf(after.resources)] }],
+    ),
+  );
+  yield* ranked(
+    entries.map(({ command, after }) => ({
+      item: command,
+      rank: [after?.ending?.outcome === 'defeat' ? 1 : 0],
+    })),
+  );
 }
 
 function citySettled(catalogue: Catalogue, chronicle: Chronicle): Command[] {
@@ -361,12 +365,12 @@ function claimed(catalogue: Catalogue, chronicle: Chronicle): Command[] {
 
 /**
  * Whether the enemy could attack the unit next turn: from its own tile, or from a tile it reaches
- * with its move points at its move.
+ * with its move points at its move, walking over `known`.
  */
-function threatens(catalogue: Catalogue, chronicle: Chronicle, enemy: Unit, unit: Unit): boolean {
-  const relations = relationsOf(chronicle);
+function threatens(catalogue: Catalogue, known: Chronicle, enemy: Unit, unit: Unit): boolean {
+  const relations = relationsOf(known);
   const walking = { ...enemy, movePoints: enemy.stats.move };
-  return [{ tile: enemy.tile }, ...reachable(catalogue, chronicle, walking)].some(({ tile }) =>
+  return [{ tile: enemy.tile }, ...reachable(catalogue, known, walking)].some(({ tile }) =>
     canAttack({ ...enemy, tile }, unit, distance(tile, unit.tile), relations),
   );
 }
@@ -379,10 +383,16 @@ function workerWithdrawn(catalogue: Catalogue, chronicle: Chronicle): Command[] 
   const enemies = chronicle.units.filter(
     (unit) => actsAsEnemy(unit, relations) && seen.has(tileKey(unit.tile)),
   );
+  // Not the chronicle: its tiles are the snapshots', so `reachable` never reads the map unseen.
+  const known: Chronicle = {
+    ...chronicle,
+    tiles: chronicle.snapshots.map(({ tile }) => tile),
+    units: chronicle.units.filter((unit) => seen.has(tileKey(unit.tile))),
+  };
   const order = tileOrder(chronicle);
   return playersUnits(chronicle).flatMap((worker) => {
     if (!worker.stats.worker) return [];
-    if (!enemies.some((enemy) => threatens(catalogue, chronicle, enemy, worker))) return [];
+    if (!enemies.some((enemy) => threatens(catalogue, known, enemy, worker))) return [];
     const standsAt = distance(worker.tile, city);
     return ranked(
       byHand(catalogue, chronicle, worker)
@@ -420,6 +430,7 @@ function workerPlay(
   if (aim.places === true) {
     const was = yieldsOn(catalogue, chronicle)(tile);
     const is = yieldsOn(catalogue, after)(tile);
+    if (worthOf(is) < worthOf(was)) return undefined;
     return {
       item: command,
       rank: [0, (was.food ?? 0) - (is.food ?? 0), worthOf(was) - worthOf(is)],
