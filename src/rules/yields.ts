@@ -15,7 +15,7 @@ import {
   type MapContent,
   terrainKind,
 } from './map-kinds';
-import type { Resource, Resources } from './resources';
+import { RESOURCES, type Resource, type Resources } from './resources';
 import { type Chronicle, capstoneLanded } from './state';
 
 /** What gives a tile part of its yield: one of its layers, or a kind of building standing beside it. */
@@ -105,4 +105,9 @@ export function tileYield(
   beside: TilesBeside,
 ): Partial<Resources> {
   return summed(yieldParts(catalogue, chronicle, tile, beside).map(({ yields }) => yields));
+}
+
+/** What a yield gives in every resource together, each counted as one. */
+export function worthOf(yields: Partial<Resources>): number {
+  return RESOURCES.reduce((sum, resource) => sum + (yields[resource] ?? 0), 0);
 }

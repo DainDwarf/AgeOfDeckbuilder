@@ -33,7 +33,6 @@ import {
   tileKey,
   tilesBeside,
 } from '../rules/map';
-import { RESOURCES, type Resources } from '../rules/resources';
 import { pickUniform, type Rng } from '../rules/rng';
 import { campPlaceable, guardedCampPlaced } from '../rules/schedule';
 import { inOwnSight } from '../rules/sight';
@@ -54,7 +53,7 @@ import {
   type Unit,
   unitAt,
 } from '../rules/units';
-import { tileYield } from '../rules/yields';
+import { tileYield, worthOf } from '../rules/yields';
 
 /** Which city a raider goes for: the nearer of those not its own, or the player's alone. */
 export type RaidedCity = 'nearer' | 'player';
@@ -420,11 +419,6 @@ export function campedOrRaided(
     return raided(catalogue, drawn.chronicle, drawn.rows);
   }
   return guardedCampPlaced(catalogue, chronicle, kind, count, apart);
-}
-
-/** What a tile yields in every resource together. */
-function worthOf(yields: Partial<Resources>): number {
-  return RESOURCES.reduce((sum, resource) => sum + (yields[resource] ?? 0), 0);
 }
 
 /**
