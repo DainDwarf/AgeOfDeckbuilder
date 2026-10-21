@@ -190,11 +190,12 @@ export const NEUTRAL_GUARD: UnitScript = {
     return keptInside(catalogue, chronicle, unit, neutral, (inside) => {
       const attacking = landingsWithTarget(catalogue, chronicle, unit, inside, chronicle.units);
       if (attacking.length > 0) return nearestTo(chronicle, attacking, neutral.city);
-      const seen = chronicle.units.filter(
-        (other) =>
-          canAttack(unit, other, 0, relationsOf(chronicle)) &&
-          inOwnSight(catalogue, chronicle.tiles, unit, other.tile),
+      const attackable = chronicle.units.filter((other) =>
+        canAttack(unit, other, 0, relationsOf(chronicle)),
       );
+      if (attackable.length === 0) return undefined;
+      const sees = inOwnSight(catalogue, chronicle.tiles, unit);
+      const seen = attackable.filter((other) => sees.has(tileKey(other.tile)));
       if (seen.length === 0) return undefined;
       return nearestTo(chronicle, inside, nearestTo(chronicle, seen, unit.tile).tile);
     });

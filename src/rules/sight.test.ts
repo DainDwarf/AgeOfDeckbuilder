@@ -5,10 +5,13 @@ import { cultureThreshold } from './city';
 import {
   aimedAt,
   CATALOGUE,
+  CITY,
   CIVILIZATION,
   camping,
+  cityOf,
   claimOf,
   EMBARKED_MOVE,
+  field,
   NO_DEALS,
   namesOf,
   onlyStocks,
@@ -29,12 +32,10 @@ import {
   tileKey,
 } from './map';
 import { seedRng } from './rng';
-import { charted, inSight } from './sight';
-import { walked } from './stages';
+import { charted, chartedAt, inSight } from './sight';
+import { type Stage, walked } from './stages';
 import type { Chronicle, CitySection, NeutralCity, Snapshot } from './state';
 import type { UnitStats } from './units';
-
-const CITY: TileCoords = { q: 0, r: 0 };
 
 /** The city's own tile and the six around it. */
 const RING: readonly TileCoords[] = [CITY, ...neighbours(CITY)];
@@ -69,17 +70,10 @@ function ground(...relief: readonly Relief[]): Tile[] {
     for (const coord of coords) named.set(tileKey(coord), terrain);
   }
 
-  const tiles: Tile[] = [];
-  for (let q = -RADIUS; q <= RADIUS; q++) {
-    for (let r = Math.max(-RADIUS, -q - RADIUS); r <= Math.min(RADIUS, -q + RADIUS); r++) {
-      if (q === 0 && r === 0) {
-        tiles.push({ q, r, terrain: 'urban', improvements: [], building: 'PH_City' });
-        continue;
-      }
-      tiles.push({ q, r, terrain: named.get(tileKey({ q, r })) ?? 'plain', improvements: [] });
-    }
-  }
-  return tiles;
+  return field(RADIUS).map((tile) => {
+    const terrain = named.get(tileKey(tile));
+    return terrain === undefined ? tile : { ...tile, terrain };
+  });
 }
 
 /**
@@ -300,6 +294,47 @@ test('nothing sees on the settle phase: a unit entered at the centre part’s ed
   expect(distance(CITY, beyond)).toBeGreaterThan(CITY_SIGHT);
   expect(sees(ticked, beyond)).toBe(true);
   expect(snapshotOf(ticked, beyond)).toBeDefined();
+});
+
+/** The chronicles of the stage before the first stage of that name, and of that stage. */
+function aroundStage(stages: readonly Stage[], name: string): readonly [Chronicle, Chronicle] {
+  const order = [...walked(stages)];
+  const at = order.findIndex((stage) => stage.name === name);
+  if (at < 1) throw new Error(`the command staged no ${name} after a first stage`);
+  return [order[at - 1].chronicle, order[at].chronicle];
+}
+
+test('what a command brings into sight is charted at its stage: a tile claimed out of the city’s sight, a unit entered by a card', () => {
+  const claimed = { q: 2, r: 0 };
+  const fogged = chartedAt(CATALOGUE, cityOn(ground(['forest', [{ q: 1, r: 0 }]])), claimed);
+  const culture = cultureThreshold(fogged, 'player');
+  const claiming = apply(
+    CATALOGUE,
+    { ...fogged, resources: onlyStocks({ culture }) },
+    claimOf(claimed),
+  );
+  const workerSight = CATALOGUE.units.PH_Worker.sight;
+  const far = { q: workerSight, r: 0 };
+  const recruiting = apply(
+    CATALOGUE,
+    cityOf(['urban'], {
+      tiles: field(RADIUS),
+      hand: ['PH_Worker'],
+      population: 2,
+      resources: onlyStocks({ food: 2 }),
+      citySection: { ...CIVILIZATION.city, sight: workerSight - 1 },
+    }),
+    { type: 'play', index: 0, aim: 'none' },
+  );
+
+  const [unheld, held] = aroundStage(claiming, 'held');
+  const [unentered, entering] = aroundStage(recruiting, 'enter');
+
+  expect(sees(fogged, claimed)).toBe(false);
+  expect(snapshotOf(unheld, claimed)?.holder).toBeUndefined();
+  expect(snapshotOf(held, claimed)?.holder).toBe('player');
+  expect(snapshotOf(unentered, far)).toBeUndefined();
+  expect(snapshotOf(entering, far)).toBeDefined();
 });
 
 test('the snapshot keeps a tile as it was last seen once the unit that saw it has left', () => {

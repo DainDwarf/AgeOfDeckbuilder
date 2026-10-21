@@ -49,11 +49,12 @@ export function targetsInOwnSight(
   attacker: Unit,
 ): Unit[] {
   const relations = relationsOf(chronicle);
-  return units.filter(
-    (other) =>
-      canAttack(attacker, other, distance(other.tile, attacker.tile), relations) &&
-      inOwnSight(catalogue, chronicle.tiles, attacker, other.tile),
+  const inRange = units.filter((other) =>
+    canAttack(attacker, other, distance(other.tile, attacker.tile), relations),
   );
+  if (inRange.length === 0) return inRange;
+  const seen = inOwnSight(catalogue, chronicle.tiles, attacker);
+  return inRange.filter((other) => seen.has(tileKey(other.tile)));
 }
 
 /**

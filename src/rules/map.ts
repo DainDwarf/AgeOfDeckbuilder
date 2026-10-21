@@ -129,12 +129,17 @@ export function distance(a: TileCoords, b: TileCoords): number {
 
 /** The tile at a position, if the map reaches that far. */
 export function tileAt(tiles: readonly Tile[], coord: TileCoords): Tile | undefined {
-  return tiles.find((tile) => tile.q === coord.q && tile.r === coord.r);
+  return tiles.find((tile) => sameTile(tile, coord));
 }
 
 /** The one way a tile is named in a set or a map keyed by position. */
 export function tileKey({ q, r }: TileCoords): string {
   return `${q},${r}`;
+}
+
+/** Whether two positions are one tile. */
+export function sameTile(one: TileCoords, other: TileCoords): boolean {
+  return one.q === other.q && one.r === other.r;
 }
 
 /** The tiles beside any tile read out of these, keyed once, so no read searches them all. */
@@ -558,6 +563,20 @@ export function discTiles(radius: number): number {
   return 3 * radius * radius + 3 * radius + 1;
 }
 
+/**
+ * The tiles within a radius of a tile, on the map or not, q by q and r by r within each. The
+ * generator draws over its disc in this order: another order deals every seed another map.
+ */
+export function discAround({ q, r }: TileCoords, radius: number): TileCoords[] {
+  const disc: TileCoords[] = [];
+  for (let dq = -radius; dq <= radius; dq++) {
+    for (let dr = Math.max(-radius, -dq - radius); dr <= Math.min(radius, -dq + radius); dr++) {
+      disc.push({ q: q + dq, r: r + dr });
+    }
+  }
+  return disc;
+}
+
 /** How many biomes a map of the region is cut into, the centre's own among them. */
 function biomeCount({ radius, tilesPerBiome }: MapRegion): number {
   return Math.round(discTiles(radius) / tilesPerBiome);
@@ -860,12 +879,7 @@ function dealMap(
   const { radius, centreBiome, featureShares } = region;
   let rng = initial;
 
-  const coords: TileCoords[] = [];
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
-      coords.push({ q, r });
-    }
-  }
+  const coords = discAround(CENTRE, radius);
   const indexOf = new Map(coords.map((coord, index) => [tileKey(coord), index]));
   const centreIndex = coords.findIndex((coord) => tileKey(coord) === tileKey(CENTRE));
 

@@ -4,6 +4,7 @@ import {
   type Passage,
   pathCosts,
   type River,
+  sameTile,
   type Tile,
   type TileCoords,
   tileKey,
@@ -96,7 +97,7 @@ export function spentAction<U extends Unit>(unit: U): U {
 
 /** The one unit standing on a tile, if one does. */
 export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefined {
-  return units.find((unit) => unit.tile.q === coord.q && unit.tile.r === coord.r);
+  return units.find((unit) => sameTile(unit.tile, coord));
 }
 
 /** Whether a unit acts against the player as an enemy does: an enemy, or the neutral's while hostile. */

@@ -13,6 +13,7 @@ import {
   type ImprovementId,
   neighbours,
   riversAlong,
+  sameTile,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -541,10 +542,6 @@ function boxOf(tiles: readonly Tile[]): {
   };
 }
 
-function same(a: TileCoords, b: TileCoords): boolean {
-  return a.q === b.q && a.r === b.r;
-}
-
 function glowTile(
   scene: Phaser.Scene,
   coord: TileCoords,
@@ -1071,7 +1068,7 @@ export function createMapView(
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
     const faces = tilesBeside(shown.tiles.flatMap((tile) => drawnOf(tile)?.tile ?? []));
     for (const tile of shown.tiles) {
-      if (threshold !== undefined && same(tile, threshold.tile)) continue;
+      if (threshold !== undefined && sameTile(tile, threshold.tile)) continue;
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
@@ -1310,7 +1307,7 @@ export function createMapView(
       const holder = face.asStands ? holderOf(current, tile) : charted.get(tileKey(tile))?.holder;
       if (holder === undefined) continue;
       const own = cityTileOf(current, holder);
-      const weight = own !== undefined && same(tile, own) ? CITY_RING : RING;
+      const weight = own !== undefined && sameTile(tile, own) ? CITY_RING : RING;
       rings.add(ringMark(scene, tile, CITY_COLOURS[holder], weight));
     }
   };
@@ -1844,11 +1841,11 @@ export function createMapView(
       /** The step or the attack a release on a tile is for the unit the map has lit, and nothing else. */
       const commandUnitOn = (unit: number, on: TileCoords): boolean => {
         if (lit?.unit !== unit) return false;
-        if (lit.landings.some((landing) => same(landing.tile, on))) {
+        if (lit.landings.some((landing) => sameTile(landing.tile, on))) {
           commanded({ type: 'move', unit, tile: on });
           return true;
         }
-        if (lit.targets.some((coord) => same(coord, on))) {
+        if (lit.targets.some((coord) => sameTile(coord, on))) {
           commanded({ type: 'attack', unit, tile: on });
           return true;
         }
@@ -1985,7 +1982,7 @@ export function createMapView(
       for (const coord of lit) glow.add(glowTile(scene, coord, LOOK.lit, LOOK.litGlow));
 
       const click = (tile: TileCoords): void => {
-        if (lit.some((coord) => same(coord, tile))) chosen(tile);
+        if (lit.some((coord) => sameTile(coord, tile))) chosen(tile);
         else refused(pressedOn(tile));
       };
       aimClicked = click;

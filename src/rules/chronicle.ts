@@ -87,7 +87,16 @@ import {
   timelineOf,
   unitDamaged,
 } from './schedule';
-import { charted, chartedAt, inOwnSight, inSight, unitsGone } from './sight';
+import {
+  charted,
+  chartedAt,
+  chartedEach,
+  inOwnSight,
+  inSight,
+  type SightReading,
+  sightReading,
+  unitsGone,
+} from './sight';
 import {
   type Aimed,
   type Change,
@@ -709,18 +718,14 @@ function refused(chronicle: Chronicle): Sequence<Group> {
 }
 
 /**
- * Every leaf of the tree with its own chronicle charted, in the order the walk plays them, each
- * carrying on from the snapshots the leaf before it left: every stage a command resolves as is built
- * off the chronicle the command started on, so the snapshots its own chronicle carries are that
- * one's. A `charted` change has its tile's snapshot taken here, as the change's chronicle stands. The
- * units leave the snapshots here, on the `turn` change, because the snapshots a leaf's own chronicle
- * carries are stale by a turn. A group holding stages leaves its last stage's charted chronicle, or
- * its own charted where a draw of the generator rode on it past its last stage. A command that
- * charted nothing hands back the very stages it was given.
+ * Every leaf charted in walk order. Each stage is built off the command's first chronicle, its
+ * snapshots that one's, so the walk carries the snapshots, the turn and the reading of what is in
+ * sight from leaf to leaf. A command that charted nothing hands back the very stages it was given.
  */
 function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Stage[]): Stage[] {
   let standing = started.snapshots;
   let turn = started.turn;
+  let reading: SightReading | undefined;
   const seen = <Settled extends Stage>(stage: Settled, at: TileCoords | undefined): Settled => {
     if (stage.chronicle.turn !== turn) standing = unitsGone(standing);
     turn = stage.chronicle.turn;
@@ -728,7 +733,9 @@ function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
       stage.chronicle.snapshots === standing
         ? stage.chronicle
         : { ...stage.chronicle, snapshots: standing };
-    const left = charted(catalogue, at === undefined ? carried : chartedAt(catalogue, carried, at));
+    const marked = at === undefined ? carried : chartedAt(catalogue, carried, at);
+    reading = sightReading(catalogue, marked, reading);
+    const left = chartedEach(marked, reading.inSight);
     standing = left.snapshots;
     return left === stage.chronicle ? stage : { ...stage, chronicle: left };
   };
@@ -741,6 +748,7 @@ function charting(catalogue: Catalogue, started: Chronicle, stages: readonly Sta
         const held = stage.stages.map(chart);
         if (held.every((child, at) => child === stage.stages[at])) return stage;
         const last = stage.stages[stage.stages.length - 1];
+        // A draw of the generator rode on the group past its last stage.
         if (stage.chronicle !== last.chronicle) return { ...seen(stage, undefined), stages: held };
         return { ...stage, stages: held, chronicle: held[held.length - 1].chronicle };
       }
@@ -1492,7 +1500,7 @@ function scriptedActs(
         const away = distance(acting.tile, target.tile);
         if (
           !canAttack(acting, target, away, relationsOf(standing)) ||
-          !inOwnSight(catalogue, standing.tiles, acting, target.tile)
+          !inOwnSight(catalogue, standing.tiles, acting).has(tileKey(target.tile))
         ) {
           return landedAs(change('runtime-error', standing, standing));
         }

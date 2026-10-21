@@ -80,11 +80,13 @@ import {
   type BuildingTypeId,
   cornerKey,
   cornersOf,
+  discAround,
   distance,
   type FeatureId,
   MOVE_POINT,
   neighbours,
   type River,
+  sameTile,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -1453,22 +1455,12 @@ export function cityOf(
  */
 export function field(radius: number, coast: TileCoords[] = []): Tile[] {
   const wet = new Set(coast.map(tileKey));
-  const tiles: Tile[] = [];
-  for (let q = -radius; q <= radius; q++) {
-    for (let r = Math.max(-radius, -q - radius); r <= Math.min(radius, -q + radius); r++) {
-      if (q === 0 && r === 0) {
-        tiles.push({ q, r, terrain: 'urban', improvements: [], building: 'PH_City' });
-        continue;
-      }
-      tiles.push({
-        q,
-        r,
-        terrain: wet.has(tileKey({ q, r })) ? 'coast' : 'plain',
-        improvements: [],
-      });
-    }
-  }
-  return tiles;
+  return discAround(CITY, radius).map(
+    ({ q, r }): Tile =>
+      sameTile({ q, r }, CITY)
+        ? { q, r, terrain: 'urban', improvements: [], building: 'PH_City' }
+        : { q, r, terrain: wet.has(tileKey({ q, r })) ? 'coast' : 'plain', improvements: [] },
+  );
 }
 
 /** A disc of plain out to `radius` with nothing standing on it: ground no city has settled yet. */

@@ -1,12 +1,15 @@
 import type { Catalogue } from './catalogue';
 import {
+  discAround,
   distance,
   elevation,
-  type Terrain,
+  sameTile,
   type Tile,
   type TileCoords,
+  type TilesBeside,
   tileAt,
   tileKey,
+  tilesBeside,
 } from './map';
 import { type MapContent, refuse } from './map-kinds';
 import { type Chronicle, holderOf, onSettlePhase, type Snapshot } from './state';
@@ -65,39 +68,48 @@ function between(from: TileCoords, to: TileCoords, way: 1 | -1): TileCoords[] {
  */
 function seenFrom(
   catalogue: MapContent,
-  terrainAt: (coord: TileCoords) => Terrain | undefined,
+  beside: TilesBeside,
   from: TileCoords,
   to: TileCoords,
 ): boolean {
-  const standing = elevation(catalogue, terrainAt(from));
+  const standing = elevation(catalogue, beside(from)?.terrain);
   const clear = (way: 1 | -1): boolean =>
     between(from, to, way).every((coord) => {
-      const crossed = elevation(catalogue, terrainAt(coord));
+      const crossed = elevation(catalogue, beside(coord)?.terrain);
       return crossed === 0 || crossed < standing;
     });
   return clear(1) || clear(-1);
 }
 
-/**
- * Whether a unit sees a tile with its own eyes from the tile it stands on, whatever else sees it: the
- * tile within its sight, and the line over the ground clear.
- */
+/** What sees: the tile it sees from, and how far. */
+type Watcher = { readonly from: TileCoords; readonly sight: number };
+
+/** Every tile of the map the watcher sees added to `seen`, a tile `seen` already holds left unread. */
+function watched(
+  catalogue: MapContent,
+  beside: TilesBeside,
+  { from, sight }: Watcher,
+  seen: Set<string>,
+): Set<string> {
+  for (const coord of discAround(from, sight)) {
+    const key = tileKey(coord);
+    if (seen.has(key) || beside(coord) === undefined) continue;
+    if (seenFrom(catalogue, beside, from, coord)) seen.add(key);
+  }
+  return seen;
+}
+
+/** Every tile a unit sees with its own eyes from the tile it stands on, whatever else sees it. */
 export function inOwnSight(
   catalogue: MapContent,
   tiles: readonly Tile[],
   watcher: Unit,
-  at: TileCoords,
-): boolean {
-  if (distance(watcher.tile, at) > watcher.stats.sight) return false;
-  return seenFrom(catalogue, (coord) => tileAt(tiles, coord)?.terrain, watcher.tile, at);
+): ReadonlySet<string> {
+  const seeing = { from: watcher.tile, sight: watcher.stats.sight };
+  return watched(catalogue, tilesBeside(tiles), seeing, new Set());
 }
 
-export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
-  if (onSettlePhase(chronicle)) return new Set(chronicle.centre.map(tileKey));
-  const terrains = new Map(chronicle.tiles.map((tile) => [tileKey(tile), tile.terrain]));
-  const terrainAt = (at: TileCoords): Terrain | undefined => terrains.get(tileKey(at));
-  const seen = new Set(chronicle.held.map(tileKey));
-
+function watchersOf(chronicle: Chronicle): Watcher[] {
   const watching =
     chronicle.city === undefined
       ? []
@@ -105,16 +117,62 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
   for (const unit of chronicle.units) {
     if (unit.faction === 'player') watching.push({ from: unit.tile, sight: unit.stats.sight });
   }
+  return watching;
+}
 
-  for (const { from, sight } of watching) {
-    for (const { q, r } of chronicle.tiles) {
-      const coord = { q, r };
-      if (seen.has(tileKey(coord)) || distance(from, coord) > sight) continue;
-      if (seenFrom(catalogue, terrainAt, from, coord)) seen.add(tileKey(coord));
-    }
+function sameTiles(one: readonly TileCoords[], other: readonly TileCoords[]): boolean {
+  return (
+    one === other ||
+    (one.length === other.length && one.every((tile, at) => sameTile(tile, other[at])))
+  );
+}
+
+/** Whether two chronicles agree on everything what is in sight is read off. */
+function sameSight(was: Chronicle, now: Chronicle): boolean {
+  if (was.tiles !== now.tiles || onSettlePhase(was) !== onSettlePhase(now)) return false;
+  if (onSettlePhase(now)) return sameTiles(was.centre, now.centre);
+  const watching = watchersOf(was);
+  const watchers = watchersOf(now);
+  return (
+    sameTiles(was.held, now.held) &&
+    watching.length === watchers.length &&
+    watching.every(
+      (watcher, at) =>
+        watcher.sight === watchers[at].sight && sameTile(watcher.from, watchers[at].from),
+    )
+  );
+}
+
+/** What is in sight on a chronicle, the chronicle it answers for, and that one's tiles keyed. */
+export type SightReading = {
+  readonly chronicle: Chronicle;
+  readonly beside: TilesBeside;
+  readonly inSight: ReadonlySet<string>;
+};
+
+/**
+ * What is in sight on the chronicle: the kept reading where the chronicle differs from the one it
+ * answers for in nothing the sight reads, its tiles' lookup where they are the same tiles.
+ */
+export function sightReading(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  kept?: SightReading,
+): SightReading {
+  if (kept?.chronicle === chronicle) return kept;
+  if (kept !== undefined && sameSight(kept.chronicle, chronicle)) return { ...kept, chronicle };
+  const beside =
+    kept?.chronicle.tiles === chronicle.tiles ? kept.beside : tilesBeside(chronicle.tiles);
+  if (onSettlePhase(chronicle)) {
+    return { chronicle, beside, inSight: new Set(chronicle.centre.map(tileKey)) };
   }
+  const seen = new Set(chronicle.held.map(tileKey));
+  for (const watcher of watchersOf(chronicle)) watched(catalogue, beside, watcher, seen);
+  return { chronicle, beside, inSight: seen };
+}
 
-  return seen;
+export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<string> {
+  return sightReading(catalogue, chronicle).inSight;
 }
 
 /**
@@ -145,19 +203,22 @@ function taken(chronicle: Chronicle, tile: Tile): Snapshot {
   return { ...at, unit: { type: stats.type, faction, embarked } };
 }
 
-/**
- * The chronicle with a snapshot taken of every tile in sight, over whatever it was last seen as:
- * the one place what is in sight is charted, and every stage a command resolves as goes through it.
- * A chronicle the snapshots already answer for is handed straight back, so a command that charted
- * nothing answers the very chronicle it was given.
- */
+/** The chronicle with a snapshot taken of every tile in sight, as `chartedEach` takes them. */
 export function charted(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
-  const seen = inSight(catalogue, chronicle);
+  return chartedEach(chronicle, inSight(catalogue, chronicle));
+}
+
+/**
+ * The chronicle with a snapshot taken of every tile of the map the keys name, over whatever it was
+ * last seen as. A chronicle the snapshots already answer for is handed straight back, so a command
+ * that charted nothing answers the very chronicle it was given.
+ */
+export function chartedEach(chronicle: Chronicle, named: ReadonlySet<string>): Chronicle {
   const kept = new Map(chronicle.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
   let charting = false;
 
   for (const tile of chronicle.tiles) {
-    if (!seen.has(tileKey(tile))) continue;
+    if (!named.has(tileKey(tile))) continue;
     const snapshot = taken(chronicle, tile);
     if (records(kept.get(tileKey(tile)), snapshot)) continue;
     kept.set(tileKey(tile), snapshot);
