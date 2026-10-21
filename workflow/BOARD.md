@@ -11,6 +11,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The withdrawal kept** — a worker the withdraw gambit walked home is walked back out the same turn by "move a worker holding its move points to where the best play lands", which carries no condition about an enemy in sight (seeds 89, 29 and 1 of the Stone Age deck); the send-to-play gambit leaves a threatened worker where it stands.
+- **The withdrawal kept** — a worker walk of the builder's and the warlord's never lands on a tile an enemy the map shows could attack next turn, and the withdrawal walks to such a tile no enemy could attack, the nearest the city of those, else the nearest the city; the three gambits' tests on the fixture pass, and the Stone Age deck's rows under the builder are reported before and after. Doc-impact: `docs/SIMULATOR.md`. [board/the-withdrawal-kept.md](board/the-withdrawal-kept.md)
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
