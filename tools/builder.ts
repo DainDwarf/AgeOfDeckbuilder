@@ -186,7 +186,7 @@ export function declaringNoWar({ sentence, candidates }: Weighing): Gambit {
 }
 
 /** A candidate and its rank, read number by number, the lowest first. */
-export type Ranked<Item> = { readonly item: Item; readonly rank: readonly number[] };
+type Ranked<Item> = { readonly item: Item; readonly rank: readonly number[] };
 
 /** Whether one rank reads lower than the other: below it at the first number they differ by. */
 function ranksBelow(one: readonly number[], other: readonly number[]): boolean {
@@ -262,7 +262,7 @@ export function trial(
   return after.rng.every((word, at) => word === chronicle.rng[at]) ? after : undefined;
 }
 
-export function playersUnits(chronicle: Chronicle): Unit[] {
+function playersUnits(chronicle: Chronicle): Unit[] {
   return chronicle.units.filter((unit) => unit.faction === 'player');
 }
 

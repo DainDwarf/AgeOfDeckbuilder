@@ -11,7 +11,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The warlord** — `--persona warlord` drives a chronicle through the twenty-four gambits the dossier writes out, `--personas` prints them as written, every command it sends declares no war and moves no unit off a camp or a site, and each gambit of its own has its test on the fixture. Doc-impact: `docs/SIMULATOR.md`. [board/the-warlord.md](board/the-warlord.md)
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The profile** — a builder's hundred seeds profiled and what the profile justifies landed: the reachability cache, the end of turn's cost per `apply`, the split of a sweep across processes; a rules change among them is its own commit under its own review.
