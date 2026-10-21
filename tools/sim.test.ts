@@ -11,6 +11,7 @@ import {
   ageOf,
   type Catalogue,
   type Civilization,
+  unitKind,
   victoryTechnologyOf,
 } from '../src/rules/catalogue';
 import {
@@ -722,38 +723,82 @@ test('where no entry of a deal qualifies, the builder takes the first not refuse
   expect(answerOf('builder', 1, exodus, fallingBack)).toEqual({ type: 'take', at: 1 });
 });
 
-test('a worker an enemy in sight could reach next turn walks to its landing nearest the city', () => {
+test('a worker an enemy the map shows could attack next turn walks to its landing no enemy could attack nearest the city, ahead of a nearer one an enemy could', () => {
+  const workerAt = { q: 2, r: 0 };
   const beset = cityOf(['urban'], {
     tiles: field(4),
-    units: [worker({ q: 2, r: 0 }), enemyStanding({ q: 4, r: 0 }, undefined)],
+    units: [worker(workerAt), enemyStanding({ q: 1, r: -2 }, undefined)],
   });
 
   expect(answerOf('builder', 8, beset)).toEqual({
     type: 'move',
-    unit: unitNumberOn(beset, { q: 2, r: 0 }),
+    unit: unitNumberOn(beset, workerAt),
+    tile: { q: 0, r: 2 },
+  });
+});
+
+test('a worker an enemy could attack on every landing walks to its landing nearest the city', () => {
+  const workerAt = { q: 1, r: 0 };
+  const cornered = cityOf(['urban'], {
+    tiles: strip(4),
+    units: [
+      worker(workerAt),
+      enemyStanding({ q: 3, r: 0 }, undefined, { stats: unitKind(CATALOGUE, 'PH_Slinger') }),
+    ],
+  });
+
+  expect(answerOf('builder', 8, cornered)).toEqual({
+    type: 'move',
+    unit: unitNumberOn(cornered, workerAt),
     tile: CITY,
   });
 });
 
-test('a worker reads an enemy’s walk on what the player knows: a unit standing in fog blocks nothing', () => {
+test('a worker walks away from an enemy the fog shows this turn, seen by a unit that stepped away', () => {
+  const workerAt = { q: 3, r: 0 };
+  const scoutAt = { q: 6, r: -2 };
+  const scouting = cityOf(['urban'], {
+    tiles: field(6),
+    units: [
+      worker(workerAt),
+      standing('player', scoutAt),
+      enemyStanding({ q: 6, r: 0 }, undefined),
+    ],
+  });
+  const fogged = outcome(
+    apply(CATALOGUE, scouting, {
+      type: 'move',
+      unit: unitNumberOn(scouting, scoutAt),
+      tile: { q: 6, r: -4 },
+    }),
+  );
+
+  expect(answerOf('builder', 8, fogged)).toEqual({
+    type: 'move',
+    unit: unitNumberOn(fogged, workerAt),
+    tile: { q: 1, r: 0 },
+  });
+});
+
+test('a worker reads an enemy’s walk on what the player knows: a unit the map does not show blocks nothing', () => {
   const corridor = Array.from({ length: 10 }, (_, q) => ({ q, r: 0 }));
   const fog = [4, 5, 6].map((q) => ({ q, r: 0 }));
   const charted = fog.reduce(
     (chronicle, at) => chartedAt(CATALOGUE, chronicle, at),
     cityOf(['urban'], { tiles: deepBut(field(9), corridor) }),
   );
-  const workerAt = { q: 1, r: 0 };
+  const workerAt = { q: 3, r: 0 };
   const beset = withUnits(charted, [
     worker(workerAt),
     standing('player', { q: 9, r: 0 }),
-    enemyStanding({ q: 7, r: 0 }, undefined, { stats: { move: 5 * MOVE_POINT } }),
-    neutralStanding({ q: 5, r: 0 }),
+    enemyStanding({ q: 7, r: 0 }, undefined, { stats: unitKind(CATALOGUE, 'PH_Slinger') }),
+    neutralStanding({ q: 6, r: 0 }),
   ]);
 
   expect(answerOf('builder', 8, beset)).toEqual({
     type: 'move',
     unit: unitNumberOn(beset, workerAt),
-    tile: CITY,
+    tile: { q: 1, r: 0 },
   });
 });
 
@@ -772,6 +817,21 @@ test('a worker with nothing to play where it stands walks to the landing where a
     type: 'move',
     unit: unitNumberOn(walking, standing),
     tile: plain,
+  });
+});
+
+test('a worker walking to play passes a landing an enemy the map shows could attack next turn for the next', () => {
+  const workerAt = { q: 2, r: 0 };
+  const watched = ringed(4, {
+    units: [worker(workerAt), enemyStanding({ q: 4, r: -1 }, undefined)],
+    hand: ['PH_Farm'],
+    resources: onlyStocks({ production: 3 }),
+  });
+
+  expect(answerOf('builder', 9, watched)).toEqual({
+    type: 'move',
+    unit: unitNumberOn(watched, workerAt),
+    tile: { q: 0, r: 1 },
   });
 });
 
@@ -858,6 +918,21 @@ test('a worker with nothing to play walks to the landing outside the border that
     type: 'move',
     unit: unitNumberOn(roaming, standing),
     tile: near,
+  });
+});
+
+test('a worker sent out passes a landing an enemy the map shows could attack next turn for the next', () => {
+  const far = { q: -1, r: 0 };
+  const standing = { q: 1, r: 0 };
+  const watched = cityOf(['urban'], {
+    tiles: featured(field(3), 'PH_Fertile', [far, { q: 0, r: 1 }]),
+    units: [worker(standing), enemyStanding({ q: 3, r: -1 }, undefined)],
+  });
+
+  expect(answerOf('builder', 12, watched)).toEqual({
+    type: 'move',
+    unit: unitNumberOn(watched, standing),
+    tile: far,
   });
 });
 

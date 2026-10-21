@@ -1,5 +1,13 @@
 import { aimOf } from '../src/rules/cards';
-import { type Catalogue, cardOf, strikeOf, workerAim } from '../src/rules/catalogue';
+import {
+  ageOf,
+  type Catalogue,
+  cardOf,
+  type Entering,
+  entered,
+  strikeOf,
+  workerAim,
+} from '../src/rules/catalogue';
 import {
   admitted,
   apply,
@@ -25,7 +33,6 @@ import {
 } from '../src/rules/map';
 import type { Resources } from '../src/rules/resources';
 import { offered } from '../src/rules/schedule';
-import { inSight } from '../src/rules/sight';
 import {
   assignedTo,
   type Chronicle,
@@ -35,6 +42,7 @@ import {
   idle,
   onSettlePhase,
   playable,
+  type SnapshotUnit,
 } from '../src/rules/state';
 import {
   actsAsEnemy,
@@ -97,13 +105,13 @@ export const CLAIMED: Weighing = {
 
 export const WORKER_WITHDRAWN: Weighing = {
   sentence:
-    'A worker an enemy in sight could reach next turn walks to the reachable tile nearest the city',
+    'A worker an enemy the map shows could attack next turn walks to the reachable tile no such enemy could attack, the nearest the city of those, else the reachable tile nearest the city',
   candidates: workerWithdrawn,
 };
 
 export const WORKER_SENT_TO_PLAY: Weighing = {
   sentence:
-    'Move a worker holding its move points to the reachable tile where the best play in hand lands the most, where that beats where it stands',
+    'Move a worker holding its move points to the reachable tile no enemy the map shows could attack next turn where the best play in hand lands the most, where that beats where it stands',
   candidates: workerSentToPlay,
 };
 
@@ -121,7 +129,7 @@ export const GAINED_THROUGH_WORKER: Weighing = {
 
 export const WORKER_SENT_OUT: Weighing = {
   sentence:
-    'Move a worker with nothing to play to the reachable tile outside the border that yields most',
+    'Move a worker with nothing to play to the reachable tile outside the border no enemy the map shows could attack next turn that yields most',
   candidates: workerSentOut,
 };
 
@@ -444,37 +452,90 @@ function claimed(catalogue: Catalogue, chronicle: Chronicle): Command[] {
 }
 
 /**
- * Whether the enemy could attack the unit next turn: from its own tile, or from a tile it reaches
- * with its move points at its move, walking over `known`.
+ * How a unit a snapshot carries enters the map: as one of its kind, embarked on its age's embarked
+ * move where it stands embarked.
  */
-function threatens(catalogue: Catalogue, known: Chronicle, enemy: Unit, unit: Unit): boolean {
-  const relations = relationsOf(known);
-  const walking = { ...enemy, movePoints: enemy.stats.move };
-  return [{ tile: enemy.tile }, ...reachable(catalogue, known, walking)].some(({ tile }) =>
-    canAttack({ ...enemy, tile }, unit, distance(tile, unit.tile), relations),
-  );
+function shownEntering(
+  tile: TileCoords,
+  { type, faction, embarked }: SnapshotUnit,
+  embarkedMove: number | undefined,
+): Entering {
+  const carried = { type, tile, embarkedMove: embarked ? embarkedMove : undefined };
+  switch (faction) {
+    case 'player':
+      return { ...carried, faction };
+    case 'enemy':
+    case 'neutral':
+      // The map shows no script: the walk and the attack the unit is handed to read none.
+      return { ...carried, faction, script: '' };
+  }
+}
+
+/**
+ * Whether an enemy the map shows, in sight or in fog this turn, could attack the unit next turn
+ * standing on the tile: from the enemy's own tile, or from a tile it reaches at its move, walking
+ * over the charted tiles among the units the map shows.
+ */
+function attackedNextTurn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): (unit: Unit, tile: TileCoords) => boolean {
+  const relations = relationsOf(chronicle);
+  const { embarkedMove } = ageOf(catalogue, chronicle.age).camp;
+  // Not the chronicle: its tiles are the snapshots', so `reachable` never reads the map unseen.
+  let known: Chronicle = {
+    ...chronicle,
+    tiles: chronicle.snapshots.map(({ tile }) => tile),
+    units: playersUnits(chronicle),
+  };
+  for (const { q, r, unit } of chronicle.snapshots) {
+    if (unit === undefined) continue;
+    known = entered(catalogue, known, shownEntering({ q, r }, unit, embarkedMove)).chronicle;
+  }
+  const stands = known.units
+    .filter((enemy) => actsAsEnemy(enemy, relations))
+    .flatMap((enemy) =>
+      [{ tile: enemy.tile }, ...reachable(catalogue, known, enemy)].map(({ tile }) => ({
+        ...enemy,
+        tile,
+      })),
+    );
+  return (unit, tile) =>
+    stands.some((enemy) =>
+      canAttack(enemy, { ...unit, tile }, distance(enemy.tile, tile), relations),
+    );
 }
 
 function workerWithdrawn(catalogue: Catalogue, chronicle: Chronicle): Command[] {
   const { city } = chronicle;
-  if (city === undefined) return [];
-  const relations = relationsOf(chronicle);
-  const seen = inSight(catalogue, chronicle);
-  const enemies = chronicle.units.filter(
-    (unit) => actsAsEnemy(unit, relations) && seen.has(tileKey(unit.tile)),
-  );
-  // Not the chronicle: its tiles are the snapshots', so `reachable` never reads the map unseen.
-  const known: Chronicle = {
-    ...chronicle,
-    tiles: chronicle.snapshots.map(({ tile }) => tile),
-    units: chronicle.units.filter((unit) => seen.has(tileKey(unit.tile))),
-  };
+  const workers = playersUnits(chronicle).filter((unit) => unit.stats.worker);
+  if (city === undefined || workers.length === 0) return [];
+  const attacked = attackedNextTurn(catalogue, chronicle);
   const order = tileOrder(chronicle);
-  return playersUnits(chronicle).flatMap((worker) => {
-    if (!worker.stats.worker) return [];
-    if (!enemies.some((enemy) => threatens(catalogue, known, enemy, worker))) return [];
-    return walksHome(worker, city, order, byHand(catalogue, chronicle, worker).landings);
+  return workers.flatMap((worker) => {
+    if (!attacked(worker, worker.tile)) return [];
+    const { landings } = byHand(catalogue, chronicle, worker);
+    const kept = landings.filter(({ tile }) => !attacked(worker, tile));
+    return [
+      ...nearestTheCity(worker, city, order, kept),
+      ...walksHome(worker, city, order, landings),
+    ];
   });
+}
+
+/** The unit's moves onto the landings, the nearest the city's tile first. */
+function nearestTheCity(
+  unit: Unit,
+  city: TileCoords,
+  order: (tile: TileCoords) => number,
+  landings: readonly Landing[],
+): Command[] {
+  return ranked(
+    landings.map(({ tile }) => ({
+      item: moveCommand(unit, tile),
+      rank: [distance(tile, city), order(tile)],
+    })),
+  );
 }
 
 /** The unit's moves onto those of the landings nearer the city's tile than it stands, the nearest first. */
@@ -485,13 +546,11 @@ function walksHome(
   landings: readonly Landing[],
 ): Command[] {
   const standsAt = distance(unit.tile, city);
-  return ranked(
-    landings
-      .filter(({ tile }) => distance(tile, city) < standsAt)
-      .map(({ tile }) => ({
-        item: moveCommand(unit, tile),
-        rank: [distance(tile, city), order(tile)],
-      })),
+  return nearestTheCity(
+    unit,
+    city,
+    order,
+    landings.filter(({ tile }) => distance(tile, city) < standsAt),
   );
 }
 
@@ -560,13 +619,23 @@ function bestPlayFrom(
   return best;
 }
 
+/** The workers of the player's holding both move points and action. */
+function workersToWalk(chronicle: Chronicle): Unit[] {
+  return playersUnits(chronicle).filter(
+    (unit) => unit.stats.worker && unit.movePoints > 0 && unit.action > 0,
+  );
+}
+
 function* workerSentToPlay(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
+  const workers = workersToWalk(chronicle);
+  if (workers.length === 0) return;
   const order = tileOrder(chronicle);
-  for (const worker of playersUnits(chronicle)) {
-    if (!worker.stats.worker || worker.movePoints <= 0 || worker.action <= 0) continue;
+  const attacked = attackedNextTurn(catalogue, chronicle);
+  for (const worker of workers) {
     const own = bestPlayFrom(catalogue, chronicle, worker, worker.tile);
     yield* ranked(
       byHand(catalogue, chronicle, worker).landings.flatMap(({ tile, cost }) => {
+        if (attacked(worker, tile)) return [];
         const best = bestPlayFrom(catalogue, chronicle, worker, tile);
         if (best === undefined || (own !== undefined && !ranksBelow(best, own))) return [];
         return [{ item: moveCommand(worker, tile), rank: [...best, cost, order(tile)] }];
@@ -608,15 +677,17 @@ function gainedThroughWorker(catalogue: Catalogue, chronicle: Chronicle): Comman
 }
 
 function workerSentOut(catalogue: Catalogue, chronicle: Chronicle): Command[] {
+  const workers = workersToWalk(chronicle);
+  if (workers.length === 0) return [];
   const yields = seenYields(catalogue, chronicle);
   const order = tileOrder(chronicle);
-  return playersUnits(chronicle).flatMap((worker) => {
-    if (!worker.stats.worker || worker.movePoints <= 0 || worker.action <= 0) return [];
+  const attacked = attackedNextTurn(catalogue, chronicle);
+  return workers.flatMap((worker) => {
     const own = worthOf(yields(worker.tile));
     return ranked(
       byHand(catalogue, chronicle, worker).landings.flatMap(({ tile, cost }) => {
         const worth = worthOf(yields(tile));
-        if (holds(chronicle, tile) || worth <= own) return [];
+        if (holds(chronicle, tile) || attacked(worker, tile) || worth <= own) return [];
         return [{ item: moveCommand(worker, tile), rank: [-worth, cost, order(tile)] }];
       }),
     );
