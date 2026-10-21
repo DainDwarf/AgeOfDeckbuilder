@@ -45,84 +45,135 @@ import { tileYield, worthOf } from '../src/rules/yields';
 import { refusedEntry, TURN_ENDED } from './idle';
 import type { Gambit, Persona } from './sim-driver';
 
-export const BUILDER: Persona = [
-  declaringNoWar(
+/** A gambit's sentence and its candidate commands, best first, before a persona's checks pick its answer. */
+export type Weighing = {
+  readonly sentence: string;
+  readonly candidates: (catalogue: Catalogue, chronicle: Chronicle) => Iterable<Command>;
+};
+
+export const DEAL_TAKEN: Weighing = {
+  sentence:
     'While a deal stands, take the entry whose trial brings no defeat, no unit acting as an enemy and no card that strikes, of those the one losing the least population and then leaving the most stock together, and where none qualifies the first not refused, one bringing defeat last',
-    dealTaken,
-  ),
-  declaringNoWar(
+  candidates: dealTaken,
+};
+
+export const CITY_SETTLED: Weighing = {
+  sentence:
     "On the settle phase, settle on the charted tile the city's building stands on whose yield summed with its six neighbours' is the most, the nearest the centre of equals",
-    citySettled,
-  ),
-  declaringNoWar(
+  candidates: citySettled,
+};
+
+export const UNIT_SETTLED: Weighing = {
+  sentence:
     'On the settle phase, play a settle card that enters a unit on the free tile beside the city that yields most',
-    unitSettled,
-  ),
-  declaringNoWar('Pay a hazard in hand the stocks cover', hazardPaid),
-  declaringNoWar(
+  candidates: unitSettled,
+};
+
+export const HAZARD_PAID: Weighing = {
+  sentence: 'Pay a hazard in hand the stocks cover',
+  candidates: hazardPaid,
+};
+
+export const IDLE_ASSIGNED: Weighing = {
+  sentence:
     'While a population is idle and the city holds a tile nobody works, assign it to the free held tile that yields the most food, the most of everything together of equals',
-    idleAssigned,
-  ),
-  declaringNoWar(
+  candidates: idleAssigned,
+};
+
+export const REASSIGNED: Weighing = {
+  sentence:
     'While a worked tile yields less than a free held tile, reassign the population onto it',
-    reassigned,
-  ),
-  declaringNoWar(
+  candidates: reassigned,
+};
+
+export const CLAIMED: Weighing = {
+  sentence:
     'While culture covers a claim, claim the tile that yields most among those the city may claim, the nearest a charted tile that yields more of equals',
-    claimed,
-  ),
-  declaringNoWar(
+  candidates: claimed,
+};
+
+export const WORKER_WITHDRAWN: Weighing = {
+  sentence:
     'A worker an enemy in sight could reach next turn walks to the reachable tile nearest the city',
-    workerWithdrawn,
-  ),
-  declaringNoWar(
+  candidates: workerWithdrawn,
+};
+
+export const WORKER_SENT_TO_PLAY: Weighing = {
+  sentence:
     'Move a worker holding its move points to the reachable tile where the best play in hand lands the most, where that beats where it stands',
-    workerSentToPlay,
-  ),
-  declaringNoWar(
+  candidates: workerSentToPlay,
+};
+
+export const PLACED: Weighing = {
+  sentence:
     'Play through a worker the card that places something, on the tile where it adds the most food to the yield, the most of everything of equals, the nearest the city of equals, one adding nothing still played, never one lowering it',
-    placed,
-  ),
-  declaringNoWar(
+  candidates: placed,
+};
+
+export const GAINED_THROUGH_WORKER: Weighing = {
+  sentence:
     "Play through a worker the card whose trial raises the stocks the most, never one whose trial lowers a tile's yield",
-    gainedThroughWorker,
-  ),
-  declaringNoWar(
+  candidates: gainedThroughWorker,
+};
+
+export const WORKER_SENT_OUT: Weighing = {
+  sentence:
     'Move a worker with nothing to play to the reachable tile outside the border that yields most',
-    workerSentOut,
-  ),
-  declaringNoWar(
-    'While fewer than three workers stand, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
-    (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 3),
-  ),
-  declaringNoWar(
-    'While fewer than two units that attack stand, a population is idle and no held tile is free, play a unit card whose trial enters a unit that attacks',
-    (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, false, 2),
-  ),
-  declaringNoWar(
-    'A unit that attacks, attacks the enemy of least health within its reach from a held tile, walking to that tile first',
-    enemyAttacked,
-  ),
-  declaringNoWar(
-    "A unit that attacks with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the free held tile nearest the city's own, never onto it",
-    garrisonWalked,
-  ),
-  declaringNoWar(
-    "Play a card aimed at nothing whose trial raises the stocks' sum or the population",
-    gainPlayed,
-  ),
-  declaringNoWar(
-    'Play a card aimed at the hand on a hazard in hand, else on its first other card',
-    handDiscarded,
-  ),
+  candidates: workerSentOut,
+};
+
+export const GAIN_PLAYED: Weighing = {
+  sentence: "Play a card aimed at nothing whose trial raises the stocks' sum or the population",
+  candidates: gainPlayed,
+};
+
+export const HAND_DISCARDED: Weighing = {
+  sentence: 'Play a card aimed at the hand on a hazard in hand, else on its first other card',
+  candidates: handDiscarded,
+};
+
+export const BUILDER: Persona = [
+  declaringNoWar(DEAL_TAKEN),
+  declaringNoWar(CITY_SETTLED),
+  declaringNoWar(UNIT_SETTLED),
+  declaringNoWar(HAZARD_PAID),
+  declaringNoWar(IDLE_ASSIGNED),
+  declaringNoWar(REASSIGNED),
+  declaringNoWar(CLAIMED),
+  declaringNoWar(WORKER_WITHDRAWN),
+  declaringNoWar(WORKER_SENT_TO_PLAY),
+  declaringNoWar(PLACED),
+  declaringNoWar(GAINED_THROUGH_WORKER),
+  declaringNoWar(WORKER_SENT_OUT),
+  declaringNoWar({
+    sentence:
+      'While fewer than three workers stand, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
+    candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 3),
+  }),
+  declaringNoWar({
+    sentence:
+      'While fewer than two units that attack stand, a population is idle and no held tile is free, play a unit card whose trial enters a unit that attacks',
+    candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, false, 2),
+  }),
+  declaringNoWar({
+    sentence:
+      'A unit that attacks, attacks the enemy of least health within its reach from a held tile, walking to that tile first',
+    candidates: (catalogue, chronicle) =>
+      enemyAttacked(catalogue, chronicle, (tile) => holds(chronicle, tile)),
+  }),
+  declaringNoWar({
+    sentence:
+      "A unit that attacks with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the free held tile nearest the city's own, never onto it",
+    candidates: (catalogue, chronicle) =>
+      garrisonWalked(catalogue, chronicle, attackersOf(chronicle)),
+  }),
+  declaringNoWar(GAIN_PLAYED),
+  declaringNoWar(HAND_DISCARDED),
   TURN_ENDED,
 ];
 
-/** A gambit answering the first of its candidates, best first, whose command declares no war. */
-function declaringNoWar(
-  sentence: string,
-  candidates: (catalogue: Catalogue, chronicle: Chronicle) => Iterable<Command>,
-): Gambit {
+/** The gambit answering the first of its candidates whose command declares no war. */
+export function declaringNoWar({ sentence, candidates }: Weighing): Gambit {
   return {
     sentence,
     command: (catalogue, chronicle) => {
@@ -135,7 +186,7 @@ function declaringNoWar(
 }
 
 /** A candidate and its rank, read number by number, the lowest first. */
-type Ranked<Item> = { readonly item: Item; readonly rank: readonly number[] };
+export type Ranked<Item> = { readonly item: Item; readonly rank: readonly number[] };
 
 /** Whether one rank reads lower than the other: below it at the first number they differ by. */
 function ranksBelow(one: readonly number[], other: readonly number[]): boolean {
@@ -146,7 +197,7 @@ function ranksBelow(one: readonly number[], other: readonly number[]): boolean {
 }
 
 /** The candidates' items, the lowest rank first, equals in the order handed in. */
-function ranked<Item>(candidates: readonly Ranked<Item>[]): Item[] {
+export function ranked<Item>(candidates: readonly Ranked<Item>[]): Item[] {
   return [...candidates]
     .sort((one, other) =>
       ranksBelow(one.rank, other.rank) ? -1 : ranksBelow(other.rank, one.rank) ? 1 : 0,
@@ -155,7 +206,7 @@ function ranked<Item>(candidates: readonly Ranked<Item>[]): Item[] {
 }
 
 /** Where a tile stands in the order the map lists its tiles in, which every tie falls back on. */
-function tileOrder(chronicle: Chronicle): (tile: TileCoords) => number {
+export function tileOrder(chronicle: Chronicle): (tile: TileCoords) => number {
   const order = new Map(chronicle.tiles.map((tile, at) => [tileKey(tile), at]));
   return (tile) => order.get(tileKey(tile)) ?? 0;
 }
@@ -177,7 +228,7 @@ function yieldsAmong(
  * What each tile yields as the player last saw it, read off its snapshot, which every stage keeps as
  * the tile stands while it is in sight; nothing for a tile never charted.
  */
-function seenYields(
+export function seenYields(
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): (tile: TileCoords) => Partial<Resources> {
@@ -202,7 +253,7 @@ function foodFirst(yields: Partial<Resources>): number[] {
 }
 
 /** The chronicle the command leaves, and nothing where it drew from the chronicle's generator. */
-function trial(
+export function trial(
   catalogue: Catalogue,
   chronicle: Chronicle,
   command: Command,
@@ -211,8 +262,13 @@ function trial(
   return after.rng.every((word, at) => word === chronicle.rng[at]) ? after : undefined;
 }
 
-function playersUnits(chronicle: Chronicle): Unit[] {
+export function playersUnits(chronicle: Chronicle): Unit[] {
   return chronicle.units.filter((unit) => unit.faction === 'player');
+}
+
+/** The units of the player's that attack. */
+export function attackersOf(chronicle: Chronicle): Unit[] {
+  return playersUnits(chronicle).filter((unit) => !unit.stats.worker);
 }
 
 /** The unit of the player's the trial entered, and nothing where it entered none. */
@@ -221,7 +277,7 @@ function unitEnteredBetween(before: Chronicle, after: Chronicle): Unit | undefin
   return playersUnits(after).find(({ id }) => !standing.has(id));
 }
 
-function moveCommand(unit: Unit, tile: TileCoords): Command {
+export function moveCommand(unit: Unit, tile: TileCoords): Command {
   return { type: 'move', unit: unit.id, tile: { q: tile.q, r: tile.r } };
 }
 
@@ -533,8 +589,26 @@ function workerSentOut(catalogue: Catalogue, chronicle: Chronicle): Command[] {
   });
 }
 
-/** The unit cards entering a worker, or a unit that attacks, as `worker` says. */
-function unitCardPlayed(
+/** The plays of the unit cards in hand whose trial enters a worker, or a unit that attacks, as `worker` says. */
+export function unitCardsEntering(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  worker: boolean,
+): Command[] {
+  return chronicle.hand.flatMap((held, index): Command[] => {
+    if (cardOf(catalogue, held.id).kind !== 'unit') return [];
+    const command: Command = { type: 'play', index, aim: 'none' };
+    const after = trial(catalogue, chronicle, command);
+    const entered = after && unitEnteredBetween(chronicle, after);
+    return entered?.stats.worker === worker ? [command] : [];
+  });
+}
+
+/**
+ * The unit cards entering a worker, or a unit that attacks, as `worker` says, while fewer of those
+ * stand, a population is idle and no held tile is free.
+ */
+export function unitCardPlayed(
   catalogue: Catalogue,
   chronicle: Chronicle,
   worker: boolean,
@@ -548,33 +622,33 @@ function unitCardPlayed(
   ) {
     return [];
   }
-  return chronicle.hand.flatMap((held, index): Command[] => {
-    if (cardOf(catalogue, held.id).kind !== 'unit') return [];
-    const command: Command = { type: 'play', index, aim: 'none' };
-    const after = trial(catalogue, chronicle, command);
-    const entered = after && unitEnteredBetween(chronicle, after);
-    return entered?.stats.worker === worker ? [command] : [];
-  });
+  return unitCardsEntering(catalogue, chronicle, worker);
 }
 
-function* enemyAttacked(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
+/**
+ * Each unit that attacks attacking the enemy of least health it reaches from the tiles `from`
+ * admits, its own or a landing, walking to the cheapest of those first.
+ */
+export function* enemyAttacked(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  from: (tile: TileCoords) => boolean,
+): Generator<Command> {
   const relations = relationsOf(chronicle);
   const order = tileOrder(chronicle);
-  for (const unit of playersUnits(chronicle)) {
-    if (unit.stats.worker || unit.action <= 0) continue;
-    const own: Landing[] = holds(chronicle, unit.tile) ? [{ tile: unit.tile, cost: 0 }] : [];
-    const from = [
-      ...own,
-      ...byHand(catalogue, chronicle, unit).landings.filter(({ tile }) => holds(chronicle, tile)),
-    ];
-    const reaching = from.flatMap(({ tile, cost }) => {
-      const there = { ...unit, tile };
-      const enemies = byHand(catalogue, chronicle, there)
-        .targets.filter((target) => actsAsEnemy(target, relations))
-        .sort((one, other) => order(one.tile) - order(other.tile));
-      const target = leastHealth(catalogue, chronicle, enemies, there);
-      return target === undefined ? [] : [{ tile, cost, target }];
-    });
+  for (const unit of attackersOf(chronicle)) {
+    if (unit.action <= 0) continue;
+    const own: Landing = { tile: unit.tile, cost: 0 };
+    const reaching = [own, ...byHand(catalogue, chronicle, unit).landings]
+      .filter(({ tile }) => from(tile))
+      .flatMap(({ tile, cost }) => {
+        const there = { ...unit, tile };
+        const enemies = byHand(catalogue, chronicle, there)
+          .targets.filter((target) => actsAsEnemy(target, relations))
+          .sort((one, other) => order(one.tile) - order(other.tile));
+        const target = leastHealth(catalogue, chronicle, enemies, there);
+        return target === undefined ? [] : [{ tile, cost, target }];
+      });
     const [weakest] = ranked(
       reaching.map(({ target }) => ({
         item: target,
@@ -595,23 +669,46 @@ function* enemyAttacked(catalogue: Catalogue, chronicle: Chronicle): Generator<C
   }
 }
 
-function* garrisonWalked(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
+/**
+ * The unit's moves whose trial charts tiles never charted, the most first, then the cheapest; only
+ * onto landings within `radius` tiles of the city where a radius is named.
+ */
+export function chartingWalks(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+  radius?: number,
+): Command[] {
+  const { city } = chronicle;
+  const order = tileOrder(chronicle);
+  return ranked(
+    byHand(catalogue, chronicle, unit).landings.flatMap(({ tile, cost }) => {
+      if (radius !== undefined && (city === undefined || distance(tile, city) > radius)) return [];
+      const command = moveCommand(unit, tile);
+      const after = trial(catalogue, chronicle, command);
+      const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;
+      return grown > 0 ? [{ item: command, rank: [-grown, cost, order(tile)] }] : [];
+    }),
+  );
+}
+
+/**
+ * Each of the units governed holding its move points charting within five tiles of the city, and
+ * charting none, resting on the free held tile nearest the city's own.
+ */
+export function* garrisonWalked(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  governed: readonly Unit[],
+): Generator<Command> {
   const { city } = chronicle;
   if (city === undefined) return;
   const order = tileOrder(chronicle);
-  for (const unit of playersUnits(chronicle)) {
-    if (unit.stats.worker || unit.movePoints <= 0) continue;
-    const { landings } = byHand(catalogue, chronicle, unit);
-    yield* ranked(
-      landings.flatMap(({ tile, cost }) => {
-        if (distance(tile, city) > 5) return [];
-        const command = moveCommand(unit, tile);
-        const after = trial(catalogue, chronicle, command);
-        const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;
-        return grown > 0 ? [{ item: command, rank: [-grown, cost, order(tile)] }] : [];
-      }),
-    );
+  for (const unit of governed) {
+    if (unit.movePoints <= 0) continue;
+    yield* chartingWalks(catalogue, chronicle, unit, 5);
 
+    const { landings } = byHand(catalogue, chronicle, unit);
     const standsAt = distance(unit.tile, city);
     const onCity = tileKey(unit.tile) === tileKey(city);
     const outside = !holds(chronicle, unit.tile);
