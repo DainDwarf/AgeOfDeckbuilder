@@ -11,7 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The profile** — a builder's hundred seeds profiled and what the profile justifies landed: the reachability cache, the end of turn's cost per `apply`, the split of a sweep across processes; a rules change among them is its own commit under its own review.
-- **The sweep** — a knob sweep over the cell's own parameters, one cell per value, and the ablation of one gambit at a time, one cell per gambit; the `sim` skill gains both.
+- **The sight charted once** — the sight is recomputed from scratch over every tile and every watcher after every stage of every command, the builder's trials included, 76% of a builder's hundred seeds; charted once per command or kept between stages, a `src/rules/` change that stands as game code, under its own review.
+- **The sweep** — a knob sweep over the cell's own parameters, one cell per value, and the ablation of one gambit at a time, one cell per gambit; the `sim` skill gains both, and the split of a sweep across processes, one process per cell by the shell and the parts read as one by the query, a seed range on `--seeds` where one cell must split.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
