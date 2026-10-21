@@ -11,6 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The garrison rests outside the border** — a unit that attacks with nothing to attack and nothing to chart rests on the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands, never on a held tile; the builder's and the warlord's sentences print so, the rest spot is held by one test on the fixtures, and the builder on seed 89 of the default cell ends in victory on turn 15 instead of defeat on turn 37. Doc-impact: `docs/SIMULATOR.md`. [board/garrison-rests-outside.md](board/garrison-rests-outside.md)
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.

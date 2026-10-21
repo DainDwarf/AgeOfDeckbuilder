@@ -14,9 +14,11 @@ import { leastHealth } from '../src/rules/enemies';
 import {
   CENTRE,
   distance,
+  elevation,
   neighbours,
   type Tile,
   type TileCoords,
+  type TilesBeside,
   tileAt,
   tileKey,
   tilesBeside,
@@ -163,7 +165,7 @@ export const BUILDER: Persona = [
   }),
   declaringNoWar({
     sentence:
-      "A unit that attacks with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the free held tile nearest the city's own, never onto it",
+      "A unit that attacks with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
     candidates: (catalogue, chronicle) =>
       garrisonWalked(catalogue, chronicle, attackersOf(chronicle)),
   }),
@@ -215,9 +217,8 @@ export function tileOrder(chronicle: Chronicle): (tile: TileCoords) => number {
 function yieldsAmong(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  tiles: readonly Tile[],
+  beside: TilesBeside,
 ): (tile: TileCoords) => Partial<Resources> {
-  const beside = tilesBeside(tiles);
   return (coord) => {
     const tile = beside(coord);
     return tile === undefined ? {} : tileYield(catalogue, chronicle, tile, beside);
@@ -225,18 +226,19 @@ function yieldsAmong(
 }
 
 /**
- * What each tile yields as the player last saw it, read off its snapshot, which every stage keeps as
- * the tile stands while it is in sight; nothing for a tile never charted.
+ * Each tile as the player last saw it, read off its snapshot, which every stage keeps as the tile
+ * stands while it is in sight; nothing for a tile never charted.
  */
+function seenTiles(chronicle: Chronicle): TilesBeside {
+  return tilesBeside(chronicle.snapshots.map(({ tile }) => tile));
+}
+
+/** What each tile yields as the player last saw it; nothing for a tile never charted. */
 export function seenYields(
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): (tile: TileCoords) => Partial<Resources> {
-  return yieldsAmong(
-    catalogue,
-    chronicle,
-    chronicle.snapshots.map(({ tile }) => tile),
-  );
+  return yieldsAmong(catalogue, chronicle, seenTiles(chronicle));
 }
 
 /** What each tile of the map yields as it stands: what a trial leaves on the tile played on. */
@@ -244,7 +246,7 @@ function yieldsOn(
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): (tile: TileCoords) => Partial<Resources> {
-  return yieldsAmong(catalogue, chronicle, chronicle.tiles);
+  return yieldsAmong(catalogue, chronicle, tilesBeside(chronicle.tiles));
 }
 
 /** A yield ranked food first, then every resource together, the most first. */
@@ -449,16 +451,26 @@ function workerWithdrawn(catalogue: Catalogue, chronicle: Chronicle): Command[] 
   return playersUnits(chronicle).flatMap((worker) => {
     if (!worker.stats.worker) return [];
     if (!enemies.some((enemy) => threatens(catalogue, known, enemy, worker))) return [];
-    const standsAt = distance(worker.tile, city);
-    return ranked(
-      byHand(catalogue, chronicle, worker)
-        .landings.filter(({ tile }) => distance(tile, city) < standsAt)
-        .map(({ tile }) => ({
-          item: moveCommand(worker, tile),
-          rank: [distance(tile, city), order(tile)],
-        })),
-    );
+    return walksHome(worker, city, order, byHand(catalogue, chronicle, worker).landings);
   });
+}
+
+/** The unit's moves onto those of the landings nearer the city's tile than it stands, the nearest first. */
+function walksHome(
+  unit: Unit,
+  city: TileCoords,
+  order: (tile: TileCoords) => number,
+  landings: readonly Landing[],
+): Command[] {
+  const standsAt = distance(unit.tile, city);
+  return ranked(
+    landings
+      .filter(({ tile }) => distance(tile, city) < standsAt)
+      .map(({ tile }) => ({
+        item: moveCommand(unit, tile),
+        rank: [distance(tile, city), order(tile)],
+      })),
+  );
 }
 
 /**
@@ -694,7 +706,10 @@ export function chartingWalks(
 
 /**
  * Each of the units governed holding its move points charting within five tiles of the city, and
- * charting none, resting on the free held tile nearest the city's own.
+ * charting none, resting on the landing the city may claim that stands highest, yields least of
+ * equals, nearest the city's tile of equals, where that beats where it stands; with no such landing,
+ * one outside the border and off that ring walks to its unheld landing nearest the city's tile,
+ * where that is nearer.
  */
 export function* garrisonWalked(
   catalogue: Catalogue,
@@ -704,30 +719,33 @@ export function* garrisonWalked(
   const { city } = chronicle;
   if (city === undefined) return;
   const order = tileOrder(chronicle);
+  const seen = seenTiles(chronicle);
+  const yields = yieldsAmong(catalogue, chronicle, seen);
+  const ring = new Set(claimable(catalogue, chronicle, 'player').map(tileKey));
+  const resting = (tile: TileCoords): number[] => [
+    -elevation(catalogue, seen(tile)?.terrain),
+    worthOf(yields(tile)),
+    distance(tile, city),
+  ];
   for (const unit of governed) {
     if (unit.movePoints <= 0) continue;
     yield* chartingWalks(catalogue, chronicle, unit, 5);
 
     const { landings } = byHand(catalogue, chronicle, unit);
-    const standsAt = distance(unit.tile, city);
-    const onCity = tileKey(unit.tile) === tileKey(city);
-    const outside = !holds(chronicle, unit.tile);
-    const nearest = (tiles: readonly TileCoords[]): Command[] =>
-      ranked(
-        tiles.map((tile) => ({
-          item: moveCommand(unit, tile),
-          rank: [distance(tile, city), order(tile)],
-        })),
+    const candidates = landings.filter(({ tile }) => ring.has(tileKey(tile)));
+    const onRing = ring.has(tileKey(unit.tile));
+    if (candidates.length > 0) {
+      const own = onRing ? resting(unit.tile) : undefined;
+      yield* ranked(
+        candidates.flatMap(({ tile }) => {
+          const rank = resting(tile);
+          if (own !== undefined && !ranksBelow(rank, own)) return [];
+          return [{ item: moveCommand(unit, tile), rank: [...rank, order(tile)] }];
+        }),
       );
-    const held = landings
-      .map(({ tile }) => tile)
-      .filter((tile) => holds(chronicle, tile) && tileKey(tile) !== tileKey(city));
-    if (held.length > 0) {
-      yield* nearest(held.filter((tile) => distance(tile, city) < standsAt || onCity || outside));
-    } else if (outside) {
-      yield* nearest(
-        landings.map(({ tile }) => tile).filter((tile) => distance(tile, city) < standsAt),
-      );
+    } else if (!onRing && !holds(chronicle, unit.tile)) {
+      const unheld = landings.filter(({ tile }) => !holds(chronicle, tile));
+      yield* walksHome(unit, city, order, unheld);
     }
   }
 }

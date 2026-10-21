@@ -86,7 +86,7 @@ export const WARLORD: Persona = [
   }),
   staying({
     sentence:
-      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the free held tile nearest the city's own, never onto it",
+      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
     candidates: (catalogue, chronicle) =>
       garrisonWalked(catalogue, chronicle, notMarching(chronicle)),
   }),
