@@ -11,5 +11,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The garrison walk cut in three** — the builder's 16 and the warlord's 19 become three gambits, the charting walk within five tiles, the rest on the ring, and the walk home of a unit outside the border with no ring tile reachable, which the code does today and the sentence does not say; one job per gambit, so the trace names each and the ablation can leave the charting out alone.
+- **The card aimed at the hand cut in two** — the builder's 18 and the warlord's 23, "on a hazard in hand, else on its first other card", become two gambits, the hazard discarded and the hand cycled, so the second can be left out or struck: Fire goes off 7 times a row on whatever sits first.
+- **The withdrawal kept** — a worker the withdraw gambit walked home is walked back out the same turn by "move a worker holding its move points to where the best play lands", which carries no condition about an enemy in sight (seeds 89, 29 and 1 of the Stone Age deck); the send-to-play gambit leaves a threatened worker where it stands.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
