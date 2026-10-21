@@ -16,7 +16,8 @@ import {
   enemyAttacked,
   GAIN_PLAYED,
   GAINED_THROUGH_WORKER,
-  garrisonWalked,
+  garrisonRested,
+  garrisonWalkedHome,
   HAND_DISCARDED,
   HAZARD_PAID,
   IDLE_ASSIGNED,
@@ -76,7 +77,7 @@ export const WARLORD: Persona = [
   }),
   staying({
     sentence:
-      'While no camp and no site is charted, a unit that attacks walks to the reachable tile whose trial charts the most tiles, the cheapest of equals',
+      'While no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
     candidates: campSought,
   }),
   staying({
@@ -86,9 +87,21 @@ export const WARLORD: Persona = [
   }),
   staying({
     sentence:
-      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
     candidates: (catalogue, chronicle) =>
-      garrisonWalked(catalogue, chronicle, notMarching(chronicle)),
+      chartingWalks(catalogue, chronicle, notMarching(chronicle), 5),
+  }),
+  staying({
+    sentence:
+      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+    candidates: (catalogue, chronicle) =>
+      garrisonRested(catalogue, chronicle, notMarching(chronicle)),
+  }),
+  staying({
+    sentence:
+      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
+    candidates: (catalogue, chronicle) =>
+      garrisonWalkedHome(catalogue, chronicle, notMarching(chronicle)),
   }),
   staying({
     sentence:
@@ -200,9 +213,7 @@ function* campSought(catalogue: Catalogue, chronicle: Chronicle): Generator<Comm
   if (chronicle.snapshots.some(({ tile }) => campOrSite(catalogue, chronicle, tile.building))) {
     return;
   }
-  for (const unit of attackersOf(chronicle)) {
-    if (unit.movePoints > 0) yield* chartingWalks(catalogue, chronicle, unit);
-  }
+  yield* chartingWalks(catalogue, chronicle, attackersOf(chronicle));
 }
 
 function* marched(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {

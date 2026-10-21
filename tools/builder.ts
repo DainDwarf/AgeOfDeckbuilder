@@ -165,9 +165,21 @@ export const BUILDER: Persona = [
   }),
   declaringNoWar({
     sentence:
-      "A unit that attacks with nothing to attack walks to the reachable tile within five tiles of the city whose trial charts the most tiles, and charting none, to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+      'A unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
     candidates: (catalogue, chronicle) =>
-      garrisonWalked(catalogue, chronicle, attackersOf(chronicle)),
+      chartingWalks(catalogue, chronicle, attackersOf(chronicle), 5),
+  }),
+  declaringNoWar({
+    sentence:
+      "A unit that attacks walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+    candidates: (catalogue, chronicle) =>
+      garrisonRested(catalogue, chronicle, attackersOf(chronicle)),
+  }),
+  declaringNoWar({
+    sentence:
+      "A unit that attacks outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
+    candidates: (catalogue, chronicle) =>
+      garrisonWalkedHome(catalogue, chronicle, attackersOf(chronicle)),
   }),
   declaringNoWar(GAIN_PLAYED),
   declaringNoWar(HAND_DISCARDED),
@@ -682,42 +694,45 @@ export function* enemyAttacked(
 }
 
 /**
- * The unit's moves whose trial charts tiles never charted, the most first, then the cheapest; only
- * onto landings within `radius` tiles of the city where a radius is named.
+ * Each unit's moves whose trial charts tiles never charted, unit by unit, the cheapest first, the
+ * most charted of equals; only onto landings within `radius` tiles of the city where a radius is
+ * named.
  */
-export function chartingWalks(
+export function* chartingWalks(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  unit: Unit,
+  units: readonly Unit[],
   radius?: number,
-): Command[] {
+): Generator<Command> {
   const { city } = chronicle;
   const order = tileOrder(chronicle);
-  return ranked(
-    byHand(catalogue, chronicle, unit).landings.flatMap(({ tile, cost }) => {
-      if (radius !== undefined && (city === undefined || distance(tile, city) > radius)) return [];
-      const command = moveCommand(unit, tile);
-      const after = trial(catalogue, chronicle, command);
-      const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;
-      return grown > 0 ? [{ item: command, rank: [-grown, cost, order(tile)] }] : [];
-    }),
-  );
+  for (const unit of units) {
+    if (unit.movePoints <= 0) continue;
+    yield* ranked(
+      byHand(catalogue, chronicle, unit).landings.flatMap(({ tile, cost }) => {
+        if (radius !== undefined && (city === undefined || distance(tile, city) > radius)) {
+          return [];
+        }
+        const command = moveCommand(unit, tile);
+        const after = trial(catalogue, chronicle, command);
+        const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;
+        return grown > 0 ? [{ item: command, rank: [cost, -grown, order(tile)] }] : [];
+      }),
+    );
+  }
 }
 
 /**
- * Each of the units governed holding its move points charting within five tiles of the city, and
- * charting none, resting on the landing the city may claim that stands highest, yields least of
- * equals, nearest the city's tile of equals, where that beats where it stands; with no such landing,
- * one outside the border and off that ring walks to its unheld landing nearest the city's tile,
- * where that is nearer.
+ * Each of the units governed resting on the landing the city may claim that stands highest, yields
+ * least of equals, nearest the city's tile of equals, where that beats where it stands.
  */
-export function* garrisonWalked(
+export function garrisonRested(
   catalogue: Catalogue,
   chronicle: Chronicle,
   governed: readonly Unit[],
-): Generator<Command> {
+): Command[] {
   const { city } = chronicle;
-  if (city === undefined) return;
+  if (city === undefined) return [];
   const order = tileOrder(chronicle);
   const seen = seenTiles(chronicle);
   const yields = yieldsAmong(catalogue, chronicle, seen);
@@ -727,27 +742,42 @@ export function* garrisonWalked(
     worthOf(yields(tile)),
     distance(tile, city),
   ];
-  for (const unit of governed) {
-    if (unit.movePoints <= 0) continue;
-    yield* chartingWalks(catalogue, chronicle, unit, 5);
+  return governed.flatMap((unit) => {
+    if (unit.movePoints <= 0) return [];
+    const own = ring.has(tileKey(unit.tile)) ? resting(unit.tile) : undefined;
+    return ranked(
+      byHand(catalogue, chronicle, unit).landings.flatMap(({ tile }) => {
+        if (!ring.has(tileKey(tile))) return [];
+        const rank = resting(tile);
+        if (own !== undefined && !ranksBelow(rank, own)) return [];
+        return [{ item: moveCommand(unit, tile), rank: [...rank, order(tile)] }];
+      }),
+    );
+  });
+}
 
-    const { landings } = byHand(catalogue, chronicle, unit);
-    const candidates = landings.filter(({ tile }) => ring.has(tileKey(tile)));
-    const onRing = ring.has(tileKey(unit.tile));
-    if (candidates.length > 0) {
-      const own = onRing ? resting(unit.tile) : undefined;
-      yield* ranked(
-        candidates.flatMap(({ tile }) => {
-          const rank = resting(tile);
-          if (own !== undefined && !ranksBelow(rank, own)) return [];
-          return [{ item: moveCommand(unit, tile), rank: [...rank, order(tile)] }];
-        }),
-      );
-    } else if (!onRing && !holds(chronicle, unit.tile)) {
-      const unheld = landings.filter(({ tile }) => !holds(chronicle, tile));
-      yield* walksHome(unit, city, order, unheld);
+/**
+ * Each of the units governed standing outside the border and off the tiles the city may claim
+ * walking to its unheld landing nearest the city's tile, where that is nearer.
+ */
+export function garrisonWalkedHome(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  governed: readonly Unit[],
+): Command[] {
+  const { city } = chronicle;
+  if (city === undefined) return [];
+  const order = tileOrder(chronicle);
+  const ring = new Set(claimable(catalogue, chronicle, 'player').map(tileKey));
+  return governed.flatMap((unit) => {
+    if (unit.movePoints <= 0 || ring.has(tileKey(unit.tile)) || holds(chronicle, unit.tile)) {
+      return [];
     }
-  }
+    const unheld = byHand(catalogue, chronicle, unit).landings.filter(
+      ({ tile }) => !holds(chronicle, tile),
+    );
+    return walksHome(unit, city, order, unheld);
+  });
 }
 
 function* gainPlayed(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
