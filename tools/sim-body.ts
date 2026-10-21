@@ -19,11 +19,11 @@ import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, readFlags, stringFlag, wholeFlag } from './flags';
 import { learnedWithNeeds, technologiesReaching, technologyUnlocking } from './learned-with-needs';
 import { PERSONAS } from './personas';
-import { type Driven, type End, playedBy } from './sim-driver';
+import { type Driven, type End, type Persona, playedBy } from './sim-driver';
 
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
-  '                      [--seeds <n>] [--turns <n>] [--out <path>] [<technology>...]',
+  '                      [--without <n>] [--seeds <n>|<a>-<b>] [--turns <n>] [--out <path>] [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
 ].join('\n');
@@ -33,6 +33,7 @@ const FLAGS = {
   region: { type: 'string' },
   civilization: { type: 'string' },
   persona: { type: 'string' },
+  without: { type: 'string' },
   seeds: { type: 'string' },
   turns: { type: 'string' },
   out: { type: 'string' },
@@ -59,7 +60,14 @@ type Cell = {
   /** The civilization as the record carries it: whole where it was handed in, by name otherwise. */
   readonly recorded: string | Civilization;
   readonly persona: string;
+  /** The number of the persona's gambit left out of its walk, as `--personas` numbers them. */
+  readonly without: number | undefined;
+  /** The persona's gambits the chronicles are played by, the one left out excepted. */
+  readonly walk: Persona;
 };
+
+/** The seeds of the cell, the first and the last included, and the flag as it was given. */
+type Seeds = { readonly first: number; readonly last: number; readonly given: number | string };
 
 /** The simulator run on the game's content, on the command line's arguments. */
 export function sim(args: readonly string[]): void {
@@ -84,7 +92,7 @@ export function simulated(
   }
   const cell = cellOf(catalogue, values, positionals);
   const turnCap = wholeFlag(values, 'turns', 1, USAGE) ?? 60;
-  const seeds = wholeFlag(values, 'seeds', 1, USAGE) ?? 20;
+  const seeds = seedsOf(values);
   const traced = wholeFlag(values, 'trace', 1, USAGE);
   const out = stringFlag(values, 'out', USAGE);
 
@@ -108,8 +116,8 @@ export function simulated(
           appendFileSync(path, `${line}\n`);
         };
   if (path !== undefined) writeFileSync(path, '');
-  write(recordOf(cell, turnCap, { seeds }));
-  for (let seed = 1; seed <= seeds; seed++) {
+  write(recordOf(cell, turnCap, { seeds: seeds.given }));
+  for (let seed = seeds.first; seed <= seeds.last; seed++) {
     const { launch, driven, ms } = chronicleOf(catalogue, cell, seed, turnCap);
     const columns: Column[] = [
       ['seed', seed],
@@ -119,7 +127,7 @@ export function simulated(
       ['ms', ms],
       ...chronicleColumns(catalogue, cell.campaign, launch, driven),
     ];
-    if (seed === 1) write(columns.map(([name]) => name).join(','));
+    if (seed === seeds.first) write(columns.map(([name]) => name).join(','));
     write(columns.map(([, value]) => value).join(','));
   }
 }
@@ -128,7 +136,7 @@ export function simulated(
  * The cell the flags name: the age and the region, each defaulting to what the launch screen opens on,
  * on a new campaign that has learned what reaches them, then the technologies named, each with its
  * needs; the civilization, the campaign's first unless one is handed in; and the persona, the idle
- * unless named.
+ * unless named, its gambit `--without` numbers left out of its walk.
  */
 function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
   const fresh = freshCampaign(catalogue);
@@ -152,7 +160,28 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
   if (!Object.hasOwn(PERSONAS, persona)) {
     throw new Error(`no persona ${persona}; the personas: ${Object.keys(PERSONAS).join(', ')}`);
   }
-  return { age, region, campaign, civilization, recorded, persona };
+  const gambits = PERSONAS[persona];
+  const without = wholeFlag(values, 'without', 1, USAGE, gambits.length);
+  const walk = gambits.filter((_, at) => at + 1 !== without);
+  return { age, region, campaign, civilization, recorded, persona, without, walk };
+}
+
+/** The seeds `--seeds` names: 1 to a count, or a range `<a>-<b>`, both included; 1 to 20 where it is not set. */
+function seedsOf(values: FlagValues): Seeds {
+  const value = stringFlag(values, 'seeds', USAGE);
+  if (value === undefined) return { first: 1, last: 20, given: 20 };
+  const read = /^(?:(\d+)-)?(\d+)$/.exec(value);
+  if (read !== null) {
+    const [, from, to] = read;
+    const first = from === undefined ? 1 : Number(from);
+    const last = Number(to);
+    if (Number.isSafeInteger(last) && first >= 1 && first <= last) {
+      return { first, last, given: from === undefined ? last : value };
+    }
+  }
+  throw new Error(
+    `--seeds is neither a count of 1 or more nor a range <a>-<b> with 1 <= a <= b: ${value}\n${USAGE}`,
+  );
 }
 
 /**
@@ -219,24 +248,27 @@ function isIds(value: unknown): value is string[] {
  */
 function chronicleOf(
   catalogue: Catalogue,
-  { age, region, campaign, civilization, persona }: Cell,
+  { age, region, campaign, civilization, walk }: Cell,
   seed: number,
   turnCap: number,
 ): { readonly launch: Sequence; readonly driven: Driven; readonly ms: number } {
   const started = Date.now();
   const launch = launched(catalogue, age, region, seed, civilization, campaign.technologies);
-  const driven = playedBy(catalogue, PERSONAS[persona], launch, turnCap);
+  const driven = playedBy(catalogue, walk, launch, turnCap);
   return { launch, driven, ms: Date.now() - started };
 }
 
-/** The cell as the command that made it, one comment line of JSON, the campaign's technologies whole. */
+/**
+ * The cell as the command that made it, one comment line of JSON, the campaign's technologies whole;
+ * `without` is dropped by the JSON where no gambit is left out.
+ */
 function recordOf(
-  { age, region, campaign, recorded: civilization, persona }: Cell,
+  { age, region, campaign, recorded: civilization, persona, without }: Cell,
   turns: number,
-  run: { readonly seeds: number } | { readonly trace: number },
+  run: { readonly seeds: Seeds['given'] } | { readonly trace: number },
 ): string {
   const learned = campaign.technologies;
-  return `# ${JSON.stringify({ age, region, civilization, learned, persona, turns, ...run })}`;
+  return `# ${JSON.stringify({ age, region, civilization, learned, persona, without, turns, ...run })}`;
 }
 
 /**

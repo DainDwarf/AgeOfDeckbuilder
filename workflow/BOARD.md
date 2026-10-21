@@ -11,6 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The sweep** — `npm run sim` takes `--without <n>` and a range on `--seeds`, its record carries both, its tests on the fixture hold them, and the `sim` skill holds the split, the sweep and the ablation as recipes with the query that reads a run's parts as one. Doc-impact: `docs/SIMULATOR.md`, `CLAUDE.md`'s command table, the `sim` skill. [board/the-sweep.md](board/the-sweep.md)
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.

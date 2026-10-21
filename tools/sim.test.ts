@@ -107,6 +107,18 @@ function rowsOf(lines: readonly string[]): Record<string, string>[] {
   });
 }
 
+/** The row without the time its chronicle took. */
+function untimed(row: Record<string, string>): Record<string, string> {
+  return Object.fromEntries(Object.entries(row).filter(([column]) => column !== 'ms'));
+}
+
+/** The arguments refused with that refusal on the fixture's content, nothing printed before it. */
+function expectRefused(args: readonly string[], refusal: RegExp): void {
+  const seen: string[] = [];
+  expect(() => simulated(CATALOGUE, args, (line) => seen.push(line))).toThrow(refusal);
+  expect(seen).toEqual([]);
+}
+
 /** The names a cell lists, each as many times as the number beside it, sorted. */
 function namesListed(cell: string): string[] {
   if (cell === '') return [];
@@ -212,8 +224,6 @@ test('a civilization handed in, inline or in a file, is the one the chronicles a
   const lines = printed(['--seeds', '1', '--civilization', inline]);
   const launch = launched(CATALOGUE, AGE, REGION, 1, handed, []);
   const driven = playedBy(CATALOGUE, PERSONAS.idle, launch, 60);
-  const untimed = (row: Record<string, string>): Record<string, string> =>
-    Object.fromEntries(Object.entries(row).filter(([column]) => column !== 'ms'));
 
   expect(recordRead(lines).civilization).toEqual(handed);
   expect(rowsOf(lines)[0]).toMatchObject({
@@ -253,15 +263,59 @@ test('a civilization handed in, inline or in a file, is the one the chronicles a
       [city({ sight: -1 }), /city sees -1/],
       [city({ idle: -1 }), /city opens with -1 idle/],
     ];
-    for (const [value, refusal] of misfits) {
-      const seen: string[] = [];
-      expect(() =>
-        simulated(CATALOGUE, ['--civilization', value], (line) => seen.push(line)),
-      ).toThrow(refusal);
-      expect(seen).toEqual([]);
-    }
+    for (const [value, refusal] of misfits) expectRefused(['--civilization', value], refusal);
   } finally {
     rmSync(folder, { recursive: true, force: true });
+  }
+});
+
+test('a seed range plays its seeds from the first to the last, each the chronicle a count plays on that seed, the header before the range’s first row and the record carrying the range as written; anything but a count of one or more or a range running forward from one is refused', () => {
+  const ranged = printed(['--seeds', '2-3']);
+  const counted = printed(['--seeds', '3']);
+
+  expect(recordRead(ranged).seeds).toBe('2-3');
+  expect(ranged[1]).toBe(counted[1]);
+  expect(rowsOf(ranged).map(untimed)).toEqual(rowsOf(counted).slice(1).map(untimed));
+  for (const value of ['0', '0-2', '3-2', '2-', '-2', 'two', '1-2-3']) {
+    expectRefused(['--seeds', value], /^--seeds is neither/);
+  }
+});
+
+test('a gambit left out leaves the persona’s walk, the record carrying its number after the persona, and the trace plays the same walk: the idle without its settle stops stuck on the settle phase, and without its take stuck on its first deal', () => {
+  const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
+  const whole = playedBy(
+    CATALOGUE,
+    PERSONAS.idle,
+    launchedFromCampaign(CATALOGUE, freshCampaign(CATALOGUE), choices, 1),
+    60,
+  );
+  const firstTake = whole.landed.find(({ command }) => command.type === 'take');
+  if (firstTake === undefined) throw new Error('the idle takes no deal on seed 1');
+  const unsettled = printed(['--seeds', '1', '--without', '2']);
+  const stopOf = (lines: readonly string[]): string[] => {
+    const [{ ending, cause, turn }] = rowsOf(lines);
+    return [ending, cause, turn];
+  };
+
+  expect(unsettled[0]).toBe(
+    `# ${JSON.stringify({ ...choices, learned: [], persona: 'idle', without: 2, turns: 60, seeds: 1 })}`,
+  );
+  expect(stopOf(unsettled)).toEqual(['stopped', 'stuck', '0']);
+  expect(stopOf(printed(['--seeds', '1', '--without', '1']))).toEqual([
+    'stopped',
+    'stuck',
+    `${firstTake.turn}`,
+  ]);
+  const [traced, ...trace] = printed(['--trace', '1', '--without', '2']);
+  expect(recordRead([traced]).without).toBe(2);
+  expect(trace).toEqual(['turn 0 | stopped stuck']);
+});
+
+test('a gambit number from none or past the persona’s gambit count is refused, the refusal naming the count', () => {
+  const count = new RegExp(`from 1 to ${PERSONAS.builder.length}: `);
+
+  for (const value of ['0', `${PERSONAS.builder.length + 1}`, 'one']) {
+    expectRefused(['--persona', 'builder', '--without', value], count);
   }
 });
 

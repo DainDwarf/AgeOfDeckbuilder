@@ -34,18 +34,28 @@ export function stringFlag(values: FlagValues, flag: string, usage: string): str
   return value;
 }
 
-/** The whole number a flag names, `least` or more, and nothing where it is not set; any other is refused. */
+/**
+ * The whole number a flag names, `least` or more and `most` at most where one is given, and nothing
+ * where it is not set; any other is refused.
+ */
 export function wholeFlag(
   values: FlagValues,
   flag: string,
   least: number,
   usage: string,
+  most?: number,
 ): number | undefined {
   const value = stringFlag(values, flag, usage);
   if (value === undefined) return undefined;
   const whole = Number(value);
-  if (!/^\d+$/.test(value) || !Number.isSafeInteger(whole) || whole < least) {
-    throw new Error(`--${flag} is not a whole number of ${least} or more: ${value}\n${usage}`);
+  if (
+    !/^\d+$/.test(value) ||
+    !Number.isSafeInteger(whole) ||
+    whole < least ||
+    (most !== undefined && whole > most)
+  ) {
+    const bounds = most === undefined ? `of ${least} or more` : `from ${least} to ${most}`;
+    throw new Error(`--${flag} is not a whole number ${bounds}: ${value}\n${usage}`);
   }
   return whole;
 }
