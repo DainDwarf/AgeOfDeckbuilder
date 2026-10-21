@@ -1005,22 +1005,41 @@ test('the builder plays the card aimed at nothing whose trial raises the stocksâ
   expect(answerOf('builder', 19, gaining)).toEqual({ type: 'play', index: 2, aim: 'none' });
 });
 
-test('the builder plays a card aimed at the hand on a hazard in hand, else on its first other card', () => {
-  const discarding = (hand: string[]): Chronicle =>
-    cityOf(['urban'], { hand, resources: onlyStocks({ science: 1 }) });
+/** A city holding its own tile alone, the hand named and the stocks for a card aimed at the hand. */
+function discarding(hand: string[]): Chronicle {
+  return cityOf(['urban'], { hand, resources: onlyStocks({ science: 1 }) });
+}
 
-  expect(answerOf('builder', 20, discarding(['PH_Discard', 'PH_Harvest', 'PH_Hunger']))).toEqual({
-    type: 'play',
-    index: 0,
-    aim: 'hand',
-    card: 2,
-  });
-  expect(answerOf('builder', 20, discarding(['PH_Harvest', 'PH_Discard']))).toEqual({
-    type: 'play',
-    index: 1,
-    aim: 'hand',
-    card: 0,
-  });
+test('a card aimed at the hand is played on the first card in hand that strikes, a challenge as a hazard, and on none while no card strikes', () => {
+  for (const [persona, gambit] of [
+    ['builder', 20],
+    ['warlord', 25],
+  ] as const) {
+    expect(
+      answerOf(persona, gambit, discarding(['PH_Ordeal', 'PH_Discard', 'PH_Curse', 'PH_Hunger'])),
+    ).toEqual({ type: 'play', index: 1, aim: 'hand', card: 2 });
+    expect(answerOf(persona, gambit, discarding(['PH_Ordeal', 'PH_Discard', 'PH_Hunger']))).toEqual(
+      { type: 'play', index: 1, aim: 'hand', card: 2 },
+    );
+    expect(answerOf(persona, gambit, discarding(['PH_Discard', 'PH_Ordeal']))).toBeUndefined();
+  }
+});
+
+test('a card aimed at the hand is played on the first other card in hand, whatever it is', () => {
+  for (const [persona, gambit] of [
+    ['builder', 21],
+    ['warlord', 26],
+  ] as const) {
+    expect(answerOf(persona, gambit, discarding(['PH_Discard', 'PH_Ordeal', 'PH_Hunger']))).toEqual(
+      { type: 'play', index: 0, aim: 'hand', card: 1 },
+    );
+    expect(answerOf(persona, gambit, discarding(['PH_Harvest', 'PH_Discard']))).toEqual({
+      type: 'play',
+      index: 1,
+      aim: 'hand',
+      card: 0,
+    });
+  }
 });
 
 test('the builder sends no command that declares war: a worker passes the landing yielding most outside the border where it is the neutralâ€™s', () => {

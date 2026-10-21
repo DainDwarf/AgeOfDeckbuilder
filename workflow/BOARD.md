@@ -11,7 +11,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The card aimed at the hand cut in two** — the builder's 20 and the warlord's 25, "on a hazard in hand, else on its first other card", become two gambits each, the first playing the card aimed at the hand on the first card in hand that strikes, the second on its first other card; `--personas` prints both sentences at their numbers, each gambit is held by one test on the fixtures, the trace names each, and `--without` leaves either out alone. Doc-impact: `docs/SIMULATOR.md`. [board/card-aimed-at-the-hand-cut-in-two.md](board/card-aimed-at-the-hand-cut-in-two.md)
 - **The withdrawal kept** — a worker the withdraw gambit walked home is walked back out the same turn by "move a worker holding its move points to where the best play lands", which carries no condition about an enemy in sight (seeds 89, 29 and 1 of the Stone Age deck); the send-to-play gambit leaves a threatened worker where it stands.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.

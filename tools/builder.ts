@@ -29,6 +29,7 @@ import { inSight } from '../src/rules/sight';
 import {
   assignedTo,
   type Chronicle,
+  type ChronicleCard,
   cardsInPiles,
   holds,
   idle,
@@ -129,9 +130,14 @@ export const GAIN_PLAYED: Weighing = {
   candidates: gainPlayed,
 };
 
-export const HAND_DISCARDED: Weighing = {
-  sentence: 'Play a card aimed at the hand on a hazard in hand, else on its first other card',
-  candidates: handDiscarded,
+export const STRIKING_DISCARDED: Weighing = {
+  sentence: 'Play a card aimed at the hand on the first card in hand that strikes',
+  candidates: strikingDiscarded,
+};
+
+export const HAND_CYCLED: Weighing = {
+  sentence: 'Play a card aimed at the hand on its first other card',
+  candidates: handCycled,
 };
 
 export const BUILDER: Persona = [
@@ -182,7 +188,8 @@ export const BUILDER: Persona = [
       garrisonWalkedHome(catalogue, chronicle, attackersOf(chronicle)),
   }),
   declaringNoWar(GAIN_PLAYED),
-  declaringNoWar(HAND_DISCARDED),
+  declaringNoWar(STRIKING_DISCARDED),
+  declaringNoWar(HAND_CYCLED),
   TURN_ENDED,
 ];
 
@@ -300,9 +307,12 @@ function actingAsEnemies(chronicle: Chronicle): number {
   return chronicle.units.filter((unit) => actsAsEnemy(unit, relations)).length;
 }
 
+function carriesStrike(catalogue: Catalogue, { id }: ChronicleCard): boolean {
+  return strikeOf(cardOf(catalogue, id)) !== undefined;
+}
+
 function strikingCards(catalogue: Catalogue, chronicle: Chronicle): number {
-  return cardsInPiles(chronicle).filter(({ id }) => strikeOf(cardOf(catalogue, id)) !== undefined)
-    .length;
+  return cardsInPiles(chronicle).filter((card) => carriesStrike(catalogue, card)).length;
 }
 
 function* dealTaken(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
@@ -797,12 +807,27 @@ function* gainPlayed(catalogue: Catalogue, chronicle: Chronicle): Generator<Comm
   }
 }
 
-function handDiscarded(catalogue: Catalogue, chronicle: Chronicle): Command[] {
-  const hazard = chronicle.hand.findIndex(({ id }) => cardOf(catalogue, id).kind === 'hazard');
+/**
+ * The plays of the cards in hand aimed at the hand that the refusal lets through, in hand order,
+ * each on the card of the hand `target` names for the slot it is played from.
+ */
+function playedOnHand(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  target: (index: number) => number,
+): Command[] {
   return chronicle.hand.flatMap((held, index): Command[] => {
     if (aimOf(cardOf(catalogue, held.id)).aim !== 'hand') return [];
     if (!playable(refusalOf(catalogue, chronicle, held.id))) return [];
-    const card = hazard === -1 ? (index === 0 ? 1 : 0) : hazard;
-    return [{ type: 'play', index, aim: 'hand', card }];
+    return [{ type: 'play', index, aim: 'hand', card: target(index) }];
   });
+}
+
+function strikingDiscarded(catalogue: Catalogue, chronicle: Chronicle): Command[] {
+  const striking = chronicle.hand.findIndex((card) => carriesStrike(catalogue, card));
+  return striking === -1 ? [] : playedOnHand(catalogue, chronicle, () => striking);
+}
+
+function handCycled(catalogue: Catalogue, chronicle: Chronicle): Command[] {
+  return playedOnHand(catalogue, chronicle, (index) => (index === 0 ? 1 : 0));
 }
