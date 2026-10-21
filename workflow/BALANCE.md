@@ -1,6 +1,6 @@
 # Balance findings
 
-The balance issues met in play, kept here until the headless simulator is good enough to inform a decision on them; the balance pass rung reads this file when its turn comes, and an entry leaves when the pass settles it. An entry is what was seen, where, and the lead if there is one — no numbers proposed, no fix designed. Nothing here is a board line.
+The balance issues met in play, kept here until the headless simulator is good enough to inform a decision on them; the balance pass rung reads this file when its turn comes, and an entry leaves when the pass settles it. An entry is what was seen, where, and the lead if there is one — no numbers proposed, no fix designed. Nothing here is a board line. The decks the findings were met with stand in `decks/`, one per age in the content's own format, so the simulator plays what was played: `npm run sim -- --civilization workflow/decks/stone.json`.
 
 ## Nomadic Age
 
