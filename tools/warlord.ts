@@ -19,9 +19,11 @@ import {
   garrisonPursued,
   garrisonRested,
   garrisonWalkedHome,
+  goalGambits,
   HAND_CYCLED,
   HAZARD_PAID,
   IDLE_ASSIGNED,
+  leastHealthAmong,
   moveCommand,
   PLACED,
   REASSIGNED,
@@ -41,91 +43,100 @@ import {
 import { TURN_ENDED } from './idle';
 import type { Gambit, Persona } from './sim-driver';
 
-export const WARLORD: Persona = [
-  staying(DEAL_TAKEN),
-  staying(CITY_SETTLED),
-  staying(UNIT_SETTLED),
-  staying(HAZARD_PAID),
-  staying({
-    sentence:
-      'While a population is idle and more stand than the tiles the city holds, three at most, play a unit card whose trial enters a unit that attacks',
-    candidates: (catalogue, chronicle) =>
-      idle(chronicle) > 0 && populationAboveFloor(chronicle)
-        ? unitCardsEntering(catalogue, chronicle, false)
-        : [],
-  }),
-  staying({
-    sentence:
-      'While none is idle, more stand than the tiles the city holds, three at most, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
-    candidates: unassignedForUnit,
-  }),
-  staying(IDLE_ASSIGNED),
-  staying(REASSIGNED),
-  staying(CLAIMED),
-  staying(WORKER_WITHDRAWN),
-  staying(WORKER_SENT_TO_PLAY),
-  staying(PLACED),
-  staying(GAINED_THROUGH_WORKER),
-  staying(WORKER_SENT_OUT),
-  staying({
-    sentence:
-      'While no worker stands, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
-    candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 1),
-  }),
-  staying({
-    sentence:
-      'A unit that attacks, attacks the enemy of least health within its range, walking to the tile it attacks from first, the cheapest of equals',
-    candidates: (catalogue, chronicle) => enemyAttacked(catalogue, chronicle, () => true),
-  }),
-  staying({
-    sentence:
-      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands",
-    candidates: (catalogue, chronicle) =>
-      garrisonPursued(catalogue, chronicle, notMarching(chronicle), 3),
-  }),
-  staying({
-    sentence:
-      'While no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
-    candidates: campSought,
-  }),
-  staying({
-    sentence:
-      "While at least three units that attack stand, a unit that attacks not the nearest the city's tile walks toward the nearest charted camp or site by the cheapest way over charted tiles, to the reachable tile that way weighs least from",
-    candidates: marched,
-  }),
-  staying({
-    sentence:
-      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
-    candidates: (catalogue, chronicle) =>
-      chartingWalks(catalogue, chronicle, notMarching(chronicle), 5),
-  }),
-  staying({
-    sentence:
-      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
-    candidates: (catalogue, chronicle) =>
-      garrisonRested(catalogue, chronicle, notMarching(chronicle)),
-  }),
-  staying({
-    sentence:
-      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
-    candidates: (catalogue, chronicle) =>
-      garrisonWalkedHome(catalogue, chronicle, notMarching(chronicle)),
-  }),
-  staying({
-    sentence:
-      "Play a card aimed at a unit whose trial refreshes a unit's move points, on the unit that attacks furthest from the city that has spent them and stands on no camp or site",
-    candidates: movePointsRefreshed,
-  }),
-  staying({
-    sentence:
-      "Play a card aimed at a unit whose trial raises a unit's health, on the unit that attacks that has lost the most",
-    candidates: healthRaised,
-  }),
-  staying(GAIN_PLAYED),
-  staying(STRIKING_DISCARDED),
-  staying(HAND_CYCLED),
-  TURN_ENDED,
-];
+/** The warlord, its goal gambits going for the goal of the technology named. */
+export function warlord(goal?: string): Persona {
+  return [
+    staying(DEAL_TAKEN),
+    staying(CITY_SETTLED),
+    staying(UNIT_SETTLED),
+    staying(HAZARD_PAID),
+    ...goalGambits(goal).map(staying),
+    staying({
+      sentence:
+        'While a population is idle and more stand than the tiles the city holds, three at most, play a unit card whose trial enters a unit that attacks',
+      candidates: (catalogue, chronicle) =>
+        idle(chronicle) > 0 && populationAboveFloor(chronicle)
+          ? unitCardsEntering(catalogue, chronicle, false)
+          : [],
+    }),
+    staying({
+      sentence:
+        'While none is idle, more stand than the tiles the city holds, three at most, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
+      candidates: unassignedForUnit,
+    }),
+    staying(IDLE_ASSIGNED),
+    staying(REASSIGNED),
+    staying(CLAIMED),
+    staying(WORKER_WITHDRAWN),
+    staying(WORKER_SENT_TO_PLAY),
+    staying(PLACED),
+    staying(GAINED_THROUGH_WORKER),
+    staying(WORKER_SENT_OUT),
+    staying({
+      sentence:
+        'While no worker stands, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
+      candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 1),
+    }),
+    staying({
+      sentence:
+        'A unit that attacks, attacks the enemy of least health within its range, walking to the tile it attacks from first, the cheapest of equals',
+      candidates: (catalogue, chronicle) =>
+        enemyAttacked(
+          catalogue,
+          chronicle,
+          leastHealthAmong(chronicle, () => true),
+        ),
+    }),
+    staying({
+      sentence:
+        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands",
+      candidates: (catalogue, chronicle) =>
+        garrisonPursued(catalogue, chronicle, notMarching(chronicle), 3),
+    }),
+    staying({
+      sentence:
+        'While no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
+      candidates: campSought,
+    }),
+    staying({
+      sentence:
+        "While at least three units that attack stand, a unit that attacks not the nearest the city's tile walks toward the nearest charted camp or site by the cheapest way over charted tiles, to the reachable tile that way weighs least from",
+      candidates: marched,
+    }),
+    staying({
+      sentence:
+        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
+      candidates: (catalogue, chronicle) =>
+        chartingWalks(catalogue, chronicle, notMarching(chronicle), 5),
+    }),
+    staying({
+      sentence:
+        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+      candidates: (catalogue, chronicle) =>
+        garrisonRested(catalogue, chronicle, notMarching(chronicle)),
+    }),
+    staying({
+      sentence:
+        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
+      candidates: (catalogue, chronicle) =>
+        garrisonWalkedHome(catalogue, chronicle, notMarching(chronicle)),
+    }),
+    staying({
+      sentence:
+        "Play a card aimed at a unit whose trial refreshes a unit's move points, on the unit that attacks furthest from the city that has spent them and stands on no camp or site",
+      candidates: movePointsRefreshed,
+    }),
+    staying({
+      sentence:
+        "Play a card aimed at a unit whose trial raises a unit's health, on the unit that attacks that has lost the most",
+      candidates: healthRaised,
+    }),
+    staying(GAIN_PLAYED),
+    staying(STRIKING_DISCARDED),
+    staying(HAND_CYCLED),
+    TURN_ENDED,
+  ];
+}
 
 /**
  * The gambit answering the first of its candidates that declares no war and moves no unit of the

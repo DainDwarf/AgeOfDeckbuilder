@@ -1,7 +1,13 @@
 import { appendFileSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { CATALOGUE } from '../src/content/catalogue';
-import { type Campaign, civilizationIn, openingChoices, paidInto } from '../src/rules/campaign';
+import {
+  available,
+  type Campaign,
+  civilizationIn,
+  openingChoices,
+  paidInto,
+} from '../src/rules/campaign';
 import {
   type Catalogue,
   type Civilization,
@@ -17,13 +23,19 @@ import { type Change, plays, type Sequence, walked } from '../src/rules/stages';
 import { type Chronicle, cardsInPiles, type Deal } from '../src/rules/state';
 import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, readFlags, stringFlag, wholeFlag } from './flags';
-import { learnedWithNeeds, technologiesReaching, technologyUnlocking } from './learned-with-needs';
+import {
+  learnedWithNeeds,
+  technologiesEarnedIn,
+  technologiesReaching,
+  technologyUnlocking,
+} from './learned-with-needs';
 import { PERSONAS } from './personas';
 import { type Driven, type End, type Persona, playedBy } from './sim-driver';
 
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
-  '                      [--without <n>] [--seeds <n>|<a>-<b>] [--turns <n>] [--out <path>] [<technology>...]',
+  '                      [--goal <technology>] [--without <n>] [--seeds <n>|<a>-<b>] [--turns <n>] [--out <path>]',
+  '                      [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
 ].join('\n');
@@ -33,6 +45,7 @@ const FLAGS = {
   region: { type: 'string' },
   civilization: { type: 'string' },
   persona: { type: 'string' },
+  goal: { type: 'string' },
   without: { type: 'string' },
   seeds: { type: 'string' },
   turns: { type: 'string' },
@@ -60,6 +73,8 @@ type Cell = {
   /** The civilization as the record carries it: whole where it was handed in, by name otherwise. */
   readonly recorded: string | Civilization;
   readonly persona: string;
+  /** The technology whose achievement the persona's goal gambits go for, where one is named. */
+  readonly goal: string | undefined;
   /** The number of the persona's gambit left out of its walk, as `--personas` numbers them. */
   readonly without: number | undefined;
   /** The persona's gambits the chronicles are played by, the one left out excepted. */
@@ -136,7 +151,7 @@ export function simulated(
  * The cell the flags name: the age and the region, each defaulting to what the launch screen opens on,
  * on a new campaign that has learned what reaches them, then the technologies named, each with its
  * needs; the civilization, the campaign's first unless one is handed in; and the persona, the idle
- * unless named, its gambit `--without` numbers left out of its walk.
+ * unless named, built for the goal `--goal` names, its gambit `--without` numbers left out of its walk.
  */
 function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
   const fresh = freshCampaign(catalogue);
@@ -160,10 +175,21 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
   if (!Object.hasOwn(PERSONAS, persona)) {
     throw new Error(`no persona ${persona}; the personas: ${Object.keys(PERSONAS).join(', ')}`);
   }
-  const gambits = PERSONAS[persona];
+  const goal = stringFlag(values, 'goal', USAGE);
+  if (goal !== undefined) {
+    const read = technologiesEarnedIn(catalogue, age).filter((technology) =>
+      available(catalogue, technology, campaign.technologies),
+    );
+    if (!read.includes(goal)) {
+      throw new Error(
+        `no goal ${goal}; the technologies the cell's chronicles read: ${read.join(', ')}`,
+      );
+    }
+  }
+  const gambits = PERSONAS[persona](goal);
   const without = wholeFlag(values, 'without', 1, USAGE, gambits.length);
   const walk = gambits.filter((_, at) => at + 1 !== without);
-  return { age, region, campaign, civilization, recorded, persona, without, walk };
+  return { age, region, campaign, civilization, recorded, persona, goal, without, walk };
 }
 
 /** The seeds `--seeds` names: 1 to a count, or a range `<a>-<b>`, both included; 1 to 20 where it is not set. */
@@ -260,15 +286,16 @@ function chronicleOf(
 
 /**
  * The cell as the command that made it, one comment line of JSON, the campaign's technologies whole;
- * `without` is dropped by the JSON where no gambit is left out.
+ * `without` is dropped by the JSON where no gambit is left out, and `goal` where none is named.
  */
 function recordOf(
-  { age, region, campaign, recorded: civilization, persona, without }: Cell,
+  { age, region, campaign, recorded: civilization, persona, without, goal }: Cell,
   turns: number,
   run: { readonly seeds: Seeds['given'] } | { readonly trace: number },
 ): string {
   const learned = campaign.technologies;
-  return `# ${JSON.stringify({ age, region, civilization, learned, persona, without, turns, ...run })}`;
+  const cell = { age, region, civilization, learned, persona, without, goal, turns, ...run };
+  return `# ${JSON.stringify(cell)}`;
 }
 
 /**
@@ -402,8 +429,8 @@ function endRead(end: End): string {
 
 /** Every persona by name, then its gambits as their numbered sentences. */
 function personasPrinted(): string[] {
-  return Object.entries(PERSONAS).flatMap(([name, gambits]) => [
+  return Object.entries(PERSONAS).flatMap(([name, persona]) => [
     `${name}:`,
-    ...gambits.map(({ sentence }, at) => `${at + 1}. ${sentence}`),
+    ...persona().map(({ sentence }, at) => `${at + 1}. ${sentence}`),
   ]);
 }

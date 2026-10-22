@@ -2,10 +2,13 @@ import { aimOf } from '../src/rules/cards';
 import {
   ageOf,
   type Catalogue,
+  capstoneOf,
   cardOf,
   type Entering,
+  earningOf,
   entered,
   strikeOf,
+  victoryTechnologyOf,
   workerAim,
 } from '../src/rules/catalogue';
 import {
@@ -13,12 +16,13 @@ import {
   apply,
   byHand,
   type Command,
+  countOn,
   declaresWar,
   outcome,
   refusalOf,
 } from '../src/rules/chronicle';
 import { cityCommand, cityDrag, claimable } from '../src/rules/city';
-import { leastHealth } from '../src/rules/enemies';
+import { targetsInOwnSight } from '../src/rules/enemies';
 import {
   CENTRE,
   distance,
@@ -37,6 +41,7 @@ import { inSight } from '../src/rules/sight';
 import {
   assignedTo,
   type Chronicle,
+  type ChronicleAchievement,
   type ChronicleCard,
   cardsInPiles,
   holds,
@@ -150,66 +155,134 @@ export const HAND_CYCLED: Weighing = {
   candidates: handCycled,
 };
 
-export const BUILDER: Persona = [
-  declaringNoWar(DEAL_TAKEN),
-  declaringNoWar(CITY_SETTLED),
-  declaringNoWar(UNIT_SETTLED),
-  declaringNoWar(HAZARD_PAID),
-  declaringNoWar(IDLE_ASSIGNED),
-  declaringNoWar(REASSIGNED),
-  declaringNoWar(CLAIMED),
-  declaringNoWar(WORKER_WITHDRAWN),
-  declaringNoWar(WORKER_SENT_TO_PLAY),
-  declaringNoWar(PLACED),
-  declaringNoWar(GAINED_THROUGH_WORKER),
-  declaringNoWar(WORKER_SENT_OUT),
-  declaringNoWar({
-    sentence:
-      'While fewer than three workers stand, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
-    candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 3),
-  }),
-  declaringNoWar({
-    sentence:
-      'While fewer than two units that attack stand, a population is idle and no held tile is free, play a unit card whose trial enters a unit that attacks',
-    candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, false, 2),
-  }),
-  declaringNoWar({
-    sentence:
-      'A unit that attacks, attacks the enemy of least health within three tiles of the city within its range, walking to the tile it attacks from first, the cheapest of equals',
-    candidates: (catalogue, chronicle) => {
-      const near = nearTheCity(chronicle, 3);
-      return enemyAttacked(catalogue, chronicle, (enemy) => near(enemy.tile));
+/** The goal gambits, going for the goal of the technology named, the capstone where none is. */
+export function goalGambits(goal: string | undefined): Weighing[] {
+  const counted = (catalogue: Catalogue, chronicle: Chronicle): GoalCount =>
+    goalCount(catalogue, chronicle, goal);
+  return [
+    {
+      sentence:
+        "Claim the tile whose trial raises the goal's count the most, the nearest the city of equals",
+      candidates: (catalogue, chronicle) =>
+        goalClaimed(catalogue, chronicle, counted(catalogue, chronicle)),
     },
-  }),
-  declaringNoWar({
-    sentence:
-      'A unit that attacks walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands',
-    candidates: (catalogue, chronicle) =>
-      garrisonPursued(catalogue, chronicle, attackersOf(chronicle), 3),
-  }),
-  declaringNoWar({
-    sentence:
-      'A unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
-    candidates: (catalogue, chronicle) =>
-      chartingWalks(catalogue, chronicle, attackersOf(chronicle), 5),
-  }),
-  declaringNoWar({
-    sentence:
-      "A unit that attacks walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
-    candidates: (catalogue, chronicle) =>
-      garrisonRested(catalogue, chronicle, attackersOf(chronicle)),
-  }),
-  declaringNoWar({
-    sentence:
-      "A unit that attacks outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
-    candidates: (catalogue, chronicle) =>
-      garrisonWalkedHome(catalogue, chronicle, attackersOf(chronicle)),
-  }),
-  declaringNoWar(GAIN_PLAYED),
-  declaringNoWar(STRIKING_DISCARDED),
-  declaringNoWar(HAND_CYCLED),
-  TURN_ENDED,
-];
+    {
+      sentence:
+        "Play the card in hand whose trial raises the goal's count the most, through a worker on its tile, aimed at nothing, at a unit or at the hand",
+      candidates: (catalogue, chronicle) =>
+        goalPlayed(catalogue, chronicle, counted(catalogue, chronicle)),
+    },
+    {
+      sentence:
+        "Move a worker holding its move points to the reachable tile no enemy the map shows could attack next turn from where a card in hand played through it raises the goal's count the most, where none does from where it stands",
+      candidates: (catalogue, chronicle) => {
+        const count = counted(catalogue, chronicle);
+        return workersWalkedToPlay(
+          catalogue,
+          chronicle,
+          (there, index, tile) => {
+            const play = playedThroughWorker(catalogue, there, index, tile);
+            const rise = play && goalRaised(catalogue, there, count, play.command);
+            return rise === undefined ? undefined : [-rise];
+          },
+          (_best, own) => own === undefined,
+        );
+      },
+    },
+    {
+      sentence:
+        "A unit that attacks walks to the reachable tile whose trial raises the goal's count the most, the cheapest of equals",
+      candidates: (catalogue, chronicle) => {
+        const count = counted(catalogue, chronicle);
+        return landingsRead(catalogue, chronicle, attackersOf(chronicle), ({ cost }, move) => {
+          const rise = goalRaised(catalogue, chronicle, count, move);
+          return rise === undefined ? undefined : [-rise, cost];
+        });
+      },
+    },
+    {
+      sentence:
+        "A unit that attacks, attacks the enemy whose trial raises the goal's count the most, walking to the tile it attacks from first, the cheapest of equals",
+      candidates: (catalogue, chronicle) => {
+        const count = counted(catalogue, chronicle);
+        return enemyAttacked(catalogue, chronicle, (attacker, from, target) => {
+          const there = movedByHand(chronicle, attacker, from);
+          const rise = goalRaised(catalogue, there, count, attackCommand(attacker, target));
+          return rise === undefined ? undefined : [-rise];
+        });
+      },
+    },
+  ];
+}
+
+/** The builder, its goal gambits going for the goal of the technology named. */
+export function builder(goal?: string): Persona {
+  return [
+    declaringNoWar(DEAL_TAKEN),
+    declaringNoWar(CITY_SETTLED),
+    declaringNoWar(UNIT_SETTLED),
+    declaringNoWar(HAZARD_PAID),
+    ...goalGambits(goal).map(declaringNoWar),
+    declaringNoWar(IDLE_ASSIGNED),
+    declaringNoWar(REASSIGNED),
+    declaringNoWar(CLAIMED),
+    declaringNoWar(WORKER_WITHDRAWN),
+    declaringNoWar(WORKER_SENT_TO_PLAY),
+    declaringNoWar(PLACED),
+    declaringNoWar(GAINED_THROUGH_WORKER),
+    declaringNoWar(WORKER_SENT_OUT),
+    declaringNoWar({
+      sentence:
+        'While fewer than three workers stand, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
+      candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 3),
+    }),
+    declaringNoWar({
+      sentence:
+        'While fewer than two units that attack stand, a population is idle and no held tile is free, play a unit card whose trial enters a unit that attacks',
+      candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, false, 2),
+    }),
+    declaringNoWar({
+      sentence:
+        'A unit that attacks, attacks the enemy of least health within three tiles of the city within its range, walking to the tile it attacks from first, the cheapest of equals',
+      candidates: (catalogue, chronicle) => {
+        const near = nearTheCity(chronicle, 3);
+        return enemyAttacked(
+          catalogue,
+          chronicle,
+          leastHealthAmong(chronicle, (enemy) => near(enemy.tile)),
+        );
+      },
+    }),
+    declaringNoWar({
+      sentence:
+        'A unit that attacks walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands',
+      candidates: (catalogue, chronicle) =>
+        garrisonPursued(catalogue, chronicle, attackersOf(chronicle), 3),
+    }),
+    declaringNoWar({
+      sentence:
+        'A unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
+      candidates: (catalogue, chronicle) =>
+        chartingWalks(catalogue, chronicle, attackersOf(chronicle), 5),
+    }),
+    declaringNoWar({
+      sentence:
+        "A unit that attacks walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+      candidates: (catalogue, chronicle) =>
+        garrisonRested(catalogue, chronicle, attackersOf(chronicle)),
+    }),
+    declaringNoWar({
+      sentence:
+        "A unit that attacks outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
+      candidates: (catalogue, chronicle) =>
+        garrisonWalkedHome(catalogue, chronicle, attackersOf(chronicle)),
+    }),
+    declaringNoWar(GAIN_PLAYED),
+    declaringNoWar(STRIKING_DISCARDED),
+    declaringNoWar(HAND_CYCLED),
+    TURN_ENDED,
+  ];
+}
 
 /** The gambit answering the first of its candidates whose command declares no war. */
 export function declaringNoWar({ sentence, candidates }: Weighing): Gambit {
@@ -301,6 +374,114 @@ export function trial(
   return after.rng.every((word, at) => word === chronicle.rng[at]) ? after : undefined;
 }
 
+/** The goal's count, as one decision reads it on its chronicle and on each of its trials. */
+type GoalCount = (chronicle: Chronicle) => number;
+
+/**
+ * The goal's count chosen on the chronicle a decision stands on: the count of the achievement earning
+ * the technology named while it stands unreached there, and the capstone's otherwise.
+ */
+function goalCount(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  goal: string | undefined,
+): GoalCount {
+  const capstone = capstoneOf(catalogue, chronicle.timeline.capstone.id);
+  const capstoneCount: GoalCount = (read) => capstone.count(catalogue, read);
+  if (goal === undefined || goal === victoryTechnologyOf(catalogue, chronicle.age)) {
+    return capstoneCount;
+  }
+  const { id } = earningOf(catalogue, goal);
+  if (rowOf(chronicle, id).reached) return capstoneCount;
+  return (read) => countOn(catalogue, read, rowOf(read, id));
+}
+
+/** The achievement of the chronicle's row that the id names; a row without it throws. */
+function rowOf(chronicle: Chronicle, id: string): ChronicleAchievement {
+  const held = chronicle.achievements.find((row) => row.id === id);
+  if (held === undefined) throw new Error(`the chronicle's row holds no ${id}`);
+  return held;
+}
+
+/** How much the command's trial raises the goal's count, and nothing where it raises none. */
+function goalRaised(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  count: GoalCount,
+  command: Command,
+): number | undefined {
+  const after = trial(catalogue, chronicle, command);
+  const rise = after === undefined ? 0 : count(after) - count(chronicle);
+  return rise > 0 ? rise : undefined;
+}
+
+function goalClaimed(catalogue: Catalogue, chronicle: Chronicle, count: GoalCount): Command[] {
+  const { city } = chronicle;
+  if (city === undefined) return [];
+  const order = tileOrder(chronicle);
+  return rankedClaims(catalogue, chronicle, (tile, claim) => {
+    const rise = goalRaised(catalogue, chronicle, count, claim);
+    return rise === undefined ? undefined : [-rise, distance(tile, city), order(tile)];
+  });
+}
+
+function goalPlayed(catalogue: Catalogue, chronicle: Chronicle, count: GoalCount): Command[] {
+  const order = tileOrder(chronicle);
+  return ranked(
+    chronicle.hand.flatMap((held, index) => {
+      if (!playable(refusalOf(catalogue, chronicle, held.id))) return [];
+      return playsOfCard(catalogue, chronicle, index, order).flatMap(({ command, at }) => {
+        const rise = goalRaised(catalogue, chronicle, count, command);
+        return rise === undefined ? [] : [{ item: command, rank: [-rise, index, at] }];
+      });
+    }),
+  );
+}
+
+/**
+ * Every play of the card in that slot of the hand the rules admit: through a worker on its tile, at
+ * nothing, at a unit of the player's, at another card of the hand; each with its tile's place in tile
+ * order, or the slot of the card it is aimed at.
+ */
+function playsOfCard(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  index: number,
+  order: (tile: TileCoords) => number,
+): { readonly command: Command; readonly at: number }[] {
+  const card = cardOf(catalogue, chronicle.hand[index].id);
+  const aim = aimOf(card);
+  switch (aim.aim) {
+    case 'none':
+      return [{ command: { type: 'play', index, aim: 'none' }, at: 0 }];
+    case 'tile':
+      if (workerAim(card) === undefined) return [];
+      return admitted(catalogue, chronicle, aim).map((tile) => ({
+        command: { type: 'play', index, aim: 'tile', tile },
+        at: order(tile),
+      }));
+    case 'unit':
+      return admitted(catalogue, chronicle, aim).map((tile) => ({
+        command: { type: 'play', index, aim: 'unit', tile },
+        at: order(tile),
+      }));
+    case 'hand':
+      return chronicle.hand.flatMap((_, card) =>
+        card === index ? [] : [{ command: { type: 'play', index, aim: 'hand', card }, at: card }],
+      );
+    case 'discard-pile':
+      return [];
+  }
+}
+
+/** The chronicle with the unit set on the tile by hand, past the rules: no move point spent, nothing charted. */
+function movedByHand(chronicle: Chronicle, mover: Unit, at: TileCoords): Chronicle {
+  return {
+    ...chronicle,
+    units: chronicle.units.map((unit) => (unit.id === mover.id ? { ...unit, tile: at } : unit)),
+  };
+}
+
 function playersUnits(chronicle: Chronicle): Unit[] {
   return chronicle.units.filter((unit) => unit.faction === 'player');
 }
@@ -318,6 +499,10 @@ function unitEnteredBetween(before: Chronicle, after: Chronicle): Unit | undefin
 
 export function moveCommand(unit: Unit, tile: TileCoords): Command {
   return { type: 'move', unit: unit.id, tile: { q: tile.q, r: tile.r } };
+}
+
+function attackCommand(unit: Unit, target: Unit): Command {
+  return { type: 'attack', unit: unit.id, tile: target.tile };
 }
 
 function actingAsEnemies(chronicle: Chronicle): number {
@@ -448,15 +633,31 @@ function claimed(catalogue: Catalogue, chronicle: Chronicle): Command[] {
   const unheld = chronicle.snapshots
     .filter((snapshot) => snapshot.holder === undefined)
     .map((snapshot) => ({ tile: snapshot, worth: worthOf(yields(snapshot)) }));
+  return rankedClaims(catalogue, chronicle, (tile) => {
+    const worth = worthOf(yields(tile));
+    const toward = unheld
+      .filter((richer) => richer.worth > worth)
+      .reduce((nearest, richer) => Math.min(nearest, distance(richer.tile, tile)), Infinity);
+    return [-worth, toward, order(tile)];
+  });
+}
+
+/**
+ * The claims of the tiles the city may claim now, ranked as `rank` reads each tile and its claim,
+ * the lowest first; a tile it reads nothing for is passed over.
+ */
+function rankedClaims(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  rank: (tile: TileCoords, claim: Command) => readonly number[] | undefined,
+): Command[] {
   return ranked(
     claimable(catalogue, chronicle, 'player')
       .filter((tile) => cityCommand(catalogue, chronicle, tile)?.type === 'claim')
-      .map((tile): Ranked<Command> => {
-        const worth = worthOf(yields(tile));
-        const toward = unheld
-          .filter((richer) => richer.worth > worth)
-          .reduce((nearest, richer) => Math.min(nearest, distance(richer.tile, tile)), Infinity);
-        return { item: { type: 'claim', tile }, rank: [-worth, toward, order(tile)] };
+      .flatMap((tile): Ranked<Command>[] => {
+        const claim: Command = { type: 'claim', tile };
+        const read = rank(tile, claim);
+        return read === undefined ? [] : [{ item: claim, rank: read }];
       }),
   );
 }
@@ -583,19 +784,12 @@ function workerPlay(
   index: number,
   tile: Tile,
 ): Ranked<Command> | undefined {
-  const { id } = chronicle.hand[index];
-  const aim = workerAim(cardOf(catalogue, id));
-  if (
-    aim === undefined ||
-    aim.refuses(catalogue, chronicle, tile, 'player') !== undefined ||
-    !playable(refusalOf(catalogue, chronicle, id))
-  ) {
-    return undefined;
-  }
-  const command: Command = { type: 'play', index, aim: 'tile', tile: { q: tile.q, r: tile.r } };
+  const play = playedThroughWorker(catalogue, chronicle, index, tile);
+  if (play === undefined) return undefined;
+  const { command, places } = play;
   const after = trial(catalogue, chronicle, command);
   if (after === undefined || after === chronicle) return undefined;
-  if (aim.places === true) {
+  if (places) {
     const was = yieldsOn(catalogue, chronicle)(tile);
     const is = yieldsOn(catalogue, after)(tile);
     if (worthOf(is) < worthOf(was)) return undefined;
@@ -609,6 +803,31 @@ function workerPlay(
   return { item: command, rank: [1, -raised] };
 }
 
+/**
+ * The card in that slot of the hand played through the worker on the tile, and whether it places
+ * something; nothing where the card is no such play or the tile or the stocks refuse it.
+ */
+function playedThroughWorker(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  index: number,
+  tile: Tile,
+): { readonly command: Command; readonly places: boolean } | undefined {
+  const { id } = chronicle.hand[index];
+  const aim = workerAim(cardOf(catalogue, id));
+  if (
+    aim === undefined ||
+    aim.refuses(catalogue, chronicle, tile, 'player') !== undefined ||
+    !playable(refusalOf(catalogue, chronicle, id))
+  ) {
+    return undefined;
+  }
+  return {
+    command: { type: 'play', index, aim: 'tile', tile: { q: tile.q, r: tile.r } },
+    places: aim.places === true,
+  };
+}
+
 /** Whether any tile of the map yields less after than before. */
 function yieldLowered(catalogue: Catalogue, before: Chronicle, after: Chronicle): boolean {
   const was = yieldsOn(catalogue, before);
@@ -616,23 +835,26 @@ function yieldLowered(catalogue: Catalogue, before: Chronicle, after: Chronicle)
   return before.tiles.some((tile) => worthOf(is(tile)) < worthOf(was(tile)));
 }
 
+/**
+ * A reading of the card in that slot of the hand played through a worker on the tile, on the
+ * chronicle with the worker standing there: its rank, the lowest first, and nothing for no play.
+ */
+type PlayRead = (there: Chronicle, index: number, tile: Tile) => readonly number[] | undefined;
+
 /** The best play of the hand through the worker read as standing on the tile, and nothing for none. */
 function bestPlayFrom(
-  catalogue: Catalogue,
   chronicle: Chronicle,
   worker: Unit,
   at: TileCoords,
+  read: PlayRead,
 ): readonly number[] | undefined {
   const tile = tileAt(chronicle.tiles, at);
   if (tile === undefined) return undefined;
-  const there: Chronicle = {
-    ...chronicle,
-    units: chronicle.units.map((unit) => (unit.id === worker.id ? { ...unit, tile: at } : unit)),
-  };
+  const there = movedByHand(chronicle, worker, at);
   const [best] = ranked(
     chronicle.hand.flatMap((_, index) => {
-      const play = workerPlay(catalogue, there, index, tile);
-      return play === undefined ? [] : [{ item: play.rank, rank: play.rank }];
+      const rank = read(there, index, tile);
+      return rank === undefined ? [] : [{ item: rank, rank }];
     }),
   );
   return best;
@@ -645,18 +867,37 @@ function workersToWalk(chronicle: Chronicle): Unit[] {
   );
 }
 
-function* workerSentToPlay(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
+function workerSentToPlay(catalogue: Catalogue, chronicle: Chronicle): Iterable<Command> {
+  return workersWalkedToPlay(
+    catalogue,
+    chronicle,
+    (there, index, tile) => workerPlay(catalogue, there, index, tile)?.rank,
+    (best, own) => own === undefined || ranksBelow(best, own),
+  );
+}
+
+/**
+ * Each worker holding its move points and its action walking to the landing no enemy the map shows
+ * could attack next turn where its best play, as `read` ranks it, ranks lowest, the cheapest of
+ * equals, where `walks` lets that best through against the best where it stands.
+ */
+function* workersWalkedToPlay(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  read: PlayRead,
+  walks: (best: readonly number[], own: readonly number[] | undefined) => boolean,
+): Generator<Command> {
   const workers = workersToWalk(chronicle);
   if (workers.length === 0) return;
   const order = tileOrder(chronicle);
   const attacked = attackedNextTurn(catalogue, chronicle);
   for (const worker of workers) {
-    const own = bestPlayFrom(catalogue, chronicle, worker, worker.tile);
+    const own = bestPlayFrom(chronicle, worker, worker.tile, read);
     yield* ranked(
       byHand(catalogue, chronicle, worker).landings.flatMap(({ tile, cost }) => {
         if (attacked(worker, tile)) return [];
-        const best = bestPlayFrom(catalogue, chronicle, worker, tile);
-        if (best === undefined || (own !== undefined && !ranksBelow(best, own))) return [];
+        const best = bestPlayFrom(chronicle, worker, tile, read);
+        if (best === undefined || !walks(best, own)) return [];
         return [{ item: moveCommand(worker, tile), rank: [...best, cost, order(tile)] }];
       }),
     );
@@ -756,44 +997,54 @@ function nearTheCity(chronicle: Chronicle, radius: number): (tile: TileCoords) =
 }
 
 /**
- * Each unit that attacks attacking the enemy of least health among those `admits` lets through that
- * it reaches from its own tile or a landing, walking to the cheapest of those first.
+ * An enemy's rank as the unit attacking it from the tile reads it, the lowest first, and nothing for
+ * one it passes over.
+ */
+type TargetRank = (attacker: Unit, from: TileCoords, target: Unit) => readonly number[] | undefined;
+
+/** The enemies `admits` lets through, the one of least health first, then in tile order. */
+export function leastHealthAmong(
+  chronicle: Chronicle,
+  admits: (enemy: Unit) => boolean,
+): TargetRank {
+  const order = tileOrder(chronicle);
+  return (_attacker, _from, target) =>
+    admits(target) ? [target.stats.health, order(target.tile)] : undefined;
+}
+
+/**
+ * Each unit that attacks attacking the enemy `rank` puts first among those it reaches from its own
+ * tile or a landing, walking first to the tile it ranks it lowest from, the cheapest of equals.
  */
 export function* enemyAttacked(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  admits: (enemy: Unit) => boolean,
+  rank: TargetRank,
 ): Generator<Command> {
   const relations = relationsOf(chronicle);
   const order = tileOrder(chronicle);
   for (const unit of attackersOf(chronicle)) {
     if (unit.action <= 0) continue;
     const own: Landing = { tile: unit.tile, cost: 0 };
-    const reaching = [own, ...byHand(catalogue, chronicle, unit).landings].flatMap(
-      ({ tile, cost }) => {
+    const reaching = ranked(
+      [own, ...byHand(catalogue, chronicle, unit).landings].flatMap(({ tile, cost }) => {
         const there = { ...unit, tile };
-        const enemies = byHand(catalogue, chronicle, there)
-          .targets.filter((target) => actsAsEnemy(target, relations) && admits(target))
-          .sort((one, other) => order(one.tile) - order(other.tile));
-        const target = leastHealth(catalogue, chronicle, enemies, there);
-        return target === undefined ? [] : [{ tile, cost, target }];
-      },
+        const enemies = byHand(catalogue, chronicle, there).targets.filter((target) =>
+          actsAsEnemy(target, relations),
+        );
+        return targetsInOwnSight(catalogue, chronicle, enemies, there).flatMap((target) => {
+          const read = rank(unit, tile, target);
+          return read === undefined
+            ? []
+            : [{ item: { tile, target }, rank: [...read, cost, order(tile)] }];
+        });
+      }),
     );
-    const [weakest] = ranked(
-      reaching.map(({ target }) => ({
-        item: target,
-        rank: [target.stats.health, order(target.tile)],
-      })),
-    );
-    if (weakest === undefined) continue;
-    const at = ranked(
-      reaching
-        .filter(({ target }) => target.id === weakest.id)
-        .map(({ tile, cost }) => ({ item: tile, rank: [cost, order(tile)] })),
-    );
-    for (const tile of at) {
+    const [first] = reaching;
+    if (first === undefined) continue;
+    for (const { tile } of reaching.filter(({ target }) => target.id === first.target.id)) {
       yield tileKey(tile) === tileKey(unit.tile)
-        ? { type: 'attack', unit: unit.id, tile: weakest.tile }
+        ? attackCommand(unit, first.target)
         : moveCommand(unit, tile);
     }
   }
@@ -865,16 +1116,32 @@ export function* chartingWalks(
   radius?: number,
 ): Generator<Command> {
   const near = radius === undefined ? () => true : nearTheCity(chronicle, radius);
+  yield* landingsRead(catalogue, chronicle, units, ({ tile, cost }, move) => {
+    if (!near(tile)) return undefined;
+    const after = trial(catalogue, chronicle, move);
+    const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;
+    return grown > 0 ? [cost, -grown] : undefined;
+  });
+}
+
+/**
+ * Each unit's moves onto its landings, unit by unit, ranked as `read` reads the landing and the move
+ * onto it, the lowest first, then in tile order; a landing it reads nothing for is passed over.
+ */
+function* landingsRead(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  units: readonly Unit[],
+  read: (landing: Landing, move: Command) => readonly number[] | undefined,
+): Generator<Command> {
   const order = tileOrder(chronicle);
   for (const unit of units) {
     if (unit.movePoints <= 0) continue;
     yield* ranked(
-      byHand(catalogue, chronicle, unit).landings.flatMap(({ tile, cost }) => {
-        if (!near(tile)) return [];
-        const command = moveCommand(unit, tile);
-        const after = trial(catalogue, chronicle, command);
-        const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;
-        return grown > 0 ? [{ item: command, rank: [cost, -grown, order(tile)] }] : [];
+      byHand(catalogue, chronicle, unit).landings.flatMap((landing) => {
+        const move = moveCommand(unit, landing.tile);
+        const rank = read(landing, move);
+        return rank === undefined ? [] : [{ item: move, rank: [...rank, order(landing.tile)] }];
       }),
     );
   }

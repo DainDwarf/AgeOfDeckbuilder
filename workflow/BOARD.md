@@ -11,5 +11,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The goal gambit** — `--goal <technology>` names the goal the personas' five goal gambits go for, the capstone without it or once it is reached, a capstone naming a count toward a need as an achievement does; done when the command runs on the Stone Age, `--personas` prints the block in both ladders, every capstone carries a count, the fixture tests pass and the pages say so. Doc-impact: `docs/SIMULATOR.md`, `docs/CHRONICLE.md`. [board/goal-gambit.md](board/goal-gambit.md)
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
