@@ -11,5 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
+- **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag. Steering a persona at a capstone, the monument's stones a worker never walks in to lay among them, is this line's too, since it is all about steering the personas towards a goal.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
