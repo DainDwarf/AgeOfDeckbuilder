@@ -6,7 +6,11 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The stand-ins' doors** — the fixture content that opens a door no real content walks through — the recall, the road, the siege capstone with its second script and its span, and whatever else the search finds — reassessed one by one: the door kept for content the design foresees, or the mechanism and its fixture cut together.
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play, the findings kept in [`BALANCE.md`](BALANCE.md) first among them; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; a trial of where military comes from: military taken off the Hearth's yield and flint giving it in place of production.
 
 ## Lines
+
+- **The recall cut** — the card aimed at the discard pile goes with its aim window: the helper and the aim kind, the window and the change's playback on the screen, its text entries, the fixture's instant and its tests, and the rules, screen, interface and glossary sentences that hold it; the idea keeps the recall for the Bronze Age.
+- **The road cut** — a layer naming its tile's movement cost outright and the bridge go: the two map helpers and the two layer fields, the infopanel's movement line for a layer, the fixture's three roads and the tests on their cost, and the rules, map and glossary sentences that hold them; the fixture keeps one plain improvement for the tests that place one, and the bridge idea is reworded to hold the road too.
+- **The siege's span cut** — the trial passed by turns ticking past its landing goes with the several-camp placement: the helper and the rules sentence, the camp placing narrowed to one camp, and the fixture siege re-authored to pass by something else.
+- **The kill on a tile cut** — the helper killing the population working one tile goes with the fixture's answer and its tests; the content kills through the idle-first helper.
