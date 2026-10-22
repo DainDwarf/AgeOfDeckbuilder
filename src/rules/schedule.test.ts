@@ -886,10 +886,10 @@ function outsideOf(dealt: Chronicle, chronicle: Chronicle): Tile[] {
 
 test('a removal takes improvements while they stand, each drawn near the city, inside the border and out of it, the city’s own tile included and a tile carrying several counting each, and leaves every building', () => {
   const laid: [TileCoords, Laid][] = [
-    [CITY, { improvements: ['PH_Road'] }],
-    [SOAKED, { improvements: ['PH_Road', 'PH_Trail'] }],
+    [CITY, { improvements: ['PH_Stake'] }],
+    [SOAKED, { improvements: ['PH_Stake', 'PH_Ditch'] }],
     [BARN, { building: TILLAGE }],
-    [DRY, { improvements: ['PH_Road', 'PH_Rubble'], building: TILLAGE }],
+    [DRY, { improvements: ['PH_Stake', 'PH_Ditch'], building: TILLAGE }],
   ];
   const carrying = [CITY, SOAKED, DRY];
   const standing = improvementsOn(flooding(laid), carrying);
@@ -917,7 +917,7 @@ test('once no improvement stands, a removal takes a building inside the border i
   for (const seed of SEEDS) {
     const city = flooding(
       [
-        [CITY, { improvements: ['PH_Road'] }],
+        [CITY, { improvements: ['PH_Stake'] }],
         [SOAKED, { building: TILLAGE }],
         [BARN, { building: TILLAGE }],
         [DRY, { building: TILLAGE }],
@@ -1069,7 +1069,7 @@ function hillsBut(kept: readonly TileCoords[]): [TileCoords, Laid][] {
 test('a challenge that terraforms strikes that many tiles of the terrains it names, each drawn near the city, inside the border and out of it, the city’s own tile included, every layer going with the old terrain or the feature and the population working them staying, and fewer where fewer stand and nothing where none does', () => {
   const laid: [TileCoords, Laid][] = [
     [CITY, { terrain: 'plain' }],
-    [SOAKED, { building: TILLAGE, improvements: ['PH_Road'] }],
+    [SOAKED, { building: TILLAGE, improvements: ['PH_Stake'] }],
     [BARN, { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' }],
     [DRY, { terrain: 'forest', feature: 'PH_Game', building: 'PH_Lodge' }],
   ];

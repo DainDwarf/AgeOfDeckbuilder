@@ -34,11 +34,7 @@ export type BiomeKind = {
   readonly compactness: number;
 };
 
-/**
- * What terrains a building or an improvement of a kind goes on, what it yields on top of them, the
- * movement cost it names its tile outright — none named, and it names nothing, unlike a terrain's —
- * and whether it bridges a river edge it stands on both banks of.
- */
+/** What terrains a building or an improvement of a kind goes on, and what it yields on top of them. */
 export type LayerKind = {
   readonly terrains: readonly string[];
   /** The features it goes on, any one of them, and goes with, for one that names any. */
@@ -46,8 +42,6 @@ export type LayerKind = {
   /** Whether it names the river: it goes only on a tile a river runs along. */
   readonly river?: boolean;
   readonly yields: Partial<Resources>;
-  readonly movementCost?: number;
-  readonly bridge?: boolean;
 };
 
 /**

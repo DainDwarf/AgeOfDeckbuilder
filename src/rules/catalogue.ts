@@ -669,9 +669,6 @@ export function catalogued(content: Catalogue): Catalogue {
       if (layer.features?.length === 0) {
         refuse(content, `the ${noun} ${id} names a feature list holding none`);
       }
-      if (layer.movementCost !== undefined && layer.movementCost < 1) {
-        refuse(content, `the ${noun} ${id} names a movement cost of ${layer.movementCost}`);
-      }
       for (const feature of layer.features ?? []) {
         const { terrain } = featureKind(content, feature);
         if (!layer.terrains.includes(terrain)) {

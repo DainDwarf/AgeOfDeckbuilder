@@ -1662,14 +1662,14 @@ test('an enemy that prepares spends its action as an attack does, and carries th
   expect(after.ending).toBeUndefined();
 });
 
-/** A plain two tiles off the city with a farm built on it and a road and a trail placed on it. */
+/** A plain two tiles off the city with a farm built on it and a stake and a ditch on it. */
 const FARMED: TileCoords = { q: 2, r: 0 };
 
 /** A city on a disc of plain with `FARMED` built on, and these units standing. */
 function farmed(units: readonly Standing[]): Chronicle {
   const built = field(3).map((tile) =>
     tileKey(tile) === tileKey(FARMED)
-      ? { ...tile, building: 'PH_Farm', improvements: ['PH_Road', 'PH_Trail'] }
+      ? { ...tile, building: 'PH_Farm', improvements: ['PH_Stake', 'PH_Ditch'] }
       : tile,
   );
   return cityOf(['urban'], { tiles: built, units });
@@ -1695,14 +1695,14 @@ test('a prepare off the city’s tile lands at the next enemy phase ahead of eve
 });
 
 test('the neutral’s city’s tile is never pillaged: a prepare carried there takes no improvement, and an enemy prepares its capture there', () => {
-  const roaded = improvementPlaced(CATALOGUE, besideTheNeutral(), NEUTRAL_TILE, 'PH_Road');
-  const pillaging = withUnits(roaded.chronicle, [preparing(standing('enemy', NEUTRAL_TILE))]);
-  const standingThere = withUnits(roaded.chronicle, [standing('enemy', NEUTRAL_TILE)]);
+  const staked = improvementPlaced(CATALOGUE, besideTheNeutral(), NEUTRAL_TILE, 'PH_Stake');
+  const pillaging = withUnits(staked.chronicle, [preparing(standing('enemy', NEUTRAL_TILE))]);
+  const standingThere = withUnits(staked.chronicle, [standing('enemy', NEUTRAL_TILE)]);
 
   const after = outcome(apply(CATALOGUE, pillaging, { type: 'end-turn' }));
 
   expect(tileAt(after.tiles, NEUTRAL_TILE)?.improvements).toEqual(
-    tileAt(roaded.chronicle.tiles, NEUTRAL_TILE)?.improvements,
+    tileAt(staked.chronicle.tiles, NEUTRAL_TILE)?.improvements,
   );
   expect(enemyPhaseOf(standingThere, PREPARING)).toEqual(['action-spent', 'prepare']);
 });

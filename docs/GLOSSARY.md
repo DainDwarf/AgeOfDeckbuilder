@@ -112,8 +112,6 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | — |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |
 | **improvement** | A layer a worker places on a tile; unlike a building, a tile holds any number. | — |
-| **road** | An improvement that names its tile's movement cost outright. | path, track, highway, trail |
-| **bridge** | A river edge with a road on both banks, crossed as if no river ran there. | ford, viaduct, span |
 | **yield** | What a tile gives at income, resource by resource. | output, produce, harvest |
 | **claim** | To take a tile adjacent to one a city holds into its border, for culture. | purchase, expand, annex |
 | **culture** | The resource that claims tiles. | — |

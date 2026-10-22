@@ -630,7 +630,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
     PH_Mine: { kind: 'action', cost: { production: 3 }, ...placesImprovement('PH_Mine') },
-    PH_Road: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Road') },
+    PH_Stake: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Stake') },
     PH_Snare: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Snare') },
     PH_Lodge: { kind: 'building', cost: { production: 3 }, ...builds('PH_Lodge') },
     PH_Smokehouse: { kind: 'building', cost: { production: 3 }, ...builds('PH_Smokehouse') },
@@ -916,18 +916,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
   },
   improvements: {
     PH_Mine: { terrains: ['hills'], yields: { production: 1 } },
-    PH_Road: {
-      terrains: ['plain', 'forest', 'hills', 'urban'],
-      yields: {},
-      movementCost: MOVE_POINT / 2,
-      bridge: true,
-    },
-    PH_Trail: {
-      terrains: ['plain', 'forest', 'hills', 'urban'],
-      yields: {},
-      movementCost: (3 * MOVE_POINT) / 4,
-    },
-    PH_Rubble: { terrains: ['plain'], yields: {}, movementCost: 2 * MOVE_POINT },
+    PH_Stake: { terrains: ['plain', 'forest', 'hills', 'urban'], yields: {} },
     PH_Snare: { terrains: ['forest'], features: ['PH_Game'], yields: { food: 1 } },
     PH_Ditch: { terrains: ['plain', 'forest'], river: true, yields: { food: 1 } },
     PH_Weir: { terrains: ['coast'], yields: { food: 1 } },
@@ -1085,7 +1074,7 @@ export const CROWD = 'PH_Crowd';
 export const CROWD_NEED = 6;
 
 /**
- * The first fixture age's achievement a deed reaches, earning `SURVEYING`: its tally counts the road
+ * The first fixture age's achievement a deed reaches, earning `SURVEYING`: its tally counts the stake
  * played through a worker by the terrain of the tile it was played on, and its count is the kinds of
  * terrain the tally names.
  */
@@ -1162,7 +1151,7 @@ function achievementsOf(age: string): Age['achievements'] {
       influence: 0,
     },
     [SURVEY]: {
-      ...terrainsPlayedOn('PH_Road'),
+      ...terrainsPlayedOn('PH_Stake'),
       need: SURVEY_NEED,
       technology: SURVEYING,
       influence: 1,
@@ -1596,7 +1585,7 @@ export function hoardedVictory(kept: Pick<Carrying, ChroniclePile> = {}): Chroni
   return outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
 }
 
-/** The tiles a fixture plays the road on toward `SURVEY`: two plains, then a forest. */
+/** The tiles a fixture plays the stake on toward `SURVEY`: two plains, then a forest. */
 export const SURVEYED: readonly [TileCoords, TileCoords, TileCoords] = [
   { q: 1, r: 0 },
   { q: -1, r: 0 },
@@ -1604,14 +1593,14 @@ export const SURVEYED: readonly [TileCoords, TileCoords, TileCoords] = [
 ];
 
 /**
- * A first-age city with nothing learned, a worker on each tile of `SURVEYED`, a road in hand for
+ * A first-age city with nothing learned, a worker on each tile of `SURVEYED`, a stake in hand for
  * each and a harvest after them, and the stocks to play them all.
  */
 export function surveying(carrying: Carrying = {}): Chronicle {
   return reaching([], {
     tiles: madeOf(field(2), 'forest', [SURVEYED[2]]),
     units: SURVEYED.map(worker),
-    hand: ['PH_Road', 'PH_Road', 'PH_Road', 'PH_Harvest'],
+    hand: ['PH_Stake', 'PH_Stake', 'PH_Stake', 'PH_Harvest'],
     resources: { food: 0, production: 6, military: 0, money: 0, science: 1, culture: 0 },
     ...carrying,
   });

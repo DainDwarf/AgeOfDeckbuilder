@@ -14,7 +14,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 
 ## Game
 
-- **Bridges are a technology**: the placeholder road line lets roads on both banks of a river edge lift the crossing's drain; in the end design that bridge is gated behind a technology the player unlocks, and roads alone do not span a river.
+- **Roads, and bridges as a technology**: an improvement that names its tile's movement cost outright, under whatever stands there, placed by a worker on the terrains it reaches; and a river edge with one on both banks crossed as if no river ran there, the bridge gated behind a technology the player unlocks, so roads alone never span a river.
 - **Colour ledger** (art-style pass scope): every UI colour resolves through one theme lookup, so an alternate theme — colour-blind-friendly included — becomes content, not surgery.
 - **Colour never carries gameplay meaning alone** (art-style pass scope): resource chips and anything gameplay-critical get shape/glyph redundancy, fixing colour-blindness in every theme at once — including the default.
 - **Animation speed settings**: the player sets how fast the staged motions play. The e2e suite runs on the fastest one: an end of turn plays out its animations in 2–3 s at today's speed, and most of the suite's time is spent watching them; only the specs that test a motion or a rest mid-way keep real speed.

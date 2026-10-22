@@ -577,17 +577,6 @@ test('a catalogue whose region keeps a biome away from its own kind is refused',
   expect(catalogued(keeping('mountain')).version).toBe('keeping');
 });
 
-test('a catalogue whose layer names a movement cost of zero is refused', () => {
-  const content = changed({
-    improvements: {
-      ...CATALOGUE.improvements,
-      PH_Road: { ...CATALOGUE.improvements.PH_Road, movementCost: 0 },
-    },
-  });
-
-  expect(() => catalogued(content)).toThrow(/^fixture: /);
-});
-
 test('a catalogue whose terrain names a movement cost of zero, ashore or embarked, is refused', () => {
   const { terrains } = CATALOGUE;
   const ashore = changed({

@@ -867,7 +867,7 @@ test('the builder places through a worker what adds the most food to the yield, 
     aim: 'tile',
     tile: plain,
   });
-  expect(answerOf('builder', 15, placing(['PH_Road']))).toEqual({
+  expect(answerOf('builder', 15, placing(['PH_Stake']))).toEqual({
     type: 'play',
     index: 0,
     aim: 'tile',
@@ -1510,7 +1510,7 @@ test('going for a goal, a persona plays the card whose trial raises the goal’s
   expect(
     goalAnswers(6, holding(['PH_Harvest', 'PH_Discard', 'PH_Cache'], discarded), discarded),
   ).toEqual(both({ type: 'play', index: 1, aim: 'hand', card: 0 }));
-  expect(goalAnswers(6, holding(['PH_Discard', 'PH_Road'], food), food)).toEqual([
+  expect(goalAnswers(6, holding(['PH_Discard', 'PH_Stake'], food), food)).toEqual([
     undefined,
     undefined,
   ]);

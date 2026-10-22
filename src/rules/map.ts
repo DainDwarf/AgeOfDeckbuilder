@@ -4,8 +4,6 @@ import {
   buildingKind,
   entryOf,
   featureKind,
-  improvementKind,
-  type LayerKind,
   type MapAge,
   type MapContent,
   type MapRegion,
@@ -25,37 +23,16 @@ export type ImprovementId = string;
 /** One move point, in the hundredths every move stat, move point and movement cost counts in. */
 export const MOVE_POINT = 100;
 
-/** The building and the improvements of a tile: the layers a movement cost or a bridge is read off. */
-function layersOf(catalogue: MapContent, tile: Tile): LayerKind[] {
-  const improvements = tile.improvements.map((improvement) =>
-    improvementKind(catalogue, improvement),
-  );
-  if (tile.building === undefined) return improvements;
-  return [buildingKind(catalogue, tile.building), ...improvements];
-}
-
-/** Whether a layer of the tile bridges: what a bridge needs on both banks. */
-function bridges(catalogue: MapContent, tile: Tile | undefined): boolean {
-  return tile !== undefined && layersOf(catalogue, tile).some((layer) => layer.bridge === true);
-}
-
 /**
- * What entering a tile spends of a unit's move points, embarked or ashore: the one answer every path
- * asks. A terrain naming no cost for that unit is not entered by it, and a tile off the map by none.
- * A layer naming the cost outright takes the tile to it, whatever the terrain's, the lowest winning.
+ * What entering a tile spends of a unit's move points, embarked or ashore: its terrain's, and
+ * nothing off the map.
  */
 export function movementCost(
   catalogue: MapContent,
   tile: Tile | undefined,
   embarked: boolean,
 ): number | undefined {
-  if (tile === undefined) return undefined;
-  const ground = groundCost(catalogue, tile.terrain, embarked);
-  if (ground === undefined) return undefined;
-  const named = layersOf(catalogue, tile).flatMap((layer) =>
-    layer.movementCost === undefined ? [] : [layer.movementCost],
-  );
-  return named.length === 0 ? ground : Math.min(...named);
+  return tile === undefined ? undefined : groundCost(catalogue, tile.terrain, embarked);
 }
 
 /**
@@ -205,7 +182,7 @@ export type Toward = Routes & {
 /**
  * One step between two tiles beside each other, in the order the walk goes: the tile it is at and
  * the one it goes on to, each with whether the walker stands on it embarked, and whether a river edge
- * no bridge spans lies between them.
+ * lies between them.
  */
 type Step = {
   readonly at: Tile | undefined;
@@ -218,20 +195,18 @@ type Step = {
 /** What a step leaves the walk having spent, and nothing where the walk does not take it. */
 type Spends = (paid: number, step: Step) => number | undefined;
 
-/** The map a walk goes over: its tiles by position, and whether a river edge no bridge spans lies between two of them. */
+/** The map a walk goes over: its tiles by position, and whether a river edge lies between two of them. */
 type Ground = {
   readonly at: (coord: TileCoords) => Tile | undefined;
   readonly river: (a: TileCoords, b: TileCoords) => boolean;
 };
 
-function groundOf(catalogue: MapContent, tiles: readonly Tile[], rivers: readonly River[]): Ground {
+function groundOf(tiles: readonly Tile[], rivers: readonly River[]): Ground {
   const byKey = new Map(tiles.map((tile) => [tileKey(tile), tile]));
   const crossings = riverEdges(rivers);
-  const at = (coord: TileCoords): Tile | undefined => byKey.get(tileKey(coord));
   return {
-    at,
-    river: (a, b) =>
-      crossings.has(edgeKey(a, b)) && !(bridges(catalogue, at(a)) && bridges(catalogue, at(b))),
+    at: (coord) => byKey.get(tileKey(coord)),
+    river: (a, b) => crossings.has(edgeKey(a, b)),
   };
 }
 
@@ -340,7 +315,7 @@ export function pathCosts(
   walk: Walk,
   passage: (coord: TileCoords) => Passage,
 ): ReadonlyMap<string, number> {
-  const ground = groundOf(catalogue, tiles, rivers);
+  const ground = groundOf(tiles, rivers);
   const spending = spends(catalogue, walk);
   const routes = cheapestRoutes(ground, from, walk.embarked, false, spending, passage);
   return walk.embarked ? routes.embarked : routes.ashore;
@@ -360,7 +335,7 @@ export function routesFrom(
   moves: Moves,
   passage: (coord: TileCoords) => Passage,
 ): Routes {
-  const ground = groundOf(catalogue, tiles, rivers);
+  const ground = groundOf(tiles, rivers);
   return cheapestRoutes(ground, from, embarked, true, weighs(catalogue, moves, false), passage);
 }
 
@@ -378,7 +353,7 @@ export function routesToward(
   moves: Moves,
   passage: (coord: TileCoords) => Passage,
 ): Toward {
-  const ground = groundOf(catalogue, tiles, rivers);
+  const ground = groundOf(tiles, rivers);
   const spending = weighs(catalogue, moves, true);
   const routes = cheapestRoutes(ground, to, embarked, true, spending, passage);
   const reachedBy = (standsEmbarked: boolean): ReadonlyMap<string, number> =>

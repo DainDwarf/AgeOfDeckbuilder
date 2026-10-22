@@ -10,6 +10,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The road cut** — no layer names its tile's movement cost or bridges a river edge: the two layer fields, the two map helpers that read them and the validator line on a layer's cost are gone, the fixture's three roads are gone and one plain improvement stands in their place, the tests on a layer's cost and on the bridge are gone, and the design pages describe a tile's movement cost as its terrain's. Doc-impact: `docs/MAP.md`, `docs/CHRONICLE.md`, `docs/GLOSSARY.md`. [board/road-cut.md](board/road-cut.md)
 - **The siege's span cut** — the trial passed by turns ticking past its landing goes with the several-camp placement: the helper and the rules sentence, the camp placing narrowed to one camp, and the fixture siege re-authored to pass by something else.
 - **The kill on a tile cut** — the helper killing the population working one tile goes with the fixture's answer and its tests; the content kills through the idle-first helper.

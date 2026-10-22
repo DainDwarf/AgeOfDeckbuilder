@@ -983,27 +983,27 @@ test('an achievement keeping a tally is reached at the end of the command whose 
 test('a command the chronicle ends on moves no tally, so a deed whose count it would bring to the need is not recorded', () => {
   const [plain, , forest] = SURVEYED;
   const tillage = capstoneOf(CATALOGUE, 'PH_Tillage');
-  const paving: Catalogue = {
+  const staking: Catalogue = {
     ...CATALOGUE,
     capstones: {
       ...CATALOGUE.capstones,
       PH_Tillage: {
         ...tillage,
         count: (_catalogue, chronicle) =>
-          tileAt(chronicle.tiles, forest)?.improvements.includes('PH_Road') === true ? 1 : 0,
+          tileAt(chronicle.tiles, forest)?.improvements.includes('PH_Stake') === true ? 1 : 0,
         need: 1,
       },
     },
   };
   const surveyed = outcome(
     apply(
-      paving,
+      staking,
       surveying({ timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } } }),
       aimedAt(plain),
     ),
   );
 
-  const stages = apply(paving, surveyed, aimedAt(forest));
+  const stages = apply(staking, surveyed, aimedAt(forest));
 
   expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
   expect(namesOf(apply(CATALOGUE, surveyed, aimedAt(forest))).slice(-2)).toEqual([

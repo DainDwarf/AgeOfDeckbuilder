@@ -1004,7 +1004,7 @@ test('the neutral’s worker plays, on the tile its city holds where it adds the
   );
 
   const mining = workersPlaying(['PH_Mine', 'PH_Farm']);
-  const roading = workersPlaying(['PH_Road', 'PH_Mine']);
+  const staking = workersPlaying(['PH_Stake', 'PH_Mine']);
   const farming = workersPlaying(['PH_Farm']);
   const hillsAndPlain = [
     { q: 1, r: -1 },
@@ -1014,7 +1014,7 @@ test('the neutral’s worker plays, on the tile its city holds where it adds the
   expect(builtBy(mining, workerAround(mining, hillsAndPlain, { ground: hills }))).toEqual([
     '3,-1 PH_Farm',
   ]);
-  expect(builtBy(roading, workerAround(roading, [{ q: 1, r: -1 }], { ground: hills }))).toEqual([
+  expect(builtBy(staking, workerAround(staking, [{ q: 1, r: -1 }], { ground: hills }))).toEqual([
     '1,-1 PH_Mine',
   ]);
   expect(

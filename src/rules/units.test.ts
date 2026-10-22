@@ -1,5 +1,4 @@
 import { expect, test } from 'vitest';
-import { improvementPlaced } from './cards';
 import { bonusCarried, bonusOf, unitKind } from './catalogue';
 import { apply, byHand, type Command, outcome } from './chronicle';
 import { warDeclared } from './city';
@@ -31,26 +30,10 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { type ImprovementId, MOVE_POINT, type TileCoords, tileKey } from './map';
-import { charted } from './sight';
+import { MOVE_POINT, type TileCoords, tileKey } from './map';
 import { walked } from './stages';
 import type { Chronicle } from './state';
 import { attackable, type Faction, relationsOf } from './units';
-
-/** The chronicle with the improvement placed on each of the named tiles, and the map charted of it. */
-function withImprovement(
-  chronicle: Chronicle,
-  improvement: ImprovementId,
-  coords: TileCoords[],
-): Chronicle {
-  return charted(
-    CATALOGUE,
-    coords.reduce(
-      (left, at) => improvementPlaced(CATALOGUE, left, at, improvement).chronicle,
-      chronicle,
-    ),
-  );
-}
 
 /** A unit of the player's sent to a tile, ready to hand to `apply`. */
 function moveTo(unit: number, to: TileCoords): Command {
@@ -500,148 +483,6 @@ test('a unit crosses a river only where the move points it has left cover the fa
   expect(pointsOf(long, 1)).toBe(3 * MOVE_POINT);
   expect(crossed.units[0].tile).toEqual(across);
   expect(pointsOf(crossed, 1)).toBe(0);
-});
-
-test('a unit crosses further over a road than beside it: half a move point to the tile', () => {
-  const road = [
-    { q: 1, r: 0 },
-    { q: 2, r: 0 },
-    { q: 3, r: 0 },
-    { q: 4, r: 0 },
-  ];
-  const city = withImprovement(
-    cityOf(['urban'], {
-      tiles: field(4),
-      units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
-    }),
-    'PH_Road',
-    road,
-  );
-
-  const along = outcome(apply(CATALOGUE, city, moveTo(1, { q: 4, r: 0 })));
-
-  expect(along.units[0].tile).toEqual({ q: 4, r: 0 });
-  expect(pointsOf(along, 1)).toBe(0);
-  expect(outcome(apply(CATALOGUE, city, moveTo(1, { q: 2, r: 1 }))).units[0].tile).toEqual({
-    q: 2,
-    r: 1,
-  });
-  expect(outcome(apply(CATALOGUE, city, moveTo(1, { q: 3, r: 1 })))).toEqual(city);
-});
-
-test('a river edge with a road on both banks is a bridge, crossed as if no river ran there', () => {
-  const bank = { q: 1, r: 0 };
-  const across = { q: 2, r: 0 };
-  const on = { q: 3, r: 0 };
-  const city = withImprovement(
-    cityOf(['urban'], {
-      tiles: field(3),
-      rivers: [riverBetween(bank, across)],
-      units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
-    }),
-    'PH_Road',
-    [bank, across],
-  );
-
-  const crossed = outcome(apply(CATALOGUE, city, moveTo(1, across)));
-
-  expect(crossed.units[0].tile).toEqual(across);
-  expect(pointsOf(crossed, 1)).toBe(MOVE_POINT);
-  expect(outcome(apply(CATALOGUE, crossed, moveTo(1, on))).units[0].tile).toEqual(on);
-});
-
-test('a road on one bank alone leaves the crossing spending every move point', () => {
-  const bank = { q: 1, r: 0 };
-  const across = { q: 2, r: 0 };
-  const on = { q: 3, r: 0 };
-  const shore = (roads: TileCoords[]): Chronicle =>
-    withImprovement(
-      cityOf(['urban'], {
-        tiles: field(3),
-        rivers: [riverBetween(bank, across)],
-        units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
-      }),
-      'PH_Road',
-      roads,
-    );
-
-  for (const roads of [[bank], [across]]) {
-    const crossed = outcome(apply(CATALOGUE, shore(roads), moveTo(1, across)));
-
-    expect(crossed.units[0].tile).toEqual(across);
-    expect(pointsOf(crossed, 1)).toBe(0);
-    expect(outcome(apply(CATALOGUE, crossed, moveTo(1, on)))).toEqual(crossed);
-  }
-});
-
-test('a layer naming a movement cost that does not bridge leaves the crossing spending every move point', () => {
-  const bank = { q: 1, r: 0 };
-  const across = { q: 2, r: 0 };
-  const on = { q: 3, r: 0 };
-  const city = withImprovement(
-    cityOf(['urban'], {
-      tiles: field(3),
-      rivers: [riverBetween(bank, across)],
-      units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
-    }),
-    'PH_Trail',
-    [bank, across],
-  );
-
-  const crossed = outcome(apply(CATALOGUE, city, moveTo(1, across)));
-
-  expect(crossed.units[0].tile).toEqual(across);
-  expect(pointsOf(crossed, 1)).toBe(0);
-  expect(outcome(apply(CATALOGUE, crossed, moveTo(1, on)))).toEqual(crossed);
-});
-
-test('a tile two layers each name a movement cost for costs the lower, whichever came first', () => {
-  const line = [
-    { q: 1, r: 0 },
-    { q: 2, r: 0 },
-    { q: 3, r: 0 },
-    { q: 4, r: 0 },
-  ];
-
-  for (const [first, second] of [
-    ['PH_Road', 'PH_Trail'],
-    ['PH_Trail', 'PH_Road'],
-  ]) {
-    const city = withImprovement(
-      withImprovement(
-        cityOf(['urban'], {
-          tiles: field(4),
-          units: [standing('player', CITY, { move: 2 * MOVE_POINT, sight: 4 })],
-        }),
-        first,
-        line,
-      ),
-      second,
-      line,
-    );
-
-    const along = outcome(apply(CATALOGUE, city, moveTo(1, { q: 4, r: 0 })));
-
-    expect(along.units[0].tile).toEqual({ q: 4, r: 0 });
-    expect(pointsOf(along, 1)).toBe(0);
-  }
-});
-
-test('a layer naming a movement cost above its terrain’s takes the tile to it', () => {
-  const heaped = { q: 1, r: 0 };
-  const city = withImprovement(
-    cityOf(['urban'], {
-      tiles: field(3),
-      units: [standing('player', CITY, { move: 3 * MOVE_POINT, sight: 4 })],
-    }),
-    'PH_Rubble',
-    [heaped],
-  );
-
-  const entered = outcome(apply(CATALOGUE, city, moveTo(1, heaped)));
-
-  expect(entered.units[0].tile).toEqual(heaped);
-  expect(pointsOf(entered, 1)).toBe(MOVE_POINT);
 });
 
 test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
