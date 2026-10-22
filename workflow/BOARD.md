@@ -10,4 +10,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The kill on a tile cut** — the helper killing the population working one tile goes with the fixture's answer and its tests; the content kills through the idle-first helper.
+- **The kill on a tile cut** — no helper kills the population working one named tile: the helper is gone, the fixture's Plague answer that was its only caller is gone, and the three schedule tests on that answer are gone; the content kills population through the idle-first take alone. Doc-impact: none. [board/kill-on-a-tile-cut.md](board/kill-on-a-tile-cut.md)
