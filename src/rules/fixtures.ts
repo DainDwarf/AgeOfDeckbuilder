@@ -67,14 +67,7 @@ import {
   terrainsPlayedOn,
 } from './chronicle';
 import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
-import {
-  attackOrNone,
-  enemyEntering,
-  enteredOnCamp,
-  leastHealth,
-  raided,
-  rowsDrawn,
-} from './enemies';
+import { attackOrNone, enemyEntering, leastHealth, raided, rowsDrawn } from './enemies';
 import {
   type BuildingTypeId,
   cornerKey,
@@ -99,7 +92,6 @@ import type { ChronicleSave } from './save';
 import {
   addedToDrawPileTop,
   campPlaceable,
-  campsPlaced,
   featureDealtNear,
   featureRemovalNear,
   featuresRemovedNear,
@@ -110,19 +102,10 @@ import {
   showsNextLanding,
   terraformedNear,
   tileCharted,
-  turnsPastLanding,
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
-import {
-  followed,
-  type Group,
-  type Landed,
-  type Sequence,
-  type Stage,
-  unchanged,
-  walked,
-} from './stages';
+import { followed, type Group, type Sequence, type Stage, unchanged, walked } from './stages';
 import {
   type CardId,
   type Chronicle,
@@ -143,8 +126,6 @@ import {
   type Unit,
   type UnitStats,
 } from './units';
-
-const SIEGE_CAMPS = 5;
 
 /** The one unit kind the fixture camp enters. */
 export const CAMP_KIND = 'PH_Warrior';
@@ -181,7 +162,7 @@ export const SILO = 'PH_Silo';
 
 /**
  * The capstone that lands nothing, which nothing passes, and which fails once a `TILLAGE` or a `SILO`
- * leaves a tile with neither. No schedule names it.
+ * leaves a tile with neither.
  */
 export const TOWER = 'PH_Tower';
 
@@ -236,7 +217,7 @@ export const AMBUSH = 3;
 /** How many warriors the fixture's encampment enters on and around the camp it places. */
 export const ENCAMPED = 3;
 
-/** How far apart from every camp standing the fixture's encampment and siege place their camps. */
+/** How far apart from every camp standing the fixture's encampment places its camp. */
 const CAMPS_APART = 3;
 
 /** The fixture's building that gives to the tiles beside it. */
@@ -254,15 +235,6 @@ export const NEUTRAL = 'PH_Hamlet';
 /** How many warriors the fixture's raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
   return 1 + Math.floor(turn / 10);
-}
-
-function besieged(catalogue: Catalogue, chronicle: Chronicle): Landed {
-  const placing = campsPlaced(catalogue, chronicle, SIEGE_CAMPS, CAMPS_APART);
-  let landing: Landed = placing;
-  for (const camp of placing.placed) {
-    landing = followed(landing, (left) => enteredOnCamp(catalogue, left, camp, [RAIDER_ROW]));
-  }
-  return landing;
 }
 
 /** The fixture's raid, its enemies drawn out of the table. */
@@ -789,11 +761,6 @@ const TABLES: Omit<Tables, 'technologies'> = {
   },
   events: EVENTS,
   capstones: {
-    PH_Siege: {
-      lands: besieged,
-      count: (_catalogue, chronicle) => turnsPastLanding(chronicle),
-      need: 6,
-    },
     PH_Tillage: {
       lands: (_catalogue, chronicle) => unchanged(chronicle),
       count: (_catalogue, chronicle) =>
@@ -1027,19 +994,19 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
   [AGE]: {
     spacing: [3, 7],
     window: [27, 33],
-    capstones: ['PH_Siege'],
+    capstones: ['PH_Tillage'],
     entries: { PH_Hardship: 1, PH_Blight: 1 },
   },
   [QUIET]: {
     spacing: [FAR, FAR],
     window: [27, 33],
-    capstones: ['PH_Siege', 'PH_Tillage'],
+    capstones: ['PH_Tillage', TOWER],
     entries: { PH_Hardship: 1 },
   },
   [WARY]: {
     spacing: [3, 7],
     window: [27, 33],
-    capstones: ['PH_Siege'],
+    capstones: ['PH_Tillage'],
     entries: { PH_Hardship: 1 },
   },
   ...Object.fromEntries(
@@ -1048,7 +1015,7 @@ const SCHEDULES: Readonly<Record<string, Schedule>> = {
       {
         spacing: [FAR, FAR],
         window: [FAR, FAR],
-        capstones: ['PH_Siege'],
+        capstones: ['PH_Tillage'],
         entries: { [event]: 1 },
       },
     ]),
@@ -1311,7 +1278,7 @@ export function achieved(achievements: Age['achievements']): Catalogue {
 export const NO_DEALS: Timeline = {
   rng: seedRng(7),
   next: FAR,
-  capstone: { id: 'PH_Siege', turn: FAR },
+  capstone: { id: 'PH_Tillage', turn: FAR },
 };
 
 /**

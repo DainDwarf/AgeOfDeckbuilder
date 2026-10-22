@@ -25,6 +25,7 @@ import {
   chronicleSaved,
   cityOf,
   endedTurn,
+  FALLOW,
   FROST,
   field,
   GRANARY,
@@ -542,8 +543,8 @@ test('a save whose chronicle names no region, a region its age does not hold, or
   expect(
     chronicleDropped(tampered(save, (chronicle) => ({ ...chronicle, region: 'PH_Unheld' }))),
   ).toEqual(['fixture: no region is named PH_Unheld']);
-  expect(chronicleDropped(tampered(save, capstoned('PH_Tillage')))).toEqual([
-    `fixture: no capstone of the region ${REGION} is named PH_Tillage`,
+  expect(chronicleDropped(tampered(save, capstoned(FALLOW)))).toEqual([
+    `fixture: no capstone of the region ${REGION} is named ${FALLOW}`,
   ]);
 });
 

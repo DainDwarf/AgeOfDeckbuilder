@@ -10,5 +10,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The siege's span cut** — no trial passes by turns ticking past its landing and no landing places several camps: the turn-counting helper is gone, a camp is placed one at a time through the one door every answer uses, the fixture's siege capstone is gone with its landing, its constant, its schedule entries and its tests, the design pages promise no span, and the camp-placement rules the siege's tests proved on the way keep one test on the rival band's answer. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/siege-span-cut.md](board/siege-span-cut.md)
 - **The kill on a tile cut** — the helper killing the population working one tile goes with the fixture's answer and its tests; the content kills through the idle-first helper.

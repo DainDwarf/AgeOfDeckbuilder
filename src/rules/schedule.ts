@@ -78,11 +78,6 @@ function rolledFrom(
   return { ...timeline, rng: spaced.rng, next: landing + spaced.turns };
 }
 
-/** How many turns the turn has ticked past the capstone's landing: none before it. */
-export function turnsPastLanding(chronicle: Chronicle): number {
-  return Math.max(0, chronicle.turn - chronicle.timeline.capstone.turn);
-}
-
 /**
  * The events phase, which draws from the chronicle's generator only through the capstone's landing:
  * a due turn's event is drawn from the timeline's own, and nothing lands until an answer is taken.
@@ -520,18 +515,15 @@ export function addedToDrawPileTop(
 /**
  * The tiles a camp may be placed on: of the terrains a camp lies on, slot empty, the ground running to
  * the player's city from them, three tiles at least from its own tile, held by no city, no unit
- * standing on them, and `apart` at least from every camp in `standing`. None for a city nowhere.
+ * standing on them, and `apart` at least from every camp standing. None for a city nowhere.
  */
-function campTiles(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  apart: number,
-  standing: readonly TileCoords[],
-): Tile[] {
+function campTiles(catalogue: Catalogue, chronicle: Chronicle, apart: number): Tile[] {
   const { city } = chronicle;
   if (city === undefined) return [];
-  const ground = buildingKind(catalogue, ageOf(catalogue, chronicle.age).camp.building).terrains;
+  const { building } = ageOf(catalogue, chronicle.age).camp;
+  const ground = buildingKind(catalogue, building).terrains;
   const reached = groundRunsTo(catalogue, chronicle.tiles, chronicle.rivers, city);
+  const camps = chronicle.tiles.filter((tile) => tile.building === building);
   return chronicle.tiles.filter(
     (tile) =>
       tile.building === undefined &&
@@ -540,60 +532,18 @@ function campTiles(
       distance(tile, city) >= 3 &&
       holderOf(chronicle, tile) === undefined &&
       unitAt(chronicle.units, tile) === undefined &&
-      standing.every((other) => distance(tile, other) >= apart),
+      camps.every((other) => distance(tile, other) >= apart),
   );
 }
 
-function campsStanding(catalogue: Catalogue, chronicle: Chronicle): TileCoords[] {
-  const { building } = ageOf(catalogue, chronicle.age).camp;
-  return chronicle.tiles.filter((tile) => tile.building === building);
-}
-
 export function campPlaceable(catalogue: Catalogue, chronicle: Chronicle, apart: number): boolean {
-  return campTiles(catalogue, chronicle, apart, campsStanding(catalogue, chronicle)).length > 0;
+  return campTiles(catalogue, chronicle, apart).length > 0;
 }
 
 /**
- * Camps placed one at a time, each drawn near the player's city among the tiles a camp may be placed
- * on `apart` from every camp standing and every one drawn before it, as many as stand, and a
- * `runtime-error` drawing nothing where none does. Each is its own stage; it enters no unit.
- */
-export function campsPlaced(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  camps: number,
-  apart: number,
-): Landed & { readonly placed: readonly TileCoords[] } {
-  if (chronicle.city === undefined) {
-    refuse(catalogue, 'a camp was placed while the city stands nowhere');
-  }
-  const { building } = ageOf(catalogue, chronicle.age).camp;
-
-  let rng = chronicle.rng;
-  const standing = campsStanding(catalogue, chronicle);
-  const placings: { readonly tile: TileCoords; readonly rng: Rng }[] = [];
-  for (let drawn = 0; drawn < camps; drawn++) {
-    const step = drawnNear(chronicle, rng, campTiles(catalogue, chronicle, apart, standing));
-    if (step === undefined) break;
-    rng = step.rng;
-    const chosen = step.picked;
-    standing.push(chosen);
-    placings.push({ tile: { q: chosen.q, r: chosen.r }, rng });
-  }
-  if (placings.length === 0) return { ...runtimeError(chronicle), placed: [] };
-
-  let landing = unchanged(chronicle);
-  for (const placing of placings) {
-    landing = followed(landing, (left) =>
-      built(catalogue, { ...left, rng: placing.rng }, placing.tile, building),
-    );
-  }
-  return { ...landing, placed: placings.map(({ tile }) => tile) };
-}
-
-/**
- * One camp placed as `campsPlaced` places it, and `count` enemies of the kind entered on and around
- * it as the age's camp's guards; where it places none, its `runtime-error` alone.
+ * A camp drawn near the player's city among the tiles a camp may be placed on, and `count` enemies of
+ * the kind entered on and around it as the age's camp's guards; a `runtime-error` placing nothing
+ * where no tile takes a camp.
  */
 export function guardedCampPlaced(
   catalogue: Catalogue,
@@ -602,15 +552,18 @@ export function guardedCampPlaced(
   count: number,
   apart: number,
 ): Landed {
-  const placing = campsPlaced(catalogue, chronicle, 1, apart);
-  const [camp] = placing.placed;
-  if (camp === undefined) return placing;
-  const { guard } = ageOf(catalogue, chronicle.age).camp.scripts;
-  // The first enemy lands on the camp, where its kind stands on it, only because `campsPlaced` asks no
-  // unit to stand there.
-  return followed(placing, (left) => {
-    const drawn = rowsDrawn(catalogue, left, [{ kind, script: guard, weight: 1 }], count);
-    return enteredAround(catalogue, drawn.chronicle, camp, drawn.rows);
+  if (chronicle.city === undefined) {
+    refuse(catalogue, 'a camp was placed while the city stands nowhere');
+  }
+  const { building, scripts } = ageOf(catalogue, chronicle.age).camp;
+  const drawn = drawnNear(chronicle, chronicle.rng, campTiles(catalogue, chronicle, apart));
+  if (drawn === undefined) return runtimeError(chronicle);
+  const camp = { q: drawn.picked.q, r: drawn.picked.r };
+  // The first enemy lands on the camp, where its kind stands on it, only because `campTiles` keeps no
+  // tile a unit stands on.
+  return followed(built(catalogue, { ...chronicle, rng: drawn.rng }, camp, building), (left) => {
+    const rows = rowsDrawn(catalogue, left, [{ kind, script: scripts.guard, weight: 1 }], count);
+    return enteredAround(catalogue, rows.chronicle, camp, rows.rows);
   });
 }
 

@@ -1207,8 +1207,8 @@ test('a catalogue whose region’s schedule names no capstone, or one capstone t
   expect(() => catalogued(rescheduled({ capstones: [] }))).toThrow(
     `fixture: the region ${REGION}'s schedule names no capstone`,
   );
-  expect(() => catalogued(rescheduled({ capstones: ['PH_Siege', 'PH_Siege'] }))).toThrow(
-    `fixture: the region ${REGION}'s schedule names the capstone PH_Siege twice`,
+  expect(() => catalogued(rescheduled({ capstones: ['PH_Tillage', 'PH_Tillage'] }))).toThrow(
+    `fixture: the region ${REGION}'s schedule names the capstone PH_Tillage twice`,
   );
 });
 
