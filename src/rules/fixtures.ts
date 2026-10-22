@@ -66,7 +66,7 @@ import {
   playsOn,
   terrainsPlayedOn,
 } from './chronicle';
-import { arrived, bordered, populationKilled, populationTaken, warDeclared, yielded } from './city';
+import { arrived, bordered, populationTaken, warDeclared, yielded } from './city';
 import { attackOrNone, enemyEntering, leastHealth, raided, rowsDrawn } from './enemies';
 import {
   type BuildingTypeId,
@@ -282,11 +282,6 @@ const EVENTS: Catalogue['events'] = {
   },
   PH_Upheaval: {
     answers: {
-      PH_Plague: {
-        cost: {},
-        reads: () => ({}),
-        lands: (_catalogue, chronicle) => populationKilled(chronicle, UPHEAVAL),
-      },
       PH_Ambush: {
         cost: {},
         reads: () => ({ damage: AMBUSH }),

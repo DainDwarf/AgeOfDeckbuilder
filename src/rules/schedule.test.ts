@@ -530,38 +530,6 @@ function answerTaken(city: Chronicle, answer: string): { dealt: Chronicle; stage
   return { dealt, stages: apply(CATALOGUE, dealt, { type: 'take', at }) };
 }
 
-test('an answer killing the population working a tile leaves the population one fewer and the tile unassigned', () => {
-  const { dealt, stages } = answerTaken(cityOf(['urban', 'hills'], UPHEAVAL_DUE), 'PH_Plague');
-  const after = outcome(stages);
-
-  expect(namesOf(stages)).toEqual(['answer', 'taken', 'assigned', 'population']);
-  expect(after.population).toBe(dealt.population - 1);
-  expect(after.assigned).toEqual([CITY]);
-  expect(after.ending).toBeUndefined();
-});
-
-test('an answer killing the population working a tile nobody works kills nobody', () => {
-  const city = cityOf(['urban', 'hills'], { ...UPHEAVAL_DUE, assigned: [CITY] });
-  const { dealt, stages } = answerTaken(city, 'PH_Plague');
-  const after = outcome(stages);
-
-  expect(after.population).toBe(dealt.population);
-  expect(after.assigned).toEqual(dealt.assigned);
-});
-
-test('an answer killing the city’s last population ends the chronicle in defeat on the take', () => {
-  const city = cityOf(['urban', 'hills'], {
-    ...UPHEAVAL_DUE,
-    population: 1,
-    assigned: [UPHEAVAL],
-  });
-  const { stages } = answerTaken(city, 'PH_Plague');
-
-  expect(namesOf(stages)).toEqual(['answer', 'taken', 'assigned', 'population', 'ended']);
-  expect(outcome(stages).population).toBe(0);
-  expect(outcome(stages).ending).toEqual({ outcome: 'defeat', cause: 'population', turn: 2 });
-});
-
 test('an answer damaging the unit standing on a tile takes its health, whatever its faction, and kills it at nought', () => {
   const hurt = (unit: Standing): Chronicle =>
     outcome(

@@ -173,21 +173,6 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
 }
 
 /**
- * The population of the faction's city off the tile and then one fewer. The tile must be one its
- * population works: `assigned` toggles, and on an unworked tile it would put one on.
- */
-function populationLeaving(
-  chronicle: Chronicle,
-  whose: CityFaction,
-  at: TileCoords,
-  uncovered?: Cost,
-): Landed {
-  return followed(assigned(chronicle, whose, at), (left) =>
-    populationFewer(left, whose, uncovered),
-  );
-}
-
-/**
  * The faction's city's population one fewer, its `population` carrying what a stock taken past
  * nothing did not cover where it pays for one, and nothing where that city is none. The player's
  * city's last taken, it falls.
@@ -206,17 +191,6 @@ function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: C
 }
 
 /**
- * The population working the tile killed: the tile unassigned and the city's population one fewer,
- * and nothing where nobody works it.
- */
-export function populationKilled(chronicle: Chronicle, at: TileCoords): Landed {
-  const key = tileKey(at);
-  const working = chronicle.assigned.find((coord) => tileKey(coord) === key);
-  if (working === undefined) return unchanged(chronicle);
-  return populationLeaving(chronicle, 'player', working);
-}
-
-/**
  * One population of the faction's city taken, whichever it is: an idle one where one is idle, and
  * where none is the last assigned tile unassigned first, the city's last no exception; the
  * population one fewer, as `populationFewer` takes it. Nothing where that city has none at all.
@@ -230,7 +204,10 @@ export function populationTaken(
   if (city === undefined || city.population <= 0) return unchanged(chronicle);
   const last = city.assigned[city.assigned.length - 1];
   if (idle(city) > 0 || last === undefined) return populationFewer(chronicle, whose, uncovered);
-  return populationLeaving(chronicle, whose, last, uncovered);
+  // `assigned` toggles: on a tile nobody works it would put one on.
+  return followed(assigned(chronicle, whose, last), (left) =>
+    populationFewer(left, whose, uncovered),
+  );
 }
 
 /**

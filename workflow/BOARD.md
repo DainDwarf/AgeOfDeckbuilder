@@ -9,5 +9,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play, the findings kept in [`BALANCE.md`](BALANCE.md) first among them; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; a trial of where military comes from: military taken off the Hearth's yield and flint giving it in place of production.
 
 ## Lines
-
-- **The kill on a tile cut** — no helper kills the population working one named tile: the helper is gone, the fixture's Plague answer that was its only caller is gone, and the three schedule tests on that answer are gone; the content kills population through the idle-first take alone. Doc-impact: none. [board/kill-on-a-tile-cut.md](board/kill-on-a-tile-cut.md)
