@@ -73,7 +73,7 @@ export const WARLORD: Persona = [
   }),
   staying({
     sentence:
-      'A unit that attacks, attacks the enemy of least health within its reach, walking to the tile it reaches it from first, the cheapest of equals',
+      'A unit that attacks, attacks the enemy of least health within its range, walking to the tile it attacks from first, the cheapest of equals',
     candidates: (catalogue, chronicle) => enemyAttacked(catalogue, chronicle, () => true),
   }),
   staying({

@@ -173,7 +173,7 @@ export const BUILDER: Persona = [
   }),
   declaringNoWar({
     sentence:
-      'A unit that attacks, attacks the enemy of least health within its reach from a held tile, walking to that tile first',
+      'A unit that attacks, attacks the enemy of least health within its range from a held tile, walking to that tile first',
     candidates: (catalogue, chronicle) =>
       enemyAttacked(catalogue, chronicle, (tile) => holds(chronicle, tile)),
   }),
