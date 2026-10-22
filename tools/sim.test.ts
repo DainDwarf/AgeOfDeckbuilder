@@ -71,7 +71,14 @@ import {
   withUnits,
   worker,
 } from '../src/rules/fixtures';
-import { MOVE_POINT, neighbours, type Tile, type TileCoords, tileKey } from '../src/rules/map';
+import {
+  MOVE_POINT,
+  neighbours,
+  type Terrain,
+  type Tile,
+  type TileCoords,
+  tileKey,
+} from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
@@ -1182,32 +1189,34 @@ function stagesNamed(driven: Driven, name: Stage['name']): Stage[] {
   );
 }
 
-/** A city holding its own tile alone, the population named, the unit cards in hand and the stocks for each. */
-function entering(population: number, hand: string[], carrying: Carrying = {}): Chronicle {
-  return cityOf(['urban'], {
-    population,
-    hand,
-    resources: onlyStocks({ food: 2, military: 2 }),
-    ...carrying,
-  });
+/** A city holding the tiles named, the unit cards in hand and the stocks for each. */
+function enteringOn(inside: Terrain[], hand: string[], carrying: Carrying = {}): Chronicle {
+  return cityOf(inside, { hand, resources: onlyStocks({ food: 2, military: 2 }), ...carrying });
 }
 
-test('while a population is idle and more than three stand, the warlord plays the unit card that enters a unit that attacks, and none at three', () => {
-  expect(answerOf('warlord', 5, entering(4, ['PH_Worker', 'PH_Warrior']))).toEqual({
-    type: 'play',
-    index: 1,
-    aim: 'none',
-  });
-  expect(answerOf('warlord', 5, entering(3, ['PH_Worker', 'PH_Warrior']))).toBeUndefined();
+/** A city holding its own tile alone, the population named, the unit cards in hand and the stocks for each. */
+function entering(population: number, hand: string[], carrying: Carrying = {}): Chronicle {
+  return enteringOn(['urban'], hand, { population, ...carrying });
+}
+
+test('while a population is idle and more stand than the tiles the city holds, three at most, the warlord plays the unit card that enters a unit that attacks, and none at that floor', () => {
+  const idleOn = (held: number, population: number): Chronicle =>
+    enteringOn(['urban', 'plain', 'forest', 'urban'].slice(0, held), ['PH_Worker', 'PH_Warrior'], {
+      population,
+      assigned: [],
+    });
+  const play = { type: 'play', index: 1, aim: 'none' };
+
+  expect(answerOf('warlord', 5, idleOn(1, 2))).toEqual(play);
+  expect(answerOf('warlord', 5, idleOn(4, 4))).toEqual(play);
+  expect(answerOf('warlord', 5, idleOn(1, 1))).toBeUndefined();
+  expect(answerOf('warlord', 5, idleOn(3, 3))).toBeUndefined();
 });
 
-test('with none idle and more than three standing, the warlord unassigns the worked tile yielding the least of everything together, the least food of equals, for the unit card the idle alone holds back, which it then plays', () => {
+test('with none idle and more standing than the tiles the city holds, three at most, the warlord unassigns the worked tile yielding the least of everything together, the least food of equals, for the unit card the idle alone holds back, which it then plays', () => {
   const forest = { q: 2, r: 0 };
   const working = (population: number, hand: string[]): Chronicle =>
-    cityOf(['urban', 'plain', 'forest', 'urban'].slice(0, population), {
-      hand,
-      resources: onlyStocks({ food: 2, military: 2 }),
-    });
+    enteringOn(['urban', 'plain', 'forest', 'urban'].slice(0, population), hand);
   const unassign = answerOf('warlord', 6, working(4, ['PH_Warrior']));
 
   expect(unassign).toEqual({ type: 'assign', tile: forest });

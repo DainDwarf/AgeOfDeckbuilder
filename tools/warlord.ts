@@ -48,15 +48,15 @@ export const WARLORD: Persona = [
   staying(HAZARD_PAID),
   staying({
     sentence:
-      'While a population is idle and more than three stand, play a unit card whose trial enters a unit that attacks',
+      'While a population is idle and more stand than the tiles the city holds, three at most, play a unit card whose trial enters a unit that attacks',
     candidates: (catalogue, chronicle) =>
-      idle(chronicle) > 0 && chronicle.population > 3
+      idle(chronicle) > 0 && populationAboveFloor(chronicle)
         ? unitCardsEntering(catalogue, chronicle, false)
         : [],
   }),
   staying({
     sentence:
-      'While none is idle, more than three stand and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
+      'While none is idle, more stand than the tiles the city holds, three at most, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
     candidates: unassignedForUnit,
   }),
   staying(IDLE_ASSIGNED),
@@ -191,8 +191,12 @@ function notMarching(chronicle: Chronicle): Unit[] {
   return garrison === undefined ? [] : [garrison];
 }
 
+function populationAboveFloor(chronicle: Chronicle): boolean {
+  return chronicle.population > Math.min(chronicle.held.length, 3);
+}
+
 function* unassignedForUnit(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
-  if (idle(chronicle) > 0 || chronicle.population <= 3) return;
+  if (idle(chronicle) > 0 || !populationAboveFloor(chronicle)) return;
   const heldBack = chronicle.hand.some(({ id }) => {
     if (cardOf(catalogue, id).kind !== 'unit') return false;
     const { unaffordable, blocked } = refusalOf(catalogue, chronicle, id);

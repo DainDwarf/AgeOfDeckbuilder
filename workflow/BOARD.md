@@ -11,6 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The warlord's unit gate** — the warlord's unit gambit and its unassign gambit open while more population stands than the tiles the city holds, three at most, in place of more than three; `--personas` prints both sentences at their numbers, each gambit is held by one test on the fixtures, and the trace names each. Doc-impact: `docs/SIMULATOR.md`. [board/the-warlords-unit-gate.md](board/the-warlords-unit-gate.md)
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
