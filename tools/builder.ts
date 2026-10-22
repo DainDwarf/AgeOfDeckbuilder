@@ -33,6 +33,7 @@ import {
 } from '../src/rules/map';
 import type { Resources } from '../src/rules/resources';
 import { offered } from '../src/rules/schedule';
+import { inSight } from '../src/rules/sight';
 import {
   assignedTo,
   type Chronicle,
@@ -51,6 +52,7 @@ import {
   reachable,
   relationsOf,
   type Unit,
+  unitAt,
 } from '../src/rules/units';
 import { tileYield, worthOf } from '../src/rules/yields';
 import { refusedEntry, TURN_ENDED } from './idle';
@@ -173,9 +175,17 @@ export const BUILDER: Persona = [
   }),
   declaringNoWar({
     sentence:
-      'A unit that attacks, attacks the enemy of least health within its range from a held tile, walking to that tile first',
+      'A unit that attacks, attacks the enemy of least health within three tiles of the city within its range, walking to the tile it attacks from first, the cheapest of equals',
+    candidates: (catalogue, chronicle) => {
+      const near = nearTheCity(chronicle, 3);
+      return enemyAttacked(catalogue, chronicle, (enemy) => near(enemy.tile));
+    },
+  }),
+  declaringNoWar({
+    sentence:
+      'A unit that attacks walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands',
     candidates: (catalogue, chronicle) =>
-      enemyAttacked(catalogue, chronicle, (tile) => holds(chronicle, tile)),
+      garrisonPursued(catalogue, chronicle, attackersOf(chronicle), 3),
   }),
   declaringNoWar({
     sentence:
@@ -472,15 +482,10 @@ function shownEntering(
 }
 
 /**
- * Whether an enemy the map shows, in sight or in fog this turn, could attack the unit next turn
- * standing on the tile: from the enemy's own tile, or from a tile it reaches at its move, walking
- * over the charted tiles among the units the map shows.
+ * The map the player knows: the charted tiles as last seen, the player's units, and each unit a
+ * snapshot carries standing as one of its kind, in sight or in fog this turn.
  */
-function attackedNextTurn(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-): (unit: Unit, tile: TileCoords) => boolean {
-  const relations = relationsOf(chronicle);
+function shownMap(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
   const { embarkedMove } = ageOf(catalogue, chronicle.age).camp;
   // Not the chronicle: its tiles are the snapshots', so `reachable` never reads the map unseen.
   let known: Chronicle = {
@@ -492,6 +497,20 @@ function attackedNextTurn(
     if (unit === undefined) continue;
     known = entered(catalogue, known, shownEntering({ q, r }, unit, embarkedMove)).chronicle;
   }
+  return known;
+}
+
+/**
+ * Whether an enemy the map shows, in sight or in fog this turn, could attack the unit next turn
+ * standing on the tile: from the enemy's own tile, or from a tile it reaches at its move, walking
+ * over the charted tiles among the units the map shows.
+ */
+function attackedNextTurn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): (unit: Unit, tile: TileCoords) => boolean {
+  const relations = relationsOf(chronicle);
+  const known = shownMap(catalogue, chronicle);
   const stands = known.units
     .filter((enemy) => actsAsEnemy(enemy, relations))
     .flatMap((enemy) =>
@@ -730,30 +749,36 @@ export function unitCardPlayed(
   return unitCardsEntering(catalogue, chronicle, worker);
 }
 
+/** Whether a tile stands within that many tiles of the city's tile; none does while no city stands. */
+function nearTheCity(chronicle: Chronicle, radius: number): (tile: TileCoords) => boolean {
+  const { city } = chronicle;
+  return (tile) => city !== undefined && distance(tile, city) <= radius;
+}
+
 /**
- * Each unit that attacks attacking the enemy of least health it reaches from the tiles `from`
- * admits, its own or a landing, walking to the cheapest of those first.
+ * Each unit that attacks attacking the enemy of least health among those `admits` lets through that
+ * it reaches from its own tile or a landing, walking to the cheapest of those first.
  */
 export function* enemyAttacked(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  from: (tile: TileCoords) => boolean,
+  admits: (enemy: Unit) => boolean,
 ): Generator<Command> {
   const relations = relationsOf(chronicle);
   const order = tileOrder(chronicle);
   for (const unit of attackersOf(chronicle)) {
     if (unit.action <= 0) continue;
     const own: Landing = { tile: unit.tile, cost: 0 };
-    const reaching = [own, ...byHand(catalogue, chronicle, unit).landings]
-      .filter(({ tile }) => from(tile))
-      .flatMap(({ tile, cost }) => {
+    const reaching = [own, ...byHand(catalogue, chronicle, unit).landings].flatMap(
+      ({ tile, cost }) => {
         const there = { ...unit, tile };
         const enemies = byHand(catalogue, chronicle, there)
-          .targets.filter((target) => actsAsEnemy(target, relations))
+          .targets.filter((target) => actsAsEnemy(target, relations) && admits(target))
           .sort((one, other) => order(one.tile) - order(other.tile));
         const target = leastHealth(catalogue, chronicle, enemies, there);
         return target === undefined ? [] : [{ tile, cost, target }];
-      });
+      },
+    );
     const [weakest] = ranked(
       reaching.map(({ target }) => ({
         item: target,
@@ -775,6 +800,60 @@ export function* enemyAttacked(
 }
 
 /**
+ * The enemies the map shows within `radius` tiles of the city's tile, the nearest it first, of least
+ * health of equals, each at the health the screen shows: its own in sight, its kind's in fog.
+ */
+function shownEnemiesNear(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  city: TileCoords,
+  radius: number,
+): Unit[] {
+  const relations = relationsOf(chronicle);
+  const seen = inSight(catalogue, chronicle);
+  const near = nearTheCity(chronicle, radius);
+  const order = tileOrder(chronicle);
+  return ranked(
+    shownMap(catalogue, chronicle).units.flatMap((shown) => {
+      if (!actsAsEnemy(shown, relations) || !near(shown.tile)) return [];
+      const enemy = seen.has(tileKey(shown.tile)) ? unitAt(chronicle.units, shown.tile) : shown;
+      if (enemy === undefined) return [];
+      return [
+        { item: enemy, rank: [distance(enemy.tile, city), enemy.stats.health, order(enemy.tile)] },
+      ];
+    }),
+  );
+}
+
+/**
+ * Each of the units governed walking toward the first of the enemies the map shows within `radius`
+ * tiles of the city, to its landing nearest that enemy, nearest the city's tile of equals, where
+ * that is nearer the enemy than where it stands.
+ */
+export function garrisonPursued(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  governed: readonly Unit[],
+  radius: number,
+): Command[] {
+  const { city } = chronicle;
+  if (city === undefined || governed.length === 0) return [];
+  const [enemy] = shownEnemiesNear(catalogue, chronicle, city, radius);
+  if (enemy === undefined) return [];
+  const order = tileOrder(chronicle);
+  return governed.flatMap((unit) => {
+    const standsAt = distance(unit.tile, enemy.tile);
+    return ranked(
+      byHand(catalogue, chronicle, unit).landings.flatMap(({ tile }) => {
+        const away = distance(tile, enemy.tile);
+        if (away >= standsAt) return [];
+        return [{ item: moveCommand(unit, tile), rank: [away, distance(tile, city), order(tile)] }];
+      }),
+    );
+  });
+}
+
+/**
  * Each unit's moves whose trial charts tiles never charted, unit by unit, the cheapest first, the
  * most charted of equals; only onto landings within `radius` tiles of the city where a radius is
  * named.
@@ -785,15 +864,13 @@ export function* chartingWalks(
   units: readonly Unit[],
   radius?: number,
 ): Generator<Command> {
-  const { city } = chronicle;
+  const near = radius === undefined ? () => true : nearTheCity(chronicle, radius);
   const order = tileOrder(chronicle);
   for (const unit of units) {
     if (unit.movePoints <= 0) continue;
     yield* ranked(
       byHand(catalogue, chronicle, unit).landings.flatMap(({ tile, cost }) => {
-        if (radius !== undefined && (city === undefined || distance(tile, city) > radius)) {
-          return [];
-        }
+        if (!near(tile)) return [];
         const command = moveCommand(unit, tile);
         const after = trial(catalogue, chronicle, command);
         const grown = after === undefined ? 0 : after.snapshots.length - chronicle.snapshots.length;

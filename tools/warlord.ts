@@ -16,6 +16,7 @@ import {
   enemyAttacked,
   GAIN_PLAYED,
   GAINED_THROUGH_WORKER,
+  garrisonPursued,
   garrisonRested,
   garrisonWalkedHome,
   HAND_CYCLED,
@@ -75,6 +76,12 @@ export const WARLORD: Persona = [
     sentence:
       'A unit that attacks, attacks the enemy of least health within its range, walking to the tile it attacks from first, the cheapest of equals',
     candidates: (catalogue, chronicle) => enemyAttacked(catalogue, chronicle, () => true),
+  }),
+  staying({
+    sentence:
+      "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands",
+    candidates: (catalogue, chronicle) =>
+      garrisonPursued(catalogue, chronicle, notMarching(chronicle), 3),
   }),
   staying({
     sentence:
