@@ -120,8 +120,6 @@ export type HandPresses = {
     released: () => void,
     retargeted: (aim: PointedAim) => void,
   ): () => void;
-  /** The aim window raised on the discard pile; `closed` says it came down with nothing paid. */
-  aimDiscardPile(index: number, closed: () => void): () => void;
   inspect(card: ChronicleCard): void;
   /** What a name on a card of the hand names, shown large. */
   inspectNamed(name: Name): void;
@@ -129,8 +127,7 @@ export type HandPresses = {
 
 /**
  * The hand in the lane between the draw pile and the discard pile, its cards compressing evenly onto
- * one another once the lane runs out. While a card is aimed at the discard pile the hand lies under
- * the window's scrim.
+ * one another once the lane runs out.
  */
 export function createHand(
   scene: Phaser.Scene,
@@ -254,18 +251,6 @@ export function createHand(
       letGoOf(slot);
     };
 
-  /**
-   * How the aim window says it closed with nothing paid: the card keeps the selection it was aimed
-   * from, so the next press on it raises the window again, and the way to close it goes with it.
-   */
-  const closing =
-    (slot: Slot): (() => void) =>
-    () => {
-      const standing = selected;
-      if (standing === undefined || standing.slot !== slot) return;
-      standing.cancel = undefined;
-    };
-
   const beingAimed = (): boolean => selected?.cancel !== undefined || selected?.atHand === true;
 
   const unselect = (): boolean => {
@@ -280,7 +265,7 @@ export function createHand(
   /**
    * The card the hand takes as the selection: whatever it held comes home, the card lifts out of the
    * lane and takes the ring, and one that aims at a tile or at a unit is being aimed from here. A
-   * card aimed at the discard pile or at the hand waits for its second press.
+   * card aimed at the hand waits for its second press.
    */
   const select = (slot: Slot): Selected => {
     unselect();
@@ -293,7 +278,6 @@ export function createHand(
     const card = aimOf(cardOf(catalogue, slot.card.id));
     switch (card.aim) {
       case 'none':
-      case 'discard-pile':
       case 'hand':
         break;
       case 'tile':
@@ -323,9 +307,6 @@ export function createHand(
       case 'none':
         letGo = slot;
         presses.play(slot.index, { aim: 'none' });
-        break;
-      case 'discard-pile':
-        standing.cancel = presses.aimDiscardPile(slot.index, closing(slot));
         break;
       case 'hand':
         standing.atHand = true;
@@ -669,7 +650,6 @@ export function createHand(
       case 'population':
       case 'assigned':
       case 'added':
-      case 'recalled':
       case 'shuffled':
       case 'counters-set':
       case 'banished':

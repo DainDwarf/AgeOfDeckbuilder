@@ -22,7 +22,6 @@ import {
   movePointsSpent,
   outside,
   placesImprovement,
-  recalled,
   refreshed,
   settled,
   shocked,
@@ -668,12 +667,6 @@ const TABLES: Omit<Tables, 'technologies'> = {
         (_catalogue, chronicle, tile) => outside(chronicle, tile),
         (catalogue, paid, at) => yielded(catalogue, paid, 'player', at),
       ),
-    },
-    PH_Recall: {
-      kind: 'instant',
-      cost: { science: 2 },
-      aim: 'discard-pile',
-      effect: (_catalogue, paid, at) => recalled(paid, at),
     },
     PH_Discard: {
       kind: 'instant',

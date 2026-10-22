@@ -229,7 +229,6 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
             expect(() => admitted(CATALOGUE, chronicle, card)).not.toThrow();
             break;
           case 'none':
-          case 'discard-pile':
           case 'hand':
             break;
         }
@@ -240,8 +239,8 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
 
 /**
  * What a card's effect lands on the chronicle at its cheapest answer: at nothing where nothing blocks
- * it, at the first tile its aim admits, at the first card of the pile it is aimed at; and nothing at
- * all where the rules leave it nothing to land on.
+ * it, at the first tile its aim admits, at the first card of the hand; and nothing at all where the
+ * rules leave it nothing to land on.
  */
 function cheapestEffect(chronicle: Chronicle, id: string): Landed | undefined {
   const card = aimOf(cardOf(CATALOGUE, id));
@@ -263,8 +262,6 @@ function cheapestEffect(chronicle: Chronicle, id: string): Landed | undefined {
         ? undefined
         : card.effect(CATALOGUE, chronicle, at, through.tile);
     }
-    case 'discard-pile':
-      return chronicle.discardPile.length === 0 ? undefined : card.effect(CATALOGUE, chronicle, 0);
     case 'hand':
       return chronicle.hand.length <= 1 ? undefined : card.effect(CATALOGUE, chronicle, 0);
   }

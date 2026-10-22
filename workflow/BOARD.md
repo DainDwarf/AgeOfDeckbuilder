@@ -10,7 +10,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The recall cut** — no card aims at the discard pile: the aim kind, its block and refusal line, the recalled change and its helper, the aim window and its title, the fixture's recall instant and its tests are gone, and the design pages describe a card as aimed at nothing, a tile, a unit or the hand. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/GLOSSARY.md`. [board/recall-cut.md](board/recall-cut.md)
 - **The road cut** — a layer naming its tile's movement cost outright and the bridge go: the two map helpers and the two layer fields, the infopanel's movement line for a layer, the fixture's three roads and the tests on their cost, and the rules, map and glossary sentences that hold them; the fixture keeps one plain improvement for the tests that place one, and the bridge idea is reworded to hold the road too.
 - **The siege's span cut** — the trial passed by turns ticking past its landing goes with the several-camp placement: the helper and the rules sentence, the camp placing narrowed to one camp, and the fixture siege re-authored to pass by something else.
 - **The kill on a tile cut** — the helper killing the population working one tile goes with the fixture's answer and its tests; the content kills through the idle-first helper.

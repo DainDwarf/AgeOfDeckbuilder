@@ -581,19 +581,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           letGo();
         };
       },
-      aimDiscardPile: (index, closed) => {
-        return overlay.aimDiscardPile(
-          this.current,
-          this.current.hand[index].id,
-          (card) => {
-            const command: PlayCommand = { type: 'play', index, aim: 'discard-pile', card };
-            warnedOrLanded(command, () => {
-              void playOut(command);
-            });
-          },
-          closed,
-        );
-      },
       inspect: (card) => overlay.inspect(this.current, card),
       inspectNamed: (name) => overlay.inspectNamed(name),
     });

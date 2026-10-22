@@ -124,9 +124,8 @@ export type ScriptAct =
  * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
  * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
  * tile that was chosen; a `unit` aim is the same over the tiles a unit of the player's stands on,
- * which it is asked of before its own reasons; a `discard-pile` or a `hand` aim hands its effect
- * where in that pile the card chosen lies on the chronicle the card's cost is paid on, which the
- * effect takes.
+ * which it is asked of before its own reasons; a `hand` aim hands its effect where in the hand the
+ * card chosen lies on the chronicle the card's cost is paid on, which the effect takes.
  */
 export type Aim =
   | {
@@ -175,10 +174,6 @@ export type Aim =
         tile: Tile,
       ) => TileBlock | undefined;
       readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed;
-    }
-  | {
-      readonly aim: 'discard-pile';
-      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Landed;
     }
   | {
       readonly aim: 'hand';
@@ -311,7 +306,6 @@ export function actionGoesTo(aim: Aim): 'worker' | 'any' | 'none' {
       return aim.through === undefined ? 'none' : 'any';
     case 'none':
     case 'unit':
-    case 'discard-pile':
     case 'hand':
       return 'none';
   }

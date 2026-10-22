@@ -317,7 +317,7 @@ function changeNamed(stages: readonly Stage[], name: Change['name']): Change {
   throw new Error(`no ${name} change is staged`);
 }
 
-test('a pile change carries the places in the pile its cards came out of, and a reward, out of no pile, carries none', () => {
+test('a pile change carries the places in the hand its cards came out of, and a reward, out of no pile, carries none', () => {
   const copies = cityOf(['urban'], {
     hand: ['PH_Harvest', 'PH_Harvest'],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
@@ -358,22 +358,6 @@ test('a pile change carries the places in the pile its cards came out of, and a 
   expect(
     changeNamed(heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'), 'added'),
   ).not.toHaveProperty('places');
-
-  const recalling = cityOf(['urban'], {
-    hand: ['PH_Harvest', 'PH_Recall'],
-    discardPile: ['PH_Farm', 'PH_Harvest', 'PH_Mine'],
-    resources: { food: 0, production: 0, military: 0, money: 0, science: 2, culture: 0 },
-  });
-  const recall = apply(CATALOGUE, recalling, {
-    type: 'play',
-    index: 1,
-    aim: 'discard-pile',
-    card: 2,
-  });
-
-  expect(changeNamed(recall, 'discarded')).toMatchObject({ places: [1] });
-  expect(changeNamed(recall, 'recalled')).toMatchObject({ places: [2] });
-  expect(idsOf(outcome(recall).hand)).toEqual(['PH_Harvest', 'PH_Mine']);
 });
 
 test('a unit card is played over its cost, one population fewer, and the unit entering on the city’s tile', () => {

@@ -469,8 +469,6 @@ function playsOfCard(
       return chronicle.hand.flatMap((_, card) =>
         card === index ? [] : [{ command: { type: 'play', index, aim: 'hand', card }, at: card }],
       );
-    case 'discard-pile':
-      return [];
   }
 }
 

@@ -127,7 +127,6 @@ function charted(aim: Aim): Aim {
       };
     case 'none':
     case 'unit':
-    case 'discard-pile':
     case 'hand':
       return aim;
   }
@@ -940,22 +939,6 @@ export function healed(catalogue: Catalogue, paid: Chronicle, at: TileCoords): L
         units: paid.units.map((unit) =>
           unit.id === hurt.id ? { ...unit, stats: { ...unit.stats, health } } : unit,
         ),
-      },
-      paid,
-    ),
-  );
-}
-
-/** The card a recall brings back: it leaves the discard pile for the back of the hand. */
-export function recalled(paid: Chronicle, at: number): Landed {
-  return landedAs(
-    changeFrom(
-      'recalled',
-      [at],
-      {
-        ...paid,
-        hand: [...paid.hand, paid.discardPile[at]],
-        discardPile: paid.discardPile.filter((_, index) => index !== at),
       },
       paid,
     ),

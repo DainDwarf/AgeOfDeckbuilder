@@ -122,9 +122,7 @@ An **influence card** is a trophy or a challenge: it carries influence of its ow
 
 A card **aimed** at a tile lands on no tile its aim does not admit, and the map lights the tiles it does. A card aimed at a **unit** is refused on a tile no unit of the player's stands on, before what the card itself asks of that tile. A card that aims at nothing needs nothing of the map: it is played where it stands. A card aimed at a tile may be played through a unit standing beside that tile, whose action it spends: where one unit beside the tile can be the one, the play goes through it; where several can, the card is then aimed at a unit, among those.
 
-A card aimed at the discard pile is offered the pile's cards in the **aim window**, newest first, and lands on one of them; the aimed card is in the hand, so the pile never offers it. An empty discard pile blocks the card in the hand: a refused tile has a tile to say its reason over, an empty pile has nowhere.
-
-A card aimed at the hand lands on another card of the hand, whichever the player chooses, and never on itself. A hand holding no other card blocks it in the hand, as an empty discard pile blocks a card aimed there. The card played goes to its pile before it lands, the discard pile or the exhaust pile, so a card it discards lies over it.
+A card aimed at the hand lands on another card of the hand, whichever the player chooses, and never on itself. A hand holding no other card blocks it in the hand. The card played goes to its pile before it lands, the discard pile or the exhaust pile, so a card it discards lies over it.
 
 ## Events and the capstone ✅
 

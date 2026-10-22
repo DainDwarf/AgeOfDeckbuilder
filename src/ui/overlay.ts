@@ -3,7 +3,6 @@ import type { Catalogue } from '../rules/catalogue';
 import { answerCost, answerOf, answerRefusal, offered } from '../rules/schedule';
 import type { Group, Stage } from '../rules/stages';
 import {
-  type CardId,
   type Chronicle,
   type ChronicleCard,
   type Cost,
@@ -44,17 +43,6 @@ const GRID_GAP = 26;
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
-  /**
-   * The discard pile offered to a card aimed at it, newest card first; `chosen` is told where in the
-   * pile the card pressed lies. The card being aimed is in the hand, so the pile never offers it.
-   * Answers the way to close it from outside.
-   */
-  aimDiscardPile(
-    chronicle: Chronicle,
-    aimed: CardId,
-    chosen: (at: number) => void,
-    closed: () => void,
-  ): () => void;
   inspect(chronicle: Chronicle, card: ChronicleCard): void;
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(name: Name): void;
@@ -109,22 +97,8 @@ type Laid = {
   readonly height: number;
 };
 
-/**
- * What the aim window stands on: the card being aimed, the cards it offers, and what a press on one
- * of them plays.
- */
-type Aiming = {
-  readonly aimed: CardId;
-  readonly cards: readonly Offered[];
-  readonly chosen: (at: number) => void;
-  readonly closed: () => void;
-};
-
 /** A pile's browse on the scrim, which selects nothing. */
 type Browsing = { readonly stands: 'browse' };
-
-/** The aim window on the scrim, over what it offers. */
-type AimWindow = { readonly stands: 'aim-window'; readonly aim: Aiming };
 
 /**
  * The deal window on the scrim: the chronicle whose first deal it stands, which its answers read
@@ -151,11 +125,8 @@ type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & {
 /** What the capstone's window carries beside each raising: the landing's is told when it closes. */
 type RaisedWith = { readonly opening: object; readonly landing: { readonly closed: () => void } };
 
-/**
- * What the scrim carries: a pile's browse, the aim window, the deal window, the capstone's window, or
- * the ending screen.
- */
-type Carried = Browsing | AimWindow | Dealing | Capstone | { readonly stands: 'ending' };
+/** What the scrim carries: a pile's browse, the deal window, the capstone's window, or the ending screen. */
+type Carried = Browsing | Dealing | Capstone | { readonly stands: 'ending' };
 
 /** What the chronicle screen hands its overlay. */
 type OverlayOf = EndingOf & {
@@ -208,14 +179,6 @@ export function createOverlay({
   const close = (): void => {
     browser.close();
     carried = undefined;
-  };
-
-  /** The aim window closed with nothing paid: the one path, whichever way it was closed. */
-  const closeAim = (): void => {
-    if (carried?.stands !== 'aim-window') return;
-    const { aim } = carried;
-    close();
-    aim.closed();
   };
 
   /** What the scrim carries replaced, the scrim up for what is raised on it. */
@@ -414,18 +377,6 @@ export function createOverlay({
     raiseLore('capstone', capstoneLore(face.id, announcement.raised), laid);
   };
 
-  /** The aim window raised. */
-  const showAim = (aim: Aiming): void => {
-    raiseOnScrim({ stands: 'aim-window', aim });
-
-    const title = raiseTitle('aim-window', text('aim.discard-pile', { card: cardName(aim.aimed) }));
-    layWindow('aim-window', aim.cards, title.y + title.height + MARGIN, (card) => {
-      // The aim landed, so the window closes without saying it closed with nothing paid.
-      close();
-      aim.chosen(card.at);
-    });
-  };
-
   /** The ending screen raised as the chronicle ends: it stands on the scrim for good. */
   const raiseEnding = (chronicle: Chronicle, ending: Ending): Promise<void> => {
     carried = { stands: 'ending' };
@@ -446,9 +397,6 @@ export function createOverlay({
     switch (carried.stands) {
       case 'browse':
         close();
-        return true;
-      case 'aim-window':
-        closeAim();
         return true;
       case 'deal':
         if (carried.selected === undefined) return false;
@@ -475,7 +423,6 @@ export function createOverlay({
         return;
       }
       case 'browse':
-      case 'aim-window':
       case 'capstone':
       case 'ending':
         return;
@@ -522,19 +469,6 @@ export function createOverlay({
 
   return {
     browse: showBrowse,
-    aimDiscardPile(chronicle, aimed, chosen, closed): () => void {
-      showAim({
-        aimed,
-        cards: chronicle.discardPile
-          .map((card, at) =>
-            offeredCard(cardFace(catalogue, card, chronicle.citySection.building), at, 1),
-          )
-          .reverse(),
-        chosen,
-        closed,
-      });
-      return closeAim;
-    },
     inspect(chronicle: Chronicle, card: ChronicleCard): void {
       inspecting.large.show(cardFace(catalogue, card, chronicle.citySection.building));
     },

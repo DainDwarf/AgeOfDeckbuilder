@@ -1356,7 +1356,6 @@ export function admits(chronicle: Chronicle, index: number, at: TileCoords): boo
     case 'unit':
       return admitted(CATALOGUE, chronicle, card).some((tile) => tileKey(tile) === tileKey(at));
     case 'none':
-    case 'discard-pile':
     case 'hand':
       return false;
   }
@@ -2291,7 +2290,7 @@ export async function playedOut(page: Page): Promise<void> {
 /**
  * The gesture that takes a card out of the hand; what the release does is the card's kind. A card
  * that plays at nothing is played out here and now; one that aims at a tile is left selected and
- * being aimed, one aimed at the discard pile raises its window, and their play-out waits on the aim.
+ * being aimed, and its play-out waits on the aim.
  */
 export async function dragOut(page: Page, index: number): Promise<void> {
   const card = await onScreen(page, `hand-${index}`);

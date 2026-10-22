@@ -210,14 +210,13 @@ export type TileBlock =
 
 /**
  * What stands against a card, an answer or a claim the cost alone would let through: what the city,
- * the piles, the border, the map or a turn already shown hold against it, a card nothing plays, and
+ * the hand, the border, the map or a turn already shown hold against it, a card nothing plays, and
  * every reason an aim turns a tile down.
  */
 export type Block =
   | 'population'
   | 'idle'
   | 'city'
-  | 'discard-pile'
   | 'hand'
   | 'turn-shown'
   | 'played-by-nothing'

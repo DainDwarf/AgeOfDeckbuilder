@@ -11,8 +11,8 @@ export type Change = {
   | {
       readonly name: PlacedChange;
       /**
-       * Indices into the pile in `before`, the discard pile for `recalled` and the hand for the rest;
-       * a `discarded` or an `exhausted` card lies on top of its pile, in the order of the places.
+       * Indices into the hand in `before`; a `discarded` or an `exhausted` card lies on top of its
+       * pile, in the order of the places.
        */
       readonly places: readonly number[];
     }
@@ -53,7 +53,7 @@ type GroupHead =
 /** The one step a command resolves as, a change or a group, each on a chronicle and leaving one. */
 export type Stage = Change | Group;
 
-/** What a card is played at: nothing, a tile, a unit, a card of the discard pile or of the hand. */
+/** What a card is played at: nothing, a tile, a unit or a card of the hand. */
 export type Aimed =
   | { readonly aim: 'none' }
   | {
@@ -66,14 +66,6 @@ export type Aimed =
       readonly aim: 'unit';
       /** The tile the unit it is aimed at stands on: a unit is played at through the map. */
       readonly tile: TileCoords;
-    }
-  | {
-      readonly aim: 'discard-pile';
-      /**
-       * Where in the discard pile the card aimed at it lies, in the pile as it stood before the
-       * play: the play sends the card being played to the pile before the effect resolves.
-       */
-      readonly card: number;
     }
   | {
       readonly aim: 'hand';
@@ -112,7 +104,7 @@ type PlainChange =
   | 'neutral-fallen'
   | 'runtime-error';
 
-type PlacedChange = 'discarded' | 'exhausted' | 'recalled' | 'banished';
+type PlacedChange = 'discarded' | 'exhausted' | 'banished';
 
 /** The changes that carry the tile they moved a row on. */
 type TiledChange =

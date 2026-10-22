@@ -111,11 +111,6 @@ import { plays, walked } from './stages';
 import { type CardId, type Chronicle, idle, playable, type TileBlock, withCityRows } from './state';
 import { relationsOf, standsOn } from './units';
 
-/** A card aimed at where a card lies in the discard pile, ready to hand to `apply`. */
-function aimedAtPile(card: number): Command {
-  return { type: 'play', index: 0, aim: 'discard-pile', card };
-}
-
 /** The first card of the hand aimed at a tile through the unit standing on `through`, ready to hand to `apply`. */
 function aimedThrough(tile: TileCoords, through: TileCoords): Command {
   return { type: 'play', index: 0, aim: 'tile', tile, through };
@@ -287,76 +282,6 @@ test('the refresh instant is refused on a unit whose move points are full, on an
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit({ q: 2, r: 0 })))).toBe(city);
   expect(outcome(apply(CATALOGUE, city, aimedAtUnit({ q: 0, r: 1 })))).toBe(city);
   expect(outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
-});
-
-test('the recall instant takes the card it is aimed at out of the discard pile and into the hand', () => {
-  const city = cityOf(['urban'], {
-    hand: ['PH_Recall'],
-    discardPile: ['PH_Farm', 'PH_Harvest', 'PH_Mine'],
-    resources: science(2),
-  });
-
-  const stages = apply(CATALOGUE, city, aimedAtPile(1));
-  const after = outcome(stages);
-
-  expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'recalled']);
-  expect(idsOf(after.hand)).toEqual(['PH_Harvest']);
-  expect(idsOf(after.discardPile)).toEqual(['PH_Farm', 'PH_Mine', 'PH_Recall']);
-  expect(after.resources.science).toBe(0);
-  expect(everyCard(after)).toEqual(everyCard(city));
-});
-
-test('the recall instant is refused at a card the discard pile does not hold, and at nothing', () => {
-  const city = cityOf(['urban'], {
-    hand: ['PH_Recall'],
-    discardPile: ['PH_Farm', 'PH_Harvest'],
-    resources: science(2),
-  });
-
-  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
-  expect(stagedBy(city, aimedAtPile(-1))).toEqual(['refused']);
-  expect(stagedBy(city, aimedAtPile(2))).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }))).toBe(city);
-  expect(outcome(apply(CATALOGUE, city, aimedAtPile(-1)))).toBe(city);
-  expect(outcome(apply(CATALOGUE, city, aimedAtPile(2)))).toBe(city);
-});
-
-test('the recall instant never brings back the card it sent to the discard pile itself', () => {
-  const city = cityOf(['urban'], {
-    hand: ['PH_Recall'],
-    discardPile: ['PH_Farm'],
-    resources: science(2),
-  });
-
-  expect(stagedBy(city, aimedAtPile(1))).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, city, aimedAtPile(1)))).toBe(city);
-  expect(idsOf(outcome(apply(CATALOGUE, city, aimedAtPile(0))).hand)).toEqual(['PH_Farm']);
-});
-
-test('an empty discard pile blocks the recall instant in the hand', () => {
-  const empty = cityOf(['urban'], { hand: ['PH_Recall'], resources: science(2) });
-  const holding = cityOf(['urban'], {
-    hand: ['PH_Recall'],
-    discardPile: ['PH_Farm'],
-    resources: science(2),
-  });
-
-  expect(refusalOf(CATALOGUE, empty, 'PH_Recall').blocked).toEqual(['discard-pile']);
-  expect(playable(refusalOf(CATALOGUE, empty, 'PH_Recall'))).toBe(false);
-  expect(stagedBy(empty, aimedAtPile(0))).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, empty, aimedAtPile(0)))).toBe(empty);
-  expect(playable(refusalOf(CATALOGUE, holding, 'PH_Recall'))).toBe(true);
-});
-
-test('a recall the city cannot pay for stays in the hand and costs nothing', () => {
-  const short = cityOf(['urban'], {
-    hand: ['PH_Recall'],
-    discardPile: ['PH_Farm'],
-    resources: science(1),
-  });
-
-  expect(stagedBy(short, aimedAtPile(0))).toEqual(['refused']);
-  expect(outcome(apply(CATALOGUE, short, aimedAtPile(0)))).toBe(short);
 });
 
 test('the discard instant discards the card of the hand it is played at, before it or after it, over itself on the discard pile', () => {

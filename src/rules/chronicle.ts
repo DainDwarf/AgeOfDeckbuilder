@@ -163,7 +163,7 @@ export type Command =
  */
 export type UnitCommand = Extract<Command, { readonly unit: number }>;
 
-/** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit, the discard pile or the hand. */
+/** One card of the hand played, aimed the way the card is: at nothing, a tile, a unit or the hand. */
 export type PlayCommand = Extract<Command, { readonly type: 'play' }>;
 
 /** A full hand. */
@@ -683,7 +683,6 @@ function tileAimed(aimed: Aimed): TileCoords | undefined {
     case 'unit':
       return aimed.tile;
     case 'none':
-    case 'discard-pile':
     case 'hand':
       return undefined;
   }
@@ -782,7 +781,6 @@ function chartedOn(stage: Change): TileCoords | undefined {
     case 'drawn':
     case 'discarded':
     case 'exhausted':
-    case 'recalled':
     case 'shuffled':
     case 'counters-set':
     case 'banished':
@@ -1080,8 +1078,6 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
   switch (card.aim) {
     case 'none':
       return card.blocked?.(catalogue, chronicle) ?? [];
-    case 'discard-pile':
-      return chronicle.discardPile.length === 0 ? ['discard-pile'] : [];
     case 'hand':
       return chronicle.hand.length <= 1 ? ['hand'] : [];
     case 'tile':
@@ -1146,18 +1142,15 @@ function aimedBy(command: PlayCommand): Aimed {
         : { aim: 'tile', tile: command.tile, through: command.through };
     case 'unit':
       return { aim: 'unit', tile: command.tile };
-    case 'discard-pile':
     case 'hand':
-      return { aim: command.aim, card: command.card };
+      return { aim: 'hand', card: command.card };
   }
 }
 
 /**
  * The card's effect with what the play aimed it at, judged before anything is paid; `undefined`
- * refuses the play, and so does a play aimed another way than the card. It takes a tile or a unit the
- * aim admits — through a unit beside the tile, the one that can be, or the one of several the play
- * names — a place the discard pile holds, or another card of the hand, which the effect takes one
- * place earlier when it lay after the card played.
+ * refuses the play. A card of the hand aimed at is handed to the effect one place earlier when it
+ * lay after the card played.
  */
 function aimedEffect(
   catalogue: Catalogue,
@@ -1191,12 +1184,6 @@ function aimedEffect(
       const { tile } = command;
       if (admittedAt(catalogue, chronicle, card, tile) === undefined) return undefined;
       return (paid) => card.effect(catalogue, paid, tile);
-    }
-    case 'discard-pile': {
-      if (command.aim !== 'discard-pile') return undefined;
-      const at = command.card;
-      if (at < 0 || at >= chronicle.discardPile.length) return undefined;
-      return (paid) => card.effect(catalogue, paid, at);
     }
     case 'hand': {
       if (command.aim !== 'hand') return undefined;
