@@ -11,5 +11,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The garrison pursues** — both personas gain a gambit below the attack and above the charting walk, the governed units walking toward the enemy the map shows within three tiles of the city, and the builder's attack admits the enemies within three tiles of the city from any tile in place of any enemy from a held tile; `--personas` prints the sentences at their numbers, each gambit is held by one test on the fixtures, the trace names each, and `--without` leaves either out alone. Doc-impact: `docs/SIMULATOR.md`. [board/the-garrison-pursues.md](board/the-garrison-pursues.md)
+- **The warlord's unit gate** — the warlord fields units that attack from a population above the tiles the city holds, up to three, so it starts producing units before it has claimed.
 - **The goal gambit** — `--goal <technology>` on top of any persona: among the commands the persona would take, the one that raises that achievement's count; the `sim` skill gains the flag.
 - **The warlord embarks** — the warlord crosses the water on its way to a camp or a site across it, embarking and disembarking through the deck's cards where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water.
