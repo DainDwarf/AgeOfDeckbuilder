@@ -1005,8 +1005,9 @@ test('a command the chronicle ends on moves no tally, so a deed whose count it w
       ...CATALOGUE.capstones,
       PH_Tillage: {
         ...tillage,
-        passes: (_catalogue, chronicle) =>
-          tileAt(chronicle.tiles, forest)?.improvements.includes('PH_Road') === true,
+        count: (_catalogue, chronicle) =>
+          tileAt(chronicle.tiles, forest)?.improvements.includes('PH_Road') === true ? 1 : 0,
+        need: 1,
       },
     },
   };

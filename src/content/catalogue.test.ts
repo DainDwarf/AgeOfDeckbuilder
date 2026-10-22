@@ -462,7 +462,7 @@ test('every region’s schedule rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield and is neither passed nor failed, on a chronicle launched and settled in that region’s age', () => {
+test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield, counts below its need and is not failed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     const beside = tilesBeside(chronicle.tiles);
@@ -483,7 +483,7 @@ test('every answer of every event of a region’s schedule costs, answers what b
         expect(() => capstone.lands(CATALOGUE, chronicle)).not.toThrow();
         expect(() => capstone.continues?.(CATALOGUE, chronicle)).not.toThrow();
         for (const part of parts) expect(() => capstone.yieldRule?.(part)).not.toThrow();
-        expect(capstone.passes(CATALOGUE, chronicle)).toBe(false);
+        expect(capstone.count(CATALOGUE, chronicle)).toBeLessThan(capstone.need);
         expect(capstone.fails?.(CATALOGUE, chronicle, chronicle) ?? false).toBe(false);
       }
     }

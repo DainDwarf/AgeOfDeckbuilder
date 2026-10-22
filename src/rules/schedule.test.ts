@@ -1492,7 +1492,7 @@ test('the capstone’s landing is a stage of its own on its turn, even where it 
   const quiet: Catalogue = {
     ...CATALOGUE,
     capstones: {
-      PH_Siege: { lands: (_c, chronicle) => unchanged(chronicle), passes: () => false },
+      PH_Siege: { lands: (_c, chronicle) => unchanged(chronicle), count: () => 0, need: 1 },
     },
   };
   const awaited = awaitingCapstone({ drawPile: fullDraw() });
@@ -1587,17 +1587,20 @@ test('a camp captured on the siege’s last turn holds the victory back until it
   });
 });
 
-test('a capture that meets a capstone’s condition ends the chronicle on the capture, its rewards never dealt', () => {
+test('a capture after which a capstone’s count meets its need ends the chronicle on the capture, its rewards never dealt', () => {
   const camp = { q: 4, r: 0 };
   const campsRemoved: Catalogue = {
     ...CATALOGUE,
     capstones: {
       PH_Siege: {
         lands: (_c, chronicle) => unchanged(chronicle),
-        passes: (catalogue, chronicle) =>
+        count: (catalogue, chronicle) =>
           chronicle.tiles.every(
             (tile) => tile.building !== ageOf(catalogue, chronicle.age).camp.building,
-          ),
+          )
+            ? 1
+            : 0,
+        need: 1,
       },
     },
   };
@@ -1812,13 +1815,14 @@ test('a building that passes a capstone ends the chronicle in victory on the pla
   }
 });
 
-test('a capstone’s condition met partway through a play ends the chronicle there, and the rest of the card never resolves', () => {
+test('a capstone’s count meeting its need partway through a play ends the chronicle there, and the rest of the card never resolves', () => {
   const spent: Catalogue = {
     ...CATALOGUE,
     capstones: {
       PH_Tillage: {
         lands: (_c, chronicle) => unchanged(chronicle),
-        passes: (_c, chronicle) => chronicle.units.some((unit) => unit.action === 0),
+        count: (_c, chronicle) => chronicle.units.filter((unit) => unit.action === 0).length,
+        need: 1,
       },
     },
   };
@@ -1830,7 +1834,7 @@ test('a capstone’s condition met partway through a play ends the chronicle the
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
-test('a capstone’s condition holding before the capstone lands ends the chronicle on the landing, the tick, the draw and the roll reading nothing', () => {
+test('a capstone’s count meeting its need before the capstone lands ends the chronicle on the landing, the tick, the draw and the roll reading nothing', () => {
   const tilledEarly = tilled(
     awaitingTillage({
       ...FARMING,
@@ -1860,13 +1864,14 @@ test('a capstone’s condition holding before the capstone lands ends the chroni
   expect(outcome(stages).ending).toEqual({ outcome: 'victory', turn: CAPSTONE });
 });
 
-test('a change that both leaves the city no population and meets a capstone’s condition ends the chronicle in victory', () => {
+test('a change that both leaves the city no population and brings a capstone’s count to its need ends the chronicle in victory', () => {
   const emptied: Catalogue = {
     ...CATALOGUE,
     capstones: {
       PH_Tillage: {
         lands: (_c, chronicle) => unchanged(chronicle),
-        passes: (_c, chronicle) => chronicle.population === 0,
+        count: (_c, chronicle) => (chronicle.population === 0 ? 1 : 0),
+        need: 1,
       },
     },
   };

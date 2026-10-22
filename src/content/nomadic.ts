@@ -267,8 +267,9 @@ const TABLES: Tables = {
   capstones: {
     'first-shelter': {
       lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'shelter'),
-      passes: (_catalogue, chronicle) =>
-        chronicle.tiles.some((tile) => tile.building === 'shelter'),
+      count: (_catalogue, chronicle) =>
+        chronicle.tiles.some((tile) => tile.building === 'shelter') ? 1 : 0,
+      need: 1,
     },
   },
   technologies: {

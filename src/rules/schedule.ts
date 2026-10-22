@@ -78,9 +78,9 @@ function rolledFrom(
   return { ...timeline, rng: spaced.rng, next: landing + spaced.turns };
 }
 
-/** Whether the turn has ticked past the last of a span of turns begun on the capstone's. */
-export function spanEnded(chronicle: Chronicle, turns: number): boolean {
-  return chronicle.turn >= chronicle.timeline.capstone.turn + turns;
+/** How many turns the turn has ticked past the capstone's landing: none before it. */
+export function turnsPastLanding(chronicle: Chronicle): number {
+  return Math.max(0, chronicle.turn - chronicle.timeline.capstone.turn);
 }
 
 /**

@@ -109,9 +109,9 @@ import {
   removalNear,
   removedNear,
   showsNextLanding,
-  spanEnded,
   terraformedNear,
   tileCharted,
+  turnsPastLanding,
   unitDamaged,
 } from './schedule';
 import { charted } from './sight';
@@ -798,12 +798,14 @@ const TABLES: Omit<Tables, 'technologies'> = {
   capstones: {
     PH_Siege: {
       lands: besieged,
-      passes: (_catalogue, chronicle) => spanEnded(chronicle, 6),
+      count: (_catalogue, chronicle) => turnsPastLanding(chronicle),
+      need: 6,
     },
     PH_Tillage: {
       lands: (_catalogue, chronicle) => unchanged(chronicle),
-      passes: (_catalogue, chronicle) =>
-        chronicle.tiles.some((tile) => tile.building === TILLAGE && holds(chronicle, tile)),
+      count: (_catalogue, chronicle) =>
+        chronicle.tiles.some((tile) => tile.building === TILLAGE && holds(chronicle, tile)) ? 1 : 0,
+      need: 1,
     },
     [FALLOW]: {
       lands: (_catalogue, chronicle) => unchanged(chronicle),
@@ -818,13 +820,15 @@ const TABLES: Omit<Tables, 'technologies'> = {
             return part.yields;
         }
       },
-      passes: () => false,
+      count: () => 0,
+      need: 1,
     },
     [TOWER]: {
       lands: (_catalogue, chronicle) => unchanged(chronicle),
       fails: (catalogue, before, after) =>
         buildingRemoved(catalogue, before, after, [TILLAGE, SILO]),
-      passes: () => false,
+      count: () => 0,
+      need: 1,
     },
   },
   terrains: {

@@ -9,6 +9,7 @@ import {
   type Camp,
   type Card,
   type Catalogue,
+  capstoneOf,
   cardAge,
   cardOf,
   catalogued,
@@ -100,6 +101,18 @@ test('a catalogue whose achievement needs a count below one, or pays influence b
   expect(() =>
     catalogued(achieved({ [HOARD]: { ...HOARD_DECLARED, influence: 0 } })),
   ).not.toThrow();
+});
+
+test('a catalogue whose capstone needs a count that is not a whole number of at least one is refused', () => {
+  const tillage = capstoneOf(CATALOGUE, 'PH_Tillage');
+  const needing = (need: number) =>
+    changed({ capstones: { ...CATALOGUE.capstones, PH_Tillage: { ...tillage, need } } });
+  for (const need of [0, 1.5]) {
+    expect(() => catalogued(needing(need))).toThrow(
+      `fixture: the capstone PH_Tillage needs a count of ${need}`,
+    );
+  }
+  expect(() => catalogued(needing(1))).not.toThrow();
 });
 
 test('a catalogue whose age sets a base price that is not a whole number of at least one is refused', () => {

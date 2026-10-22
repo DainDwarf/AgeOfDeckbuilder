@@ -251,6 +251,9 @@ function gifts(turn: number): number {
   return 6 + Math.floor(turn / 5);
 }
 
+/** The Cold nights the long winter adds. */
+const COLD_NIGHTS = 5;
+
 /** The buildings the monument stands as, each built over the one before. */
 const MONUMENT = ['foundations', 'great-stones', 'monument'];
 
@@ -262,6 +265,9 @@ const MONUMENT_HAZARDS = ['unrest', 'thieves', 'weary-builders'];
 
 /** The unit kind whose kill passes the siege. */
 const LEADER = 'leader';
+
+/** The leader's health, which the siege's need reads too. */
+const LEADER_HEALTH = 8;
 
 /** The script every enemy of the siege's raid carries. */
 const SIEGE_SCRIPT = 'siege-raider';
@@ -516,7 +522,7 @@ export const STONE: Slice = {
       [LEADER]: {
         type: LEADER,
         worker: false,
-        health: 8,
+        health: LEADER_HEALTH,
         damage: 3,
         range: 1,
         move: 2 * MOVE_POINT,
@@ -923,8 +929,8 @@ export const STONE: Slice = {
     },
     capstones: {
       'long-winter': {
-        lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'cold-night', 5),
-        reads: () => ({ count: 5 }),
+        lands: (catalogue, chronicle) => rewarded(catalogue, chronicle, 'cold-night', COLD_NIGHTS),
+        reads: () => ({ count: COLD_NIGHTS }),
         yieldRule: (part) => {
           switch (part.kind) {
             case 'terrain':
@@ -936,9 +942,11 @@ export const STONE: Slice = {
               return part.yields;
           }
         },
-        passes: (_catalogue, chronicle) =>
-          capstoneLanded(chronicle) &&
-          !cardsInPiles(chronicle).some(({ id }) => id === 'cold-night'),
+        count: (_catalogue, chronicle) =>
+          capstoneLanded(chronicle)
+            ? COLD_NIGHTS - cardsInPiles(chronicle).filter(({ id }) => id === 'cold-night').length
+            : 0,
+        need: COLD_NIGHTS,
       },
       monument: {
         lands: (catalogue, chronicle) => addedToDrawPileTop(catalogue, chronicle, 'foundations'),
@@ -946,15 +954,23 @@ export const STONE: Slice = {
           const { rng, picked } = pickUniform(chronicle.rng, MONUMENT_HAZARDS);
           return rewarded(catalogue, { ...chronicle, rng }, picked, 1);
         },
-        passes: (_catalogue, chronicle) =>
-          chronicle.tiles.some((tile) => tile.building === 'monument'),
+        count: (_catalogue, chronicle) =>
+          Math.max(
+            0,
+            ...chronicle.tiles.map(({ building }) => MONUMENT.indexOf(building ?? '') + 1),
+          ),
+        need: MONUMENT.length,
         fails: (catalogue, before, after) => buildingRemoved(catalogue, before, after, MONUMENT),
       },
       siege: {
         lands: siegeRaided,
         reads: () => ({ band: SIEGE_BAND }),
-        passes: (_catalogue, chronicle) =>
-          capstoneLanded(chronicle) && !chronicle.units.some((unit) => unit.stats.type === LEADER),
+        count: (_catalogue, chronicle) => {
+          if (!capstoneLanded(chronicle)) return 0;
+          const leader = chronicle.units.find((unit) => unit.stats.type === LEADER);
+          return leader === undefined ? LEADER_HEALTH : LEADER_HEALTH - leader.stats.health;
+        },
+        need: LEADER_HEALTH,
       },
     },
     technologies: {

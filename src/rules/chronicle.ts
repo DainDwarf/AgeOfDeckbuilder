@@ -349,12 +349,12 @@ function conditionsRead(
   stages: readonly Stage[],
 ): Stage[] {
   if (started.ending !== undefined) return raisedOn(started, stages);
-  const { passes, fails } = capstoneOf(catalogue, started.timeline.capstone.id);
+  const { count, need, fails } = capstoneOf(catalogue, started.timeline.capstone.id);
   // The events phase lands the capstone in the command whose tick reaches its turn, so a command
   // started on that turn or after starts past the landing.
   let landed = capstoneLanded(started);
   const passesNow = (chronicle: Chronicle): boolean =>
-    landed && chronicle.ending === undefined && passes(catalogue, chronicle);
+    landed && chronicle.ending === undefined && count(catalogue, chronicle) >= need;
   const failsNow = (before: Chronicle, after: Chronicle): boolean =>
     landed && after.ending === undefined && fails?.(catalogue, before, after) === true;
 

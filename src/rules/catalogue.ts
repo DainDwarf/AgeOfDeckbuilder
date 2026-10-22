@@ -392,15 +392,16 @@ export type ScheduledEvent = {
 
 /**
  * A capstone: what it does on its turn and on every turn after, the numbers its rules entry reads,
- * the rule it lays over every tile's yield from its landing on, whether the chronicle has passed it,
- * and whether one change, read on the chronicles before and after it, has failed it.
+ * the rule it lays over every tile's yield from its landing on, its count read toward the need that
+ * passes it, and whether one change, read on the chronicles before and after it, has failed it.
  */
 export type Capstone = {
   readonly lands: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
   readonly continues?: (catalogue: Catalogue, chronicle: Chronicle) => Landed;
   readonly reads?: (catalogue: Catalogue, chronicle: Chronicle) => Record<string, number>;
   readonly yieldRule?: YieldRule;
-  readonly passes: (catalogue: Catalogue, chronicle: Chronicle) => boolean;
+  readonly count: (catalogue: Catalogue, chronicle: Chronicle) => number;
+  readonly need: number;
   readonly fails?: (catalogue: Catalogue, before: Chronicle, after: Chronicle) => boolean;
 };
 
@@ -738,7 +739,15 @@ export function catalogued(content: Catalogue): Catalogue {
       refuse(content, `the event ${id} deals no answer costing no stock and blocked by nothing`);
     }
   }
+  for (const [id, { need }] of Object.entries(content.capstones)) {
+    needHeld(content, `the capstone ${id}`, need);
+  }
   return content;
+}
+
+/** A count's need, refused unless it is a whole number of one or more. */
+function needHeld(content: Catalogue, owner: string, need: number): void {
+  if (!Number.isInteger(need) || need < 1) refuse(content, `${owner} needs a count of ${need}`);
 }
 
 /**
@@ -1041,9 +1050,7 @@ function treeHeld(content: Catalogue): void {
       const owner = ownedBy.get(id);
       if (owner !== undefined) refuse(content, `the ages ${owner} and ${age} both own ${id}`);
       ownedBy.set(id, age);
-      if (!Number.isInteger(need) || need < 1) {
-        refuse(content, `the achievement ${id} needs a count of ${need}`);
-      }
+      needHeld(content, `the achievement ${id}`, need);
       if (!Number.isInteger(influence) || influence < 0) {
         refuse(content, `the achievement ${id} pays ${influence} influence`);
       }
