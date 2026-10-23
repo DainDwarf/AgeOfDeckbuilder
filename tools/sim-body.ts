@@ -9,13 +9,16 @@ import {
   paidInto,
 } from '../src/rules/campaign';
 import {
+  ageOf,
   type Catalogue,
   type Civilization,
+  catalogued,
   civilizationMisfit,
-  scheduleOf,
+  type Region,
 } from '../src/rules/catalogue';
 import { countOn, launched } from '../src/rules/chronicle';
 import type { TileCoords } from '../src/rules/map';
+import { entryOf } from '../src/rules/map-kinds';
 import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
 import { offered } from '../src/rules/schedule';
@@ -34,8 +37,8 @@ import { type Driven, type End, type Persona, playedBy } from './sim-driver';
 
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
-  '                      [--goal <technology>] [--without <n>] [--seeds <n>|<a>-<b>] [--turns <n>] [--out <path>]',
-  '                      [<technology>...]',
+  '                      [--goal <technology>] [--without <n>] [--off <switch>[,<switch>...]] [--seeds <n>|<a>-<b>]',
+  '                      [--turns <n>] [--out <path>] [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
 ].join('\n');
@@ -47,6 +50,7 @@ const FLAGS = {
   persona: { type: 'string' },
   goal: { type: 'string' },
   without: { type: 'string' },
+  off: { type: 'string' },
   seeds: { type: 'string' },
   turns: { type: 'string' },
   out: { type: 'string' },
@@ -64,8 +68,16 @@ const FACTIONS = Object.keys({
   neutral: true,
 } satisfies Record<Faction, true>) as Faction[];
 
+/** What a cell may be played with switched off, in the order `--off`'s refusal lists them. */
+const SWITCHES = ['camps', 'neutral', 'events', 'capstone'] as const;
+
+/** One thing a cell may be played with switched off. */
+type Switch = (typeof SWITCHES)[number];
+
 /** What a chronicle of the cell is launched on and played by. */
 type Cell = {
+  /** The content the cell's chronicles are played on: the game's, its region switched off as `off` names. */
+  readonly catalogue: Catalogue;
   readonly age: string;
   readonly region: string;
   readonly campaign: Campaign;
@@ -79,6 +91,8 @@ type Cell = {
   readonly without: number | undefined;
   /** The persona's gambits the chronicles are played by, the one left out excepted. */
   readonly walk: Persona;
+  /** What the cell is played with switched off, in the order `--off` names them. */
+  readonly off: readonly Switch[];
 };
 
 /** The seeds of the cell, the first and the last included, and the flag as it was given. */
@@ -115,7 +129,7 @@ export function simulated(
     if (out !== undefined)
       throw new Error(`--out beside --trace: the trace writes no row\n${USAGE}`);
     print(recordOf(cell, turnCap, { trace: traced }));
-    const { driven } = chronicleOf(catalogue, cell, traced, turnCap);
+    const { driven } = chronicleOf(cell, traced, turnCap);
     for (const { turn, gambit, command } of driven.landed) {
       print(`turn ${turn} | ${gambit} | ${JSON.stringify(command)}`);
     }
@@ -133,14 +147,14 @@ export function simulated(
   if (path !== undefined) writeFileSync(path, '');
   write(recordOf(cell, turnCap, { seeds: seeds.given }));
   for (let seed = seeds.first; seed <= seeds.last; seed++) {
-    const { launch, driven, ms } = chronicleOf(catalogue, cell, seed, turnCap);
+    const { launch, driven, ms } = chronicleOf(cell, seed, turnCap);
     const columns: Column[] = [
       ['seed', seed],
       ['ending', driven.end.outcome],
       ['cause', causeOf(driven.end) ?? ''],
       ['turn', driven.end.turn],
       ['ms', ms],
-      ...chronicleColumns(catalogue, cell.campaign, launch, driven),
+      ...chronicleColumns(cell.catalogue, cell.campaign, launch, driven, cell.off),
     ];
     if (seed === seeds.first) write(columns.map(([name]) => name).join(','));
     write(columns.map(([, value]) => value).join(','));
@@ -150,16 +164,18 @@ export function simulated(
 /**
  * The cell the flags name: the age and the region, each defaulting to what the launch screen opens on,
  * on a new campaign that has learned what reaches them, then the technologies named, each with its
- * needs; the civilization, the campaign's first unless one is handed in; and the persona, the idle
- * unless named, built for the goal `--goal` names, its gambit `--without` numbers left out of its walk.
+ * needs; the civilization, the campaign's first unless one is handed in; the persona, the idle
+ * unless named, built for the goal `--goal` names, its gambit `--without` numbers left out of its walk;
+ * and the content, its region switched off as `--off` names.
  */
-function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
-  const fresh = freshCampaign(catalogue);
-  const age = stringFlag(values, 'age', USAGE) ?? openingChoices(catalogue, fresh).age;
-  const reached = learnedWithNeeds(catalogue, fresh, technologiesReaching(catalogue, age));
-  const opening = openingChoices(catalogue, reached);
+function cellOf(game: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
+  const fresh = freshCampaign(game);
+  const age = stringFlag(values, 'age', USAGE) ?? openingChoices(game, fresh).age;
+  const reached = learnedWithNeeds(game, fresh, technologiesReaching(game, age));
+  const opening = openingChoices(game, reached);
   const region = stringFlag(values, 'region', USAGE) ?? opening.region;
-  scheduleOf(catalogue, age, region);
+  const off = switchesOf(values);
+  const catalogue = switchedOff(game, age, region, off);
   const unlocking = technologyUnlocking(catalogue, region);
   const campaign = learnedWithNeeds(catalogue, reached, [
     ...(unlocking === undefined ? [] : [unlocking]),
@@ -189,7 +205,74 @@ function cellOf(catalogue: Catalogue, values: FlagValues, positionals: readonly 
   const gambits = PERSONAS[persona](goal);
   const without = wholeFlag(values, 'without', 1, USAGE, gambits.length);
   const walk = gambits.filter((_, at) => at + 1 !== without);
-  return { age, region, campaign, civilization, recorded, persona, goal, without, walk };
+  return {
+    catalogue,
+    age,
+    region,
+    campaign,
+    civilization,
+    recorded,
+    persona,
+    goal,
+    without,
+    walk,
+    off,
+  };
+}
+
+/** What `--off` switches off, in the order named; nothing where it is not set. */
+function switchesOf(values: FlagValues): Switch[] {
+  const value = stringFlag(values, 'off', USAGE);
+  if (value === undefined) return [];
+  const off: Switch[] = [];
+  for (const name of value.split(',')) {
+    const named = SWITCHES.find((each) => each === name);
+    if (named === undefined) {
+      throw new Error(`--off names no switch ${name}; the switches: ${SWITCHES.join(', ')}`);
+    }
+    if (off.includes(named)) throw new Error(`--off names ${named} twice`);
+    off.push(named);
+  }
+  return off;
+}
+
+/**
+ * The content handed in, the region of the age switched off as named, validated as the content is.
+ * An age or a region the content does not hold is refused.
+ */
+export function switchedOff(
+  catalogue: Catalogue,
+  age: string,
+  region: string,
+  off: readonly Switch[],
+): Catalogue {
+  const owned = ageOf(catalogue, age);
+  const switched = off.reduce(
+    regionSwitchedOff,
+    entryOf(catalogue, owned.regions, region, 'region'),
+  );
+  const regions = { ...owned.regions, [region]: switched };
+  return catalogued({ ...catalogue, ages: { ...catalogue.ages, [age]: { ...owned, regions } } });
+}
+
+/**
+ * The region with one thing switched off: no camp dealt, no band for the neutral's city, its first
+ * deal or its capstone's turn due past any turn a chronicle reaches.
+ */
+function regionSwitchedOff(region: Region, off: Switch): Region {
+  // Past every turn `--turns` admits, a safe integer, and still past it once the capstone's landing
+  // turn is added to it as the next deal's.
+  const past = [2 ** 53, 2 ** 53] as const;
+  switch (off) {
+    case 'camps':
+      return { ...region, camps: 0 };
+    case 'neutral':
+      return { ...region, neutralFromCentre: undefined };
+    case 'events':
+      return { ...region, schedule: { ...region.schedule, spacing: past } };
+    case 'capstone':
+      return { ...region, schedule: { ...region.schedule, window: past } };
+  }
 }
 
 /** The seeds `--seeds` names: 1 to a count, or a range `<a>-<b>`, both included; 1 to 20 where it is not set. */
@@ -273,8 +356,7 @@ function isIds(value: unknown): value is string[] {
  * it took.
  */
 function chronicleOf(
-  catalogue: Catalogue,
-  { age, region, campaign, civilization, walk }: Cell,
+  { catalogue, age, region, campaign, civilization, walk }: Cell,
   seed: number,
   turnCap: number,
 ): { readonly launch: Sequence; readonly driven: Driven; readonly ms: number } {
@@ -286,27 +368,41 @@ function chronicleOf(
 
 /**
  * The cell as the command that made it, one comment line of JSON, the campaign's technologies whole;
- * `without` is dropped by the JSON where no gambit is left out, and `goal` where none is named.
+ * `without` is dropped by the JSON where no gambit is left out, `goal` where none is named, and `off`
+ * where nothing is switched off.
  */
 function recordOf(
-  { age, region, campaign, recorded: civilization, persona, without, goal }: Cell,
+  { age, region, campaign, recorded: civilization, persona, without, goal, off }: Cell,
   turns: number,
   run: { readonly seeds: Seeds['given'] } | { readonly trace: number },
 ): string {
   const learned = campaign.technologies;
-  const cell = { age, region, civilization, learned, persona, without, goal, turns, ...run };
+  const cell = {
+    age,
+    region,
+    civilization,
+    learned,
+    persona,
+    without,
+    goal,
+    off: off.length === 0 ? undefined : off,
+    turns,
+    ...run,
+  };
   return `# ${JSON.stringify(cell)}`;
 }
 
 /**
- * The columns a row reads off a chronicle driven from its launch on the campaign: what its ending
- * paid, the chronicle it was left on, and what the launch and every command landed did on the way.
+ * The columns a row reads off a chronicle driven from its launch on the campaign, with what is
+ * switched off: what its ending paid, the chronicle it was left on, and what the launch and every
+ * command landed did on the way.
  */
 export function chronicleColumns(
   catalogue: Catalogue,
   campaign: Campaign,
   launch: Sequence,
   { chronicle, end, landed }: Driven,
+  off: readonly Switch[],
 ): Column[] {
   const stages = [...launch.stages, ...landed.flatMap((command) => command.stages)];
   const played = plays(stages).map(({ card }) => card);
@@ -334,7 +430,7 @@ export function chronicleColumns(
   return [
     ['influence', influencePaid(catalogue, campaign, chronicle, end)],
     ['capstone', chronicle.timeline.capstone.id],
-    ['capstone-turn', chronicle.timeline.capstone.turn],
+    ['capstone-turn', off.includes('capstone') ? '' : chronicle.timeline.capstone.turn],
     ...RESOURCES.map((resource): Column => [resource, chronicle.resources[resource]]),
     ['population', chronicle.population],
     ['held', chronicle.held.length],

@@ -12,6 +12,7 @@ import {
   ageOf,
   type Catalogue,
   type Civilization,
+  neutralOf,
   unitKind,
   victoryTechnologyOf,
 } from '../src/rules/catalogue';
@@ -38,6 +39,7 @@ import {
   CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
+  CLEARING,
   CROWD,
   CROWD_NEED,
   camped,
@@ -92,7 +94,7 @@ import { type Chronicle, cardsInPiles } from '../src/rules/state';
 import { type Faction, type UnitStats, unitAt } from '../src/rules/units';
 import { chartingWalks } from './builder';
 import { PERSONAS } from './personas';
-import { chronicleColumns, simulated } from './sim-body';
+import { chronicleColumns, simulated, switchedOff } from './sim-body';
 import { type Driven, type Persona, playedBy } from './sim-driver';
 
 /** What the simulator prints on the fixture's content, or on the content handed in. */
@@ -242,7 +244,7 @@ test('a civilization handed in, inline or in a file, is the one the chronicles a
     ending: driven.end.outcome,
     turn: `${driven.end.turn}`,
     ...Object.fromEntries(
-      chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, driven).map(
+      chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, driven, []).map(
         ([column, value]) => [column, `${value}`],
       ),
     ),
@@ -331,6 +333,88 @@ test('a gambit number from none or past the persona’s gambit count is refused,
   }
 });
 
+test('a cell played with its camps, its neutral, its events and its capstone switched off opens on no camp, no neutral’s city and no unit but the player’s, then stands and kills no enemy, takes no deal and stops on the cap, the capstone drawn and its turn blank; the record names what is off as given', () => {
+  const off = ['capstone', 'camps', 'events', 'neutral'] as const;
+  const lines = printed(['--seeds', '1', '--off', off.join(',')]);
+  const [row] = rowsOf(lines);
+  const openingOn = (catalogue: Catalogue, region: string): Chronicle =>
+    launchedFromCampaign(
+      catalogue,
+      freshCampaign(catalogue),
+      { age: AGE, region, civilization: CIVILIZATION_ID },
+      1,
+    ).chronicle;
+  const sited = [CAMP.building, neutralOf(CATALOGUE, AGE).building];
+  const opposing = (chronicle: Chronicle): string[] => [
+    ...chronicle.tiles.flatMap(({ building }) =>
+      building !== undefined && sited.includes(building) ? [building] : [],
+    ),
+    ...chronicle.units.flatMap(({ faction }) => (faction === 'player' ? [] : [faction])),
+  ];
+
+  const [eventsOn] = rowsOf(
+    printed(['--seeds', '1', '--off', off.filter((each) => each !== 'events').join(',')]),
+  );
+
+  expect(recordRead(lines).off).toEqual(off);
+  expect(eventsOn.deals).not.toBe('');
+  for (const region of [REGION, CLEARING]) {
+    expect(opposing(openingOn(CATALOGUE, region))).not.toEqual([]);
+    expect(opposing(openingOn(switchedOff(CATALOGUE, AGE, region, off), region))).toEqual([]);
+  }
+  expect(row).toMatchObject({
+    ending: 'stopped',
+    cause: 'turn-cap',
+    turn: `${recordRead(lines).turns}`,
+    capstone: openingOn(CATALOGUE, REGION).timeline.capstone.id,
+    'capstone-turn': '',
+    'units:enemy': '',
+    'killed:enemy': '',
+    deals: '',
+  });
+});
+
+test('a cell played with its capstone switched off stops on the cap where the same seed with it on reaches the victory its capstone brings, every command before the capstone’s turn the same, on the trace too', () => {
+  const passing = changed({
+    capstones: Object.fromEntries(
+      Object.entries(CATALOGUE.capstones).map(([id, capstone]) => [
+        id,
+        { ...capstone, count: () => capstone.need },
+      ]),
+    ),
+  });
+  const ran = (args: readonly string[]): string[] => printed(args, passing);
+  const [on] = rowsOf(ran(['--seeds', '1', '--off', 'camps,events']));
+  const capped = ran(['--seeds', '1', '--off', 'camps,events,capstone']);
+  const [off] = rowsOf(capped);
+  const cap = recordRead(capped).turns;
+  const [, ...tracedOn] = ran(['--trace', '1', '--off', 'camps,events']);
+  const [traced, ...tracedOff] = ran(['--trace', '1', '--off', 'camps,events,capstone']);
+  const beforeLanding = (trace: readonly string[]): string[] =>
+    trace.filter((line) => Number(/^turn (\d+)/.exec(line)?.[1]) < Number(on['capstone-turn']));
+
+  expect([on.ending, on.turn]).toEqual(['victory', on['capstone-turn']]);
+  expect([off.ending, off.cause, off.turn, off.capstone, off['capstone-turn']]).toEqual([
+    'stopped',
+    'turn-cap',
+    `${cap}`,
+    on.capstone,
+    '',
+  ]);
+  expect(recordRead([traced]).off).toEqual(['camps', 'events', 'capstone']);
+  expect(beforeLanding(tracedOn)).not.toEqual([]);
+  expect(beforeLanding(tracedOff)).toEqual(beforeLanding(tracedOn));
+  expect(tracedOff.at(-1)).toBe(`turn ${cap} | stopped turn-cap`);
+});
+
+test('a switch that is none of the four, or one named twice, is refused', () => {
+  expectRefused(
+    ['--off', 'camps,camp'],
+    /^--off names no switch camp; the switches: camps, neutral, events, capstone$/,
+  );
+  expectRefused(['--off', 'events,capstone,events'], /^--off names events twice$/);
+});
+
 test('an achievement the launch reaches reads the settle phase’s turn, and one reached as the turn moves the turn it moved to', () => {
   const { achievements } = ageOf(CATALOGUE, AGE);
   const early = achieved({
@@ -353,7 +437,7 @@ test('an achievement reached during an end of turn, before the turn moves, reads
   const launch = unchanged(city);
   const driven = playedBy(CATALOGUE, ending, launch, city.turn + 1);
   const columns = Object.fromEntries(
-    chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, driven),
+    chronicleColumns(CATALOGUE, freshCampaign(CATALOGUE), launch, driven, []),
   );
 
   expect(driven.chronicle.turn).not.toBe(city.turn);
@@ -387,6 +471,7 @@ test('a unit killed is read under its faction by kind, and a deal taken with the
       freshCampaign(CATALOGUE),
       launch,
       playedBy(CATALOGUE, ambushing, launch, 3),
+      [],
     ),
   );
 
@@ -414,6 +499,7 @@ test('a capture’s deal taken is read with the building captured, the reward ta
       freshCampaign(CATALOGUE),
       launch,
       playedBy(CATALOGUE, PERSONAS.idle(), launch, capturing.turn + 1),
+      [],
     ),
   );
   const [first] = Object.keys(CAMP.rewards);
