@@ -12,7 +12,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The cell's switches** — the simulator plays a cell with its camps, its neutral, its events or its capstone switched off, the cell's record naming what is off.
+- **The cell's switches** — `npm run sim -- --off camps,neutral,events,capstone` plays the cell with those four off, any subset of them in any order, the cell's record naming what is off; a switch is the content handed the rules changed for the cell alone, and `tools/sim.test.ts` proves each of the four on the fixture. Doc-impact: `docs/SIMULATOR.md`. [board/the-cells-switches.md](board/the-cells-switches.md)
 - **The stocks over the turns** — the row reads the city's stocks and population at fixed turns beside what it reads at the ending, so a query draws the curve.
 - **The end-of-Stone deck** — a deck of the tree's last cards, authored in `workflow/decks/` for the pass's readings.
 - **Military off the Hearth, onto flint** — the Hearth's yield loses its military and flint gives military in place of production, measured on the starting deck with the switches off, then felt in play.
