@@ -13,6 +13,7 @@ import {
   aimed,
   aimLine,
   bareAimable,
+  bareTile,
   bareWith,
   besideTheCards,
   browse,
@@ -923,13 +924,13 @@ test('a left click anywhere on the infopanel reaches no tile under it, and lets 
 
   await openSaved(page, opened);
   const home = await onScreen(page, `hand-${index}`);
-  const city = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
+  const bare = await onScreen(page, `tile-${tileKey(bareTile(opened))}`);
 
-  /** The card aimed, then the city's tile inspected under the aim. */
+  /** The card aimed, then a bare tile inspected under the aim. */
   const aimedAndInspected = async (): Promise<void> => {
     await page.mouse.click(home.x, home.y);
     await aimed(page);
-    await page.mouse.click(city.x, city.y, { button: 'right' });
+    await page.mouse.click(bare.x, bare.y, { button: 'right' });
     await expect.poll(() => shownCard(page)).toBeDefined();
     await rested(page);
   };
