@@ -20,7 +20,7 @@ One job: run `npm run sim` on the cell asked for and hand back what it printed. 
 - A stop is an error to investigate, never a result, but for a stop on the cap with the capstone off, which is such a cell's ending. A row whose ending is `stopped` is reported first, with its seed and cause, and its trace is the next measurement.
 - Which seed to replay is read off the rows; a run is never repeated in search of one.
 - No script over the rows and none over the rules: a question about the rows is a query, and one the rows cannot answer is a column to add, reported for a board line.
-- No measurement runs on CI and none is committed.
+- No measurement runs on CI and none is committed permanently: a baseline the user orders kept lives under `workflow/`, ephemeral like the rest of it, with its setup written beside it.
 - A content variant is its own run, in its own process: the edit, the run, then `git checkout <file>` and `git status --porcelain <file>` printing nothing, unless the user is tuning, in which case the edit stays on the tree and the hand-back says so. Two files are compared seed by seed: the same seed is the same map, through the join below.
 
 ## Sweeps

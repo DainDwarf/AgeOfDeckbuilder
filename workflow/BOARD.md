@@ -12,5 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **Playing bread on the builder persona** — the builder never plays bread on the end-of-Stone deck, in 20 of 20 seeds of the economy free play.
 - **A production upkeep for buildings** — a trial: a building costs production each turn to keep, a sink for the production that piles up, measured on the three decks' curves.
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
