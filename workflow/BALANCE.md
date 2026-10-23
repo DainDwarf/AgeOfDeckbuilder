@@ -1,6 +1,6 @@
 # Balance findings
 
-The balance issues met in play, kept here until the headless simulator is good enough to inform a decision on them; the balance pass rung reads this file when its turn comes, and an entry leaves when the pass settles it. An entry is what was seen, where, and the lead if there is one — no numbers proposed, no fix designed. Nothing here is a board line. The decks the findings were met with stand in `decks/`, one per age in the content's own format, so the simulator plays what was played: `npm run sim -- --civilization workflow/decks/stone.json`.
+The balance issues met in play, kept here until the headless simulator is good enough to inform a decision on them; the balance pass rung reads this file when its turn comes, and an entry leaves when the pass settles it. An entry is what was seen, where, and the lead if there is one — no numbers proposed, no fix designed. Nothing here is a board line. The decks the pass reads on stand in `decks/`, in the content's own format: the Stone deck as it was played, the same without its scouts, and the end-of-Stone deck, the no-scouts one with its hunts and two of its gathers taken out and the tree's last cards added, so the simulator plays what was played, `npm run sim -- --civilization workflow/decks/stone.json`, and the end deck with the whole tree learned, `npm run sim -- --age stone --civilization workflow/decks/stone-end.json herbalism agriculture trapping fire irrigation domestication bow-and-arrow pottery calendar bread tanning raft megalith bartering fishing`.
 
 ## Nomadic Age
 

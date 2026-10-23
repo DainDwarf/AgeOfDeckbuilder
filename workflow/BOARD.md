@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The end-of-Stone deck** — `workflow/decks/stone-end.json` holds the no-scouts Stone deck without its Hunts and down to four Gathers, with Tannery, Megalith, Bread, Food trade and Goods trade added, one copy each, a cell on it with the whole tree learned lands every chronicle, and `BALANCE.md` names the three decks and the command. Doc-impact: none. [board/end-of-stone-deck.md](board/end-of-stone-deck.md)
 - **Military off the Hearth, onto flint** — the Hearth's yield loses its military and flint gives military in place of production, measured on the starting deck with the switches off, then felt in play.
 - **A production upkeep for buildings** — a trial: a building costs production each turn to keep, a sink for the production that piles up, measured on the three decks' curves.
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
