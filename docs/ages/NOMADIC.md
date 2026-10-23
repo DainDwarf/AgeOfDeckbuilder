@@ -8,20 +8,20 @@ The Nomadic Age is where humanity stops wandering, and it is the first chronicle
 
 ## The settle ✅
 
-The civilization's city section holds the player's city and its card, and its deck's settle section two settle cards, a worker and a scout, every one costing nothing and the two units taking no population — the band arrives with them. The settle phase is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The ground around the disc's centre is a biome of its own, plain, forest and hills and nothing else, rolled compact, so the settle chooses among tiles that feed and build and the water and the mountain lie beyond the first steps. The player's city keeps the terrain it lands on, and its building, the **hearth**, gives **military** on top of that terrain and nothing else. Nothing on the map yields military, so the player's city is where warriors come from, and the culture the border grows by is the sites' alone, so the border stays a few tiles. The tile is a choice a new player reads off the map: a plain feeds growth, and hills and forest give production.
+The civilization's city section holds the player's city and its card, and its deck's settle section two settle cards, a worker and a scout, every one costing nothing and the two units taking no population — the band arrives with them. The settle phase is the two acts the age is named for: choose where to stop, and send someone out. The settle lands on plain, forest or hills; water and mountain refuse it. The ground around the disc's centre is a biome of its own, plain, forest and hills and nothing else, rolled compact, so the settle chooses among tiles that feed and build and the water and the mountain lie beyond the first steps. The player's city keeps the terrain it lands on, and its building, the **hearth**, gives nothing on top of that terrain. In this age nothing but flint yields military, so the flint hills are where warriors come from, and the culture the border grows by is the sites' alone, so the border stays a few tiles. The tile is a choice a new player reads off the map: a plain feeds growth, and hills and forest give production.
 
 ## The land ✅
 
 A terrain gives one point of one resource, and a feature gives the second. So a bare tile is thin, a featured tile is worth walking to, and the band is always looking for the tile that has two.
 
-| Terrain | Gives | Feature | Gives |
-| --- | --- | --- | --- |
-| plain | food | **fertile** or **cattle** | food |
-| forest | production | **deer** | food |
-| hills | production | **flint** | production |
-| coast | food | — | — |
-| ocean | nothing | — | — |
-| mountain | nothing; beyond every unit | — | — |
+| Terrain  | Gives                      | Feature                   | Gives    |
+| -------- | -------------------------- | ------------------------- | -------- |
+| plain    | food                       | **fertile** or **cattle** | food     |
+| forest   | production                 | **deer**                  | food     |
+| hills    | production                 | **flint**                 | military |
+| coast    | food                       | —                         | —        |
+| ocean    | nothing                    | —                         | —        |
+| mountain | nothing; beyond every unit | —                         | —        |
 
 Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; ocean and mountain are crossed by nothing, and coast by embarked units alone. Features are dealt rarely enough to be sought after, fertile, deer and cattle rarer than flint, so going for more of any of them is a journey; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
 
@@ -63,7 +63,7 @@ Lean season is food against a raid, a rival band is a raid now against a camp la
 
 ## The capstone ✅
 
-**The first shelter.** When it lands it adds one card to the top of the draw pile, **Shelter**, the age's only building: it costs production, a lot of it in the age's terms, and goes on plain, forest or hills inside the border through a worker, like every building after it. The chronicle ends in victory the moment the shelter stands, in the middle of the play that builds it. The pressure until then is the schedule, which keeps dealing and keeps escalating, so a band that dawdles meets larger rival bands, not a timer. Passing it is the checklist of everything the age taught — production stored off the flint and the forest, a tile claimed, a worker brought home and sent in — and the card the player sees at the opening reads as a promise: build this, and the age is over.
+**The first shelter.** When it lands it adds one card to the top of the draw pile, **Shelter**, the age's only building: it costs production, a lot of it in the age's terms, and goes on plain, forest or hills inside the border through a worker, like every building after it. The chronicle ends in victory the moment the shelter stands, in the middle of the play that builds it. The pressure until then is the schedule, which keeps dealing and keeps escalating, so a band that dawdles meets larger rival bands, not a timer. Passing it is the checklist of everything the age taught — production stored off the hills and the forest, a tile claimed, a worker brought home and sent in — and the card the player sees at the opening reads as a promise: build this, and the age is over.
 
 ## The achievement ✅
 

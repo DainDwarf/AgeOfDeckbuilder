@@ -4,7 +4,6 @@ The balance issues met in play, kept here until the headless simulator is good e
 
 ## Nomadic Age
 
-- **Military off the Hearth, onto flint**: the Hearth's yield loses its military and flint gives military instead of production. Tried before and rejected; the Nomadic Age reads chill enough now to carry it.
 - **The rival band is rough**: the band itself needs balancing, and its event's answers are no real choice — "fight them" was never taken.
 
 ## Stone Age

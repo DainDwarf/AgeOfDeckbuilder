@@ -334,7 +334,7 @@ const TABLES: Tables = {
     },
   },
   buildings: {
-    hearth: { terrains: ['plain', 'forest', 'hills'], yields: { military: 1 } },
+    hearth: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     camp: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     shelter: { terrains: ['plain', 'forest', 'hills'], yields: {} },
     'painted-cave': { terrains: ['hills'], yields: {} },
@@ -345,7 +345,7 @@ const TABLES: Tables = {
     fertile: { terrain: 'plain', yields: { food: 1 } },
     deer: { terrain: 'forest', yields: { food: 1 } },
     cattle: { terrain: 'plain', yields: { food: 1 } },
-    flint: { terrain: 'hills', yields: { production: 1 } },
+    flint: { terrain: 'hills', yields: { military: 1 } },
   },
   improvements: {},
 };
