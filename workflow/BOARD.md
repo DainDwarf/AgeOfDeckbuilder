@@ -12,5 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A production upkeep for buildings** — a trial: a building costs production each turn to keep, a sink for the production that piles up, measured on the three decks' curves.
+- **A building's upkeep** — a proper building upkeep: a building costs production each turn to keep, one production per built building the trial settled on, with the player-facing information on the screen.
+- **The personas guard their incomes** — safeguarding the gambits: no gambit of either persona places, reassigns or unassigns in a way that puts any resource's income below nothing, the guard that let the upkeep trial run without a city falling.
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
