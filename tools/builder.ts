@@ -4,6 +4,7 @@ import {
   type Catalogue,
   capstoneOf,
   cardOf,
+  costOf,
   type Entering,
   earningOf,
   entered,
@@ -21,7 +22,7 @@ import {
   outcome,
   refusalOf,
 } from '../src/rules/chronicle';
-import { cityCommand, cityDrag, claimable } from '../src/rules/city';
+import { cityCommand, cityDrag, claimable, income } from '../src/rules/city';
 import { targetsInOwnSight } from '../src/rules/enemies';
 import {
   CENTRE,
@@ -35,11 +36,12 @@ import {
   tileKey,
   tilesBeside,
 } from '../src/rules/map';
-import type { Resources } from '../src/rules/resources';
+import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { offered } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import {
   assignedTo,
+  type CardId,
   type Chronicle,
   type ChronicleAchievement,
   type ChronicleCard,
@@ -278,6 +280,11 @@ export function builder(goal?: string): Persona {
         garrisonWalkedHome(catalogue, chronicle, attackersOf(chronicle)),
     }),
     declaringNoWar(GAIN_PLAYED),
+    declaringNoWar({
+      sentence:
+        'Play a card aimed at nothing whose trial raises a resource the income gives less of than each resource the card costs',
+      candidates: lessGivenRaised,
+    }),
     declaringNoWar(STRIKING_DISCARDED),
     declaringNoWar(HAND_CYCLED),
     TURN_ENDED,
@@ -1203,18 +1210,46 @@ export function garrisonWalkedHome(
   });
 }
 
-function* gainPlayed(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
-  for (const [index, held] of chronicle.hand.entries()) {
-    const card = cardOf(catalogue, held.id);
+/**
+ * The plays of the cards in hand aimed at nothing that the refusal lets through, hazards passed, in
+ * hand order, each with the card it plays and the chronicle its trial leaves; one whose trial drew
+ * is passed.
+ */
+function* trialsAtNothing(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+): Generator<{ readonly command: Command; readonly id: CardId; readonly after: Chronicle }> {
+  for (const [index, { id }] of chronicle.hand.entries()) {
+    const card = cardOf(catalogue, id);
     if (card.kind === 'hazard' || aimOf(card).aim !== 'none') continue;
-    if (!playable(refusalOf(catalogue, chronicle, held.id))) continue;
+    if (!playable(refusalOf(catalogue, chronicle, id))) continue;
     const command: Command = { type: 'play', index, aim: 'none' };
     const after = trial(catalogue, chronicle, command);
-    if (after === undefined) continue;
+    if (after !== undefined) yield { command, id, after };
+  }
+}
+
+function* gainPlayed(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
+  for (const { command, after } of trialsAtNothing(catalogue, chronicle)) {
     if (
       worthOf(after.resources) > worthOf(chronicle.resources) ||
       after.population > chronicle.population
     ) {
+      yield command;
+    }
+  }
+}
+
+function* lessGivenRaised(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
+  const afterIncome = income(catalogue, chronicle, 'player').chronicle.resources;
+  const given = (resource: Resource): number =>
+    afterIncome[resource] - chronicle.resources[resource];
+  for (const { command, id, after } of trialsAtNothing(catalogue, chronicle)) {
+    const costs = costOf(catalogue, id);
+    const raised = RESOURCES.filter(
+      (resource) => after.resources[resource] > chronicle.resources[resource],
+    );
+    if (raised.some((resource) => costs.every((cost) => given(resource) < given(cost.resource)))) {
       yield command;
     }
   }

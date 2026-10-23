@@ -596,6 +596,12 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'none',
       effect: (_catalogue, paid) => gained(paid, { food: 2 }),
     },
+    PH_Offering: {
+      kind: 'instant',
+      cost: { food: 1 },
+      aim: 'none',
+      effect: (_catalogue, paid) => gained(paid, { culture: 1 }),
+    },
     PH_Mine: { kind: 'action', cost: { production: 3 }, ...placesImprovement('PH_Mine') },
     PH_Stake: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Stake') },
     PH_Snare: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Snare') },

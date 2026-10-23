@@ -1339,6 +1339,22 @@ test('the builder plays the card aimed at nothing whose trial raises the stocksâ
   expect(answerOf('builder', 25, gaining)).toEqual({ type: 'play', index: 2, aim: 'none' });
 });
 
+test('the builder plays the card aimed at nothing whose trial raises a resource the income gives less of than each resource the card costs, and not where the income gives as much of it or more', () => {
+  const offering = (inside: Terrain[]): Chronicle =>
+    cityOf(inside, {
+      hand: ['PH_Almanac', 'PH_Offering'],
+      resources: onlyStocks({ food: 1 }),
+    });
+
+  expect(answerOf('builder', 26, offering(['urban', 'glade', 'glade']))).toEqual({
+    type: 'play',
+    index: 1,
+    aim: 'none',
+  });
+  expect(answerOf('builder', 26, offering(['urban', 'glade']))).toBeUndefined();
+  expect(answerOf('builder', 26, offering(['urban']))).toBeUndefined();
+});
+
 /** A city holding its own tile alone, the hand named and the stocks for a card aimed at the hand. */
 function discarding(hand: string[]): Chronicle {
   return cityOf(['urban'], { hand, resources: onlyStocks({ science: 1 }) });
@@ -1346,7 +1362,7 @@ function discarding(hand: string[]): Chronicle {
 
 test('a card aimed at the hand is played on the first card in hand that strikes, a challenge as a hazard, and on none while no card strikes', () => {
   for (const [persona, gambit] of [
-    ['builder', 26],
+    ['builder', 27],
     ['warlord', 31],
   ] as const) {
     expect(
@@ -1361,7 +1377,7 @@ test('a card aimed at the hand is played on the first card in hand that strikes,
 
 test('a card aimed at the hand is played on the first other card in hand, whatever it is', () => {
   for (const [persona, gambit] of [
-    ['builder', 27],
+    ['builder', 28],
     ['warlord', 32],
   ] as const) {
     expect(answerOf(persona, gambit, discarding(['PH_Discard', 'PH_Ordeal', 'PH_Hunger']))).toEqual(
