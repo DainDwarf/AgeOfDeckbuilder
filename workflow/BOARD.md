@@ -6,6 +6,8 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The balance pass** — the Stone Age's numbers, measured through the simulator and felt in play, the findings kept in [`BALANCE.md`](BALANCE.md) first among them; Domestication's goal, which a worker standing on one herd reaches, made a focus, Tanning's need of two herds inside the border weighed, Fishing's need of 50 food from coast and the Fishery's gain on the coast around it weighed, and Trapping, Irrigation, Pasture and Clay pit, four improvements of one price and one gain, weighed against one another; a trial of where military comes from: military taken off the Hearth's yield and flint giving it in place of production.
+- **The economy pass** — is the progress of the player's resources and the cost of actions on a nice curve: measured with the camps, the neutral and the events switched off in the simulator and the stocks read over the turns, on the starting deck, the Stone Age deck and a newly authored end-of-Stone-Age deck; production exploding too quickly, the monument's first stone rarely laid, and the trial of military taken off the Hearth's yield and flint giving it in place of production among its questions, the findings in [`BALANCE.md`](BALANCE.md) read first.
+- **The camps pass** — are the enemy camps too harsh: measured with the camps and the neutral back on and the events still off, on the same decks and seeds; the first camp wave winning nearly every Stone seed, and the neutral destroyed too often, among its questions.
+- **The events pass** — are the events good: measured with everything back on; the rival band's answer both personas take and the player never, the Flood taking the village when nothing else stands, and a review of the Nomadic events among its questions.
 
 ## Lines
