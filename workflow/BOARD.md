@@ -6,9 +6,15 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The economy pass** — is the progress of the player's resources and the cost of actions on a nice curve: measured with the camps, the neutral and the events switched off in the simulator and the stocks read over the turns, on the starting deck, the Stone Age deck and a newly authored end-of-Stone-Age deck; production exploding too quickly, the monument's first stone rarely laid, and the trial of military taken off the Hearth's yield and flint giving it in place of production among its questions, the findings in [`BALANCE.md`](BALANCE.md) read first.
 - **The camps pass** — are the enemy camps too harsh: measured with the camps and the neutral back on and the events still off, on the same decks and seeds; the first camp wave winning nearly every Stone seed, and the neutral destroyed too often, among its questions.
 - **The events pass** — are the events good: measured with everything back on; the rival band's answer both personas take and the player never, the Flood taking the village when nothing else stands, and a review of the Nomadic events among its questions.
 - **The goals pass** — are the technologies' goals good: each checked for whether a player going for it reaches it, on which turn, and whether it asks more than a chronicle played as usual gives; Domestication's goal, which a worker standing on one herd reaches, first among them.
 
 ## Lines
+
+- **The cell's switches** — the simulator plays a cell with its camps, its neutral, its events or its capstone switched off, the cell's record naming what is off.
+- **The stocks over the turns** — the row reads the city's stocks and population at fixed turns beside what it reads at the ending, so a query draws the curve.
+- **The end-of-Stone deck** — a deck of the tree's last cards, authored in `workflow/decks/` for the pass's readings.
+- **Military off the Hearth, onto flint** — the Hearth's yield loses its military and flint gives military in place of production, measured on the starting deck with the switches off, then felt in play.
+- **A production upkeep for buildings** — a trial: a building costs production each turn to keep, a sink for the production that piles up, measured on the three decks' curves.
+- **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
