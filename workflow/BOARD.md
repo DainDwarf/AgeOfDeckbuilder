@@ -12,6 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Military off the Hearth, onto flint** — the Hearth's yield loses its military and flint gives military in place of production, measured on the starting deck with the switches off, then felt in play.
+- **Military off the Hearth, onto flint** — the Hearth gives nothing on top of its terrain and flint gives military in place of production, the Village keeping its own; measured on the starting deck in the Nomadic Age with the camps, the neutral and the events off, the builder and the warlord over 20 seeds before and after, reported at the hand-back, then felt in play. Doc-impact: `docs/ages/NOMADIC.md`. [board/military-onto-flint.md](board/military-onto-flint.md)
 - **A production upkeep for buildings** — a trial: a building costs production each turn to keep, a sink for the production that piles up, measured on the three decks' curves.
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
