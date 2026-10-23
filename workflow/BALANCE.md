@@ -11,7 +11,6 @@ The balance issues met in play, kept here until the headless simulator is good e
 
 - **The neutral gets pummelled by the barbarians**: seen in two games out of two. Lead: a neutral that starts on desert is weak by construction, which may be the whole cause rather than the camps' strength.
 - **Beast Bones**: the tools become a trophy as well, and more production.
-- **Domestication's goal**: a worker standing on one herd reaches it; a focus to make of it. Held for v0.1.0's pass.
 - **Tanning's need**: two herds inside the border, to weigh. Held for v0.1.0's pass.
 - **Fishing's need and the Fishery's gain**: 50 food from coast, and the gain on the coast around the Fishery, to weigh. Held for v0.1.0's pass.
 - **Four improvements of one price and one gain**: Trapping, Irrigation, Pasture and Clay pit, to weigh against one another. Held for v0.1.0's pass.
