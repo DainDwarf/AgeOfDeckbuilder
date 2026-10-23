@@ -9,9 +9,9 @@ One job: run `npm run sim` on the cell asked for and hand back what it printed. 
 
 ## Procedure
 
-1. **Name the cell from the question.** `--age`, `--region`, `--persona` and `--seeds`, each defaulting to what the launch screen opens on, the idle and 20, `--seeds` taking a count or a range `<a>-<b>`; `--without <n>` leaves the persona's gambit of that number out of its walk, the number as `--personas` prints it; `--off <switch>[,<switch>...]` plays the cell with its camps, its neutral, its events or its capstone switched off, the ones named; `--goal <technology>` names the goal the persona's goal gambits go for, the achievement of a technology the cell's chronicles read, the capstone without it or once the goal is reached; `--civilization` hands in the civilization played, a JSON inline or in a file in the content's own format, the campaign's first without it; the age and the region learn what reaches them, and a technology named after the flags learns more. A civilization handed in is written to the scratchpad as a JSON file and the file's path given, the inline form being for a one-liner alone. `--turns <n>` moves the turn cap off 60. `--personas` prints every persona as its sentences.
+1. **Name the cell from the question.** `--age`, `--region`, `--persona` and `--seeds`, each defaulting to what the launch screen opens on, the idle and 20, `--seeds` taking a count or a range `<a>-<b>`; `--without <n>` leaves the persona's gambit of that number out of its walk, the number as `--personas` prints it; `--off <switch>[,<switch>...]` plays the cell with its camps, its neutral, its events or its capstone switched off, the ones named; `--goal <technology>` names the goal the persona's goal gambits go for, the achievement of a technology the cell's chronicles read, the capstone without it or once the goal is reached; `--civilization` hands in the civilization played, a JSON inline or in a file in the content's own format, the campaign's first without it; the age and the region learn what reaches them, and a technology named after the flags learns more. A civilization handed in is written to the scratchpad as a JSON file and the file's path given, the inline form being for a one-liner alone. `--turns <n>` moves the turn cap off 60. `--every <n>` writes one row more as each nth turn opens, the ending's columns blank, and goes beside no `--trace`. `--personas` prints every persona as its sentences.
 2. **Write the rows to the scratchpad**, `--out <scratchpad>/<name>.csv`, the name the question's word, never into the tree; the file's first line holds the cell, read with `Get-Content <file> -TotalCount 1`. A run past a few seconds goes in the background; its end resumes the turn.
-3. **Query the file for what the rows say**, through the recipes below, every number read off a query's answer and none counted by eye: the endings and their causes, the turns, the stops with their seeds; the achievements reached and on which turns, the influence paid, the stocks and population the city ended on, the cards never played, the deals' entries taken, the units killed. Then stop.
+3. **Query the file for what the rows say**, through the recipes below, every number read off a query's answer and none counted by eye: the endings and their causes, the turns, the stops with their seeds; the achievements reached and on which turns, the influence paid, the stocks and population the city ended on and, with `--every`, the curve of any column over the turns, the cards never played, the deals' entries taken, the units killed. Then stop.
 4. **Replay a seed worth a look** with `--trace <seed>` on the same cell, the seed read off its row. The trace names the gambit behind every command.
 
 ## Rules
@@ -60,7 +60,7 @@ $jobs | ForEach-Object -Parallel {
 
 ## Queries
 
-The rows are queried in place with DuckDB's command line, `duckdb -c "<sql>"`, on the file `--out` wrote, every `read_csv` given `comment='#'` so the cell's first line is skipped; nothing is loaded and no session state stands. Several statements go in one `-c`, separated by `;`; a query of several lines goes through a PowerShell here-string, `$q = @"…"@; duckdb -c $q`, the path inside `read_csv('…')` written with forward slashes. A column named with `:` or `-` is double-quoted in SQL. A blank cell reads NULL, and a column blank in every row reads as text.
+The rows are queried in place with DuckDB's command line, `duckdb -c "<sql>"`, on the file `--out` wrote, every `read_csv` given `comment='#'` so the cell's first line is skipped; nothing is loaded and no session state stands. Several statements go in one `-c`, separated by `;`; a query of several lines goes through a PowerShell here-string, `$q = @"…"@; duckdb -c $q`, the path inside `read_csv('…')` written with forward slashes. A column named with `:` or `-` is double-quoted in SQL. A blank cell reads NULL, and a column blank in every row reads as text. A file written with `--every` holds a row per turn read beside each chronicle's ending row, the ending blank on it: a recipe over the endings takes `WHERE ending IS NOT NULL`, a curve `WHERE ending IS NULL`, and a join of two such files `USING (seed, turn)`.
 
 The endings and the stops, with their seeds:
 
@@ -72,6 +72,13 @@ Every number's distribution at once:
 
 ```sql
 SELECT column_name, min, q25, q50, q75, max, avg, null_percentage FROM (SUMMARIZE SELECT * EXCLUDE (seed) FROM read_csv('<file>', comment='#')) WHERE column_type <> 'VARCHAR'
+```
+
+A column's curve over the turns, each turn over the chronicles still standing on it, then the curve cut by how the chronicle ended:
+
+```sql
+SELECT turn, count(*) AS standing, min(production), median(production), max(production) FROM read_csv('<file>', comment='#') WHERE ending IS NULL GROUP BY turn ORDER BY turn;
+SELECT e.ending, turn, median(production) FROM read_csv('<file>', comment='#') r JOIN (SELECT seed, ending FROM read_csv('<file>', comment='#') WHERE ending IS NOT NULL) e USING (seed) WHERE r.ending IS NULL GROUP BY ALL ORDER BY 1, 2
 ```
 
 A listing unpacked — a faction's units or kills, the cards played or never played, the deals — into how many times each name is listed and the median of its number:

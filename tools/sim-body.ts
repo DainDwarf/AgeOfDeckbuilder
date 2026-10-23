@@ -16,7 +16,7 @@ import {
   civilizationMisfit,
   type Region,
 } from '../src/rules/catalogue';
-import { countOn, launched } from '../src/rules/chronicle';
+import { countOn, launched, outcome } from '../src/rules/chronicle';
 import type { TileCoords } from '../src/rules/map';
 import { entryOf } from '../src/rules/map-kinds';
 import { RESOURCES } from '../src/rules/resources';
@@ -38,7 +38,7 @@ import { type Driven, type End, type Persona, playedBy } from './sim-driver';
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
   '                      [--goal <technology>] [--without <n>] [--off <switch>[,<switch>...]] [--seeds <n>|<a>-<b>]',
-  '                      [--turns <n>] [--out <path>] [<technology>...]',
+  '                      [--turns <n>] [--every <n>] [--out <path>] [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
 ].join('\n');
@@ -53,6 +53,7 @@ const FLAGS = {
   off: { type: 'string' },
   seeds: { type: 'string' },
   turns: { type: 'string' },
+  every: { type: 'string' },
   out: { type: 'string' },
   trace: { type: 'string' },
   personas: { type: 'boolean' },
@@ -98,6 +99,12 @@ type Cell = {
 /** The seeds of the cell, the first and the last included, and the flag as it was given. */
 type Seeds = { readonly first: number; readonly last: number; readonly given: number | string };
 
+/**
+ * A chronicle driven as it stood at one moment: the chronicle, the commands landed by then, and how
+ * it came to its end where the moment is its end.
+ */
+type Moment = Omit<Driven, 'end'> & { readonly end: End | undefined };
+
 /** The simulator run on the game's content, on the command line's arguments. */
 export function sim(args: readonly string[]): void {
   simulated(CATALOGUE, args);
@@ -105,9 +112,10 @@ export function sim(args: readonly string[]): void {
 
 /**
  * The simulator run on the content, on the command line's arguments: the personas printed, one seed
- * traced after the cell's record, or one row per seed of the cell written, the record then the header
- * first, each row as its chronicle ends, to `--out` or else printed. A refusal is thrown before
- * anything is written.
+ * traced after the cell's record, or the rows of every seed of the cell written, the record then the
+ * header first, each seed's as its chronicle ends, one per nth turn it opened where `--every` names n
+ * and its ending's after them, to `--out` or else printed. A refusal is thrown before anything is
+ * written.
  */
 export function simulated(
   catalogue: Catalogue,
@@ -121,6 +129,7 @@ export function simulated(
   }
   const cell = cellOf(catalogue, values, positionals);
   const turnCap = wholeFlag(values, 'turns', 1, USAGE) ?? 60;
+  const every = wholeFlag(values, 'every', 1, USAGE);
   const seeds = seedsOf(values);
   const traced = wholeFlag(values, 'trace', 1, USAGE);
   const out = stringFlag(values, 'out', USAGE);
@@ -128,7 +137,9 @@ export function simulated(
   if (traced !== undefined) {
     if (out !== undefined)
       throw new Error(`--out beside --trace: the trace writes no row\n${USAGE}`);
-    print(recordOf(cell, turnCap, { trace: traced }));
+    if (every !== undefined)
+      throw new Error(`--every beside --trace: the trace writes no row\n${USAGE}`);
+    print(recordOf(cell, undefined, turnCap, { trace: traced }));
     const { driven } = chronicleOf(cell, traced, turnCap);
     for (const { turn, gambit, command } of driven.landed) {
       print(`turn ${turn} | ${gambit} | ${JSON.stringify(command)}`);
@@ -145,20 +156,55 @@ export function simulated(
           appendFileSync(path, `${line}\n`);
         };
   if (path !== undefined) writeFileSync(path, '');
-  write(recordOf(cell, turnCap, { seeds: seeds.given }));
+  write(recordOf(cell, every, turnCap, { seeds: seeds.given }));
   for (let seed = seeds.first; seed <= seeds.last; seed++) {
     const { launch, driven, ms } = chronicleOf(cell, seed, turnCap);
-    const columns: Column[] = [
-      ['seed', seed],
-      ['ending', driven.end.outcome],
-      ['cause', causeOf(driven.end) ?? ''],
-      ['turn', driven.end.turn],
-      ['ms', ms],
-      ...chronicleColumns(cell.catalogue, cell.campaign, launch, driven, cell.off),
+    const rows = [
+      ...(every === undefined ? [] : openingsOf(driven, every)).map((opening) =>
+        rowOf(cell, seed, launch, opening, ''),
+      ),
+      rowOf(cell, seed, launch, driven, ms),
     ];
-    if (seed === seeds.first) write(columns.map(([name]) => name).join(','));
-    write(columns.map(([, value]) => value).join(','));
+    if (seed === seeds.first) write(rows[0].map(([name]) => name).join(','));
+    for (const row of rows) write(row.map(([, value]) => value).join(','));
   }
+}
+
+/**
+ * The chronicle driven as each nth turn opened, from turn n, with the commands landed by then: the
+ * chronicle the command that moved the turn left, and none where that is the one the drive ended on.
+ */
+function openingsOf(driven: Driven, every: number): Moment[] {
+  return driven.landed.flatMap(({ turn, stages }, at): Moment[] => {
+    const opening = outcome(stages);
+    if (opening.turn === turn || opening.turn % every !== 0 || opening === driven.chronicle) {
+      return [];
+    }
+    return [{ chronicle: opening, landed: driven.landed.slice(0, at + 1), end: undefined }];
+  });
+}
+
+/**
+ * The row of the seed's chronicle of the cell at the moment: the seed, the end with its cause and its
+ * turn where the moment is the end, the turn alone otherwise, the time the chronicle took, and the
+ * columns read off the chronicle at the moment.
+ */
+function rowOf(
+  cell: Cell,
+  seed: number,
+  launch: Sequence,
+  moment: Moment,
+  ms: number | '',
+): Column[] {
+  const { end } = moment;
+  return [
+    ['seed', seed],
+    ['ending', end?.outcome ?? ''],
+    ['cause', causeOf(end)],
+    ['turn', end?.turn ?? moment.chronicle.turn],
+    ['ms', ms],
+    ...chronicleColumns(cell.catalogue, cell.campaign, launch, moment, cell.off),
+  ];
 }
 
 /**
@@ -368,11 +414,12 @@ function chronicleOf(
 
 /**
  * The cell as the command that made it, one comment line of JSON, the campaign's technologies whole;
- * `without` is dropped by the JSON where no gambit is left out, `goal` where none is named, and `off`
- * where nothing is switched off.
+ * `without` is dropped by the JSON where no gambit is left out, `goal` where none is named, `off`
+ * where nothing is switched off, and `every` where no row is read over the turns.
  */
 function recordOf(
   { age, region, campaign, recorded: civilization, persona, without, goal, off }: Cell,
+  every: number | undefined,
   turns: number,
   run: { readonly seeds: Seeds['given'] } | { readonly trace: number },
 ): string {
@@ -386,6 +433,7 @@ function recordOf(
     without,
     goal,
     off: off.length === 0 ? undefined : off,
+    every,
     turns,
     ...run,
   };
@@ -393,15 +441,15 @@ function recordOf(
 }
 
 /**
- * The columns a row reads off a chronicle driven from its launch on the campaign, with what is
- * switched off: what its ending paid, the chronicle it was left on, and what the launch and every
- * command landed did on the way.
+ * The columns a row reads off a chronicle driven from its launch on the campaign, at a moment, with
+ * what is switched off: what its ending paid where the moment is its end, the chronicle as it stood
+ * then, and what the launch and every command landed by then did on the way.
  */
 export function chronicleColumns(
   catalogue: Catalogue,
   campaign: Campaign,
   launch: Sequence,
-  { chronicle, end, landed }: Driven,
+  { chronicle, end, landed }: Moment,
   off: readonly Switch[],
 ): Column[] {
   const stages = [...launch.stages, ...landed.flatMap((command) => command.stages)];
@@ -447,13 +495,14 @@ export function chronicleColumns(
   ];
 }
 
-/** What the ending paid into the campaign, and nothing for a stop, which pays nothing. */
+/** What the ending paid into the campaign, and nothing for a stop, which pays nothing, or before the end. */
 function influencePaid(
   catalogue: Catalogue,
   campaign: Campaign,
   chronicle: Chronicle,
-  end: End,
+  end: End | undefined,
 ): number | '' {
+  if (end === undefined) return '';
   switch (end.outcome) {
     case 'victory':
     case 'defeat':
@@ -498,11 +547,12 @@ function listingOf(entries: Iterable<readonly [name: string, number: number]>): 
   return [...entries].map(([name, number]) => `${name}:${number}`).join(' ');
 }
 
-/** The defeat's cause or the stop's, and nothing for a victory. */
-function causeOf(end: End): string | undefined {
+/** The defeat's cause or the stop's, and nothing for a victory or before the end. */
+function causeOf(end: End | undefined): string {
+  if (end === undefined) return '';
   switch (end.outcome) {
     case 'victory':
-      return undefined;
+      return '';
     case 'defeat':
     case 'stopped':
       return end.cause;

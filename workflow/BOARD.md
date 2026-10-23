@@ -12,7 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The stocks over the turns** — `npm run sim -- --every <n>` writes before each chronicle's ending row one row per nth turn it opened, every column read at that opening and the ending's own blank, the record naming it, the file as today without the flag; `SIMULATOR.md` says so. Doc-impact: `docs/SIMULATOR.md`. [board/stocks-over-the-turns.md](board/stocks-over-the-turns.md)
 - **The end-of-Stone deck** — a deck of the tree's last cards, authored in `workflow/decks/` for the pass's readings.
 - **Military off the Hearth, onto flint** — the Hearth's yield loses its military and flint gives military in place of production, measured on the starting deck with the switches off, then felt in play.
 - **A production upkeep for buildings** — a trial: a building costs production each turn to keep, a sink for the production that piles up, measured on the three decks' curves.

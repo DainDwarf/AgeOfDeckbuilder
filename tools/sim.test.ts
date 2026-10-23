@@ -145,6 +145,45 @@ function namesListed(cell: string): string[] {
     .sort();
 }
 
+/**
+ * The row's listings of the units standing by faction and of the cards never played read the
+ * chronicle, and its cards played the ones named.
+ */
+function expectListings(
+  row: Record<string, string>,
+  chronicle: Chronicle,
+  played: readonly string[],
+): void {
+  const factions: Record<Faction, true> = { player: true, enemy: true, neutral: true };
+  for (const faction of Object.keys(factions) as Faction[]) {
+    expect(namesListed(row[`units:${faction}`])).toEqual(
+      chronicle.units
+        .filter((unit) => unit.faction === faction)
+        .map(({ stats }) => stats.type)
+        .sort(),
+    );
+  }
+  expect(namesListed(row.played)).toEqual([...played].sort());
+  expect(namesListed(row.unplayed)).toEqual(
+    cardsInPiles(chronicle)
+      .map(({ id }) => id)
+      .filter((id) => !played.includes(id))
+      .sort(),
+  );
+}
+
+/** The fixture's content, every capstone's count at its need from the opening. */
+function capstonesPassing(): Catalogue {
+  return changed({
+    capstones: Object.fromEntries(
+      Object.entries(CATALOGUE.capstones).map(([id, capstone]) => [
+        id,
+        { ...capstone, count: () => capstone.need },
+      ]),
+    ),
+  });
+}
+
 /** The cards the play commands played, by id: each the card of the hand it named when it was sent. */
 function cardsPlayed(landed: Driven['landed']): string[] {
   return landed.flatMap(({ command, stages }) =>
@@ -207,23 +246,7 @@ test('the idle drives each seed of the cell to the chronicle’s ending, the cel
   );
   for (const [at, row] of rows.entries()) {
     const { chronicle, landed } = drives[at];
-    const factions: Record<Faction, true> = { player: true, enemy: true, neutral: true };
-    for (const faction of Object.keys(factions) as Faction[]) {
-      expect(namesListed(row[`units:${faction}`])).toEqual(
-        chronicle.units
-          .filter((unit) => unit.faction === faction)
-          .map(({ stats }) => stats.type)
-          .sort(),
-      );
-    }
-    const played = cardsPlayed(landed);
-    expect(namesListed(row.played)).toEqual([...played].sort());
-    expect(namesListed(row.unplayed)).toEqual(
-      cardsInPiles(chronicle)
-        .map(({ id }) => id)
-        .filter((id) => !played.includes(id))
-        .sort(),
-    );
+    expectListings(row, chronicle, cardsPlayed(landed));
     expect(row.ms).toMatch(/^\d+$/);
   }
 });
@@ -293,6 +316,107 @@ test('a seed range plays its seeds from the first to the last, each the chronicl
   for (const value of ['0', '0-2', '3-2', '2-', '-2', 'two', '1-2-3']) {
     expectRefused(['--seeds', value], /^--seeds is neither/);
   }
+});
+
+test('with every n turns named, each seed writes before its ending row one row per nth turn its chronicle opened, from turn n, reading the chronicle as the turn’s first decision reads it and what landed before it, its ending, cause, influence and time blank; the header and the ending rows as without it, and the record carrying every before the turn cap', () => {
+  const every = 2;
+  const lines = printed(['--seeds', '2', '--every', `${every}`]);
+  const plain = printed(['--seeds', '2']);
+  const rows = rowsOf(lines);
+  const campaign = freshCampaign(CATALOGUE);
+  const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
+  const endings = rowsOf(plain).map(untimed);
+  const openings = [1, 2].map((seed) =>
+    playedBy(
+      CATALOGUE,
+      PERSONAS.idle(),
+      launchedFromCampaign(CATALOGUE, campaign, choices, seed),
+      60,
+    ).landed.flatMap(({ turn, stages }, at, landed) =>
+      turn > 0 && turn % every === 0 && landed[at - 1]?.turn !== turn
+        ? [{ seed, turn, chronicle: stages[0].before, before: landed.slice(0, at) }]
+        : [],
+    ),
+  );
+  const read = (row: Record<string, string>): Record<string, string> =>
+    row.ending !== ''
+      ? untimed(row)
+      : Object.fromEntries(
+          Object.entries(row).filter(
+            ([column]) =>
+              !['played', 'unplayed', 'deals'].includes(column) &&
+              !/^(units|killed|reached):/.test(column),
+          ),
+        );
+
+  expect(lines[0]).toBe(
+    `# ${JSON.stringify({ ...choices, learned: [], persona: 'idle', every, turns: 60, seeds: 2 })}`,
+  );
+  expect(lines[1]).toBe(plain[1]);
+  expect(openings.flat()).not.toEqual([]);
+  expect(rows.map(read)).toEqual(
+    openings.flatMap((opened, at) => [
+      ...opened.map(({ seed, turn, chronicle }) => ({
+        seed: `${seed}`,
+        ending: '',
+        cause: '',
+        turn: `${turn}`,
+        ms: '',
+        influence: '',
+        capstone: chronicle.timeline.capstone.id,
+        'capstone-turn': `${chronicle.timeline.capstone.turn}`,
+        ...Object.fromEntries(
+          RESOURCES.map((resource) => [resource, `${chronicle.resources[resource]}`]),
+        ),
+        population: `${chronicle.population}`,
+        held: `${chronicle.held.length}`,
+        'neutral-population': `${chronicle.neutral?.population ?? ''}`,
+        ...Object.fromEntries(
+          chronicle.achievements.map((held) => [
+            `count:${held.id}`,
+            `${countOn(CATALOGUE, chronicle, held)}`,
+          ]),
+        ),
+      })),
+      endings[at],
+    ]),
+  );
+  const overTheTurns = rows.filter(({ ending }) => ending === '');
+  for (const [at, { chronicle, before }] of openings.flat().entries()) {
+    const row = overTheTurns[at];
+    expectListings(row, chronicle, cardsPlayed(before));
+    for (const { id, reached } of chronicle.achievements) {
+      expect(row[`reached:${id}`] === '').toBe(!reached);
+    }
+  }
+});
+
+test('with every n turns named, the opening an ending or a stop is read on writes no row of its own, its ending row reading it: the stop on the cap’s turn, and the victory landed as the capstone’s turn opens', () => {
+  const capped = rowsOf(printed(['--seeds', '1', '--turns', '4', '--every', '2']));
+  const won = rowsOf(
+    printed(['--seeds', '1', '--off', 'camps,events', '--every', '1'], capstonesPassing()),
+  );
+  const victory = won.pop();
+
+  expect(capped.map(({ ending, turn }) => [ending, turn])).toEqual([
+    ['', '2'],
+    ['stopped', '4'],
+  ]);
+  expect([victory?.ending, victory?.turn]).toEqual(['victory', victory?.['capstone-turn']]);
+  expect(won).not.toEqual([]);
+  expect(won.map(({ turn }) => Number(turn))).toEqual(
+    Array.from({ length: Number(victory?.turn) - 1 }, (_, at) => at + 1),
+  );
+});
+
+test('a count of turns for every that is below one or not whole is refused, and so is every beside the trace', () => {
+  for (const value of ['0', '1.5', 'two']) {
+    expectRefused(['--every', value], /^--every is not a whole number of 1 or more: /);
+  }
+  expectRefused(
+    ['--trace', '1', '--every', '2'],
+    /^--every beside --trace: the trace writes no row/,
+  );
 });
 
 test('a gambit left out leaves the persona’s walk, the record carrying its number after the persona, and the trace plays the same walk: the idle without its settle stops stuck on the settle phase, and without its take stuck on its first deal', () => {
@@ -375,14 +499,7 @@ test('a cell played with its camps, its neutral, its events and its capstone swi
 });
 
 test('a cell played with its capstone switched off stops on the cap where the same seed with it on reaches the victory its capstone brings, every command before the capstone’s turn the same, on the trace too', () => {
-  const passing = changed({
-    capstones: Object.fromEntries(
-      Object.entries(CATALOGUE.capstones).map(([id, capstone]) => [
-        id,
-        { ...capstone, count: () => capstone.need },
-      ]),
-    ),
-  });
+  const passing = capstonesPassing();
   const ran = (args: readonly string[]): string[] => printed(args, passing);
   const [on] = rowsOf(ran(['--seeds', '1', '--off', 'camps,events']));
   const capped = ran(['--seeds', '1', '--off', 'camps,events,capstone']);
