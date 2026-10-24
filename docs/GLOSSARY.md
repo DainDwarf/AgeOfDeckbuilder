@@ -74,7 +74,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
 | **aim** | What a card is played at, nothing included; for a selected unit, the tiles it lights and the units it glows. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **being aimed** | The state of a selected card or unit while what its aim admits is offered, until it lands or is let go of. | armed, pending, targeting, in flight |
-| **stock** | A city's holding of one resource: what income adds to and every cost and the upkeep are paid out of. | reserve, treasury, pool, supply, balance, bank |
+| **stock** | A city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
 | **cost** | What a city pays out of its stocks to play something, for example a card. | fee, charge, toll |
 | **unaffordable** | What cannot be paid for: a card whose cost a city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
