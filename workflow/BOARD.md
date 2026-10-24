@@ -12,6 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **A building's upkeep** — a proper building upkeep: a building costs production each turn to keep, one production per built building the trial settled on, with the player-facing information on the screen.
-- **The personas guard their incomes** — safeguarding the gambits: no gambit of either persona places, reassigns or unassigns in a way that puts any resource's income below nothing, the guard that let the upkeep trial run without a city falling.
+- **A building's upkeep** — each building declares the upkeep it takes, and at income every city pays, out of what its tiles' yields left, what the buildings on the tiles it holds declare, a shortfall paid in population as a strike's is; the building's card in the infopanel reads the line, and the bar's production reckoning nets it. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/GLOSSARY.md`. [board/a-buildings-upkeep.md](board/a-buildings-upkeep.md)
+- **The personas and the neutral guard their incomes** — safeguarding the gambits and the neutral's script: no gambit of either persona places, reassigns or unassigns, and the neutral's script neither builds nor assigns, in a way that puts any resource's income below nothing; the guard that let the upkeep trial run without a city falling.
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
