@@ -225,7 +225,7 @@ export const WELL = 'PH_Well';
 /** What `WELL` gives each plain tile beside it, and its own. */
 export const WELL_GIVES = { terrain: 'plain', yields: { production: 2 } } as const;
 
-/** The fixture's building that takes upkeep. */
+/** The fixture's building that takes upkeep, and the card that builds it, for nothing. */
 export const SHRINE = 'PH_Shrine';
 
 /** The move of a unit the fixture's embark card embarks: none of the fixture's units has it ashore. */
@@ -578,6 +578,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Worker: { kind: 'unit', cost: { food: 2 }, ...enters('PH_Worker') },
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
     PH_Farm: { kind: 'building', cost: { production: 3 }, ...builds('PH_Farm') },
+    [SHRINE]: { kind: 'building', cost: {}, ...builds(SHRINE) },
     PH_March: {
       kind: 'instant',
       cost: {},

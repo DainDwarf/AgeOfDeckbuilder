@@ -69,6 +69,7 @@ import {
   reaching,
   regionsUnlocked,
   ringed,
+  SHRINE,
   type Standing,
   settledOn,
   standing,
@@ -1374,6 +1375,112 @@ test('the builder plays the card aimed at nothing whose trial raises a resource 
   expect(answerOf('builder', 26, offering(['urban']))).toBeUndefined();
 });
 
+test('the builder reads an income the upkeep takes below nothing as below nothing, its stock at nothing, when it plays the card raising a resource the income gives less of', () => {
+  const shrined = shrinedOn(
+    ['urban', 'plain'],
+    { q: 1, r: 0 },
+    {
+      population: 3,
+      assigned: [],
+      hand: ['PH_Almanac', 'PH_Offering'],
+      resources: onlyStocks({ food: 1 }),
+    },
+  );
+
+  expect(shrined.resources.culture).toBe(0);
+  expect(answerOf('builder', 26, shrined)).toEqual({ type: 'play', index: 1, aim: 'none' });
+});
+
+/** A city holding the tiles named, as `cityOf` lays it, a shrine built on the one of them named. */
+function shrinedOn(
+  inside: Terrain[],
+  shrine: TileCoords,
+  carrying: Carrying = {},
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
+  return cityOf(
+    inside,
+    { tiles: builtOn(cityOf(inside).tiles, SHRINE, [shrine]), ...carrying },
+    catalogue,
+  );
+}
+
+/** What a city holding its own tile, hills and a plain works to cover a shrine's upkeep: both. */
+const COVERING: Carrying = { population: 2, assigned: [CITY, { q: 1, r: 0 }] };
+
+/** What the same city works short of a shrine's upkeep: its own tile alone. */
+const SHORT: Carrying = { population: 1, assigned: [CITY] };
+
+test('the builder reassigns no population off the tile its upkeep takes, and reassigns one that raises an income below nothing that stays below it', () => {
+  const hills = { q: 1, r: 0 };
+  const plain = { q: 2, r: 0 };
+  const glade = { q: 1, r: 0 };
+  const forest = { q: 2, r: 0 };
+
+  expect(answerOf('builder', 11, cityOf(['urban', 'hills', 'plain'], COVERING))).toEqual({
+    type: 'reassign',
+    from: hills,
+    to: plain,
+  });
+  expect(answerOf('builder', 11, shrinedOn(['urban', 'hills', 'plain'], plain, COVERING))).toBe(
+    undefined,
+  );
+  expect(
+    answerOf(
+      'builder',
+      11,
+      shrinedOn(
+        ['urban', 'glade', 'forest', 'plain'],
+        { q: 3, r: 0 },
+        {
+          population: 2,
+          assigned: [glade, { q: 3, r: 0 }],
+        },
+      ),
+    ),
+  ).toEqual({ type: 'reassign', from: glade, to: forest });
+});
+
+test('the builder places through a worker nothing whose upkeep its income does not cover, and walks no worker to place it', () => {
+  const plain = { q: 2, r: 0 };
+  const hills = { q: 1, r: 0 };
+  const holding = (working: Carrying, at: TileCoords): Chronicle =>
+    cityOf(['urban', 'hills', 'plain'], { ...working, units: [worker(at)], hand: [SHRINE] });
+  const covering = holding(COVERING, hills);
+
+  expect(answerOf('builder', 15, holding(COVERING, plain))).toEqual({
+    type: 'play',
+    index: 0,
+    aim: 'tile',
+    tile: plain,
+  });
+  expect(answerOf('builder', 15, holding(SHORT, plain))).toBeUndefined();
+  expect(answerOf('builder', 14, covering)).toEqual({
+    type: 'move',
+    unit: unitNumberOn(covering, hills),
+    tile: plain,
+  });
+  expect(answerOf('builder', 14, holding(SHORT, hills))).toBeUndefined();
+});
+
+test('the builder claims no tile whose building’s upkeep its income does not cover, and claims the next', () => {
+  const shrine = { q: 1, r: 0 };
+  const west = { q: -1, r: 0 };
+  const claiming = (tiles: Tile[]): Chronicle =>
+    cityOf(['urban'], { tiles, resources: onlyStocks({ culture: 2 }) });
+  const ground = featured(
+    [...strip(2), { ...west, terrain: 'plain', improvements: [] }],
+    'PH_Fertile',
+    [shrine],
+  );
+
+  expect(answerOf('builder', 12, claiming(ground))).toEqual({ type: 'claim', tile: shrine });
+  expect(answerOf('builder', 12, claiming(builtOn(ground, SHRINE, [shrine])))).toEqual({
+    type: 'claim',
+    tile: west,
+  });
+});
+
 /** A city holding its own tile alone, the hand named and the stocks for a card aimed at the hand. */
 function discarding(hand: string[]): Chronicle {
   return cityOf(['urban'], { hand, resources: onlyStocks({ science: 1 }) });
@@ -1472,6 +1579,18 @@ test('with none idle and more standing than the tiles the city holds, three at m
   ).toEqual({ type: 'play', index: 0, aim: 'none' });
   expect(answerOf('warlord', 11, working(3, ['PH_Warrior']))).toBeUndefined();
   expect(answerOf('warlord', 11, working(4, ['PH_Worker']))).toBeUndefined();
+});
+
+test('the warlord unassigns for a unit no tile its upkeep takes, and unassigns the next', () => {
+  const inside: Terrain[] = ['urban', 'hills', 'plain', 'urban'];
+  const plain = { q: 2, r: 0 };
+  const working = (carrying: Carrying): Chronicle => enteringOn(inside, ['PH_Warrior'], carrying);
+
+  expect(answerOf('warlord', 11, working({}))).toEqual({ type: 'assign', tile: { q: 1, r: 0 } });
+  expect(answerOf('warlord', 11, working({ tiles: shrinedOn(inside, plain).tiles }))).toEqual({
+    type: 'assign',
+    tile: plain,
+  });
 });
 
 test('the warlord plays the unit card that enters a worker while no worker stands, and none once one does', () => {
@@ -1773,6 +1892,47 @@ test('going for a goal, a worker with nothing to play where it stands walks to t
 
   expect(goalAnswers(7, inside, food)).toEqual([walk, walk]);
   expect(goalAnswers(7, holding({ q: 2, r: -1 }), food)).toEqual([undefined, undefined]);
+});
+
+test('going for a goal, a persona claims nothing, plays nothing and walks no worker to a play whose upkeep its income does not cover', () => {
+  const hills = { q: 1, r: 0 };
+  const plain = { q: 2, r: 0 };
+  const shrines = goingFor(
+    (_catalogue, chronicle) =>
+      chronicle.held.filter((at) => tileAt(chronicle.tiles, at)?.building === SHRINE).length,
+  );
+  const holding = (working: Carrying, at: TileCoords): Chronicle =>
+    cityOf(
+      ['urban', 'hills', 'plain'],
+      { ...GOING, ...working, units: [worker(at)], hand: [SHRINE] },
+      shrines,
+    );
+  const west = { q: -1, r: 0 };
+  const claiming = (working: Carrying): Chronicle =>
+    cityOf(
+      ['urban', 'hills'],
+      {
+        ...GOING,
+        ...working,
+        tiles: [
+          ...cityOf(['urban', 'hills']).tiles,
+          { ...west, terrain: 'plain', improvements: [], building: SHRINE },
+        ],
+        resources: onlyStocks({ culture: 4 }),
+      },
+      shrines,
+    );
+  const covering = holding(COVERING, hills);
+  const claim = { type: 'claim', tile: west };
+  const play = { type: 'play', index: 0, aim: 'tile', tile: plain };
+  const walk = { type: 'move', unit: unitNumberOn(covering, hills), tile: plain };
+
+  expect(goalAnswers(5, claiming(COVERING), shrines)).toEqual([claim, claim]);
+  expect(goalAnswers(5, claiming(SHORT), shrines)).toEqual([undefined, undefined]);
+  expect(goalAnswers(6, holding(COVERING, plain), shrines)).toEqual([play, play]);
+  expect(goalAnswers(6, holding(SHORT, plain), shrines)).toEqual([undefined, undefined]);
+  expect(goalAnswers(7, covering, shrines)).toEqual([walk, walk]);
+  expect(goalAnswers(7, holding(SHORT, hills), shrines)).toEqual([undefined, undefined]);
 });
 
 test('going for a goal, a unit that attacks walks to the landing whose trial raises the goal’s count the most, the cheapest of equals', () => {

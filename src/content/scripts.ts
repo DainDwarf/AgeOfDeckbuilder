@@ -9,6 +9,8 @@ import {
   type UnitShare,
   workerAim,
 } from '../rules/catalogue';
+import { incomeOf } from '../rules/chronicle';
+import { neutralAssigns, upkeepOf } from '../rules/city';
 import {
   attackOrNone,
   campAshore,
@@ -33,6 +35,7 @@ import {
   tileKey,
   tilesBeside,
 } from '../rules/map';
+import { RESOURCES, type Resources, takenBelowNothing } from '../rules/resources';
 import { pickUniform, type Rng } from '../rules/rng';
 import { campPlaceable, guardedCampPlaced } from '../rules/schedule';
 import { inOwnSight } from '../rules/sight';
@@ -230,7 +233,8 @@ export const NEUTRAL_WORKER: UnitScript = {
 
 /**
  * What a worker of the neutral's builds, and nothing where it can build nothing: the free tile its
- * city holds and the card the neutral can pay for that adds the most to the tile's yield there.
+ * city holds and the card the neutral can pay for that adds the most to the tile's yield there, of
+ * those whose build, its population laid anew, takes no income below nothing or lower while it is.
  */
 function buildOf(
   catalogue: Catalogue,
@@ -242,6 +246,9 @@ function buildOf(
   const cards = ageOf(catalogue, chronicle.age).neutral?.workers?.cards ?? [];
   const held = new Set(neutral.held.map(tileKey));
   const beside = tilesBeside(chronicle.tiles);
+  const laidIncome = (on: Chronicle): Resources =>
+    incomeOf(catalogue, neutralAssigns(catalogue, on).chronicle, 'neutral');
+  const was = laidIncome(chronicle);
   let chosen: { readonly tile: TileCoords; readonly card: CardId } | undefined;
   let most = { food: Number.NEGATIVE_INFINITY, worth: Number.NEGATIVE_INFINITY };
   let nearest = Number.POSITIVE_INFINITY;
@@ -266,7 +273,7 @@ function buildOf(
       }
       const after = aim.effect(catalogue, there, at).chronicle;
       const relaid = tileAt(after.tiles, at);
-      if (relaid === undefined) continue;
+      if (relaid === undefined || takenBelowNothing(was, laidIncome(after))) continue;
       const yields = tileYield(catalogue, after, relaid, tilesBeside(after.tiles));
       const added = {
         food: (yields.food ?? 0) - (before.food ?? 0),
@@ -345,9 +352,9 @@ function raidingWhileHostile(catalogue: Catalogue, chronicle: Chronicle, unit: U
 }
 
 /**
- * The villager: claiming the tile that yields most, the nearest to its city of equals, and working
- * the most food, the most together of equals, ties in tile order; entering the kind falling shortest
- * of the ratio.
+ * The villager: claiming the tile that yields most, the nearest to its city of equals; working what
+ * covers its upkeep first, then the most food, the most together of equals, ties in tile order;
+ * entering the kind falling shortest of the ratio.
  */
 export const VILLAGER: NeutralScript = {
   claims(catalogue: Catalogue, chronicle: Chronicle, offered: readonly TileCoords[]): TileCoords {
@@ -372,18 +379,33 @@ export const VILLAGER: NeutralScript = {
   assigns(catalogue: Catalogue, chronicle: Chronicle, held: readonly TileCoords[]) {
     const beside = tilesBeside(chronicle.tiles);
     const among = new Set(held.map(tileKey));
-    return chronicle.tiles
+    const population = chronicle.neutral?.population ?? 0;
+    const free = chronicle.tiles
       .filter((tile) => among.has(tileKey(tile)))
       .map((tile) => ({
         tile: { q: tile.q, r: tile.r },
         yields: tileYield(catalogue, chronicle, tile, beside),
-      }))
-      .sort(
-        (a, b) =>
-          (b.yields.food ?? 0) - (a.yields.food ?? 0) || worthOf(b.yields) - worthOf(a.yields),
-      )
-      .slice(0, chronicle.neutral?.population ?? 0)
-      .map(({ tile }) => tile);
+      }));
+    const worked: typeof free = [];
+    const upkeep = upkeepOf(catalogue, chronicle, 'neutral');
+    for (const resource of RESOURCES) {
+      const given = (): number =>
+        worked.reduce((sum, { yields }) => sum + (yields[resource] ?? 0), 0);
+      while (worked.length < population && given() < (upkeep[resource] ?? 0)) {
+        let most: (typeof free)[number] | undefined;
+        for (const one of free) {
+          if ((one.yields[resource] ?? 0) > (most?.yields[resource] ?? 0)) most = one;
+        }
+        if (most === undefined) break;
+        worked.push(most);
+        free.splice(free.indexOf(most), 1);
+      }
+    }
+    const fed = free.sort(
+      (a, b) =>
+        (b.yields.food ?? 0) - (a.yields.food ?? 0) || worthOf(b.yields) - worthOf(a.yields),
+    );
+    return [...worked, ...fed].slice(0, population).map(({ tile }) => tile);
   },
 
   enters(_catalogue: Catalogue, chronicle: Chronicle, ratio: readonly UnitShare[]) {

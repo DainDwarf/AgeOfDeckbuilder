@@ -19,10 +19,11 @@ import {
   type Command,
   countOn,
   declaresWar,
+  incomeOf,
   outcome,
   refusalOf,
 } from '../src/rules/chronicle';
-import { cityCommand, cityDrag, claimable, income } from '../src/rules/city';
+import { cityCommand, cityDrag, claimable } from '../src/rules/city';
 import { targetsInOwnSight } from '../src/rules/enemies';
 import {
   CENTRE,
@@ -36,7 +37,7 @@ import {
   tileKey,
   tilesBeside,
 } from '../src/rules/map';
-import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
+import { RESOURCES, type Resources, takenBelowNothing } from '../src/rules/resources';
 import { offered } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import {
@@ -94,23 +95,23 @@ export const HAZARD_PAID: Weighing = {
   candidates: hazardPaid,
 };
 
-export const IDLE_ASSIGNED: Weighing = {
+export const IDLE_ASSIGNED: Weighing = guardingIncome({
   sentence:
     'While a population is idle and the city holds a tile nobody works, assign it to the free held tile that yields the most food, the most of everything together of equals',
   candidates: idleAssigned,
-};
+});
 
-export const REASSIGNED: Weighing = {
+export const REASSIGNED: Weighing = guardingIncome({
   sentence:
     'While a worked tile yields less than a free held tile, reassign the population onto it',
   candidates: reassigned,
-};
+});
 
-export const CLAIMED: Weighing = {
+export const CLAIMED: Weighing = guardingIncome({
   sentence:
     'While culture covers a claim, claim the tile that yields most among those the city may claim, the nearest a charted tile that yields more of equals',
   candidates: claimed,
-};
+});
 
 export const WORKER_WITHDRAWN: Weighing = {
   sentence:
@@ -162,18 +163,18 @@ export function goalGambits(goal: string | undefined): Weighing[] {
   const counted = (catalogue: Catalogue, chronicle: Chronicle): GoalCount =>
     goalCount(catalogue, chronicle, goal);
   return [
-    {
+    guardingIncome({
       sentence:
         "Claim the tile whose trial raises the goal's count the most, the nearest the city of equals",
       candidates: (catalogue, chronicle) =>
         goalClaimed(catalogue, chronicle, counted(catalogue, chronicle)),
-    },
-    {
+    }),
+    guardingIncome({
       sentence:
         "Play the card in hand whose trial raises the goal's count the most, through a worker on its tile, aimed at nothing, at a unit or at the hand",
       candidates: (catalogue, chronicle) =>
         goalPlayed(catalogue, chronicle, counted(catalogue, chronicle)),
-    },
+    }),
     {
       sentence:
         "Move a worker holding its move points to the reachable tile no enemy the map shows could attack next turn from where a card in hand played through it raises the goal's count the most, where none does from where it stands",
@@ -184,7 +185,10 @@ export function goalGambits(goal: string | undefined): Weighing[] {
           chronicle,
           (there, index, tile) => {
             const play = playedThroughWorker(catalogue, there, index, tile);
-            const rise = play && goalRaised(catalogue, there, count, play.command);
+            if (play === undefined || incomeTakenBy(catalogue, there, play.command)) {
+              return undefined;
+            }
+            const rise = goalRaised(catalogue, there, count, play.command);
             return rise === undefined ? undefined : [-rise];
           },
           (_best, own) => own === undefined,
@@ -302,6 +306,34 @@ export function declaringNoWar({ sentence, candidates }: Weighing): Gambit {
       return undefined;
     },
   };
+}
+
+/** The weighing with each candidate passed over whose command `incomeTakenBy` reads. */
+function guardingIncome({ sentence, candidates }: Weighing): Weighing {
+  return {
+    sentence,
+    candidates: function* (catalogue, chronicle) {
+      for (const command of candidates(catalogue, chronicle)) {
+        if (!incomeTakenBy(catalogue, chronicle, command)) yield command;
+      }
+    },
+  };
+}
+
+/** Whether the command takes some resource's income below nothing, or lower while it is. */
+function incomeTakenBy(catalogue: Catalogue, chronicle: Chronicle, command: Command): boolean {
+  return incomeTaken(catalogue, chronicle, outcome(apply(catalogue, chronicle, command)));
+}
+
+/**
+ * Whether some resource's income of the player's city reads below nothing on the chronicle after,
+ * and lower than on the chronicle before.
+ */
+export function incomeTaken(catalogue: Catalogue, before: Chronicle, after: Chronicle): boolean {
+  return takenBelowNothing(
+    incomeOf(catalogue, before, 'player'),
+    incomeOf(catalogue, after, 'player'),
+  );
 }
 
 /** A candidate and its rank, read number by number, the lowest first. */
@@ -797,7 +829,7 @@ function workerPlay(
   if (places) {
     const was = yieldsOn(catalogue, chronicle)(tile);
     const is = yieldsOn(catalogue, after)(tile);
-    if (worthOf(is) < worthOf(was)) return undefined;
+    if (worthOf(is) < worthOf(was) || incomeTaken(catalogue, chronicle, after)) return undefined;
     return {
       item: command,
       rank: [0, (was.food ?? 0) - (is.food ?? 0), worthOf(was) - worthOf(is)],
@@ -1241,15 +1273,13 @@ function* gainPlayed(catalogue: Catalogue, chronicle: Chronicle): Generator<Comm
 }
 
 function* lessGivenRaised(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
-  const afterIncome = income(catalogue, chronicle, 'player').chronicle.resources;
-  const given = (resource: Resource): number =>
-    afterIncome[resource] - chronicle.resources[resource];
+  const given = incomeOf(catalogue, chronicle, 'player');
   for (const { command, id, after } of trialsAtNothing(catalogue, chronicle)) {
     const costs = costOf(catalogue, id);
     const raised = RESOURCES.filter(
       (resource) => after.resources[resource] > chronicle.resources[resource],
     );
-    if (raised.some((resource) => costs.every((cost) => given(resource) < given(cost.resource)))) {
+    if (raised.some((resource) => costs.every((cost) => given[resource] < given[cost.resource]))) {
       yield command;
     }
   }

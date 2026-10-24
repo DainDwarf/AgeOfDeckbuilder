@@ -31,6 +31,7 @@ import {
   onTheNeutralCity,
   plains,
   SCRIPT,
+  SHRINE,
   SITE,
   type Standing,
   standing,
@@ -946,6 +947,39 @@ test('the villager works the tiles its city holds giving the most food first, th
   expect(working(8)).toEqual(['3,-1', '1,0', '2,1', '3,0', '2,0', '2,-1']);
 });
 
+test('the villager works the tiles giving what its upkeep takes first, resource by resource, the most of it first, until they cover it, and the most food once they do', () => {
+  const held = [
+    { q: 2, r: -1, terrain: 'hills' },
+    { q: 2, r: 0, terrain: 'forest' },
+    { q: 2, r: 1, terrain: 'plain', feature: 'PH_Fertile' },
+    { q: 3, r: -1, terrain: 'plain' },
+  ];
+  const around = neutralAround(
+    held.map(({ q, r }) => ({ q, r })),
+    [],
+  );
+  const laid = (shrined: boolean): Chronicle =>
+    held.reduce(
+      (chronicle, tile) =>
+        withTile(chronicle, {
+          improvements: [],
+          ...tile,
+          ...(shrined && tileKey(tile) === '3,-1' ? { building: SHRINE } : {}),
+        }),
+      around,
+    );
+  const working = (chronicle: Chronicle, population: number): string[] =>
+    VILLAGER.assigns(
+      CATALOGUE,
+      withCityRows(chronicle, 'neutral', { population }),
+      chronicle.neutral?.held ?? [],
+    ).map(tileKey);
+
+  expect(working(laid(false), 1)).toEqual(['2,1']);
+  expect(working(laid(true), 1)).toEqual(['2,-1']);
+  expect(working(laid(true), 4)).toEqual(['2,-1', '2,0', '1,0', '2,1']);
+});
+
 /** `WORKING`, its neutral's workers acting as the neutral's worker and playing the cards named. */
 function workersPlaying(cards: readonly string[]): Catalogue {
   const neutral = neutralOf(WORKING, AGE);
@@ -1044,6 +1078,20 @@ test('the neutral’s worker plays, on the tile its city holds where it adds the
       `2,0 ${cards[0]}`,
     ]);
   }
+});
+
+test('the neutral’s worker builds what takes upkeep where its population, laid over anew, then covers it, and not where it cannot', () => {
+  const shrining = workersPlaying([SHRINE]);
+  const hills = { q: 2, r: 0 };
+  const forest = { q: 1, r: -1 };
+  const ground = madeOf(madeOf(plains(3), 'hills', [hills]), 'forest', [forest]);
+  const peopled = (population: number): Chronicle =>
+    withCityRows(workerAround(shrining, [hills, forest, { q: 2, r: -1 }], { ground }), 'neutral', {
+      population,
+    });
+
+  expect(builtBy(shrining, peopled(3))).toEqual([`2,-1 ${SHRINE}`]);
+  expect(builtBy(shrining, peopled(2))).toEqual([]);
 });
 
 test('the neutral’s worker walks toward the tile it goes for out of its reach and plays nothing on the way', () => {

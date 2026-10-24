@@ -89,16 +89,20 @@ export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFa
     if (occupied(chronicle.units, { q, r }, whose, relations)) continue;
     yielding = followed(yielding, (left) => yielded(catalogue, left, whose, { q, r }));
   }
-  return followed(yielding, (left) => upkept(catalogue, left, whose));
+  return followed(yielding, (left) => shocked(left, whose, upkeepOf(catalogue, left, whose)));
 }
 
-/** The faction's city's upkeep, shocked: what the buildings on the tiles it holds declare, summed. */
-function upkept(catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction): Landed {
+/** The faction's city's upkeep: what the buildings on the tiles it holds declare, summed. */
+export function upkeepOf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  whose: CityFaction,
+): Partial<Resources> {
   const declared = (cityRows(chronicle, whose)?.held ?? []).flatMap((coord) => {
     const building = tileAt(chronicle.tiles, coord)?.building;
     return building === undefined ? [] : [buildingKind(catalogue, building).upkeep ?? {}];
   });
-  return shocked(chronicle, whose, summed(declared));
+  return summed(declared);
 }
 
 /**

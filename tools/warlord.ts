@@ -23,6 +23,7 @@ import {
   HAND_CYCLED,
   HAZARD_PAID,
   IDLE_ASSIGNED,
+  incomeTaken,
   leastHealthAmong,
   moveCommand,
   PLACED,
@@ -227,7 +228,11 @@ function* unassignedForUnit(catalogue: Catalogue, chronicle: Chronicle): Generat
     const command: Command = { type: 'assign', tile };
     // The card is held back until the tile is unassigned, so what it enters is read past the unassign.
     const after = trial(catalogue, chronicle, command);
-    if (after !== undefined && unitCardsEntering(catalogue, after, false).length > 0) {
+    if (
+      after !== undefined &&
+      !incomeTaken(catalogue, chronicle, after) &&
+      unitCardsEntering(catalogue, after, false).length > 0
+    ) {
       yield command;
     }
   }

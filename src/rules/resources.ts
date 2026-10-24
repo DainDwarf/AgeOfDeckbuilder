@@ -15,6 +15,11 @@ export function summed(parts: readonly Partial<Resources>[]): Partial<Resources>
   return total;
 }
 
+/** Whether some resource reads below nothing after, and lower than before. */
+export function takenBelowNothing(before: Resources, after: Resources): boolean {
+  return RESOURCES.some((resource) => after[resource] < Math.min(0, before[resource]));
+}
+
 /** The resources with none of the one named. */
 export function withNone(resources: Partial<Resources>, none: Resource): Partial<Resources> {
   const { [none]: _taken, ...kept } = resources;

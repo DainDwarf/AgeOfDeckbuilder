@@ -12,5 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The personas and the neutral guard their incomes** — no gambit of either persona claims, assigns, reassigns, unassigns or places, and the neutral's script neither assigns nor builds, in a way that takes any resource's income below nothing or lower while it is, each guard held by one test on the fixture, the design pages saying so. Doc-impact: `docs/SIMULATOR.md`, `docs/ages/STONE.md`. [board/personas-guard-incomes.md](board/personas-guard-incomes.md)
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
