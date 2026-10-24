@@ -47,6 +47,20 @@ export function wholeFlag(
 ): number | undefined {
   const value = stringFlag(values, flag, usage);
   if (value === undefined) return undefined;
+  return wholeNumber(flag, value, least, usage, most);
+}
+
+/**
+ * The whole number a value of the flag names, `least` or more and `most` at most where one is given;
+ * any other is refused.
+ */
+export function wholeNumber(
+  flag: string,
+  value: string,
+  least: number,
+  usage: string,
+  most?: number,
+): number {
   const whole = Number(value);
   if (
     !/^\d+$/.test(value) ||
@@ -58,4 +72,25 @@ export function wholeFlag(
     throw new Error(`--${flag} is not a whole number ${bounds}: ${value}\n${usage}`);
   }
   return whole;
+}
+
+/**
+ * What a flag's comma list names, each item read in the order named, and nothing where it is not set;
+ * one read twice is refused.
+ */
+export function listFlag<Item extends string | number>(
+  values: FlagValues,
+  flag: string,
+  usage: string,
+  read: (item: string) => Item,
+): Item[] | undefined {
+  const value = stringFlag(values, flag, usage);
+  if (value === undefined) return undefined;
+  const items: Item[] = [];
+  for (const item of value.split(',')) {
+    const named = read(item);
+    if (items.includes(named)) throw new Error(`--${flag} names ${named} twice`);
+    items.push(named);
+  }
+  return items;
 }

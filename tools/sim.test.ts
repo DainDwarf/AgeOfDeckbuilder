@@ -94,7 +94,7 @@ import { chartedAt } from '../src/rules/sight';
 import { followed, type Stage, unchanged, walked } from '../src/rules/stages';
 import { type Chronicle, cardsInPiles } from '../src/rules/state';
 import { type Faction, type UnitStats, unitAt } from '../src/rules/units';
-import { chartingWalks } from './builder';
+import { CLAIMED, chartingWalks, GAIN_PLAYED } from './builder';
 import { PERSONAS } from './personas';
 import { chronicleColumns, simulated, switchedOff } from './sim-body';
 import { type Driven, type Persona, playedBy } from './sim-driver';
@@ -421,7 +421,7 @@ test('a count of turns for every that is below one or not whole is refused, and 
   );
 });
 
-test('a gambit left out leaves the persona’s walk, the record carrying its number after the persona, and the trace plays the same walk: the idle without its settle stops stuck on the settle phase, and without its take stuck on its first deal', () => {
+test('a gambit left out leaves the persona’s walk, the record carrying its number in a list after the persona, and the trace plays the same walk: the idle without its settle stops stuck on the settle phase, and without its take stuck on its first deal', () => {
   const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
   const whole = playedBy(
     CATALOGUE,
@@ -438,7 +438,7 @@ test('a gambit left out leaves the persona’s walk, the record carrying its num
   };
 
   expect(unsettled[0]).toBe(
-    `# ${JSON.stringify({ ...choices, learned: [], persona: 'idle', without: 2, turns: 60, seeds: 1 })}`,
+    `# ${JSON.stringify({ ...choices, learned: [], persona: 'idle', without: [2], turns: 60, seeds: 1 })}`,
   );
   expect(stopOf(unsettled)).toEqual(['stopped', 'stuck', '0']);
   expect(stopOf(printed(['--seeds', '1', '--without', '1']))).toEqual([
@@ -447,16 +447,39 @@ test('a gambit left out leaves the persona’s walk, the record carrying its num
     `${firstTake.turn}`,
   ]);
   const [traced, ...trace] = printed(['--trace', '1', '--without', '2']);
-  expect(recordRead([traced]).without).toBe(2);
+  expect(recordRead([traced]).without).toEqual([2]);
   expect(trace).toEqual(['turn 0 | stopped stuck']);
 });
 
-test('a gambit number from none or past the persona’s gambit count is refused, the refusal naming the count', () => {
-  const count = new RegExp(`from 1 to ${PERSONAS.builder().length}: `);
+test('several gambits left out all leave the persona’s walk, the record carrying their numbers in the order named: each of two the builder plays in its first turns plays on without the other, and neither without both', () => {
+  const builder = ['--persona', 'builder', '--turns', '4'];
+  const gambitsTraced = (...without: number[]): string[] =>
+    printed([...builder, '--trace', '1', '--without', without.join(',')])
+      .slice(1, -1)
+      .map((line) => line.split(' | ')[1]);
+  const [claim, gain] = [CLAIMED, GAIN_PLAYED].map(
+    ({ sentence }) => PERSONAS.builder().findIndex((gambit) => gambit.sentence === sentence) + 1,
+  );
+  const both = printed([...builder, '--seeds', '1', '--without', `${gain},${claim}`]);
 
-  for (const value of ['0', `${PERSONAS.builder().length + 1}`, 'one']) {
-    expectRefused(['--persona', 'builder', '--without', value], count);
+  expect(gambitsTraced(claim)).toContain(GAIN_PLAYED.sentence);
+  expect(gambitsTraced(gain)).toContain(CLAIMED.sentence);
+  expect(gambitsTraced(gain, claim)).not.toContain(CLAIMED.sentence);
+  expect(gambitsTraced(gain, claim)).not.toContain(GAIN_PLAYED.sentence);
+  expect(recordRead(both).without).toEqual([gain, claim]);
+});
+
+test('a gambit number from none or past the persona’s gambit count, or an empty one, is refused naming it, the refusal naming the count, and so is one named twice', () => {
+  const count = PERSONAS.builder().length;
+  const refusal = (item: string): RegExp => new RegExp(`from 1 to ${count}: ${item}\n`);
+
+  for (const value of ['0', `${count + 1}`, 'one']) {
+    expectRefused(['--persona', 'builder', '--without', value], refusal(value));
   }
+  expectRefused(['--persona', 'builder', '--without', `2,${count + 1}`], refusal(`${count + 1}`));
+  expectRefused(['--persona', 'builder', '--without', '23,'], refusal(''));
+  expectRefused(['--persona', 'builder', '--without', ',23'], refusal(''));
+  expectRefused(['--persona', 'builder', '--without', '3,5,3'], /^--without names 3 twice$/);
 });
 
 test('a cell played with its camps, its neutral, its events and its capstone switched off opens on no camp, no neutral’s city and no unit but the player’s, then stands and kills no enemy, takes no deal and stops on the cap, the capstone drawn and its turn blank; the record names what is off as given', () => {
@@ -2013,7 +2036,7 @@ test('a goal is a technology the cell’s chronicles read, the record carrying i
   const goal = ['--persona', 'builder', '--goal', GRANARY];
 
   expect(printed([...goal, '--without', '1', '--seeds', '1', '--turns', '1'])[0]).toBe(
-    `# ${JSON.stringify({ ...choices, learned: [], persona: 'builder', without: 1, goal: GRANARY, turns: 1, seeds: 1 })}`,
+    `# ${JSON.stringify({ ...choices, learned: [], persona: 'builder', without: [1], goal: GRANARY, turns: 1, seeds: 1 })}`,
   );
   expect(
     recordRead(

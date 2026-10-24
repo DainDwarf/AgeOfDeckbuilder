@@ -25,7 +25,7 @@ import { offered } from '../src/rules/schedule';
 import { type Change, plays, type Sequence, walked } from '../src/rules/stages';
 import { type Chronicle, cardsInPiles, type Deal } from '../src/rules/state';
 import { type Faction, type Unit, unitAt } from '../src/rules/units';
-import { type FlagValues, readFlags, stringFlag, wholeFlag } from './flags';
+import { type FlagValues, listFlag, readFlags, stringFlag, wholeFlag, wholeNumber } from './flags';
 import {
   learnedWithNeeds,
   technologiesEarnedIn,
@@ -37,7 +37,7 @@ import { type Driven, type End, type Persona, playedBy } from './sim-driver';
 
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
-  '                      [--goal <technology>] [--without <n>] [--off <switch>[,<switch>...]] [--seeds <n>|<a>-<b>]',
+  '                      [--goal <technology>] [--without <n>[,<n>...]] [--off <switch>[,<switch>...]] [--seeds <n>|<a>-<b>]',
   '                      [--turns <n>] [--every <n>] [--out <path>] [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
@@ -88,9 +88,9 @@ type Cell = {
   readonly persona: string;
   /** The technology whose achievement the persona's goal gambits go for, where one is named. */
   readonly goal: string | undefined;
-  /** The number of the persona's gambit left out of its walk, as `--personas` numbers them. */
-  readonly without: number | undefined;
-  /** The persona's gambits the chronicles are played by, the one left out excepted. */
+  /** The persona's gambits left out of its walk, by number as `--personas` prints it, in the order named. */
+  readonly without: readonly number[] | undefined;
+  /** The persona's gambits the chronicles are played by, the ones left out excepted. */
   readonly walk: Persona;
   /** What the cell is played with switched off, in the order `--off` names them. */
   readonly off: readonly Switch[];
@@ -211,7 +211,7 @@ function rowOf(
  * The cell the flags name: the age and the region, each defaulting to what the launch screen opens on,
  * on a new campaign that has learned what reaches them, then the technologies named, each with its
  * needs; the civilization, the campaign's first unless one is handed in; the persona, the idle
- * unless named, built for the goal `--goal` names, its gambit `--without` numbers left out of its walk;
+ * unless named, built for the goal `--goal` names, its gambits `--without` numbers left out of its walk;
  * and the content, its region switched off as `--off` names.
  */
 function cellOf(game: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
@@ -249,8 +249,10 @@ function cellOf(game: Catalogue, values: FlagValues, positionals: readonly strin
     }
   }
   const gambits = PERSONAS[persona](goal);
-  const without = wholeFlag(values, 'without', 1, USAGE, gambits.length);
-  const walk = gambits.filter((_, at) => at + 1 !== without);
+  const without = listFlag(values, 'without', USAGE, (item) =>
+    wholeNumber('without', item, 1, USAGE, gambits.length),
+  );
+  const walk = gambits.filter((_, at) => !without?.includes(at + 1));
   return {
     catalogue,
     age,
@@ -268,18 +270,15 @@ function cellOf(game: Catalogue, values: FlagValues, positionals: readonly strin
 
 /** What `--off` switches off, in the order named; nothing where it is not set. */
 function switchesOf(values: FlagValues): Switch[] {
-  const value = stringFlag(values, 'off', USAGE);
-  if (value === undefined) return [];
-  const off: Switch[] = [];
-  for (const name of value.split(',')) {
-    const named = SWITCHES.find((each) => each === name);
-    if (named === undefined) {
-      throw new Error(`--off names no switch ${name}; the switches: ${SWITCHES.join(', ')}`);
-    }
-    if (off.includes(named)) throw new Error(`--off names ${named} twice`);
-    off.push(named);
-  }
-  return off;
+  return (
+    listFlag(values, 'off', USAGE, (name) => {
+      const named = SWITCHES.find((each) => each === name);
+      if (named === undefined) {
+        throw new Error(`--off names no switch ${name}; the switches: ${SWITCHES.join(', ')}`);
+      }
+      return named;
+    }) ?? []
+  );
 }
 
 /**
