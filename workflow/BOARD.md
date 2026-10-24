@@ -11,5 +11,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The goals pass** — are the technologies' goals good: each checked for whether a player going for it reaches it, on which turn, and whether it asks more than a chronicle played as usual gives; Domestication's goal, which a worker standing on one herd reaches, first among them.
 
 ## Lines
-
-- **Production's prices** — every production price in the content stands at the dossier's table, the catalogue's coherence test passes, the economy baseline is rerun on the new prices and `ECONOMY.md` reads from it, and the `BALANCE.md` entry is gone. Doc-impact: none. [board/productions-prices.md](board/productions-prices.md)

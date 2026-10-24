@@ -13,7 +13,3 @@ The balance issues met in play, kept here until the headless simulator is good e
 - **Tanning's need**: two herds inside the border, to weigh. Held for v0.1.0's pass.
 - **Fishing's need and the Fishery's gain**: 50 food from coast, and the gain on the coast around the Fishery, to weigh. Held for v0.1.0's pass.
 - **Four improvements of one price and one gain**: Trapping, Irrigation, Pasture and Clay pit, to weigh against one another. Held for v0.1.0's pass.
-
-## Across the ages
-
-- **Production is under-valued**: a stock of 57 production on the first cold night. Card costs, event prices and capstones all price it too low.

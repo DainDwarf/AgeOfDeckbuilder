@@ -39,9 +39,12 @@ function hungerFood(turn: number): number {
   return 2 + Math.floor(turn / 10);
 }
 
-/** The food the fields burning lose, and the production the firebreak costs, on this turn. */
 function wildfireTakes(turn: number): number {
   return 2 * (1 + Math.floor(turn / 5));
+}
+
+function firebreak(turn: number): number {
+  return 4 * (1 + Math.floor(turn / 5));
 }
 
 /** What an event's raid enters. */
@@ -125,10 +128,10 @@ const TABLES: Tables = {
       refuses: (_catalogue, chronicle, tile) => movePointsSpent(chronicle, tile),
       effect: (_catalogue, paid, at) => refreshed(paid, at),
     },
-    shelter: { kind: 'building', cost: { production: 8 }, ...builds('shelter') },
+    shelter: { kind: 'building', cost: { production: 12 }, ...builds('shelter') },
     hunger: {
       kind: 'hazard',
-      cost: { production: 2 },
+      cost: { production: 4 },
       counters: { food: hungerFood(0) },
       strikes: (_catalogue, chronicle, counter) =>
         shocked(chronicle, 'player', { food: counter('food') }),
@@ -239,8 +242,8 @@ const TABLES: Tables = {
             shocked(chronicle, 'player', { food: wildfireTakes(chronicle.turn) }),
         },
         firebreak: {
-          cost: (_catalogue, chronicle) => ({ production: wildfireTakes(chronicle.turn) }),
-          reads: (_catalogue, chronicle) => ({ production: wildfireTakes(chronicle.turn) }),
+          cost: (_catalogue, chronicle) => ({ production: firebreak(chronicle.turn) }),
+          reads: (_catalogue, chronicle) => ({ production: firebreak(chronicle.turn) }),
           lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },

@@ -144,10 +144,9 @@ function floodTakes(chronicle: Chronicle): Removal {
   return removalNear(chronicle, floodRemoves(chronicle.turn));
 }
 
-/** The production digging channels costs: three for each thing the flood would take, the city counted. */
 function channels(chronicle: Chronicle): number {
   const { improvements, buildings, city } = floodTakes(chronicle);
-  return 3 * (improvements + buildings + city);
+  return 6 * (improvements + buildings + city);
 }
 
 /** How many population the sickness kills on this turn: one, and one more for every ten turns. */
@@ -540,14 +539,14 @@ export const STONE: Slice = {
     cards: {
       farm: {
         kind: 'building',
-        cost: { production: 4 },
+        cost: { production: 6 },
         ...builds('farm'),
       },
-      trapping: { kind: 'action', cost: { production: 2 }, ...placesImprovement('trapping') },
-      irrigation: { kind: 'action', cost: { production: 2 }, ...placesImprovement('irrigation') },
-      pasture: { kind: 'action', cost: { production: 2 }, ...placesImprovement('pasture') },
+      trapping: { kind: 'action', cost: { production: 3 }, ...placesImprovement('trapping') },
+      irrigation: { kind: 'action', cost: { production: 3 }, ...placesImprovement('irrigation') },
+      pasture: { kind: 'action', cost: { production: 3 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
-      'clay-pit': { kind: 'action', cost: { production: 2 }, ...placesImprovement('clay-pit') },
+      'clay-pit': { kind: 'action', cost: { production: 3 }, ...placesImprovement('clay-pit') },
       calendar: { kind: 'instant', cost: { science: 2 }, ...showsNextLanding() },
       bread: {
         kind: 'instant',
@@ -557,7 +556,7 @@ export const STONE: Slice = {
       },
       tannery: {
         kind: 'building',
-        cost: { production: 4 },
+        cost: { production: 6 },
         ...builds('tannery'),
       },
       fire: {
@@ -596,12 +595,12 @@ export const STONE: Slice = {
       },
       fishery: {
         kind: 'building',
-        cost: { production: 4 },
+        cost: { production: 6 },
         ...builds('fishery'),
       },
       megalith: {
         kind: 'building',
-        cost: { production: 4 },
+        cost: { production: 6 },
         ...builds('megalith'),
       },
       'stone-cave-paintings': {
@@ -702,18 +701,18 @@ export const STONE: Slice = {
       },
       'cold-night': {
         kind: 'hazard',
-        cost: { production: 3 },
+        cost: { production: 6 },
         strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
       },
       foundations: {
         kind: 'action',
-        cost: { production: 4 },
+        cost: { production: 8 },
         becomes: 'great-stones',
         ...builds('foundations'),
       },
       'great-stones': {
         kind: 'action',
-        cost: { production: 8 },
+        cost: { production: 16 },
         becomes: 'ornaments',
         ...builds('great-stones', 'foundations'),
       },

@@ -1,6 +1,6 @@
 # Economy baseline
 
-The economy free play: the simulator on the Stone Age, temperate, with the camps, the neutral, the events and the capstone off, so nothing but the deck and the persona moves the stocks. Measured on 2026-10-23 at commit e2693ae, the builder playing bread, both personas on three decks, seeds 1 to 20, one row as each turn opens. The rows stand in `economy/`, one folder per cell, one file per five seeds, so a balance change ships against a baseline: run the same cell into the scratchpad, join it to these rows seed by seed, and the movement is the change's. Rerun this baseline when a change lands that moves it on purpose, and replace the folders; the chart's page rebuilds from `economy/chart/`.
+The economy free play: the simulator on the Stone Age, temperate, with the camps, the neutral, the events and the capstone off, so nothing but the deck and the persona moves the stocks. Measured on 2026-10-24 at the commit that lands these rows, the builder playing bread, both personas on three decks, seeds 1 to 20, one row as each turn opens. The rows stand in `economy/`, one folder per cell, one file per five seeds, so a balance change ships against a baseline: run the same cell into the scratchpad, join it to these rows seed by seed, and the movement is the change's. Rerun this baseline when a change lands that moves it on purpose, and replace the folders; the chart's page rebuilds from `economy/chart/`.
 
 ## The cell
 
@@ -40,31 +40,31 @@ Every one of the 120 chronicles stood to the turn cap. The medians on the turn-6
 | Cell | Population | Held | Food | Production | Science | Culture | Military | Money |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Builder, nomadic | 14.5 | 8 | 18.5 | 127 | 0 | 3 | 104 | 0 |
-| Builder, end of Stone | 21 | 11 | 22 | 259 | 22 | 11.5 | 95 | 2 |
-| Builder, no scouts | 19 | 8 | 23.5 | 190 | 22 | 3 | 94.5 | 0 |
+| Builder, end of Stone | 19 | 10 | 25.5 | 73 | 22 | 8.5 | 102 | 0 |
+| Builder, no scouts | 18 | 8 | 17.5 | 81 | 22.5 | 3 | 98 | 0 |
 | Warlord, nomadic | 5 | 8 | 17.5 | 53 | 0 | 11 | 27 | 0 |
-| Warlord, end of Stone | 8 | 9 | 16 | 80 | 21 | 8.5 | 30.5 | 0 |
-| Warlord, no scouts | 9.5 | 8 | 13 | 127 | 22 | 5 | 35.5 | 0 |
+| Warlord, end of Stone | 5 | 8 | 14.5 | 24.5 | 21 | 10 | 33 | 0 |
+| Warlord, no scouts | 6 | 8 | 19 | 46.5 | 22 | 7 | 37.5 | 0 |
 
 What the builder plays, the median count per chronicle and in how many of the 20 chronicles the card was played at all:
 
 | Card        | Nomadic  | End of Stone | No scouts   |
 | ----------- | -------- | ------------ | ----------- |
-| gather      | 117 (20) | 45 (20)      | 67 (20)     |
-| fire        | —        | 22 (20)      | 22 (20)     |
-| clay-pit    | —        | 5.5 (20)     | 3.5 (20)    |
-| farm        | —        | 3 (19)       | 3 (17)      |
-| irrigation  | —        | 6.5 (12)     | 6 (10)      |
-| pasture     | —        | 1.5 (12)     | 1 (11)      |
-| trapping    | —        | 1 (10)       | 1.5 (8)     |
-| megalith    | —        | 1 (20)       | not in deck |
-| tannery     | —        | 1 (10)       | not in deck |
-| food-trade  | —        | 8 (9)        | not in deck |
-| goods-trade | —        | 6.5 (10)     | not in deck |
+| gather      | 117 (20) | 44 (20)      | 66 (20)     |
+| fire        | —        | 22 (20)      | 22.5 (20)   |
+| clay-pit    | —        | 5 (19)       | 4.5 (20)    |
+| farm        | —        | 2 (20)       | 3 (17)      |
+| irrigation  | —        | 4.5 (12)     | 6 (13)      |
+| pasture     | —        | 2 (9)        | 2 (9)       |
+| trapping    | —        | 1 (9)        | 1 (10)      |
+| megalith    | —        | 1 (15)       | not in deck |
+| tannery     | —        | 1 (8)        | not in deck |
+| food-trade  | —        | 6.5 (8)      | not in deck |
+| goods-trade | —        | 7 (7)        | not in deck |
 | bread       | —        | 10 (20)      | not in deck |
 | worker      | 2 (19)   | 1 (20)       | 1 (19)      |
-| warrior     | 1 (19)   | 2 (11)       | 1 (17)      |
-| archer      | —        | 2 (14)       | 1 (16)      |
+| warrior     | 1 (19)   | 1 (13)       | 1.5 (14)    |
+| archer      | —        | 1 (15)       | 1.5 (12)    |
 
 The nomadic deck has no card that places anything. Heal and march stay unplayed in every chronicle of the two Stone decks.
 
