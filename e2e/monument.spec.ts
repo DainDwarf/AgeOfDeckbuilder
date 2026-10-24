@@ -62,9 +62,9 @@ function covered(chronicle: Chronicle): Chronicle {
   let left = chronicle;
   for (const stage of walked(struck(CATALOGUE, chronicle).stages)) {
     if (stage.kind !== 'change' || stage.name !== 'population') continue;
-    const { uncovered } = stage;
-    if (uncovered === undefined) continue;
-    left = gained(left, { [uncovered.resource]: uncovered.amount }).chronicle;
+    for (const { resource, amount } of stage.uncovered ?? []) {
+      left = gained(left, { [resource]: amount }).chronicle;
+    }
   }
   return left;
 }

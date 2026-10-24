@@ -952,7 +952,7 @@ test('at income each city pays out of what its tiles yielded, as one stock after
   expect(fell.after[0].chronicle.resources).toMatchObject({ production: 0, culture: 0 });
   expect(fell.after.slice(1)).toMatchObject(
     (['production', 'culture'] as const).map((resource) => ({
-      uncovered: { resource, amount: owed[resource] - fell.yielded.resources[resource] },
+      uncovered: [{ resource, amount: owed[resource] - fell.yielded.resources[resource] }],
     })),
   );
   expect(fell.after[2].chronicle.population).toBe(short.population - 2);
@@ -965,10 +965,12 @@ test('at income each city pays out of what its tiles yielded, as one stock after
   expect(namesOf(neutral.after)).toEqual(['stock', 'assigned', 'population']);
   expect(neutral.after[0].chronicle.neutral?.resources.production).toBe(0);
   expect(neutral.after[2]).toMatchObject({
-    uncovered: {
-      resource: 'production',
-      amount: (upkeep.production ?? 0) - (neutral.yielded.neutral?.resources.production ?? 0),
-    },
+    uncovered: [
+      {
+        resource: 'production',
+        amount: (upkeep.production ?? 0) - (neutral.yielded.neutral?.resources.production ?? 0),
+      },
+    ],
   });
   expect(neutral.after[2].chronicle.neutral?.population).toBe(
     (shrined.neutral?.population ?? 0) - 1,
@@ -977,17 +979,22 @@ test('at income each city pays out of what its tiles yielded, as one stock after
   expect(reckoned(CATALOGUE, shrined)).toEqual(reckoned(CATALOGUE, opened));
 });
 
-test('a city’s income is what its worked tiles yield less its upkeep, the upkeep read past a stock at nothing', () => {
+test('a city’s income reads every stock its upkeep takes past nothing, its last population taken included, by the income and by the reckoning', () => {
   const shrine = { q: 1, r: 0 };
   const city = cityOf(['urban', 'plain'], {
     tiles: builtOn(field(1), SHRINE, [shrine]),
+    population: 1,
     assigned: [shrine],
   });
+  const upkeep = buildingKind(CATALOGUE, SHRINE).upkeep ?? {};
+  const income = incomeOf(CATALOGUE, city, 'player');
 
-  expect(city.resources.production).toBe(0);
-  expect(incomeOf(CATALOGUE, city, 'player').production).toBe(
-    -(buildingKind(CATALOGUE, SHRINE).upkeep?.production ?? 0),
-  );
+  expect(city.resources).toMatchObject({ production: 0, culture: 0 });
+  expect([income.production, income.culture]).toEqual([
+    -(upkeep.production ?? 0),
+    -(upkeep.culture ?? 0),
+  ]);
+  expect(reckoned(CATALOGUE, city)?.pastNothing).toEqual(new Set(['production', 'culture']));
 });
 
 test('the neutral’s upkeep taking its last population, its city falls inside the income group: the population, then its building off its tile, then the fall carrying the population as its cause; its slot empty, its rows gone, its relations as they were, nothing dealt, nothing of its city after, and the player’s rows untouched', () => {

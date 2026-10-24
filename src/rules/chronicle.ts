@@ -933,7 +933,10 @@ export function reckoned(catalogue: Catalogue, chronicle: Chronicle): Reckoning 
   };
 }
 
-/** The faction's city's income: what its worked tiles yield less its upkeep, as `stocksMoved` reads it. */
+/**
+ * The faction's city's income: what its worked tiles yield less its upkeep, resource by resource, a
+ * stock the upkeep takes past nothing read past it.
+ */
 export function incomeOf(
   catalogue: Catalogue,
   chronicle: Chronicle,
@@ -943,8 +946,8 @@ export function incomeOf(
 }
 
 /**
- * What the stages moved of the faction's city's stocks, past nothing read off the population each
- * shortfall took: one left short once the city has no population left to take reads as nothing.
+ * What the stages moved of the faction's city's stocks, resource by resource, what they took past
+ * nothing included, and the stocks they took past nothing.
  */
 function stocksMoved(run: Sequence, whose: CityFaction): Pick<Reckoning, 'stocks' | 'pastNothing'> {
   const stocks = { ...NOUGHT };
@@ -960,8 +963,10 @@ function stocksMoved(run: Sequence, whose: CityFaction): Pick<Reckoning, 'stocks
     if (stage.name !== 'population' || stage.uncovered === undefined) continue;
     // A `population` names no city: the one that paid is the one whose population moved.
     if (after.population === before.population) continue;
-    stocks[stage.uncovered.resource] -= stage.uncovered.amount;
-    pastNothing.add(stage.uncovered.resource);
+    for (const { resource, amount } of stage.uncovered) {
+      stocks[resource] -= amount;
+      pastNothing.add(resource);
+    }
   }
   return { stocks, pastNothing };
 }

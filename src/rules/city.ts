@@ -107,8 +107,8 @@ export function upkeepOf(
 
 /**
  * The stocks shocked: each of the faction's city's stocks loses what is named of it, never below
- * nothing, one `stock`; then one population taken for each stock it does not cover, carrying how
- * far past it falls. Nothing where nothing is named or that city is none.
+ * nothing, one `stock`; then one population per stock taken past nothing, carrying how far, the
+ * city's last carrying every one still uncovered. Nothing where nothing is named or no city stands.
  */
 export function shocked(
   chronicle: Chronicle,
@@ -128,8 +128,10 @@ export function shocked(
   let shocking = RESOURCES.every((resource) => resources[resource] === city.resources[resource])
     ? unchanged(chronicle)
     : landedAs(change('stock', withCityRows(chronicle, whose, { resources }), chronicle));
-  for (const past of uncovered) {
-    shocking = followed(shocking, (left) => populationTaken(left, whose, past));
+  const takes = Math.min(uncovered.length, city.population);
+  for (let take = 0; take < takes; take++) {
+    const carried = take === takes - 1 ? uncovered.slice(take) : [uncovered[take]];
+    shocking = followed(shocking, (left) => populationTaken(left, whose, carried));
   }
   return shocking;
 }
@@ -218,11 +220,15 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
 }
 
 /**
- * The faction's city's population one fewer, its `population` carrying what a stock taken past
- * nothing did not cover where it pays for one, and nothing where that city is none. A city's last
+ * The faction's city's population one fewer, its `population` carrying what stocks taken past
+ * nothing did not cover where it pays for them, and nothing where that city is none. A city's last
  * taken, it falls: the player's on the spot, the neutral's by its building taken off its tile.
  */
-function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: Cost): Landed {
+function populationFewer(
+  chronicle: Chronicle,
+  whose: CityFaction,
+  uncovered?: readonly Cost[],
+): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined) return unchanged(chronicle);
   const fewer = withCityRows(chronicle, whose, { population: city.population - 1 });
@@ -303,7 +309,7 @@ export function retiled(
 export function populationTaken(
   chronicle: Chronicle,
   whose: CityFaction,
-  uncovered?: Cost,
+  uncovered?: readonly Cost[],
 ): Landed {
   const city = cityRows(chronicle, whose);
   if (city === undefined || city.population <= 0) return unchanged(chronicle);

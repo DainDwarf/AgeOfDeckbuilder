@@ -23,8 +23,11 @@ export type Change = {
     }
   | {
       readonly name: 'population';
-      /** Where it pays for a stock taken past nothing: the resource and what the stock did not cover. */
-      readonly uncovered?: Cost;
+      /**
+       * Where it pays for a stock taken past nothing: the resource and what the stock did not cover;
+       * on the city's last population, every stock still uncovered.
+       */
+      readonly uncovered?: readonly Cost[];
     }
   | { readonly name: 'neutral-fallen'; readonly cause: NeutralFallCause }
   | { readonly name: TiledChange; readonly tile: TileCoords }
