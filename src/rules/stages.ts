@@ -1,5 +1,5 @@
 import type { TileCoords } from './map';
-import type { CardId, Chronicle, Cost, DefeatCause } from './state';
+import type { CardId, Chronicle, Cost, DefeatCause, NeutralFallCause } from './state';
 
 /** One row of the chronicle moved, on the chronicle it was raised on, leaving the one it carries. */
 export type Change = {
@@ -26,6 +26,7 @@ export type Change = {
       /** Where it pays for a stock taken past nothing: the resource and what the stock did not cover. */
       readonly uncovered?: Cost;
     }
+  | { readonly name: 'neutral-fallen'; readonly cause: NeutralFallCause }
   | { readonly name: TiledChange; readonly tile: TileCoords }
   | { readonly name: 'move'; readonly from: TileCoords; readonly to: TileCoords }
 );
@@ -101,7 +102,6 @@ type PlainChange =
   | 'tallied'
   | 'reached'
   | 'relations'
-  | 'neutral-fallen'
   | 'runtime-error';
 
 type PlacedChange = 'discarded' | 'exhausted' | 'banished';

@@ -1,5 +1,5 @@
 import { ageOf, type Catalogue, cardOf, costOf, unitCardOf, workerAim } from './catalogue';
-import { neighbours, type TileCoords, tileAt, tileKey } from './map';
+import { neighbours, type Tile, type TileCoords, tileAt, tileKey } from './map';
 import { buildingKind, refuse } from './map-kinds';
 import { RESOURCES, type Resources, summed } from './resources';
 import {
@@ -21,11 +21,14 @@ import {
   type Chronicle,
   type CityFaction,
   type Cost,
+  cityOn,
   cityRows,
+  cityTileOf,
   costsOf,
   holderOf,
   holds,
   idle,
+  type NeutralFallCause,
   playable,
   type Refusal,
   unaffordable,
@@ -212,8 +215,8 @@ export function arrived(chronicle: Chronicle, whose: CityFaction): Landed {
 
 /**
  * The faction's city's population one fewer, its `population` carrying what a stock taken past
- * nothing did not cover where it pays for one, and nothing where that city is none. The player's
- * city's last taken, it falls.
+ * nothing did not cover where it pays for one, and nothing where that city is none. A city's last
+ * taken, it falls: the player's on the spot, the neutral's by its building taken off its tile.
  */
 function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: Cost): Landed {
   const city = cityRows(chronicle, whose);
@@ -224,8 +227,68 @@ function populationFewer(chronicle: Chronicle, whose: CityFaction, uncovered?: C
       ? change('population', fewer, chronicle)
       : { kind: 'change', name: 'population', uncovered, before: chronicle, chronicle: fewer },
   );
-  if (whose !== 'player' || city.population > 1) return taken;
-  return followed(taken, (left) => fall(left, 'population'));
+  if (city.population > 1) return taken;
+  switch (whose) {
+    case 'player':
+      return followed(taken, (left) => fall(left, 'population'));
+    case 'neutral': {
+      const tile = cityTileOf(chronicle, 'neutral');
+      if (tile === undefined) return taken;
+      return followed(taken, (left) => buildingTakenOff(left, tile, 'population'));
+    }
+  }
+}
+
+/** The building taken off the tile, its slot empty. */
+export function buildingTakenOff(
+  paid: Chronicle,
+  at: TileCoords,
+  cause?: NeutralFallCause,
+): Landed {
+  return retiled(paid, at, (tile) => ({ ...tile, building: undefined }), cause);
+}
+
+/**
+ * One tile of the map layered over, every other tile left as it stands: the one `retiled` change. A
+ * city's tile coming out without its building, that city falls on the spot, the neutral's to the
+ * cause named, its building being the one the tile held before.
+ */
+export function retiled(
+  paid: Chronicle,
+  at: TileCoords,
+  after: (tile: Tile) => Tile,
+  cause: NeutralFallCause = 'removal',
+): Landed {
+  const key = tileKey(at);
+  const laid = landedAs(
+    changeOn(
+      'retiled',
+      at,
+      {
+        ...paid,
+        tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)),
+      },
+      paid,
+    ),
+  );
+  return followed(laid, (left) => {
+    const building = tileAt(left.tiles, at)?.building;
+    switch (cityOn(left, at)) {
+      case 'player':
+        return building === left.citySection.building ? unchanged(left) : fall(left, 'removal');
+      case 'neutral':
+        if (building === tileAt(paid.tiles, at)?.building) return unchanged(left);
+        return landedAs({
+          kind: 'change',
+          name: 'neutral-fallen',
+          cause,
+          before: left,
+          chronicle: { ...left, neutral: undefined },
+        });
+      case undefined:
+        return unchanged(left);
+    }
+  });
 }
 
 /**

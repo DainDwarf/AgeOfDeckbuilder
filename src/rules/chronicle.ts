@@ -8,7 +8,6 @@ import {
   lyingAs,
   playedThrough,
   refuses,
-  retiled,
   steppedOnto,
   struck,
   throughRefusal,
@@ -37,6 +36,7 @@ import {
 } from './catalogue';
 import {
   assign,
+  buildingTakenOff,
   type CityCommand,
   cityCommand,
   claim,
@@ -49,6 +49,7 @@ import {
   neutralEntered,
   neutralPlayed,
   reassign,
+  retiled,
   warDeclared,
 } from './city';
 import {
@@ -124,6 +125,7 @@ import {
   type ChronicleCard,
   type CityFaction,
   capstoneLanded,
+  type NeutralFallCause,
   onSettlePhase,
   playable,
   type Refusal,
@@ -1599,8 +1601,7 @@ function captured(
       return grouped(
         { name: 'capture', tile },
         course(chronicle, [
-          (left) => leftTheMap(left, tile),
-          (left) => fallenWith(left, takes),
+          (left) => leftTheMap(left, tile, 'player'),
           (left) =>
             landedAs(
               change(
@@ -1650,8 +1651,7 @@ function capturedByTheEnemies(
   return grouped(
     { name: 'capture', tile },
     course(chronicle, [
-      (left) => built(catalogue, left, tile, building),
-      (left) => fallenWith(left, 'neutral-city'),
+      (left) => built(catalogue, left, tile, building, 'enemies'),
       (left) => campJoined(left, capturer, scripts.guard),
       (left) => carriedPrepare(left, capturer, false),
     ]),
@@ -1677,26 +1677,12 @@ function campJoined(chronicle: Chronicle, joining: Unit, script: string): Landed
   );
 }
 
-/**
- * What leaves the chronicle with the building captured: with the neutral's city, the one
- * `neutral-fallen`, its border, population and stocks gone and its relations standing.
- */
-function fallenWith(chronicle: Chronicle, takes: Captured): Landed {
-  switch (takes) {
-    case 'camp':
-    case 'site':
-      return unchanged(chronicle);
-    case 'neutral-city':
-      return landedAs(change('neutral-fallen', { ...chronicle, neutral: undefined }, chronicle));
-  }
-}
-
 /** A captured building leaving the map, its slot empty and a camp's enemies no camp's with it. */
-function leftTheMap(chronicle: Chronicle, tile: TileCoords): Landed {
+function leftTheMap(chronicle: Chronicle, tile: TileCoords, cause?: NeutralFallCause): Landed {
   const units = chronicle.units.map((unit) =>
     unit.faction === 'enemy' && unit.camp !== undefined && tileKey(unit.camp) === tileKey(tile)
       ? { ...unit, camp: undefined }
       : unit,
   );
-  return retiled({ ...chronicle, units }, tile, (slot) => ({ ...slot, building: undefined }));
+  return buildingTakenOff({ ...chronicle, units }, tile, cause);
 }

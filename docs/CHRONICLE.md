@@ -53,7 +53,7 @@ The map is hidden. The player's city and its units have **sight** over the tiles
 
 ## The city ✅
 
-A city holds a **stock** of each resource: income adds to them, and every cost and the upkeep are paid out of them. A stock never stands below nothing: what is taken from it past nothing, by a harm or by the upkeep, the city pays in population, one for each stock taken past nothing, however far past, the player's city's last no exception. A cost is paid or refused, never taken: a card or an answer a city cannot pay for is refused, so what reaches a city's population is what is done to it and what it keeps.
+A city holds a **stock** of each resource: income adds to them, and every cost and the upkeep are paid out of them. A stock never stands below nothing: what is taken from it past nothing, by a harm or by the upkeep, the city pays in population, one for each stock taken past nothing, however far past, a city's last no exception. A cost is paid or refused, never taken: a card or an answer a city cannot pay for is refused, so what reaches a city's population is what is done to it and what it keeps.
 
 A city pays **upkeep** at income for what it keeps: what each building on a tile it holds declares as its upkeep, taken as one sum once its tiles have yielded. Which buildings take upkeep and what each takes is content.
 
@@ -102,6 +102,8 @@ The neutral's **relations** with the player are at peace or **hostile**, at peac
 The player destroys the neutral: its city is captured by a unit of the player's standing on it through the enemy phase, as a camp is, and by a unit of the player's alone — its own guard resting on its tile captures nothing, and an enemy standing there captures nothing by standing. Its building leaves the map, its slot empty, and the neutral's population, its stocks and its border go with it: its tiles are nobody's from then on, claimed like any other. The capture deals the neutral's rewards as a camp's are dealt, in the same window, and what it deals is content. Its military units of no city are the neutral's still and hostile for the rest of the chronicle, going for the player's city as the raider does; nothing enters for a city that has fallen.
 
 The enemies destroy the neutral too: an enemy that prepares on its city's tile and still stands there when the next enemy phase begins captures it, as the player's city is captured. Its population, its stocks and its border go as when the player captures it, and nothing is dealt; its building leaves the map and the age's camp stands in its slot, held by the enemy that took it, which is that camp's from then on and carries its guard's script, so a camp stands where the neutral's city stood. Its relations with the player stand as they were, and its units of no city keep acting by their scripts, which say what each does of no city. An age whose camp does not stand on every terrain its neutral's city's building stands on is a defect of the content, refused before any chronicle is dealt.
+
+The neutral's city falls on the player's city's other conditions too: its population reaching zero, and its building removed, whatever removes it. It falls on the spot, as when the player captures it: its building leaves the map, its slot empty, and its population, its stocks and its border go with it, its tiles nobody's from then on; nothing is dealt, its relations with the player stand as they were, and its units of no city keep acting by their scripts.
 
 ## Sites ✅
 

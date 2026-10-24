@@ -61,6 +61,7 @@ import {
   NO_GROWTH,
   neutralStanding,
   onlyStocks,
+  onTheNeutralCity,
   opening,
   plains,
   QUIET,
@@ -207,7 +208,7 @@ test('the idle drives each seed of the cell to the chronicle’s ending, the cel
     ),
   }));
   const listing = (column: string): boolean =>
-    ['ms', 'played', 'unplayed', 'deals'].includes(column) ||
+    ['ms', 'neutral-fell', 'played', 'unplayed', 'deals'].includes(column) ||
     /^(units|killed|reached):/.test(column);
 
   expect(lines[0]).toBe(
@@ -344,7 +345,7 @@ test('with every n turns named, each seed writes before its ending row one row p
       : Object.fromEntries(
           Object.entries(row).filter(
             ([column]) =>
-              !['played', 'unplayed', 'deals'].includes(column) &&
+              !['neutral-fell', 'played', 'unplayed', 'deals'].includes(column) &&
               !/^(units|killed|reached):/.test(column),
           ),
         );
@@ -624,6 +625,24 @@ test('a capture’s deal taken is read with the building captured, the reward ta
   expect(columns.deals).toBe(`${CAMP.building}>${first}:${capturing.turn}`);
 });
 
+test('the neutral’s city’s fall is read with its cause and the turn it fell on, and blank while it stands', () => {
+  const capturing = onTheNeutralCity();
+  const launch = unchanged(capturing);
+  const fellBy = (turns: number): unknown =>
+    Object.fromEntries(
+      chronicleColumns(
+        CATALOGUE,
+        freshCampaign(CATALOGUE),
+        launch,
+        playedBy(CATALOGUE, PERSONAS.idle(), launch, turns),
+        [],
+      ),
+    )['neutral-fell'];
+
+  expect(fellBy(capturing.turn)).toBe('');
+  expect(fellBy(capturing.turn + 1)).toBe(`player:${capturing.turn}`);
+});
+
 test('a cell learns the victory of every age before its own and the technology that unlocks its region, then the technologies named; its region is the age’s first reached without it unless named', () => {
   const unlocking = regionsUnlocked({ [GRANARY]: REGION });
   const aged = recordRead(
@@ -728,7 +747,7 @@ test('the simulator run on the game’s content writes the cell’s record, the 
         [
           '^seed,ending,cause,turn,ms,',
           'influence,capstone,capstone-turn,',
-          'food,production,military,money,science,culture,population,held,neutral-population,',
+          'food,production,military,money,science,culture,population,held,neutral-population,neutral-fell,',
           'units:player,units:enemy,units:neutral,killed:player,killed:enemy,killed:neutral,',
           'played,unplayed,deals',
           '(,count:([^,]+),reached:\\2)*$',

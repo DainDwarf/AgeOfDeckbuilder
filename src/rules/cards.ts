@@ -17,7 +17,7 @@ import {
   type UnitEntry,
   unitKind,
 } from './catalogue';
-import { claimable, declaredByLanding, populationTaken } from './city';
+import { claimable, declaredByLanding, populationTaken, retiled } from './city';
 import {
   distance,
   type FeatureId,
@@ -42,7 +42,6 @@ import {
   change,
   changeFrom,
   changeOn,
-  fall,
   followed,
   type Group,
   grouped,
@@ -64,6 +63,7 @@ import {
   holderOf,
   holds,
   idle,
+  type NeutralFallCause,
   type TileBlock,
 } from './state';
 import { refreshedMovePoints, spentAction, standsOn, type Unit, unitAt } from './units';
@@ -766,40 +766,16 @@ export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): 
   );
 }
 
-/**
- * One tile of the map layered over, every other tile left as it stands: the one `retiled` change. The
- * player's city's tile coming out without its building, the city falls.
- */
-export function retiled(paid: Chronicle, at: TileCoords, after: (tile: Tile) => Tile): Landed {
-  const key = tileKey(at);
-  const laid = landedAs(
-    changeOn(
-      'retiled',
-      at,
-      {
-        ...paid,
-        tiles: paid.tiles.map((tile) => (tileKey(tile) === key ? after(tile) : tile)),
-      },
-      paid,
-    ),
-  );
-  return followed(laid, (left) => {
-    const { city, citySection } = left;
-    if (city === undefined || tileKey(city) !== key) return unchanged(left);
-    if (tileAt(left.tiles, city)?.building === citySection.building) return unchanged(left);
-    return fall(left, 'removal');
-  });
-}
-
 /** The building filling the building slot of a tile. */
 export function built(
   catalogue: Catalogue,
   paid: Chronicle,
   at: TileCoords,
   building: string,
+  cause?: NeutralFallCause,
 ): Landed {
   buildingKind(catalogue, building);
-  return retiled(paid, at, (tile) => ({ ...tile, building }));
+  return retiled(paid, at, (tile) => ({ ...tile, building }), cause);
 }
 
 /** The improvement an action card places: the tile carries it from now on, and the worker stays put. */

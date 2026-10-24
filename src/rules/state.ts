@@ -10,6 +10,12 @@ import type { Faction, Relations, Unit } from './units';
 export type DefeatCause = 'capture' | 'population' | 'removal' | 'capstone';
 
 /**
+ * Who or what took the neutral's city: the player's capture, the enemies', its population reaching
+ * zero, or its building removed by anything else.
+ */
+export type NeutralFallCause = 'player' | 'enemies' | 'population' | 'removal';
+
+/**
  * How a chronicle ended and the turn it ended on: in victory, the capstone passed, or in defeat, to
  * what the cause names.
  */

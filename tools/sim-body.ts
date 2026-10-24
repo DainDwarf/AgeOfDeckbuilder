@@ -455,10 +455,12 @@ export function chronicleColumns(
   const stages = [...launch.stages, ...landed.flatMap((command) => command.stages)];
   const played = plays(stages).map(({ card }) => card);
   const killed: Unit[] = [];
+  const neutralFell: [string, number][] = [];
   const reachedOn = new Map<string, number>();
   for (const stage of walked(stages)) {
     if (stage.kind !== 'change') continue;
     if (stage.name === 'killed') killed.push(unitKilled(stage));
+    if (stage.name === 'neutral-fallen') neutralFell.push([stage.cause, stage.chronicle.turn]);
     if (stage.name !== 'reached') continue;
     for (const [at, { id, reached }] of stage.chronicle.achievements.entries()) {
       if (reached && !stage.before.achievements[at].reached) {
@@ -483,6 +485,7 @@ export function chronicleColumns(
     ['population', chronicle.population],
     ['held', chronicle.held.length],
     ['neutral-population', chronicle.neutral?.population ?? ''],
+    ['neutral-fell', listingOf(neutralFell)],
     ...FACTIONS.map((faction): Column => [`units:${faction}`, byKind(chronicle.units, faction)]),
     ...FACTIONS.map((faction): Column => [`killed:${faction}`, byKind(killed, faction)]),
     ['played', counted(played)],

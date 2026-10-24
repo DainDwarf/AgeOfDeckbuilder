@@ -1063,7 +1063,7 @@ test('a unit of the neutral’s standing on a site when the turn ends captures i
   expect(taken.turn).toBe(sited.turn + 1);
 });
 
-test('a unit of the player’s standing on the neutral’s city when the turn ends captures it: one capture carrying its tile over its building leaving the tile, the neutral’s city leaving with its border, its population and its stocks while its relations stay hostile, and its rewards dealt under its building', () => {
+test('a unit of the player’s standing on the neutral’s city when the turn ends captures it: one capture carrying its tile over its building leaving the tile, the neutral’s city falling to the player and leaving with its border, its population and its stocks while its relations stay hostile, and its rewards dealt under its building', () => {
   const standingOn = onTheNeutralCity();
 
   const stages = apply(CATALOGUE, standingOn, { type: 'end-turn' });
@@ -1071,6 +1071,7 @@ test('a unit of the player’s standing on the neutral’s city when the turn en
 
   expect(tilesStaged('capture', standingOn)).toEqual([tileKey(NEUTRAL_TILE)]);
   expect(namesOf(heldBy(stages, 'capture'))).toEqual(['retiled', 'neutral-fallen', 'dealt']);
+  expect(heldBy(stages, 'capture')[1]).toMatchObject({ cause: 'player' });
   expect(buildingAt(fallen, NEUTRAL_TILE)).toBeUndefined();
   expect(fallen.neutral).toBeUndefined();
   expect(relationsOf(fallen)).toBe('hostile');
@@ -1707,7 +1708,7 @@ test('the neutral’s city’s tile is never pillaged: a prepare carried there t
   expect(enemyPhaseOf(standingThere, PREPARING)).toEqual(['action-spent', 'prepare']);
 });
 
-test('an enemy prepared on the neutral’s city’s tile captures it as the next enemy phase begins, ahead of every pillage: one capture carrying its tile over the age’s camp built in its slot, the neutral leaving with its border, its population and its stocks, and the enemy made that camp’s guard, its prepare gone; nothing is dealt, its relations stand, and with the player’s city captured too the chronicle ends first', () => {
+test('an enemy prepared on the neutral’s city’s tile captures it as the next enemy phase begins, ahead of every pillage: one capture carrying its tile over the age’s camp built in its slot, the neutral falling to the enemies and leaving with its border, its population and its stocks, and the enemy made that camp’s guard, its prepare gone; nothing is dealt, its relations stand, and with the player’s city captured too the chronicle ends first', () => {
   const farm = { q: -2, r: 0 };
   const farmed = besideTheNeutral({}, builtOn(plains(3), 'PH_Farm', [farm]));
   const taking = withUnits(farmed, [
@@ -1729,6 +1730,7 @@ test('an enemy prepared on the neutral’s city’s tile captures it as the next
     'prepare',
   ]);
   expect(tilesStaged('capture', taking)).toEqual([tileKey(NEUTRAL_TILE)]);
+  expect(heldBy(stages, 'capture')[1]).toMatchObject({ cause: 'enemies' });
   expect(buildingAt(fallen, NEUTRAL_TILE)).toBe(CAMP.building);
   expect(fallen.neutral).toBeUndefined();
   expect(unitAt(fallen.units, NEUTRAL_TILE)).toMatchObject({

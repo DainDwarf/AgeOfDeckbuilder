@@ -1,4 +1,4 @@
-import { built, featurePlaced, featureRemoved, reaches, retiled, terraformed } from './cards';
+import { built, featurePlaced, featureRemoved, reaches, terraformed } from './cards';
 import {
   type Aim,
   type Answer,
@@ -11,7 +11,7 @@ import {
   type Span,
   scheduleOf,
 } from './catalogue';
-import { costPaid } from './city';
+import { buildingTakenOff, costPaid, retiled } from './city';
 import { enteredAround, rowsDrawn } from './enemies';
 import {
   distance,
@@ -387,10 +387,7 @@ function oneRemovedNear(chronicle: Chronicle): Landed {
       ? { picked: chronicle.city, rng: chronicle.rng }
       : pickUniform(chronicle.rng, buildings);
   if (drawn.picked === undefined) return runtimeError(chronicle);
-  return retiled({ ...chronicle, rng: drawn.rng }, drawn.picked, (tile) => ({
-    ...tile,
-    building: undefined,
-  }));
+  return buildingTakenOff({ ...chronicle, rng: drawn.rng }, drawn.picked);
 }
 
 /** The tiles carrying one of the features; a feature the catalogue does not hold is refused. */

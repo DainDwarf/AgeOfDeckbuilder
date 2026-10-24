@@ -14,6 +14,7 @@ import {
 } from './catalogue';
 import { admitted, apply, type Command, launched, outcome, reckoned } from './chronicle';
 import {
+  arrived,
   assignWaiting,
   bordered,
   cityCommand,
@@ -109,6 +110,14 @@ function reassignTo(from: TileCoords, to: TileCoords): Command {
  */
 function alone(carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], { tiles: field(3), population: 3, ...carrying });
+}
+
+/** The chronicle with the neutral's city holding the tile beyond its own, a shrine built on it. */
+function shrinedByTheNeutral(chronicle: Chronicle): Chronicle {
+  const theirs = { q: 2, r: 0 };
+  return followed(bordered(chronicle, 'neutral', theirs), (left) =>
+    built(CATALOGUE, left, theirs, SHRINE),
+  ).chronicle;
 }
 
 /** The fixture's civilization with this many free claims in its settle section. */
@@ -950,10 +959,7 @@ test('at income each city pays out of what its tiles yielded, as one stock after
   expect(reckoned(CATALOGUE, short)?.pastNothing).toEqual(new Set(['production', 'culture']));
 
   const opened = besideTheNeutral();
-  const theirs = { q: 2, r: 0 };
-  const shrined = followed(bordered(opened, 'neutral', theirs), (left) =>
-    built(CATALOGUE, left, theirs, SHRINE),
-  ).chronicle;
+  const shrined = shrinedByTheNeutral(arrived(opened, 'neutral').chronicle);
   const neutral = paying(shrined);
 
   expect(namesOf(neutral.after)).toEqual(['stock', 'assigned', 'population']);
@@ -969,6 +975,32 @@ test('at income each city pays out of what its tiles yielded, as one stock after
   );
   expect(neutral.after[2].chronicle.population).toBe(shrined.population);
   expect(reckoned(CATALOGUE, shrined)).toEqual(reckoned(CATALOGUE, opened));
+});
+
+test('the neutral’s upkeep taking its last population, its city falls inside the income group: the population, then its building off its tile, then the fall carrying the population as its cause; its slot empty, its rows gone, its relations as they were, nothing dealt, nothing of its city after, and the player’s rows untouched', () => {
+  const shrined = shrinedByTheNeutral(besideTheNeutral());
+  const stages = apply(CATALOGUE, shrined, { type: 'end-turn' });
+  const income = heldBy(stages, 'income');
+  const paid = income.slice(-5);
+  const after = outcome(stages);
+  const playerRows = ({ resources, population, held, assigned }: Chronicle) => ({
+    resources,
+    population,
+    held,
+    assigned,
+  });
+
+  expect(shrined.neutral?.population).toBe(1);
+  expect(namesOf(paid)).toEqual(['stock', 'assigned', 'population', 'retiled', 'neutral-fallen']);
+  expect(paid[2].chronicle.neutral?.population).toBe(0);
+  expect(paid[3]).toMatchObject({ tile: NEUTRAL_TILE });
+  expect(paid[4]).toMatchObject({ cause: 'population' });
+  expect(playerRows(paid[4].chronicle)).toEqual(playerRows(paid[0].before));
+  expect(tileAt(after.tiles, NEUTRAL_TILE)?.building).toBeUndefined();
+  expect(after.neutral).toBeUndefined();
+  expect(after.relations).toBe(shrined.relations);
+  expect(after.deals).toEqual([]);
+  expect(after.ending).toBeUndefined();
 });
 
 test('hostile, a unit of the player’s occupies the tile of the neutral’s it stands on, which yields nothing at income', () => {
