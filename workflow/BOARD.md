@@ -11,3 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The goals pass** — are the technologies' goals good: each checked for whether a player going for it reaches it, on which turn, and whether it asks more than a chronicle played as usual gives; Domestication's goal, which a worker standing on one herd reaches, first among them.
 
 ## Lines
+
+- **Several gambits left out** — `--without` takes a comma list of gambit numbers, the walk leaves them all out and the cell's line records them as an array in the order named, the sim tests holding it. Doc-impact: `docs/SIMULATOR.md`. [board/several-gambits-left-out.md](board/several-gambits-left-out.md)
