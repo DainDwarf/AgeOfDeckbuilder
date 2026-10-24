@@ -12,5 +12,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The neutral city falls as the player's does** — the neutral's city falls on the conditions the player's falls on, its population reaching zero and its building removed among them, through the one door the captures already pass; the fall leaves its slot empty, nothing dealt, its relations standing and its units of no city acting by their scripts; the simulator's row says how and on which turn the neutral fell. Doc-impact: `docs/CHRONICLE.md`, `docs/SIMULATOR.md`. [board/neutral-city-falls.md](board/neutral-city-falls.md)
 - **The personas and the neutral guard their incomes** — safeguarding the gambits and the neutral's script: no gambit of either persona places, reassigns or unassigns, and the neutral's script neither builds nor assigns, in a way that puts any resource's income below nothing; the guard that let the upkeep trial run without a city falling.
 - **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
