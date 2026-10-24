@@ -2172,7 +2172,7 @@ test('a strike on a stock already at nothing raises no stock stage, and takes on
 });
 
 /** What each stock gained from the income group the end of turn stages on the city. */
-function incomeOf(city: Chronicle): Resources {
+function gainedAtIncome(city: Chronicle): Resources {
   const income = apply(CATALOGUE, city, { type: 'end-turn' }).find(
     (stage) => stage.name === 'income',
   );
@@ -2190,7 +2190,7 @@ test('growth takes what the income and the strikes leave: a stock over the growt
   });
 
   const starved = outcome(apply(CATALOGUE, struck, { type: 'end-turn' }));
-  const yielded = incomeOf(fed).food;
+  const yielded = gainedAtIncome(fed).food;
   const grown = outcome(apply(CATALOGUE, fed, { type: 'end-turn' }));
 
   expect(struck.resources.food).toBeGreaterThan(threshold);
@@ -2224,13 +2224,13 @@ test('the reckoning is the end of turn’s own run: each stock as the strikes le
   }
   expect(struck.stocks).toEqual({
     ...gainedBetween(short, left),
-    food: incomeOf(short).food - HUNGER,
+    food: gainedAtIncome(short).food - HUNGER,
   });
   expect(short.resources.food + struck.stocks.food).toBeLessThan(0);
   expect(struck.pastNothing).toEqual(new Set(['food']));
   expect(short.population + struck.population).toBe(grow.chronicle.population);
   expect(struck.population).toBe(-1);
-  expect(growing.stocks).toEqual(incomeOf(fed));
+  expect(growing.stocks).toEqual(gainedAtIncome(fed));
   expect(fed.resources.food + growing.stocks.food).toBeGreaterThanOrEqual(threshold);
   expect(growing.pastNothing).toEqual(new Set());
   expect(growing.population).toBe(1);

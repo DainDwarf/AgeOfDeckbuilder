@@ -12,7 +12,7 @@ import {
   type ScriptAct,
   unitKind,
 } from './catalogue';
-import { admitted, apply, type Command, launched, outcome, reckoned } from './chronicle';
+import { admitted, apply, type Command, incomeOf, launched, outcome, reckoned } from './chronicle';
 import {
   arrived,
   assignWaiting,
@@ -975,6 +975,19 @@ test('at income each city pays out of what its tiles yielded, as one stock after
   );
   expect(neutral.after[2].chronicle.population).toBe(shrined.population);
   expect(reckoned(CATALOGUE, shrined)).toEqual(reckoned(CATALOGUE, opened));
+});
+
+test('a city’s income is what its worked tiles yield less its upkeep, the upkeep read past a stock at nothing', () => {
+  const shrine = { q: 1, r: 0 };
+  const city = cityOf(['urban', 'plain'], {
+    tiles: builtOn(field(1), SHRINE, [shrine]),
+    assigned: [shrine],
+  });
+
+  expect(city.resources.production).toBe(0);
+  expect(incomeOf(CATALOGUE, city, 'player').production).toBe(
+    -(buildingKind(CATALOGUE, SHRINE).upkeep?.production ?? 0),
+  );
 });
 
 test('the neutral’s upkeep taking its last population, its city falls inside the income group: the population, then its building off its tile, then the fall carrying the population as its cause; its slot empty, its rows gone, its relations as they were, nothing dealt, nothing of its city after, and the player’s rows untouched', () => {

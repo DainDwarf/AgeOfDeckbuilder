@@ -125,6 +125,7 @@ import {
   type ChronicleCard,
   type CityFaction,
   capstoneLanded,
+  cityRows,
   type NeutralFallCause,
   onSettlePhase,
   playable,
@@ -926,24 +927,43 @@ export type Reckoning = {
 export function reckoned(catalogue: Catalogue, chronicle: Chronicle): Reckoning | undefined {
   if (endOfTurnAs(chronicle) !== 'cities') return undefined;
   const { strikes, growth } = citiesHalf(catalogue, chronicle);
-  const uncovered = { ...NOUGHT };
-  for (const stage of walked(strikes.stages)) {
-    if (stage.kind !== 'change' || stage.name !== 'population') continue;
-    if (stage.uncovered === undefined) continue;
-    // A `population` of a city other than the player's is no part of the player's reckoning.
-    if (stage.chronicle.population === stage.before.population) continue;
-    uncovered[stage.uncovered.resource] += stage.uncovered.amount;
-  }
-  const stocks = { ...NOUGHT };
-  for (const resource of RESOURCES) {
-    stocks[resource] =
-      strikes.chronicle.resources[resource] - chronicle.resources[resource] - uncovered[resource];
-  }
   return {
-    stocks,
-    pastNothing: new Set(RESOURCES.filter((resource) => uncovered[resource] > 0)),
+    ...stocksMoved(strikes, 'player'),
     population: growth.chronicle.population - chronicle.population,
   };
+}
+
+/** The faction's city's income: what its worked tiles yield less its upkeep, as `stocksMoved` reads it. */
+export function incomeOf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  whose: CityFaction,
+): Resources {
+  return stocksMoved(income(catalogue, chronicle, whose), whose).stocks;
+}
+
+/**
+ * What the stages moved of the faction's city's stocks, past nothing read off the population each
+ * shortfall took: one left short once the city has no population left to take reads as nothing.
+ */
+function stocksMoved(run: Sequence, whose: CityFaction): Pick<Reckoning, 'stocks' | 'pastNothing'> {
+  const stocks = { ...NOUGHT };
+  const pastNothing = new Set<Resource>();
+  for (const stage of walked(run.stages)) {
+    if (stage.kind !== 'change') continue;
+    const before = cityRows(stage.before, whose);
+    const after = cityRows(stage.chronicle, whose);
+    if (before === undefined || after === undefined) continue;
+    for (const resource of RESOURCES) {
+      stocks[resource] += after.resources[resource] - before.resources[resource];
+    }
+    if (stage.name !== 'population' || stage.uncovered === undefined) continue;
+    // A `population` names no city: the one that paid is the one whose population moved.
+    if (after.population === before.population) continue;
+    stocks[stage.uncovered.resource] -= stage.uncovered.amount;
+    pastNothing.add(stage.uncovered.resource);
+  }
+  return { stocks, pastNothing };
 }
 
 /** A step of the end of turn taken by every city in turn: the player's, then the neutral's. */
