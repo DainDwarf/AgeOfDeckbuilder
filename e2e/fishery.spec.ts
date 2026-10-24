@@ -43,6 +43,7 @@ import {
   shownCard,
   shows,
   unitEntered,
+  upkeepRow,
   WORKER,
   watch,
 } from './chronicle-screen';
@@ -176,6 +177,7 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
       { text: buildingName(FISHERY), yields: {} },
       { text: buildingName(FISHERY), yields: own.yields },
       { text: LINE, yields: {} },
+      upkeepRow(FISHERY),
     ]);
 
   expect(problems).toEqual([]);

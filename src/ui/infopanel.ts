@@ -514,6 +514,57 @@ function buildFace(
     return { root: scene.add.container(0, 0, contents), hovers };
   }
 
+  /**
+   * The chips of a line on its right, three at most to a line, moved under it where they do not fit
+   * the room beside what stands on its left: the top of the line after the last of them.
+   */
+  const chipped = (chipping: Chips, top: number, line: number, room: number): number => {
+    const chips = amountsOf(chipping.amounts).map(({ resource, amount }) => {
+      const reading = signedOf(chipping.kind, amount);
+      const value = addText(scene, 0, 0, reading, style.chip).setOrigin(0, 0.5);
+      return { resource, value, width: 0.7 * em + value.width };
+    });
+
+    let lineTop = top;
+    let across = room;
+    const together =
+      chips.reduce((total, chip) => total + chip.width, 0) + 0.3 * em * (chips.length - 1);
+    if (together > across) {
+      lineTop += line + 0.35 * em;
+      across = right - left;
+    }
+
+    let first = 0;
+    while (first < chips.length) {
+      let taken = 0;
+      let span = 0;
+      while (taken < 3 && first + taken < chips.length) {
+        const grown = span + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
+        if (taken > 0 && grown > across) break;
+        span = grown;
+        taken++;
+      }
+
+      const centre = lineTop + line / 2;
+      let x = right - span;
+      for (const { resource, value } of chips.slice(first, first + taken)) {
+        // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
+        const chip = scene.add
+          .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, LOOK.reading[resource])
+          .setAngle(45)
+          .setName(`panel-${chipping.kind}-${resource}`);
+        value.setPosition(x + 0.7 * em, centre);
+        contents.push(chip, value);
+        listen(x, lineTop, 0.7 * em + value.width, line, resource);
+        x += 0.7 * em + value.width + 0.3 * em;
+      }
+      lineTop += line + 0.35 * em;
+      first += taken;
+      across = right - left;
+    }
+    return lineTop;
+  };
+
   for (const [at, row] of card.rows.entries()) {
     const rowName = addText(scene, left + 0.75 * em + 0.3 * em, 0, nameOf(row), style.label)
       .setOrigin(0, 0.5)
@@ -525,62 +576,29 @@ function buildFace(
     );
     contents.push(rowName);
 
-    /** What the line being laid out has on its right: the row's width, less the name beside it. */
-    let room = right - (rowName.x + rowName.width + 0.3 * em);
-    const gives = yieldsOf(row);
-    if (gives.length === 0) {
+    const room = right - (rowName.x + rowName.width + 0.3 * em);
+    if (amountsOf(row.yields).length === 0) {
       const none = addText(scene, right, 0, text('panel.no-yield'), style.label).setOrigin(1, 0.5);
       if (none.width > room) rowTop += line + 0.35 * em;
       none.setY(rowTop + line / 2);
       contents.push(none);
       rowTop += line + 0.35 * em;
     } else {
-      const chips = gives.map(({ resource, amount }) => {
-        const value = addText(scene, 0, 0, `+${amount}`, style.chip).setOrigin(0, 0.5);
-        return { resource, value, width: 0.7 * em + value.width };
-      });
-
-      const together =
-        chips.reduce((total, chip) => total + chip.width, 0) + 0.3 * em * (chips.length - 1);
-      if (together > room) {
-        rowTop += line + 0.35 * em;
-        room = right - left;
-      }
-
-      let first = 0;
-      while (first < chips.length) {
-        let taken = 0;
-        let span = 0;
-        while (taken < 3 && first + taken < chips.length) {
-          const grown = span + chips[first + taken].width + (taken === 0 ? 0 : 0.3 * em);
-          if (taken > 0 && grown > room) break;
-          span = grown;
-          taken++;
-        }
-
-        const centre = rowTop + line / 2;
-        let x = right - span;
-        for (const { resource, value } of chips.slice(first, first + taken)) {
-          // A diamond is a square turned, never a polygon: see the trap over `yieldMark` in `map.ts`.
-          const chip = scene.add
-            .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, LOOK.reading[resource])
-            .setAngle(45)
-            .setName(`panel-yield-${resource}`);
-          value.setPosition(x + 0.7 * em, centre);
-          contents.push(chip, value);
-          listen(x, rowTop, 0.7 * em + value.width, line, resource);
-          x += 0.7 * em + value.width + 0.3 * em;
-        }
-        rowTop += line + 0.35 * em;
-        first += taken;
-        room = right - left;
-      }
+      rowTop = chipped({ kind: 'yield', amounts: row.yields }, rowTop, line, room);
     }
 
-    const note = noteOf(catalogue, row);
-    if (note !== undefined) {
-      contents.push(addText(scene, left, rowTop + line / 2, note, style.label).setOrigin(0, 0.5));
-      rowTop += line + 0.35 * em;
+    for (const under of linesUnder(catalogue, row)) {
+      const says = addText(scene, left, rowTop + line / 2, under.says, style.label).setOrigin(
+        0,
+        0.5,
+      );
+      contents.push(says);
+      if (under.takes === undefined) {
+        rowTop += line + 0.35 * em;
+        continue;
+      }
+      const beside = right - (says.x + says.width + 0.3 * em);
+      rowTop = chipped({ kind: 'upkeep', amounts: under.takes }, rowTop, line, beside);
     }
   }
 
@@ -663,36 +681,55 @@ function nameOf(row: Row): string {
   }
 }
 
+/** One line under a row: what it says, and what it takes, read as chips, where it takes anything. */
+type LineUnder = { readonly says: string; readonly takes?: Partial<Resources> };
+
 /**
- * What a row says under itself of what it does beyond its yield — to a move, to the tiles beside it
- * — and nothing for a row that does neither.
+ * What a row says under itself of what it does beyond its yield, a line each — to a move, to the
+ * tiles beside it, to the stocks of the city holding it — and nothing for a row that does none.
  */
-function noteOf(catalogue: Catalogue, row: Row): string | undefined {
+function linesUnder(catalogue: Catalogue, row: Row): LineUnder[] {
   switch (row.kind) {
     case 'building': {
-      const { givesBeside } = buildingKind(catalogue, row.building);
-      return givesBeside === undefined
-        ? undefined
-        : text('panel.beside', { terrain: terrainName(givesBeside.terrain) });
+      const { givesBeside, upkeep } = buildingKind(catalogue, row.building);
+      const lines: LineUnder[] = [];
+      if (givesBeside !== undefined) {
+        lines.push({ says: text('panel.beside', { terrain: terrainName(givesBeside.terrain) }) });
+      }
+      if (upkeep !== undefined) lines.push({ says: text('panel.upkeep'), takes: upkeep });
+      return lines;
     }
     case 'beside':
     case 'improvement':
     case 'feature':
     case 'terrain':
-      return undefined;
+      return [];
     case 'river':
-      return text('panel.crossing');
+      return [{ says: text('panel.crossing') }];
   }
 }
 
-/** What the row gives at income, in the order the resource bar reads. */
-function yieldsOf(row: Row): { resource: Resource; amount: number }[] {
-  const given: { resource: Resource; amount: number }[] = [];
-  for (const resource of RESOURCES) {
-    const amount = row.yields[resource];
-    if (amount !== undefined) given.push({ resource, amount });
+/** The chips of a line: a row's, what it gives at income, or an upkeep line's, what it takes. */
+type Chips = { readonly kind: 'yield' | 'upkeep'; readonly amounts: Partial<Resources> };
+
+/** What a chip reads of its amount: given, signed up, taken, signed down. */
+function signedOf(kind: Chips['kind'], amount: number): string {
+  switch (kind) {
+    case 'yield':
+      return text('reading.plus', { count: amount });
+    case 'upkeep':
+      return text('reading.minus', { count: amount });
   }
-  return given;
+}
+
+/** Each resource named and its amount, in the order the resource bar reads. */
+function amountsOf(amounts: Partial<Resources>): { resource: Resource; amount: number }[] {
+  const named: { resource: Resource; amount: number }[] = [];
+  for (const resource of RESOURCES) {
+    const amount = amounts[resource];
+    if (amount !== undefined) named.push({ resource, amount });
+  }
+  return named;
 }
 
 /** A mark drawn at the size it has on the map, brought into a box; its outline keeps its weight. */

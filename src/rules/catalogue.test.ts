@@ -50,6 +50,7 @@ import {
   REGION,
   regionsUnlocked,
   rescheduled,
+  SHRINE,
   SITE,
   SITES,
   SLICES,
@@ -535,6 +536,17 @@ test('a catalogue whose building gives to a terrain it does not hold is refused'
   });
 
   expect(() => catalogued(content)).toThrow('fixture: no terrain is named marsh');
+});
+
+test('a catalogue whose building takes an upkeep of nought or less of a resource is refused', () => {
+  const shrine = CATALOGUE.buildings[SHRINE];
+  for (const production of [0, -1]) {
+    const content = changed({
+      buildings: { ...CATALOGUE.buildings, [SHRINE]: { ...shrine, upkeep: { production } } },
+    });
+
+    expect(() => catalogued(content)).toThrow(/^fixture: the building PH_Shrine takes an upkeep/);
+  }
 });
 
 test('a catalogue whose region names a biome or a feature it does not hold is refused', () => {

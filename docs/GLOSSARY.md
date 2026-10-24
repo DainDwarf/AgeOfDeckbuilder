@@ -74,7 +74,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
 | **aim** | What a card is played at, nothing included; for a selected unit, the tiles it lights and the units it glows. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **being aimed** | The state of a selected card or unit while what its aim admits is offered, until it lands or is let go of. | armed, pending, targeting, in flight |
-| **stock** | A city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
+| **stock** | A city's holding of one resource: what income adds to and every cost and the upkeep are paid out of. | reserve, treasury, pool, supply, balance, bank |
 | **cost** | What a city pays out of its stocks to play something, for example a card. | fee, charge, toll |
 | **unaffordable** | What cannot be paid for: a card whose cost a city's stocks do not cover, or whose price the influence does not. | unpayable, short, lacking, too expensive |
 | **discard** | To send a card from the hand to the discard pile. | throw away, dump |
@@ -89,14 +89,15 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **discard pile** | The cards played or discarded this cycle, waiting to be shuffled back. | graveyard, trash, bin |
 | **browse** | A window offering a pile's cards to be read. | pile window, viewer, gallery, preview, list (of a pile) |
 | **combat** | Units attacking one another: the player's by hand in play, the enemies' and the neutral's in the enemy phase. | battle, fight, skirmish |
-| **income** | The phase where standing things yield. | upkeep, production phase, resolution |
+| **income** | The phase where standing things yield. | production phase, resolution |
+| **upkeep** | What a city pays each turn, at income, for what it keeps. | maintenance, running cost, tax |
 | **sight** | A unit's stat and the player's city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |
 | **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
 | **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
 | **uncharted** | A tile never yet in sight. | unexplored, unrevealed, black, hidden |
 | **instant** | A card with an immediate effect that no unit's action goes to. | spell, effect card |
-| **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, upkeep, affliction, bane |
+| **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, affliction, bane |
 | **strike** | What a hazard or a challenge does to the chronicle at the end of a turn it is still in the hand. | bite, trigger, proc, go off |
 | **worker** | A unit that does not attack, that cards are played through to change tiles: build, terraform, place an improvement. | builder, engineer, labourer |
 | **population** | A city's inhabitants: assigned to tiles for income, turned into units by unit cards. | inhabitants, citizens, workforce, pops |

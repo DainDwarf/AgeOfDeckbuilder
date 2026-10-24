@@ -37,7 +37,7 @@ import {
   refuse,
   terrainKind,
 } from './map-kinds';
-import { RESOURCES, type Resource, type Resources } from './resources';
+import { RESOURCES, type Resources } from './resources';
 import {
   change,
   changeFrom,
@@ -975,29 +975,4 @@ export function gained(paid: Chronicle, gain: Partial<Resources>): Landed {
   const resources = { ...paid.resources };
   for (const resource of RESOURCES) resources[resource] += gain[resource] ?? 0;
   return landedAs(change('stock', { ...paid, resources }, paid));
-}
-
-/**
- * A resource shocked: the player's city's stock of it loses the amount, never below nothing, and
- * where the stock does not cover it one population is taken besides, carrying how far past it falls.
- */
-export function shocked(chronicle: Chronicle, resource: Resource, amount: number): Landed {
-  const stock = chronicle.resources[resource];
-  const left = Math.max(0, stock - amount);
-  const struck =
-    left === stock
-      ? unchanged(chronicle)
-      : landedAs(
-          change(
-            'stock',
-            {
-              ...chronicle,
-              resources: { ...chronicle.resources, [resource]: left },
-            },
-            chronicle,
-          ),
-        );
-  if (stock >= amount) return struck;
-  const uncovered = { resource, amount: amount - stock };
-  return followed(struck, (after) => populationTaken(after, 'player', uncovered));
 }

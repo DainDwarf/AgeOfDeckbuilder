@@ -11,13 +11,12 @@ import {
   outside,
   refreshed,
   settled,
-  shocked,
   slotFree,
   throughWorker,
 } from '../rules/cards';
 import type { Age, Schedule, Slice, Tables, UnitEntryTable } from '../rules/catalogue';
 import { endedInVictory } from '../rules/chronicle';
-import { arrived, yielded } from '../rules/city';
+import { arrived, shocked, yielded } from '../rules/city';
 import { raided, rowsDrawn } from '../rules/enemies';
 import { MOVE_POINT } from '../rules/map';
 import { buildingKind } from '../rules/map-kinds';
@@ -131,7 +130,8 @@ const TABLES: Tables = {
       kind: 'hazard',
       cost: { production: 2 },
       counters: { food: hungerFood(0) },
-      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('food')),
+      strikes: (_catalogue, chronicle, counter) =>
+        shocked(chronicle, 'player', { food: counter('food') }),
     },
     stores: {
       kind: 'trophy',
@@ -236,7 +236,7 @@ const TABLES: Tables = {
           cost: {},
           reads: (_catalogue, chronicle) => ({ food: wildfireTakes(chronicle.turn) }),
           lands: (_catalogue, chronicle) =>
-            shocked(chronicle, 'food', wildfireTakes(chronicle.turn)),
+            shocked(chronicle, 'player', { food: wildfireTakes(chronicle.turn) }),
         },
         firebreak: {
           cost: (_catalogue, chronicle) => ({ production: wildfireTakes(chronicle.turn) }),

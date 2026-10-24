@@ -1,7 +1,7 @@
 import { ageOf, type Catalogue, cardOf, costOf, unitCardOf, workerAim } from './catalogue';
 import { neighbours, type TileCoords, tileAt, tileKey } from './map';
-import { refuse } from './map-kinds';
-import { RESOURCES } from './resources';
+import { buildingKind, refuse } from './map-kinds';
+import { RESOURCES, type Resources, summed } from './resources';
 import {
   change,
   changeOn,
@@ -73,7 +73,7 @@ export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
 /**
  * Income of the faction's city: an assigned tile nobody occupies yields, the city's own tile no
- * exception, tile by tile in tile order.
+ * exception, tile by tile in tile order; and then the city pays its upkeep out of what they left.
  */
 export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction): Landed {
   const city = cityRows(chronicle, whose);
@@ -86,7 +86,45 @@ export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFa
     if (occupied(chronicle.units, { q, r }, whose, relations)) continue;
     yielding = followed(yielding, (left) => yielded(catalogue, left, whose, { q, r }));
   }
-  return yielding;
+  return followed(yielding, (left) => upkept(catalogue, left, whose));
+}
+
+/** The faction's city's upkeep, shocked: what the buildings on the tiles it holds declare, summed. */
+function upkept(catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction): Landed {
+  const declared = (cityRows(chronicle, whose)?.held ?? []).flatMap((coord) => {
+    const building = tileAt(chronicle.tiles, coord)?.building;
+    return building === undefined ? [] : [buildingKind(catalogue, building).upkeep ?? {}];
+  });
+  return shocked(chronicle, whose, summed(declared));
+}
+
+/**
+ * The stocks shocked: each of the faction's city's stocks loses what is named of it, never below
+ * nothing, one `stock`; then one population taken for each stock it does not cover, carrying how
+ * far past it falls. Nothing where nothing is named or that city is none.
+ */
+export function shocked(
+  chronicle: Chronicle,
+  whose: CityFaction,
+  taken: Partial<Resources>,
+): Landed {
+  const city = cityRows(chronicle, whose);
+  const costs = costsOf(taken);
+  if (city === undefined || costs.length === 0) return unchanged(chronicle);
+  const resources = { ...city.resources };
+  const uncovered: Cost[] = [];
+  for (const { resource, amount } of costs) {
+    const stock = resources[resource];
+    resources[resource] = Math.max(0, stock - amount);
+    if (stock < amount) uncovered.push({ resource, amount: amount - stock });
+  }
+  let shocking = RESOURCES.every((resource) => resources[resource] === city.resources[resource])
+    ? unchanged(chronicle)
+    : landedAs(change('stock', withCityRows(chronicle, whose, { resources }), chronicle));
+  for (const past of uncovered) {
+    shocking = followed(shocking, (left) => populationTaken(left, whose, past));
+  }
+  return shocking;
 }
 
 /**

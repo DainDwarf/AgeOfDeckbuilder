@@ -906,11 +906,14 @@ function citiesHalf(
 
 /** What ending the turn now would do to the player's city, read off the end of turn's own steps. */
 export type Reckoning = {
-  /** Each stock's income less the whole of what the strikes asked of it, past nothing included. */
+  /**
+   * Each stock's income less the whole of what the upkeep and the strikes asked of it, past nothing
+   * included.
+   */
   readonly stocks: Resources;
-  /** The stocks the strikes take past nothing. */
+  /** The stocks the upkeep or the strikes take past nothing. */
   readonly pastNothing: ReadonlySet<Resource>;
-  /** The population growth brings, or the strikes take. */
+  /** The population growth brings, or the upkeep and the strikes take. */
   readonly population: number;
 };
 
@@ -925,6 +928,8 @@ export function reckoned(catalogue: Catalogue, chronicle: Chronicle): Reckoning 
   for (const stage of walked(strikes.stages)) {
     if (stage.kind !== 'change' || stage.name !== 'population') continue;
     if (stage.uncovered === undefined) continue;
+    // A `population` of a city other than the player's is no part of the player's reckoning.
+    if (stage.chronicle.population === stage.before.population) continue;
     uncovered[stage.uncovered.resource] += stage.uncovered.amount;
   }
   const stocks = { ...NOUGHT };

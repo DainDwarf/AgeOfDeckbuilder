@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { aimOf, refuses } from './cards';
+import { aimOf, built, refuses } from './cards';
 import {
   type AimedCard,
   ageOf,
@@ -12,9 +12,10 @@ import {
   type ScriptAct,
   unitKind,
 } from './catalogue';
-import { admitted, apply, type Command, launched, outcome } from './chronicle';
+import { admitted, apply, type Command, launched, outcome, reckoned } from './chronicle';
 import {
   assignWaiting,
+  bordered,
   cityCommand,
   cityDrag,
   claimable,
@@ -64,6 +65,7 @@ import {
   QUIET,
   REGION,
   ringed,
+  SHRINE,
   type Standing,
   settledLaunch,
   settledOn,
@@ -91,6 +93,7 @@ import {
 import { buildingKind, featureKind, improvementKind, regionOf, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources, withNone } from './resources';
 import { inSight } from './sight';
+import { followed, type Stage } from './stages';
 import { type Chronicle, type CityRows, idle, type Snapshot, withCityRows } from './state';
 import { FIRST_UNIT_NUMBER, type Unit, unitAt } from './units';
 import { tileYield } from './yields';
@@ -904,6 +907,68 @@ test('at income the neutral’s assigned tile yields into its own stocks, after 
   expect(last?.chronicle.resources).toEqual(before?.chronicle.resources);
   expect(last?.chronicle.neutral?.resources).toEqual(together(gives));
   expect(outcome(blocked).neutral?.resources).toEqual(together());
+});
+
+test('at income each city pays out of what its tiles yielded, as one stock after them, the upkeep the buildings on every tile it holds declare, summed; each stock it takes past nothing is emptied and takes one population besides, the neutral’s as the player’s, and the reckoning reads the player’s alone', () => {
+  const upkeep = buildingKind(CATALOGUE, SHRINE).upkeep ?? {};
+  const owed = together(upkeep, upkeep);
+  const shrines = [
+    { q: 1, r: 0 },
+    { q: 2, r: 0 },
+  ];
+  const city = (resources: Resources): Chronicle =>
+    cityOf(['urban', 'plain', 'plain'], {
+      ...NO_GROWTH,
+      tiles: builtOn(field(3), SHRINE, [...shrines, { q: 1, r: 1 }]),
+      assigned: [CITY, shrines[0]],
+      resources,
+    });
+  /** What the income ending the turn raises after its last tile yields, and what that yield left. */
+  const paying = (chronicle: Chronicle): { yielded: Chronicle; after: readonly Stage[] } => {
+    const income = heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'income');
+    const last = income
+      .map((stage) => stage.kind === 'change' && stage.name === 'stock' && stage.tile !== undefined)
+      .lastIndexOf(true);
+    return { yielded: income[last].chronicle, after: income.slice(last + 1) };
+  };
+  const covered = city(owed);
+  const short = city(together());
+
+  const paid = paying(covered);
+  const fell = paying(short);
+
+  expect(namesOf(paid.after)).toEqual(['stock']);
+  expect(together(gainedBetween(paid.yielded, paid.after[0].chronicle), owed)).toEqual(together());
+  expect(namesOf(fell.after)).toEqual(['stock', 'population', 'population']);
+  expect(fell.after[0].chronicle.resources).toMatchObject({ production: 0, culture: 0 });
+  expect(fell.after.slice(1)).toMatchObject(
+    (['production', 'culture'] as const).map((resource) => ({
+      uncovered: { resource, amount: owed[resource] - fell.yielded.resources[resource] },
+    })),
+  );
+  expect(fell.after[2].chronicle.population).toBe(short.population - 2);
+  expect(reckoned(CATALOGUE, short)?.pastNothing).toEqual(new Set(['production', 'culture']));
+
+  const opened = besideTheNeutral();
+  const theirs = { q: 2, r: 0 };
+  const shrined = followed(bordered(opened, 'neutral', theirs), (left) =>
+    built(CATALOGUE, left, theirs, SHRINE),
+  ).chronicle;
+  const neutral = paying(shrined);
+
+  expect(namesOf(neutral.after)).toEqual(['stock', 'assigned', 'population']);
+  expect(neutral.after[0].chronicle.neutral?.resources.production).toBe(0);
+  expect(neutral.after[2]).toMatchObject({
+    uncovered: {
+      resource: 'production',
+      amount: (upkeep.production ?? 0) - (neutral.yielded.neutral?.resources.production ?? 0),
+    },
+  });
+  expect(neutral.after[2].chronicle.neutral?.population).toBe(
+    (shrined.neutral?.population ?? 0) - 1,
+  );
+  expect(neutral.after[2].chronicle.population).toBe(shrined.population);
+  expect(reckoned(CATALOGUE, shrined)).toEqual(reckoned(CATALOGUE, opened));
 });
 
 test('hostile, a unit of the player’s occupies the tile of the neutral’s it stands on, which yields nothing at income', () => {

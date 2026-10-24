@@ -45,11 +45,13 @@ export type LayerKind = {
 };
 
 /**
- * A layer that fills a tile's building slot, and, for one that gives to the tiles beside it, the one
- * terrain it gives to and what it gives each tile of it beside it and its own.
+ * A layer that fills a tile's building slot; for one that gives to the tiles beside it, the one
+ * terrain it gives to and what it gives each tile of it beside it and its own; and for one that takes
+ * upkeep, what the city holding its tile pays each turn at income.
  */
 export type BuildingKind = LayerKind & {
   readonly givesBeside?: { readonly terrain: string; readonly yields: Partial<Resources> };
+  readonly upkeep?: Partial<Resources>;
 };
 
 /** The terrain a feature of a kind lies on, and what it yields at income on top of that terrain. */

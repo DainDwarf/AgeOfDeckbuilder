@@ -15,7 +15,7 @@ import {
   type MapContent,
   terrainKind,
 } from './map-kinds';
-import { RESOURCES, type Resource, type Resources } from './resources';
+import { RESOURCES, type Resources, summed } from './resources';
 import { type Chronicle, capstoneLanded } from './state';
 
 /** What gives a tile part of its yield: one of its layers, or a kind of building standing beside it. */
@@ -36,17 +36,6 @@ export type YieldRule = (part: YieldPart) => Partial<Resources>;
 export type YieldContent = MapContent & {
   readonly capstones: Readonly<Record<string, { readonly yieldRule?: YieldRule }>>;
 };
-
-/** Every resource the yields name, summed. A resource left out is none of it. */
-function summed(parts: readonly Partial<Resources>[]): Partial<Resources> {
-  const total: Partial<Resources> = {};
-  for (const yields of parts) {
-    for (const [resource, amount] of Object.entries(yields) as [Resource, number][]) {
-      total[resource] = (total[resource] ?? 0) + amount;
-    }
-  }
-  return total;
-}
 
 /** What a building of that kind gives the tile it stands on: its own yield and what it gives beside it. */
 export function builtYield(catalogue: MapContent, building: BuildingTypeId): Partial<Resources> {

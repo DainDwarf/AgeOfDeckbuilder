@@ -48,6 +48,7 @@ const TEXT = {
   'panel.river': 'River',
   'panel.crossing': 'Crossing ends the move',
   'panel.beside': 'And {terrain} beside it',
+  'panel.upkeep': 'Upkeep',
   'panel.movement': 'Mv {cost}',
   'panel.no-movement': 'Mv —',
   'feature.fertile': 'Fertile',

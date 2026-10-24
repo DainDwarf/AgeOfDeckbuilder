@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { built } from '../src/rules/cards';
 import {
   type FeatureId,
   MOVE_POINT,
@@ -12,13 +13,15 @@ import {
   tileKey,
   tilesBeside,
 } from '../src/rules/map';
-import { featureKind } from '../src/rules/map-kinds';
+import { buildingKind, featureKind } from '../src/rules/map-kinds';
 import type { Resources } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
-import { tileYield } from '../src/rules/yields';
-import { featureName, terrainName, text } from '../src/ui/text';
+import { unitAt } from '../src/rules/units';
+import { builtYield, tileYield } from '../src/rules/yields';
+import { buildingName, featureName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
+  claimedAt,
   dragSlack,
   drawnFaces,
   firstSeed,
@@ -37,6 +40,7 @@ import {
   settledOn,
   shownCard,
   standing,
+  upkeepRow,
   watch,
   westOf,
 } from './chronicle-screen';
@@ -159,6 +163,31 @@ function bareBeside(): Found<string> {
   );
 }
 
+/** The first building of the catalogue taking upkeep that names no feature and no river and gives nothing beside it. */
+const UPKEPT = (() => {
+  const found = Object.keys(CATALOGUE.buildings).find((id) => {
+    const { upkeep, features, river, givesBeside } = buildingKind(CATALOGUE, id);
+    return upkeep !== undefined && !features && !river && !givesBeside;
+  });
+  if (found === undefined) throw new Error('no building of the catalogue takes upkeep alone');
+  return found;
+})();
+
+/**
+ * A tile beside the city it goes on, bare of building and improvement and with nobody on it,
+ * claimed, and `UPKEPT` built there.
+ */
+function upkeptBeside(): Found<Chronicle> {
+  const { terrains } = buildingKind(CATALOGUE, UPKEPT);
+  return besideCity(`claims a tile beside the city ${UPKEPT} goes on`, (tile, chronicle) => {
+    if (!terrains.includes(tile.terrain) || tile.building !== undefined) return undefined;
+    if (tile.improvements.length > 0 || unitAt(chronicle.units, tile) !== undefined)
+      return undefined;
+    const claimed = claimedAt(chronicle, tile);
+    return claimed === undefined ? undefined : built(CATALOGUE, claimed, tile, UPKEPT).chronicle;
+  });
+}
+
 /**
  * The first seed's bare turn 1 whose opening charts a tile nothing crosses, a unit or an embarked
  * one, and a tile beside the city costing two move points, bare and with nobody on it so its terrain
@@ -208,6 +237,29 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   await expect
     .poll(() => panelRows(page))
     .toContainEqual({ text: featureName(feature), yields: featureKind(CATALOGUE, feature).yields });
+
+  expect(problems).toEqual([]);
+});
+
+test('a building taking upkeep carries one line under its row on its card, the word and a chip reading what it takes of each resource', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { tile, found: chronicle } = upkeptBeside();
+
+  await openSaved(page, chronicle);
+
+  // Nobody stands on it, so the building card comes first.
+  const at = await onScreen(page, `tile-${tileKey(tile)}`);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('building');
+  await expect
+    .poll(() => panelRows(page))
+    .toEqual([
+      { text: buildingName(UPKEPT), yields: {} },
+      { text: buildingName(UPKEPT), yields: builtYield(CATALOGUE, UPKEPT) },
+      upkeepRow(UPKEPT),
+    ]);
 
   expect(problems).toEqual([]);
 });

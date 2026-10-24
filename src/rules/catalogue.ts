@@ -11,7 +11,7 @@ import {
   refuse,
   terrainKind,
 } from './map-kinds';
-import type { Resources } from './resources';
+import { RESOURCES, type Resources } from './resources';
 import type { Rng } from './rng';
 import { changeOn, type Landed, landedAs, type Stage } from './stages';
 import {
@@ -657,8 +657,14 @@ export function catalogued(content: Catalogue): Catalogue {
   ]) {
     for (const terrain of layer.terrains) terrainKind(content, terrain);
   }
-  for (const { givesBeside } of Object.values(content.buildings)) {
+  for (const [id, { givesBeside, upkeep }] of Object.entries(content.buildings)) {
     if (givesBeside !== undefined) terrainKind(content, givesBeside.terrain);
+    for (const resource of RESOURCES) {
+      const amount = upkeep?.[resource];
+      if (amount !== undefined && amount <= 0) {
+        refuse(content, `the building ${id} takes an upkeep of ${amount} ${resource}`);
+      }
+    }
   }
   for (const [noun, table] of [
     ['building', content.buildings],

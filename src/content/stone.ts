@@ -12,7 +12,6 @@ import {
   healthLost,
   inside,
   placesImprovement,
-  shocked,
 } from '../rules/cards';
 import type {
   Age,
@@ -32,11 +31,11 @@ import {
   turnsPlaying,
   unitsKilledBy,
 } from '../rules/chronicle';
-import { arrived, bordered, populationTaken, warDeclared } from '../rules/city';
+import { arrived, bordered, populationTaken, shocked, warDeclared } from '../rules/city';
 import { raided, rowsDrawn } from '../rules/enemies';
 import { distance, MOVE_POINT, tileAt } from '../rules/map';
 import type { BuildingKind, RiverFlow } from '../rules/map-kinds';
-import { withNone } from '../rules/resources';
+import { type Resources, withNone } from '../rules/resources';
 import { pickUniform } from '../rules/rng';
 import {
   addedToDrawPileTop,
@@ -679,7 +678,7 @@ export const STONE: Slice = {
         kind: 'challenge',
         cost: {},
         influence: 3,
-        strikes: (_catalogue, chronicle) => shocked(chronicle, 'culture', 3),
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'player', { culture: 3 }),
       },
       wolves: {
         kind: 'challenge',
@@ -726,17 +725,17 @@ export const STONE: Slice = {
       unrest: {
         kind: 'hazard',
         cost: { military: 2 },
-        strikes: (_catalogue, chronicle) => shocked(chronicle, 'culture', 2),
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'player', { culture: 2 }),
       },
       thieves: {
         kind: 'hazard',
         cost: { military: 2 },
-        strikes: (_catalogue, chronicle) => shocked(chronicle, 'money', 2),
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'player', { money: 2 }),
       },
       'weary-builders': {
         kind: 'hazard',
         cost: { food: 2 },
-        strikes: (_catalogue, chronicle) => shocked(chronicle, 'production', 2),
+        strikes: (_catalogue, chronicle) => shocked(chronicle, 'player', { production: 2 }),
       },
       tribute: {
         kind: 'challenge',
@@ -744,13 +743,13 @@ export const STONE: Slice = {
         influence: 3,
         counters: TRIBUTE,
         strikes: (_catalogue, chronicle, counter, set) => {
-          let landing = unchanged(chronicle);
+          const taken: Partial<Resources> = {};
           const raised: Record<string, number> = {};
           for (const { resource, amount } of costsOf(TRIBUTE)) {
-            landing = followed(landing, (left) => shocked(left, resource, counter(resource)));
+            taken[resource] = counter(resource);
             raised[resource] = counter(resource) + amount;
           }
-          return followed(landing, (left) => set(left, raised));
+          return followed(shocked(chronicle, 'player', taken), (left) => set(left, raised));
         },
       },
     },
@@ -1012,21 +1011,27 @@ export const STONE: Slice = {
       village: VILLAGE,
       'neutral-village': VILLAGE,
       'stone-camp': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
-      farm: { terrains: ['plain'], yields: { food: 2 } },
+      farm: { terrains: ['plain'], yields: { food: 2 }, upkeep: { production: 1 } },
       tannery: {
         terrains: ['forest', 'plain'],
         features: ['deer', 'cattle'],
         yields: { money: 2 },
+        upkeep: { production: 1 },
       },
       fishery: {
         terrains: ['coast'],
         yields: {},
         givesBeside: { terrain: 'coast', yields: { food: 1 } },
+        upkeep: { production: 1 },
       },
-      megalith: { terrains: ['plain', 'hills', 'desert'], yields: { culture: 1 } },
-      foundations: { terrains: MONUMENT_GROUND, yields: {} },
-      'great-stones': { terrains: MONUMENT_GROUND, yields: {} },
-      monument: { terrains: MONUMENT_GROUND, yields: {} },
+      megalith: {
+        terrains: ['plain', 'hills', 'desert'],
+        yields: { culture: 1 },
+        upkeep: { production: 1 },
+      },
+      foundations: { terrains: MONUMENT_GROUND, yields: {}, upkeep: { production: 1 } },
+      'great-stones': { terrains: MONUMENT_GROUND, yields: {}, upkeep: { production: 1 } },
+      monument: { terrains: MONUMENT_GROUND, yields: {}, upkeep: { production: 1 } },
       'stone-painted-cave': { terrains: ['hills'], yields: {} },
       'stone-old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
       'stone-beast-bones': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },

@@ -24,7 +24,6 @@ import {
   placesImprovement,
   refreshed,
   settled,
-  shocked,
   slotFree,
   terraformable,
   terraformed,
@@ -66,7 +65,7 @@ import {
   playsOn,
   terrainsPlayedOn,
 } from './chronicle';
-import { arrived, bordered, populationTaken, warDeclared, yielded } from './city';
+import { arrived, bordered, populationTaken, shocked, warDeclared, yielded } from './city';
 import { attackOrNone, enemyEntering, leastHealth, raided, rowsDrawn } from './enemies';
 import {
   type BuildingTypeId,
@@ -225,6 +224,9 @@ export const WELL = 'PH_Well';
 
 /** What `WELL` gives each plain tile beside it, and its own. */
 export const WELL_GIVES = { terrain: 'plain', yields: { production: 2 } } as const;
+
+/** The fixture's building that takes upkeep. */
+export const SHRINE = 'PH_Shrine';
 
 /** The move of a unit the fixture's embark card embarks: none of the fixture's units has it ashore. */
 export const EMBARKED_MOVE = 3 * MOVE_POINT;
@@ -668,7 +670,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       kind: 'challenge',
       cost: {},
       influence: 2,
-      strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', CURSE),
+      strikes: (_catalogue, chronicle) => shocked(chronicle, 'player', { food: CURSE }),
     },
     PH_Sprawl: {
       kind: 'challenge',
@@ -683,7 +685,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       influence: 2,
       counters: { food: TITHE },
       strikes: (_catalogue, chronicle, counter, set) =>
-        followed(shocked(chronicle, 'food', counter('food')), (left) =>
+        followed(shocked(chronicle, 'player', { food: counter('food') }), (left) =>
           set(left, { food: counter('food') + TITHE_RISE }),
         ),
     },
@@ -728,18 +730,20 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Hunger: {
       kind: 'hazard',
       cost: { production: 3 },
-      strikes: (_catalogue, chronicle) => shocked(chronicle, 'food', HUNGER),
+      strikes: (_catalogue, chronicle) => shocked(chronicle, 'player', { food: HUNGER }),
     },
     PH_Frost: {
       kind: 'hazard',
       cost: { production: 3 },
       counters: { amount: FROST },
-      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
+      strikes: (_catalogue, chronicle, counter) =>
+        shocked(chronicle, 'player', { food: counter('amount') }),
     },
     PH_Squall: {
       kind: 'hazard',
       cost: { production: 3 },
-      strikes: (_catalogue, chronicle, counter) => shocked(chronicle, 'food', counter('amount')),
+      strikes: (_catalogue, chronicle, counter) =>
+        shocked(chronicle, 'player', { food: counter('amount') }),
     },
   },
   civilizations: {
@@ -876,6 +880,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Mill: { terrains: ['plain'], river: true, yields: { production: 1 } },
     [SILO]: { terrains: ['plain'], yields: {} },
     [WELL]: { terrains: ['plain'], yields: { money: 1 }, givesBeside: WELL_GIVES },
+    [SHRINE]: { terrains: ['plain'], yields: {}, upkeep: { production: 3, culture: 1 } },
   },
   features: {
     PH_Fertile: { terrain: 'plain', yields: { food: 1 } },

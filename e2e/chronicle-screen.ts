@@ -73,6 +73,7 @@ import {
   type Chronicle,
   type ChronicleAchievement,
   type ChronicleCard,
+  costsOf,
   type Deal,
   idle,
   playable,
@@ -1968,7 +1969,7 @@ export async function aimed(page: Page): Promise<void> {
 
 /**
  * What the card the infopanel is standing reads, in the order it was drawn: its texts, and every
- * yield chip by the resource it is named for.
+ * yield chip and upkeep chip by the resource it is named for.
  */
 function panelLines(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -1978,7 +1979,12 @@ function panelLines(page: Page): Promise<string[]> {
       .filter((object) => object.type === 'Container')
       .flatMap((card) =>
         (card as Phaser.GameObjects.Container).list
-          .filter((part) => part.type === 'Text' || part.name.startsWith('panel-yield-'))
+          .filter(
+            (part) =>
+              part.type === 'Text' ||
+              part.name.startsWith('panel-yield-') ||
+              part.name.startsWith('panel-upkeep-'),
+          )
           .map((part) =>
             part.type === 'Text' ? (part as Phaser.GameObjects.Text).text : part.name,
           ),
@@ -1986,26 +1992,48 @@ function panelLines(page: Page): Promise<string[]> {
   });
 }
 
-/** A text the infopanel's card reads, and what the yield chips drawn after it give. */
-export type PanelRow = { readonly text: string; readonly yields: Partial<Resources> };
+/**
+ * A text the infopanel's card reads, what the yield chips drawn after it give, and, where upkeep
+ * chips are drawn after it, what each of them reads.
+ */
+export type PanelRow = {
+  readonly text: string;
+  readonly yields: Partial<Resources>;
+  readonly upkeep?: Partial<Record<Resource, string>>;
+};
 
 /** The rows of the card the infopanel is standing, in the order drawn; a row's chips are read in whatever order they were. */
 export async function panelRows(page: Page): Promise<PanelRow[]> {
   const lines = await panelLines(page);
-  const rows: { text: string; yields: Partial<Resources> }[] = [];
+  const rows: {
+    text: string;
+    yields: Partial<Resources>;
+    upkeep?: Partial<Record<Resource, string>>;
+  }[] = [];
   for (let at = 0; at < lines.length; at++) {
-    const resource = RESOURCES.find((named) => lines[at] === `panel-yield-${named}`);
-    if (resource === undefined) {
+    const yielding = RESOURCES.find((named) => lines[at] === `panel-yield-${named}`);
+    const taking = RESOURCES.find((named) => lines[at] === `panel-upkeep-${named}`);
+    if (yielding === undefined && taking === undefined) {
       rows.push({ text: lines[at], yields: {} });
       continue;
     }
     const row = rows.at(-1);
-    if (row === undefined)
-      throw new Error(`the infopanel draws a ${resource} chip before any text`);
+    if (row === undefined) throw new Error(`the infopanel draws ${lines[at]} before any text`);
     at++;
-    row.yields[resource] = Number(lines[at]);
+    if (yielding !== undefined) row.yields[yielding] = Number(lines[at]);
+    if (taking !== undefined) row.upkeep = { ...row.upkeep, [taking]: lines[at] };
   }
   return rows;
+}
+
+/** The line under a building's row reading its upkeep: the word, and each chip as it reads what it takes. */
+export function upkeepRow(building: string): PanelRow {
+  const { upkeep = {} } = buildingKind(CATALOGUE, building);
+  const chips: Partial<Record<Resource, string>> = {};
+  for (const { resource, amount } of costsOf(upkeep)) {
+    chips[resource] = text('reading.minus', { count: amount });
+  }
+  return { text: text('panel.upkeep'), yields: {}, upkeep: chips };
 }
 
 /**
