@@ -12,4 +12,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Production's prices** — card costs, event prices and capstones price production too low, a stock of 57 production on the first cold night; settled on the three decks' curves.
+- **Production's prices** — every production price in the content stands at the dossier's table, the catalogue's coherence test passes, the economy baseline is rerun on the new prices and `ECONOMY.md` reads from it, and the `BALANCE.md` entry is gone. Doc-impact: none. [board/productions-prices.md](board/productions-prices.md)
