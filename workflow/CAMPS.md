@@ -18,6 +18,21 @@ The decks are the economy pass's, each its own cell, the folders and the flags a
 
 Seed _n_ deals the same map under every persona and deck, so a fall the map explains shows on one seed across the cells; the camps' rolls diverge from one cell to another once the chronicle's generator has been stepped differently, from the first reshuffle on.
 
+## What the baseline says
+
+Measured on 2026-10-25 at the commit that lands these rows, the camps rolling at 0.08 with a wave of two from three guards, five camps, the neutral seven to nine tiles from the centre. The ending rows per cell, 20 seeds each:
+
+| Cell | Captured | Capture turn, median | First capture | Captured by turn 15 | Neutral fell | Neutral's fall turn, median | Enemies killed, median | Own units lost, median |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Builder, nomadic | 20 | 19 | 10 | 8 | 5 | 18 | 1 | 4 |
+| Builder, end of Stone | 19 | 19 | 12 | 5 | 7 | 15 | 0.5 | 3 |
+| Builder, no scouts | 20 | 20 | 11 | 5 | 8 | 14.5 | 1 | 3 |
+| Warlord, nomadic | 18 | 19.5 | 10 | 7 | 6 | 19 | 2 | 4.5 |
+| Warlord, end of Stone | 14 | 23 | 12 | 2 | 8 | 15.5 | 6.5 | 5.5 |
+| Warlord, no scouts | 14 | 18 | 11 | 6 | 9 | 15 | 4.5 | 5 |
+
+Nearly every chronicle falls to the camps, the builder's all, the warlord's two in three, half of them before turn 20; the neutral falls in a quarter to a half of the seeds, around turn 15, and where both fall the neutral falls first in nearly every case. The same seeds fall early across the cells, so the opening is the map's and the rolls' as much as the persona's. The personas kill few enemies, the builder about one a chronicle. A player holding seed 20 by hand at a roll of 0.02 stood with two warriors and a camp taken on turn 18 while the warlord fell on turn 12 to one pillager, so the personas' openings are weaker than a player's: no unit before turn 10, a scout entered as the first unit, the garrison out charting when the first enemy comes.
+
 ## Comparing a change
 
 The economy pass's queries read here unchanged, `workflow/camps/` in place of `workflow/economy/`. What the pass reads beside the stocks: the ending and its turn, `defeat` being the capture, the `neutral-fell` listing, `enemies:<turn>` where the neutral's city fell to the enemies, blank where it stands, the `neutral-population`, and the `units:` and `killed:` columns by faction. The captures per cell, the turn they came on and the neutral's falls:
