@@ -6,8 +6,11 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The camps pass** — are the enemy camps too harsh: measured with the camps and the neutral back on and the events still off, on the same decks and seeds; the first camp wave winning nearly every Stone seed, and the neutral destroyed too often, among its questions.
 - **The events pass** — are the events good: measured with everything back on; the rival band's answer both personas take and the player never, the Flood taking the village when nothing else stands, and a review of the Nomadic events among its questions.
 - **The goals pass** — are the technologies' goals good: each checked for whether a player going for it reaches it, on which turn, and whether it asks more than a chronicle played as usual gives; Domestication's goal, which a worker standing on one herd reaches, first among them.
 
 ## Lines
+
+- **The personas reinforced** — both personas get gambits to try against the camps, on the cells [`CAMPS.md`](CAMPS.md) names: an early garrison, emergency troops when an enemy is close, workers unassigned and more warriors entered, and, to weigh, the range kept for the first strike, a unit at low health pulled back to heal, the scouts' hit and run beside the march, and the deck's unit cards weighed so warriors and archers come before scouts.
+- **The neutral helped** — the neutral gets a little help against the camps, a warrior standing at its opening first among the ways, measured on the pass's cells.
+- **The camp roll retried** — the camps' entry rate and method retried on the pass's cells: the flat rate at several values, a rate rising with the turn, and a cooldown after a roll so two early rolls never land together.
