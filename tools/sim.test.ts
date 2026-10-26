@@ -1225,15 +1225,47 @@ test('a unit that attacks walks to the cheapest tile, held or not, it reaches th
     ],
   });
   const unit = unitNumberOn(beset, guarding);
-  const walk = answerOf('builder', 23, beset);
+  const walk = answerOf('builder', 25, beset);
 
   expect(walk).toEqual({ type: 'move', unit, tile: from });
   if (walk === undefined) throw new Error('the unit walks nowhere');
-  expect(answerOf('builder', 23, outcome(apply(CATALOGUE, beset, walk)))).toEqual({
+  expect(answerOf('builder', 25, outcome(apply(CATALOGUE, beset, walk)))).toEqual({
     type: 'attack',
     unit,
     tile: weak,
   });
+});
+
+test('a unit that attacks walks to the tile furthest from the enemy within its range before it attacks, ahead of a cheaper one beside it, and one whose range is one attacks from beside it', () => {
+  const at = { q: 2, r: 0 };
+  const enemy = { q: 3, r: 0 };
+  const beside = (range: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: strip(6),
+      units: [standing('player', at, { range }), enemyStanding(enemy, undefined)],
+    });
+  const ranged = beside(2);
+  const close = beside(1);
+  const unit = unitNumberOn(ranged, at);
+
+  for (const [persona, gambit] of [
+    ['builder', 25],
+    ['warlord', 24],
+  ] as const) {
+    const walk = answerOf(persona, gambit, ranged);
+    expect(walk).toEqual({ type: 'move', unit, tile: { q: 1, r: 0 } });
+    if (walk === undefined) throw new Error('the unit walks nowhere');
+    expect(answerOf(persona, gambit, outcome(apply(CATALOGUE, ranged, walk)))).toEqual({
+      type: 'attack',
+      unit,
+      tile: enemy,
+    });
+    expect(answerOf(persona, gambit, close)).toEqual({
+      type: 'attack',
+      unit: unitNumberOn(close, at),
+      tile: enemy,
+    });
+  }
 });
 
 test('a unit that attacks walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, one in fog read at its kind’s health, to its landing nearest that enemy, and toward none beyond the three', () => {
@@ -1267,8 +1299,8 @@ test('a unit that attacks walks toward the enemy the map shows within three tile
   });
 
   for (const [persona, gambit] of [
-    ['builder', 24],
-    ['warlord', 23],
+    ['builder', 28],
+    ['warlord', 27],
   ] as const) {
     expect(answerOf(persona, gambit, two)).toEqual(walksTo(two, { q: 1, r: 0 }));
     expect(answerOf(persona, gambit, beyond)).toBeUndefined();
@@ -1287,8 +1319,8 @@ test('a unit that attacks walks to the cheapest landing within five tiles of the
     cityOf(['urban'], { tiles: strip(10), units: [standing('player', at), ...others] });
 
   for (const [persona, gambit, others] of [
-    ['builder', 25, []],
-    ['warlord', 26, [SPENT_AT_HOME]],
+    ['builder', 29, []],
+    ['warlord', 30, [SPENT_AT_HOME]],
   ] as const) {
     expect(answerOf(persona, gambit, charting(near, others))).toEqual({
       type: 'move',
@@ -1297,7 +1329,7 @@ test('a unit that attacks walks to the cheapest landing within five tiles of the
     });
     expect(answerOf(persona, gambit, charting(far, others))).toBeUndefined();
   }
-  expect(answerOf('warlord', 26, charting(near))).toBeUndefined();
+  expect(answerOf('warlord', 30, charting(near))).toBeUndefined();
 });
 
 test('a unit that attacks walks to the landing the city may claim that stands highest, yields least of equals, nearest the city’s tile of equals, and stays on that ring with no other of its tiles to land on', () => {
@@ -1331,8 +1363,8 @@ test('a unit that attacks walks to the landing the city may claim that stands hi
   );
 
   for (const [persona, gambit] of [
-    ['builder', 26],
-    ['warlord', 27],
+    ['builder', 30],
+    ['warlord', 31],
   ] as const) {
     expect(answersOf(persona, gambit, plain)).toEqual(walksTo(plain, { q: -1, r: 0 }));
     expect(answersOf(persona, gambit, poor)).toEqual(walksTo(poor, glade));
@@ -1342,7 +1374,7 @@ test('a unit that attacks walks to the landing the city may claim that stands hi
   }
 });
 
-test('a unit that attacks outside the border and off the tiles the city may claim walks to its unheld landing nearest the city’s tile, stands where none is nearer, and walks nowhere from inside the border or from that ring', () => {
+test('a unit that attacks off the tiles the city may claim walks to its landing nearest that ring, from outside the border and from the city’s tile inside a border two tiles deep along a row, stands where none is nearer, and walks nowhere from that ring', () => {
   const far = { q: 4, r: 0 };
   const near = { q: 3, r: 0 };
   const outside = (tiles: Tile[], unit: Standing): Chronicle =>
@@ -1352,9 +1384,9 @@ test('a unit that attacks outside the border and off the tiles the city may clai
     madeOf(field(4), 'forest', [{ q: 2, r: 0 }]),
     standing('player', near, {}, MOVE_POINT),
   );
-  const inside = cityOf(['urban', 'plain', 'plain', 'plain'], {
-    tiles: field(4),
-    units: [standing('player', near)],
+  const deep = cityOf(['urban', 'plain', 'plain'], {
+    tiles: strip(6),
+    units: [standing('player', CITY, { sight: 3 })],
   });
   const onRing = cityOf(['urban', 'plain'], {
     tiles: field(4),
@@ -1362,16 +1394,20 @@ test('a unit that attacks outside the border and off the tiles the city may clai
   });
 
   for (const [persona, gambit] of [
-    ['builder', 27],
-    ['warlord', 28],
+    ['builder', 31],
+    ['warlord', 32],
   ] as const) {
     expect(answerOf(persona, gambit, walking)).toEqual({
       type: 'move',
       unit: unitNumberOn(walking, far),
       tile: { q: 2, r: 0 },
     });
+    expect(answerOf(persona, gambit, deep)).toEqual({
+      type: 'move',
+      unit: unitNumberOn(deep, CITY),
+      tile: { q: 2, r: 0 },
+    });
     expect(answerOf(persona, gambit, hemmed)).toBeUndefined();
-    expect(answerOf(persona, gambit, inside)).toBeUndefined();
     expect(answerOf(persona, gambit, onRing)).toBeUndefined();
   }
 });
@@ -1383,7 +1419,7 @@ test('the builder plays the card aimed at nothing whose trial raises the stocks�
     resources: onlyStocks({ food: 2, science: 1 }),
   });
 
-  expect(answerOf('builder', 28, gaining)).toEqual({ type: 'play', index: 2, aim: 'none' });
+  expect(answerOf('builder', 32, gaining)).toEqual({ type: 'play', index: 2, aim: 'none' });
 });
 
 test('the builder plays the card aimed at nothing whose trial raises a resource the income gives less of than each resource the card costs, and not where the income gives as much of it or more', () => {
@@ -1393,13 +1429,13 @@ test('the builder plays the card aimed at nothing whose trial raises a resource 
       resources: onlyStocks({ food: 1 }),
     });
 
-  expect(answerOf('builder', 29, offering(['urban', 'glade', 'glade']))).toEqual({
+  expect(answerOf('builder', 33, offering(['urban', 'glade', 'glade']))).toEqual({
     type: 'play',
     index: 1,
     aim: 'none',
   });
-  expect(answerOf('builder', 29, offering(['urban', 'glade']))).toBeUndefined();
-  expect(answerOf('builder', 29, offering(['urban']))).toBeUndefined();
+  expect(answerOf('builder', 33, offering(['urban', 'glade']))).toBeUndefined();
+  expect(answerOf('builder', 33, offering(['urban']))).toBeUndefined();
 });
 
 test('the builder reads an income the upkeep takes below nothing as below nothing, its stock at nothing, when it plays the card raising a resource the income gives less of', () => {
@@ -1415,7 +1451,7 @@ test('the builder reads an income the upkeep takes below nothing as below nothin
   );
 
   expect(shrined.resources.culture).toBe(0);
-  expect(answerOf('builder', 29, shrined)).toEqual({ type: 'play', index: 1, aim: 'none' });
+  expect(answerOf('builder', 33, shrined)).toEqual({ type: 'play', index: 1, aim: 'none' });
 });
 
 /** A city holding the tiles named, as `cityOf` lays it, a shrine built on the one of them named. */
@@ -1515,8 +1551,8 @@ function discarding(hand: string[]): Chronicle {
 
 test('a card aimed at the hand is played on the first card in hand that strikes, a challenge as a hazard, and on none while no card strikes', () => {
   for (const [persona, gambit] of [
-    ['builder', 30],
-    ['warlord', 32],
+    ['builder', 34],
+    ['warlord', 35],
   ] as const) {
     expect(
       answerOf(persona, gambit, discarding(['PH_Ordeal', 'PH_Discard', 'PH_Curse', 'PH_Hunger'])),
@@ -1530,8 +1566,8 @@ test('a card aimed at the hand is played on the first card in hand that strikes,
 
 test('a card aimed at the hand is played on the first other card in hand, whatever it is', () => {
   for (const [persona, gambit] of [
-    ['builder', 31],
-    ['warlord', 33],
+    ['builder', 35],
+    ['warlord', 36],
   ] as const) {
     expect(answerOf(persona, gambit, discarding(['PH_Discard', 'PH_Ordeal', 'PH_Hunger']))).toEqual(
       { type: 'play', index: 0, aim: 'hand', card: 1 },
@@ -1707,14 +1743,14 @@ test('a unit of the warlord’s walks to the cheapest landing it reaches the ene
     ],
   });
   const unit = unitNumberOn(beset, { q: 2, r: 0 });
-  const walk = answerOf('warlord', 22, beset);
+  const walk = answerOf('warlord', 24, beset);
 
-  expect(answerOf('builder', 23, beset)).toBeUndefined();
+  expect(answerOf('builder', 25, beset)).toBeUndefined();
   expect(walk).toEqual({ type: 'move', unit, tile: from });
   if (walk === undefined) throw new Error('the unit walks nowhere');
   const beside = outcome(apply(CATALOGUE, beset, walk));
-  expect(answerOf('builder', 23, beside)).toBeUndefined();
-  expect(answerOf('warlord', 22, beside)).toEqual({ type: 'attack', unit, tile: weak });
+  expect(answerOf('builder', 25, beside)).toBeUndefined();
+  expect(answerOf('warlord', 24, beside)).toEqual({ type: 'attack', unit, tile: weak });
 });
 
 test('with two units that attack standing and no camp and no site charted, a unit of the warlord’s walks to the cheapest landing charting a tile however far from the city, ahead of a dearer one charting more, and once one is charted it does not; a lone one walks to none', () => {
@@ -1723,13 +1759,13 @@ test('with two units that attack standing and no camp and no site charted, a uni
     cityOf(['urban'], { tiles, units: [standing('player', at), ...others] });
   const uncharted = scouting(strip(10));
 
-  expect(answerOf('warlord', 24, uncharted)).toEqual({
+  expect(answerOf('warlord', 28, uncharted)).toEqual({
     type: 'move',
     unit: unitNumberOn(uncharted, at),
     tile: { q: 5, r: 0 },
   });
-  expect(answerOf('warlord', 24, scouting(camped(strip(10), [{ q: 1, r: 0 }])))).toBeUndefined();
-  expect(answerOf('warlord', 24, scouting(strip(10), []))).toBeUndefined();
+  expect(answerOf('warlord', 28, scouting(camped(strip(10), [{ q: 1, r: 0 }])))).toBeUndefined();
+  expect(answerOf('warlord', 28, scouting(strip(10), []))).toBeUndefined();
 });
 
 test('with three units that attack standing, all but the one nearest the city march on the nearest charted camp, each to the landing the cheapest way there weighs least from', () => {
@@ -1745,7 +1781,7 @@ test('with three units that attack standing, all but the one nearest the city ma
     ],
   });
 
-  expect(answersOf('warlord', 25, marching)).toEqual([
+  expect(answersOf('warlord', 29, marching)).toEqual([
     { type: 'move', unit: unitNumberOn(marching, ahead), tile: camp },
     { type: 'move', unit: unitNumberOn(marching, behind), tile: ahead },
   ]);
@@ -1756,7 +1792,7 @@ test('the warlord’s garrison walk governs the unit that attacks nearest the ci
   const out = [standing('player', { q: 3, r: 0 }), standing('player', { q: -3, r: 0 })];
   const walking = (units: Standing[]): Chronicle => ringed(3, { units });
   const movedBy = (chronicle: Chronicle): number[] =>
-    answersOf('warlord', 27, chronicle).flatMap((command) =>
+    answersOf('warlord', 31, chronicle).flatMap((command) =>
       command.type === 'move' ? [command.unit] : [],
     );
   const three = walking([garrison, ...out]);
@@ -1783,7 +1819,7 @@ test('the warlord refreshes the move points of the unit that attacks furthest fr
     hand: ['PH_March'],
   });
 
-  expect(answerOf('warlord', 29, spent)).toEqual({
+  expect(answerOf('warlord', 33, spent)).toEqual({
     type: 'play',
     index: 0,
     aim: 'unit',
@@ -1791,7 +1827,7 @@ test('the warlord refreshes the move points of the unit that attacks furthest fr
   });
 });
 
-test('the warlord heals the unit that attacks that has lost the most health', () => {
+test('a persona heals the unit that attacks that has lost the most health', () => {
   const hurt = { q: 1, r: 0 };
   const healing = ringed(2, {
     units: [
@@ -1801,11 +1837,135 @@ test('the warlord heals the unit that attacks that has lost the most health', ()
     hand: ['PH_Heal'],
   });
 
-  expect(answerOf('warlord', 30, healing)).toEqual({
+  for (const [persona, gambit] of [
+    ['builder', 24],
+    ['warlord', 23],
+  ] as const) {
+    expect(answerOf(persona, gambit, healing)).toEqual({
+      type: 'play',
+      index: 0,
+      aim: 'unit',
+      tile: hurt,
+    });
+  }
+});
+
+test('a unit that attacks that has lost health outside the border walks to its landing inside the border nearest the city’s tile where a card in hand would heal it, the one that has lost the most first, and the heal then lands on it; none walks with no such card in hand, from inside the border or where no tile inside it is reachable', () => {
+  const first = { q: 3, r: 0 };
+  const second = { q: 3, r: -2 };
+  const inside = { q: 1, r: 0 };
+  const hurt = (units: Standing[], hand = ['PH_Heal']): Chronicle =>
+    cityOf(['urban', 'plain', 'plain'], { tiles: field(4), units, hand });
+  const both = (firstHealth: number, secondHealth: number): Chronicle =>
+    hurt([
+      standing('player', first, { health: firstHealth }),
+      standing('player', second, { health: secondHealth }),
+    ]);
+  const walksIn = (chronicle: Chronicle, from: TileCoords): Command => ({
+    type: 'move',
+    unit: unitNumberOn(chronicle, from),
+    tile: inside,
+  });
+  const firstWorse = both(2, 4);
+  const secondWorse = both(4, 2);
+  const lone = (at: TileCoords, hand?: string[], move?: number): Chronicle =>
+    hurt([standing('player', at, { health: 2 }, move)], hand);
+  const walked = outcome(apply(CATALOGUE, lone(first), walksIn(lone(first), first)));
+
+  for (const [persona, pull, heal] of [
+    ['builder', 23, 24],
+    ['warlord', 22, 23],
+  ] as const) {
+    expect(answerOf(persona, pull, firstWorse)).toEqual(walksIn(firstWorse, first));
+    expect(answerOf(persona, pull, secondWorse)).toEqual(walksIn(secondWorse, second));
+    expect(answerOf(persona, heal, walked)).toEqual({
+      type: 'play',
+      index: 0,
+      aim: 'unit',
+      tile: inside,
+    });
+    expect(answerOf(persona, pull, lone(first, ['PH_Harvest']))).toBeUndefined();
+    expect(answerOf(persona, pull, lone({ q: 2, r: 0 }))).toBeUndefined();
+    expect(answerOf(persona, pull, lone({ q: 4, r: 0 }, undefined, MOVE_POINT))).toBeUndefined();
+  }
+});
+
+test('a unit that attacks that has spent its action where an enemy the map shows could attack it next turn is refreshed where it then reaches a tile no such enemy could attack, and walks to the one nearest the city’s tile; it is not refreshed where it reaches none, nor while it holds its action', () => {
+  const at = { q: 2, r: 0 };
+  const beside = (enemy: string, action = 0): Chronicle =>
+    cityOf(['urban'], {
+      tiles: field(4),
+      units: [
+        standing('player', at, {}, 0, action),
+        enemyStanding({ q: 3, r: 0 }, undefined, { stats: unitKind(CATALOGUE, enemy) }),
+      ],
+      hand: ['PH_March'],
+    });
+  const escaping = beside('PH_Warrior');
+  const refresh: Command = { type: 'play', index: 0, aim: 'unit', tile: at };
+
+  for (const [persona, away, withdrawal] of [
+    ['builder', 26, 27],
+    ['warlord', 25, 26],
+  ] as const) {
+    expect(answerOf(persona, away, escaping)).toEqual(refresh);
+    expect(answerOf(persona, away, beside('PH_Slinger'))).toBeUndefined();
+    expect(answerOf(persona, away, beside('PH_Warrior', 1))).toBeUndefined();
+    expect(answerOf(persona, withdrawal, outcome(apply(CATALOGUE, escaping, refresh)))).toEqual({
+      type: 'move',
+      unit: unitNumberOn(escaping, at),
+      tile: CITY,
+    });
+  }
+});
+
+test('a unit that attacks that has spent its action and holds move points is walked by none of the gambits that walk one holding its action, the pursuit and the warlord’s march among them, and the warlord’s refresh passes it for the next', () => {
+  const out = { q: -2, r: 0 };
+  const marcher = { q: 2, r: 0 };
+  const pursuing = (action: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: field(4),
+      units: [
+        standing('player', out, {}, undefined, action),
+        enemyStanding({ q: 2, r: 0 }, undefined),
+      ],
+    });
+  const marching = (action: number): Chronicle =>
+    cityOf(['urban'], {
+      tiles: camped(field(4), [{ q: 4, r: 0 }]),
+      units: [
+        standing('player', CITY, { sight: 8 }),
+        standing('player', marcher, {}, undefined, action),
+        standing('player', { q: 0, r: 2 }),
+      ],
+    });
+  const refreshing = cityOf(['urban'], {
+    tiles: field(4),
+    units: [standing('player', { q: 3, r: 0 }, {}, 0, 0), standing('player', marcher, {}, 0)],
+    hand: ['PH_March'],
+  });
+  const walkingGambits = (persona: string, chronicle: Chronicle, at: TileCoords): number[] => {
+    const unit = unitNumberOn(chronicle, at);
+    return PERSONAS[persona]().flatMap((_, index) => {
+      const answer = answerOf(persona, index + 1, chronicle);
+      return answer?.type === 'move' && answer.unit === unit ? [index + 1] : [];
+    });
+  };
+
+  for (const [persona, pursuit] of [
+    ['builder', 28],
+    ['warlord', 27],
+  ] as const) {
+    expect(walkingGambits(persona, pursuing(1), out)).toContain(pursuit);
+    expect(walkingGambits(persona, pursuing(0), out)).toEqual([]);
+  }
+  expect(walkingGambits('warlord', marching(1), marcher)).toContain(29);
+  expect(walkingGambits('warlord', marching(0), marcher)).toEqual([]);
+  expect(answerOf('warlord', 33, refreshing)).toEqual({
     type: 'play',
     index: 0,
     aim: 'unit',
-    tile: hurt,
+    tile: marcher,
   });
 });
 
@@ -1826,12 +1986,12 @@ test('a unit of the warlord’s standing on a camp attacks from it, walks off it
     landed.filter(({ command }) => command.type === 'move' && command.unit === unit);
   const driven = drivenBy(PERSONAS.warlord());
 
-  expect(answerOf('warlord', 22, onCamp([enemyStanding({ q: 4, r: -1 }, undefined)]))).toEqual({
+  expect(answerOf('warlord', 24, onCamp([enemyStanding({ q: 4, r: -1 }, undefined)]))).toEqual({
     type: 'attack',
     unit,
     tile: { q: 4, r: -1 },
   });
-  expect(answerOf('warlord', 22, onCamp([enemyStanding({ q: 2, r: 0 }, undefined)]))).toBe(
+  expect(answerOf('warlord', 24, onCamp([enemyStanding({ q: 2, r: 0 }, undefined)]))).toBe(
     undefined,
   );
   expect(movesOf(drivenBy(PERSONAS.builder()))).not.toEqual([]);
@@ -1861,7 +2021,7 @@ test('the warlord sends no command that declares war: a worker and a unit that a
     onTheNeutral(scouting, attackerAt),
   ]);
   expect(declaresWar(CATALOGUE, scouting, onTheNeutral(scouting, attackerAt))).toBe(true);
-  expect(answerOf('warlord', 24, scouting)).toBeUndefined();
+  expect(answerOf('warlord', 28, scouting)).toBeUndefined();
   for (const beside of [working, scouting]) {
     const driven = playedBy(CATALOGUE, PERSONAS.warlord(), unchanged(beside), beside.turn + 1);
     expect(driven.landed.length).toBeGreaterThan(0);

@@ -1,10 +1,11 @@
-import { aimOf } from '../src/rules/cards';
-import { type Catalogue, captureOf, cardOf, fullHealth } from '../src/rules/catalogue';
-import { byHand, type Command, refusalOf } from '../src/rules/chronicle';
+import { type Catalogue, captureOf } from '../src/rules/catalogue';
+import { byHand, type Command } from '../src/rules/chronicle';
 import { distance, routesFrom, routesToward, type TileCoords, tileKey } from '../src/rules/map';
-import { type Chronicle, idle, playable } from '../src/rules/state';
+import { type Chronicle, idle } from '../src/rules/state';
 import { passageFor, type Unit, unitOf } from '../src/rules/units';
 import {
+  ATTACKER_WITHDRAWN,
+  attackersHoldingAction,
   attackersOf,
   CITY_SETTLED,
   CLAIMED,
@@ -21,16 +22,20 @@ import {
   goalGambits,
   HAND_CYCLED,
   HAZARD_PAID,
+  HEALED,
   IDLE_ASSIGNED,
   leastHealthAmong,
   moveCommand,
+  movePointsRaisedOn,
   onceTwoStand,
   PLACED,
+  PULLED_BACK,
+  playedOnUnits,
   REASSIGNED,
+  REFRESHED_AWAY,
   ranked,
   STRIKING_DISCARDED,
   tileOrder,
-  trial,
   UNIT_SETTLED,
   unassignedForUnit,
   unitCardPlayed,
@@ -79,9 +84,11 @@ export function warlord(goal?: string): Persona {
         'While no worker stands, a population is idle and no held tile is free, play a unit card whose trial enters a worker',
       candidates: (catalogue, chronicle) => unitCardPlayed(catalogue, chronicle, true, 1),
     }),
+    staying(PULLED_BACK),
+    staying(HEALED),
     staying({
       sentence:
-        'A unit that attacks, attacks the enemy of least health within its range, walking to the tile it attacks from first, the cheapest of equals',
+        'A unit that attacks, attacks the enemy of least health within its range, walking to the tile it attacks from first, the furthest from that enemy within its range, the cheapest of equals',
       candidates: (catalogue, chronicle) =>
         enemyAttacked(
           catalogue,
@@ -89,50 +96,47 @@ export function warlord(goal?: string): Persona {
           leastHealthAmong(chronicle, () => true),
         ),
     }),
+    staying(REFRESHED_AWAY),
+    staying(ATTACKER_WITHDRAWN),
     staying({
       sentence:
-        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands",
+        "A unit that attacks holding its action that is not marching, the nearest the city's tile or any while fewer than three stand, walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, to the reachable tile nearest that enemy, nearest the city of equals, where that is nearer the enemy than where it stands",
       candidates: (catalogue, chronicle) =>
         garrisonPursued(catalogue, chronicle, notMarching(chronicle), 3),
     }),
     staying({
       sentence:
-        'While at least two units that attack stand and no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
+        'While at least two units that attack stand and no camp and no site is charted, a unit that attacks holding its action walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
       candidates: onceTwoStand(campSought),
     }),
     staying({
       sentence:
-        "While at least three units that attack stand, a unit that attacks not the nearest the city's tile walks toward the nearest charted camp or site by the cheapest way over charted tiles, to the reachable tile that way weighs least from",
+        "While at least three units that attack stand, a unit that attacks holding its action not the nearest the city's tile walks toward the nearest charted camp or site by the cheapest way over charted tiles, to the reachable tile that way weighs least from",
       candidates: marched,
     }),
     staying({
       sentence:
-        "While at least two units that attack stand, a unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
+        "While at least two units that attack stand, a unit that attacks holding its action that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
       candidates: onceTwoStand((catalogue, chronicle) =>
         chartingWalks(catalogue, chronicle, notMarching(chronicle), 5),
       ),
     }),
     staying({
       sentence:
-        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
+        "A unit that attacks holding its action that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the reachable tile the city may claim that stands highest, yields least of equals, nearest the city's tile of equals, where that beats where it stands",
       candidates: (catalogue, chronicle) =>
         garrisonRested(catalogue, chronicle, notMarching(chronicle)),
     }),
     staying({
       sentence:
-        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, outside the border and off the tiles the city may claim walks to the reachable unheld tile nearest the city's tile, where that is nearer than where it stands",
+        "A unit that attacks holding its action that is not marching, the nearest the city's tile or any while fewer than three stand, off the tiles the city may claim walks to the reachable tile nearest that ring, the nearest the city's tile of equals, where that is nearer the ring than where it stands",
       candidates: (catalogue, chronicle) =>
         garrisonWalkedHome(catalogue, chronicle, notMarching(chronicle)),
     }),
     staying({
       sentence:
-        "Play a card aimed at a unit whose trial refreshes a unit's move points, on the unit that attacks furthest from the city that has spent them and stands on no camp or site",
+        "Play a card aimed at a unit whose trial refreshes a unit's move points, on the unit that attacks holding its action furthest from the city that has spent them and stands on no camp or site",
       candidates: movePointsRefreshed,
-    }),
-    staying({
-      sentence:
-        "Play a card aimed at a unit whose trial raises a unit's health, on the unit that attacks that has lost the most",
-      candidates: healthRaised,
     }),
     staying(GAIN_PLAYED),
     staying(STRIKING_DISCARDED),
@@ -197,12 +201,21 @@ function garrisonOf(chronicle: Chronicle, attackers: readonly Unit[]): Unit | un
   return garrison;
 }
 
-/** The units that attack the march leaves home: every one while fewer than three stand, else the garrison. */
-function notMarching(chronicle: Chronicle): Unit[] {
+/**
+ * The numbers of the units that attack the march leaves home, whether they hold their action or not:
+ * every one while fewer than three stand, else the garrison.
+ */
+function leftHome(chronicle: Chronicle): Set<number> {
   const attackers = attackersOf(chronicle);
-  if (attackers.length < 3) return attackers;
+  if (attackers.length < 3) return new Set(attackers.map(({ id }) => id));
   const garrison = garrisonOf(chronicle, attackers);
-  return garrison === undefined ? [] : [garrison];
+  return new Set(garrison === undefined ? [] : [garrison.id]);
+}
+
+/** The units that attack holding their action that the march leaves home. */
+function notMarching(chronicle: Chronicle): Unit[] {
+  const home = leftHome(chronicle);
+  return attackersHoldingAction(chronicle).filter(({ id }) => home.has(id));
 }
 
 function populationAboveFloor(chronicle: Chronicle): boolean {
@@ -213,18 +226,18 @@ function* campSought(catalogue: Catalogue, chronicle: Chronicle): Generator<Comm
   if (chronicle.snapshots.some(({ tile }) => campOrSite(catalogue, chronicle, tile.building))) {
     return;
   }
-  yield* chartingWalks(catalogue, chronicle, attackersOf(chronicle));
+  yield* chartingWalks(catalogue, chronicle, attackersHoldingAction(chronicle));
 }
 
 function* marched(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
-  const home = new Set(notMarching(chronicle).map(({ id }) => id));
+  const home = leftHome(chronicle);
   const order = tileOrder(chronicle);
   const targets = chronicle.snapshots
     .filter(({ tile }) => campOrSite(catalogue, chronicle, tile.building))
     .map(({ q, r }) => ({ q, r }));
   const passage = passageFor(chronicle, 'player');
   const { tiles, rivers } = chronicle;
-  for (const unit of attackersOf(chronicle)) {
+  for (const unit of attackersHoldingAction(chronicle)) {
     if (home.has(unit.id) || unit.movePoints <= 0) continue;
     const moves = { ashore: unit.stats.move };
     const from = routesFrom(catalogue, tiles, rivers, unit.tile, unit.embarked, moves, passage);
@@ -248,42 +261,12 @@ function* marched(catalogue: Catalogue, chronicle: Chronicle): Generator<Command
   }
 }
 
-/**
- * The plays of the cards in hand aimed at a unit that the refusal lets through, on each of the units
- * in turn, in hand order, whose trial leaves that unit raised as `raised` reads it.
- */
-function* playedOnUnits(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  units: readonly Unit[],
-  raised: (before: Unit, after: Unit) => boolean,
-): Generator<Command> {
-  const cards = chronicle.hand.flatMap(({ id }, index) =>
-    aimOf(cardOf(catalogue, id)).aim === 'unit' && playable(refusalOf(catalogue, chronicle, id))
-      ? [index]
-      : [],
-  );
-  for (const unit of units) {
-    for (const index of cards) {
-      const command: Command = {
-        type: 'play',
-        index,
-        aim: 'unit',
-        tile: { q: unit.tile.q, r: unit.tile.r },
-      };
-      const after = trial(catalogue, chronicle, command);
-      const left = after && unitOf(after.units, unit.id);
-      if (left !== undefined && raised(unit, left)) yield command;
-    }
-  }
-}
-
 function movePointsRefreshed(catalogue: Catalogue, chronicle: Chronicle): Iterable<Command> {
   const { city } = chronicle;
   if (city === undefined) return [];
   const order = tileOrder(chronicle);
   const spent = ranked(
-    attackersOf(chronicle).flatMap((unit) =>
+    attackersHoldingAction(chronicle).flatMap((unit) =>
       unit.movePoints < unit.stats.move && !campOrSiteSeenOn(catalogue, chronicle, unit.tile)
         ? [{ item: unit, rank: [-distance(unit.tile, city), order(unit.tile)] }]
         : [],
@@ -293,22 +276,6 @@ function movePointsRefreshed(catalogue: Catalogue, chronicle: Chronicle): Iterab
     catalogue,
     chronicle,
     spent,
-    (before, after) => after.movePoints > before.movePoints,
-  );
-}
-
-function healthRaised(catalogue: Catalogue, chronicle: Chronicle): Iterable<Command> {
-  const order = tileOrder(chronicle);
-  const hurt = ranked(
-    attackersOf(chronicle).flatMap((unit) => {
-      const lost = fullHealth(catalogue, unit.stats) - unit.stats.health;
-      return lost > 0 ? [{ item: unit, rank: [-lost, order(unit.tile)] }] : [];
-    }),
-  );
-  return playedOnUnits(
-    catalogue,
-    chronicle,
-    hurt,
-    (before, after) => after.stats.health > before.stats.health,
+    (unit, after) => movePointsRaisedOn(unit, after) !== undefined,
   );
 }
