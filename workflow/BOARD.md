@@ -11,4 +11,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
+- **The neutral enters beside its city** — the unit the neutral enters at the enemy phase lands through the door its opening's units enter by, on its village's tile where free and otherwise on the nearest free tile around it, nothing entered and nothing paid where no tile is free, and the player's unit cards as today. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/the-neutral-enters-beside-its-city.md](board/the-neutral-enters-beside-its-city.md)
 - **The camp roll retried** — the camps' entry rate and method retried on the pass's cells: the flat rate at several values, a rate rising with the turn, and a cooldown after a roll so two early rolls never land together.
