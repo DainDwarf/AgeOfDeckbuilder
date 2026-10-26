@@ -95,6 +95,30 @@ export const HAZARD_PAID: Weighing = {
   candidates: hazardPaid,
 };
 
+export const ENTERED_EARLY: Weighing = {
+  sentence:
+    'While no unit that attacks stands within three tiles of the city and a population is idle, play a unit card whose trial enters a unit that attacks',
+  candidates: (catalogue, chronicle) =>
+    idle(chronicle) > 0 && attackersNear(chronicle).length === 0
+      ? unitCardsEntering(catalogue, chronicle, false)
+      : [],
+};
+
+export const ENTERED_UNDER_THREAT: Weighing = {
+  sentence:
+    'While more enemies the map shows stand within three tiles of the city than units that attack there, and a population is idle, play a unit card whose trial enters a unit that attacks',
+  candidates: (catalogue, chronicle) =>
+    idle(chronicle) > 0 && outnumbered(catalogue, chronicle)
+      ? unitCardsEntering(catalogue, chronicle, false)
+      : [],
+};
+
+export const UNASSIGNED_UNDER_THREAT: Weighing = {
+  sentence:
+    'While more enemies the map shows stand within three tiles of the city than units that attack there, none is idle, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
+  candidates: (catalogue, chronicle) => unassignedForUnit(catalogue, chronicle, outnumbered),
+};
+
 export const IDLE_ASSIGNED: Weighing = guardingIncome({
   sentence:
     'While a population is idle and the city holds a tile nobody works, assign it to the free held tile that yields the most food, the most of everything together of equals',
@@ -229,6 +253,9 @@ export function builder(goal?: string): Persona {
     declaringNoWar(UNIT_SETTLED),
     declaringNoWar(HAZARD_PAID),
     ...goalGambits(goal).map(declaringNoWar),
+    declaringNoWar(ENTERED_EARLY),
+    declaringNoWar(ENTERED_UNDER_THREAT),
+    declaringNoWar(UNASSIGNED_UNDER_THREAT),
     declaringNoWar(IDLE_ASSIGNED),
     declaringNoWar(REASSIGNED),
     declaringNoWar(CLAIMED),
@@ -267,9 +294,10 @@ export function builder(goal?: string): Persona {
     }),
     declaringNoWar({
       sentence:
-        'A unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
-      candidates: (catalogue, chronicle) =>
+        'While at least two units that attack stand, a unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
+      candidates: onceTwoStand((catalogue, chronicle) =>
         chartingWalks(catalogue, chronicle, attackersOf(chronicle), 5),
+      ),
     }),
     declaringNoWar({
       sentence:
@@ -1027,6 +1055,46 @@ export function unitCardPlayed(
   return unitCardsEntering(catalogue, chronicle, worker);
 }
 
+/**
+ * While none is idle and `when` holds, the unassigns of the worked tiles, the one yielding the least
+ * of everything together first, the least food of equals, for a unit card in hand entering a unit
+ * that attacks that the idle alone holds back; one whose trial `incomeTaken` reads is passed over.
+ */
+export function* unassignedForUnit(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  when: (catalogue: Catalogue, chronicle: Chronicle) => boolean,
+): Generator<Command> {
+  if (idle(chronicle) > 0 || !when(catalogue, chronicle)) return;
+  const heldBack = chronicle.hand.some(({ id }) => {
+    if (cardOf(catalogue, id).kind !== 'unit') return false;
+    const { unaffordable, blocked } = refusalOf(catalogue, chronicle, id);
+    return unaffordable.length === 0 && blocked.length === 1 && blocked[0] === 'idle';
+  });
+  if (!heldBack) return;
+  const yields = seenYields(catalogue, chronicle);
+  const order = tileOrder(chronicle);
+  const worked = ranked(
+    chronicle.assigned.map((tile) => ({
+      item: tile,
+      rank: [worthOf(yields(tile)), yields(tile).food ?? 0, order(tile)],
+    })),
+  );
+  for (const tile of worked) {
+    if (cityCommand(catalogue, chronicle, tile)?.type !== 'assign') continue;
+    const command: Command = { type: 'assign', tile };
+    // The card is held back until the tile is unassigned, so what it enters is read past the unassign.
+    const after = trial(catalogue, chronicle, command);
+    if (
+      after !== undefined &&
+      !incomeTaken(catalogue, chronicle, after) &&
+      unitCardsEntering(catalogue, after, false).length > 0
+    ) {
+      yield command;
+    }
+  }
+}
+
 /** Whether a tile stands within that many tiles of the city's tile; none does while no city stands. */
 function nearTheCity(chronicle: Chronicle, radius: number): (tile: TileCoords) => boolean {
   const { city } = chronicle;
@@ -1114,6 +1182,22 @@ function shownEnemiesNear(
 }
 
 /**
+ * Whether more enemies the map shows stand within three tiles of the city than units of the player's
+ * that attack there.
+ */
+function outnumbered(catalogue: Catalogue, chronicle: Chronicle): boolean {
+  const { city } = chronicle;
+  if (city === undefined) return false;
+  return shownEnemiesNear(catalogue, chronicle, city, 3).length > attackersNear(chronicle).length;
+}
+
+/** The units of the player's that attack standing within three tiles of the city's tile. */
+function attackersNear(chronicle: Chronicle): Unit[] {
+  const near = nearTheCity(chronicle, 3);
+  return attackersOf(chronicle).filter((unit) => near(unit.tile));
+}
+
+/**
  * Each of the units governed walking toward the first of the enemies the map shows within `radius`
  * tiles of the city, to its landing nearest that enemy, nearest the city's tile of equals, where
  * that is nearer the enemy than where it stands.
@@ -1139,6 +1223,12 @@ export function garrisonPursued(
       }),
     );
   });
+}
+
+/** The candidates, and none while fewer than two units of the player's that attack stand. */
+export function onceTwoStand(candidates: Weighing['candidates']): Weighing['candidates'] {
+  return (catalogue, chronicle) =>
+    attackersOf(chronicle).length >= 2 ? candidates(catalogue, chronicle) : [];
 }
 
 /**

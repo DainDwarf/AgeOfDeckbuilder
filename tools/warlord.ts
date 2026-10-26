@@ -1,11 +1,9 @@
 import { aimOf } from '../src/rules/cards';
 import { type Catalogue, captureOf, cardOf, fullHealth } from '../src/rules/catalogue';
 import { byHand, type Command, refusalOf } from '../src/rules/chronicle';
-import { cityCommand } from '../src/rules/city';
 import { distance, routesFrom, routesToward, type TileCoords, tileKey } from '../src/rules/map';
 import { type Chronicle, idle, playable } from '../src/rules/state';
 import { passageFor, type Unit, unitOf } from '../src/rules/units';
-import { worthOf } from '../src/rules/yields';
 import {
   attackersOf,
   CITY_SETTLED,
@@ -13,6 +11,8 @@ import {
   chartingWalks,
   DEAL_TAKEN,
   declaringNoWar,
+  ENTERED_EARLY,
+  ENTERED_UNDER_THREAT,
   enemyAttacked,
   GAIN_PLAYED,
   GAINED_THROUGH_WORKER,
@@ -23,17 +23,18 @@ import {
   HAND_CYCLED,
   HAZARD_PAID,
   IDLE_ASSIGNED,
-  incomeTaken,
   leastHealthAmong,
   moveCommand,
+  onceTwoStand,
   PLACED,
   REASSIGNED,
   ranked,
   STRIKING_DISCARDED,
-  seenYields,
   tileOrder,
   trial,
+  UNASSIGNED_UNDER_THREAT,
   UNIT_SETTLED,
+  unassignedForUnit,
   unitCardPlayed,
   unitCardsEntering,
   type Weighing,
@@ -52,6 +53,9 @@ export function warlord(goal?: string): Persona {
     staying(UNIT_SETTLED),
     staying(HAZARD_PAID),
     ...goalGambits(goal).map(staying),
+    staying(ENTERED_EARLY),
+    staying(ENTERED_UNDER_THREAT),
+    staying(UNASSIGNED_UNDER_THREAT),
     staying({
       sentence:
         'While a population is idle and more stand than the tiles the city holds, three at most, play a unit card whose trial enters a unit that attacks',
@@ -63,7 +67,8 @@ export function warlord(goal?: string): Persona {
     staying({
       sentence:
         'While none is idle, more stand than the tiles the city holds, three at most, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
-      candidates: unassignedForUnit,
+      candidates: (catalogue, chronicle) =>
+        unassignedForUnit(catalogue, chronicle, (_catalogue, read) => populationAboveFloor(read)),
     }),
     staying(IDLE_ASSIGNED),
     staying(REASSIGNED),
@@ -96,8 +101,8 @@ export function warlord(goal?: string): Persona {
     }),
     staying({
       sentence:
-        'While no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
-      candidates: campSought,
+        'While at least two units that attack stand, while no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
+      candidates: onceTwoStand(campSought),
     }),
     staying({
       sentence:
@@ -106,9 +111,10 @@ export function warlord(goal?: string): Persona {
     }),
     staying({
       sentence:
-        "A unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
-      candidates: (catalogue, chronicle) =>
+        "While at least two units that attack stand, a unit that attacks that is not marching, the nearest the city's tile or any while fewer than three stand, walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals",
+      candidates: onceTwoStand((catalogue, chronicle) =>
         chartingWalks(catalogue, chronicle, notMarching(chronicle), 5),
+      ),
     }),
     staying({
       sentence:
@@ -205,37 +211,6 @@ function notMarching(chronicle: Chronicle): Unit[] {
 
 function populationAboveFloor(chronicle: Chronicle): boolean {
   return chronicle.population > Math.min(chronicle.held.length, 3);
-}
-
-function* unassignedForUnit(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
-  if (idle(chronicle) > 0 || !populationAboveFloor(chronicle)) return;
-  const heldBack = chronicle.hand.some(({ id }) => {
-    if (cardOf(catalogue, id).kind !== 'unit') return false;
-    const { unaffordable, blocked } = refusalOf(catalogue, chronicle, id);
-    return unaffordable.length === 0 && blocked.length === 1 && blocked[0] === 'idle';
-  });
-  if (!heldBack) return;
-  const yields = seenYields(catalogue, chronicle);
-  const order = tileOrder(chronicle);
-  const worked = ranked(
-    chronicle.assigned.map((tile) => ({
-      item: tile,
-      rank: [worthOf(yields(tile)), yields(tile).food ?? 0, order(tile)],
-    })),
-  );
-  for (const tile of worked) {
-    if (cityCommand(catalogue, chronicle, tile)?.type !== 'assign') continue;
-    const command: Command = { type: 'assign', tile };
-    // The card is held back until the tile is unassigned, so what it enters is read past the unassign.
-    const after = trial(catalogue, chronicle, command);
-    if (
-      after !== undefined &&
-      !incomeTaken(catalogue, chronicle, after) &&
-      unitCardsEntering(catalogue, after, false).length > 0
-    ) {
-      yield command;
-    }
-  }
 }
 
 function* campSought(catalogue: Catalogue, chronicle: Chronicle): Generator<Command> {
