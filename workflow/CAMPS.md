@@ -20,18 +20,18 @@ Seed _n_ deals the same map under every persona and deck, so a fall the map expl
 
 ## What the baseline says
 
-Measured on 2026-10-26 at the commit that lands these rows, the camps rolling at 0.08 with a wave of two from three guards, five camps, the neutral seven to nine tiles from the centre. The ending rows per cell, 20 seeds each:
+Measured on 2026-10-26 at the commit that lands these rows, on the personas holding the range reading, the pull-back and heal, the refresh away and the withdrawal, the camps rolling at 0.08 with a wave of two from three guards, five camps, the neutral seven to nine tiles from the centre. The ending rows per cell, 20 seeds each:
 
 | Cell | Captured | Capture turn, median | First capture | Captured by turn 15 | Neutral fell | Neutral's fall turn, median | Enemies killed, median | Own units lost, median |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Builder, nomadic | 20 | 24 | 11 | 4 | 7 | 20 | 4 | 4.5 |
-| Builder, end of Stone | 18 | 23.5 | 12 | 2 | 6 | 11.5 | 3.5 | 5 |
-| Builder, no scouts | 20 | 21 | 11 | 3 | 10 | 15 | 2 | 4 |
-| Warlord, nomadic | 14 | 20.5 | 11 | 5 | 6 | 19.5 | 2.5 | 6 |
-| Warlord, end of Stone | 13 | 22 | 12 | 3 | 6 | 13 | 9 | 5 |
-| Warlord, no scouts | 13 | 21 | 11 | 2 | 11 | 15 | 10 | 5 |
+| Builder, nomadic | 19 | 24 | 11 | 5 | 7 | 20 | 4 | 4.5 |
+| Builder, end of Stone | 16 | 21 | 12 | 2 | 6 | 11.5 | 3 | 5 |
+| Builder, no scouts | 19 | 22 | 11 | 3 | 10 | 15 | 2.5 | 4 |
+| Warlord, nomadic | 13 | 19 | 11 | 5 | 6 | 20.5 | 4.5 | 5.5 |
+| Warlord, end of Stone | 13 | 22 | 12 | 3 | 7 | 15 | 11 | 4 |
+| Warlord, no scouts | 13 | 22 | 11 | 2 | 9 | 15 | 6.5 | 3.5 |
 
-Most chronicles still fall to the camps, 98 of the 120: the builder's all but two, the warlord's two in three, a third of them before turn 20. The neutral falls in six to eleven seeds of twenty, its median fall between turns 11.5 and 20, and where both fall the neutral falls first every time. The same seeds fall early across the cells, seed 6 by turn 17 in every one, so the opening is the map's and the rolls' as much as the persona's. On the Stone decks both personas raise their first unit that attacks around turn 7; on the nomadic deck the settle's scout is that unit. The builder kills two to four enemies a chronicle, the warlord about ten on the Stone decks and two or three on the nomadic one. A player holding seed 20 by hand at a roll of 0.02 stood with two warriors and a camp taken on turn 18; on that seed the warlord stands to turn 50 on the nomadic deck and to the turn cap on no scouts.
+Most chronicles still fall to the camps, 93 of the 120: the builder's all but six, the warlord's two in three, 36 of them before turn 20. The neutral falls in six to ten seeds of twenty, its median fall between turns 11.5 and 20.5, and where both fall the neutral falls first every time. The same seeds fall early across the cells, seed 6 by turn 17 in every one but the builder's on no scouts, which stands to turn 24, so the opening is the map's and the rolls' as much as the persona's. On the Stone decks both personas raise their first unit that attacks around turn 7; on the nomadic deck the settle's scout is that unit. The builder kills two to four enemies a chronicle, the warlord seven to eleven on the Stone decks and four or five on the nomadic one. A player holding seed 20 by hand at a roll of 0.02 stood with two warriors and a camp taken on turn 18; on that seed the warlord stands to the turn cap on the nomadic deck and falls on turn 28 on no scouts.
 
 ## Comparing a change
 
