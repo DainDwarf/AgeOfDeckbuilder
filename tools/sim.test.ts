@@ -1890,7 +1890,7 @@ test('a unit that attacks that has lost health outside the border walks to its l
   }
 });
 
-test('a unit that attacks that has spent its action where an enemy the map shows could attack it next turn is refreshed where it then reaches a tile no such enemy could attack, and walks to the one nearest the city’s tile; it is not refreshed where it reaches none, nor while it holds its action', () => {
+test('a unit that attacks that has spent its action where an enemy the map shows could attack it next turn is refreshed where it then reaches a tile no such enemy could attack, and walks to the one nearest the city’s tile; it is not refreshed where it reaches none, nor while it holds its action, and one holding move points that no such enemy could attack walks nowhere', () => {
   const at = { q: 2, r: 0 };
   const beside = (enemy: string, action = 0): Chronicle =>
     cityOf(['urban'], {
@@ -1903,6 +1903,10 @@ test('a unit that attacks that has spent its action where an enemy the map shows
     });
   const escaping = beside('PH_Warrior');
   const refresh: Command = { type: 'play', index: 0, aim: 'unit', tile: at };
+  const unthreatened = cityOf(['urban'], {
+    tiles: field(4),
+    units: [standing('player', { q: -2, r: 0 }, {}, undefined, 0), enemyStanding(at, undefined)],
+  });
 
   for (const [persona, away, withdrawal] of [
     ['builder', 26, 27],
@@ -1916,7 +1920,30 @@ test('a unit that attacks that has spent its action where an enemy the map shows
       unit: unitNumberOn(escaping, at),
       tile: CITY,
     });
+    expect(answerOf(persona, withdrawal, unthreatened)).toBeUndefined();
   }
+});
+
+test('the warlord plays no refresh on a unit that attacks that has spent its action on a camp where an enemy the map shows could attack it, and keeps the card, where the builder refreshes it', () => {
+  const camp = { q: 2, r: 0 };
+  const onCamp = cityOf(['urban'], {
+    tiles: camped(field(4), [camp]),
+    units: [standing('player', camp, {}, 0, 0), enemyStanding({ q: 3, r: 0 }, undefined)],
+    hand: ['PH_March'],
+  });
+  const plays = PERSONAS.warlord().flatMap((_, index) => {
+    const answer = answerOf('warlord', index + 1, onCamp);
+    return answer?.type === 'play' ? [answer] : [];
+  });
+
+  expect(answerOf('builder', 26, onCamp)).toEqual({
+    type: 'play',
+    index: 0,
+    aim: 'unit',
+    tile: camp,
+  });
+  expect(answerOf('warlord', 25, onCamp)).toBeUndefined();
+  expect(plays).toEqual([]);
 });
 
 test('a unit that attacks that has spent its action and holds move points is walked by none of the gambits that walk one holding its action, the pursuit and the warlord’s march among them, and the warlord’s refresh passes it for the next', () => {

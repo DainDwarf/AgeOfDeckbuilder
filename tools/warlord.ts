@@ -32,8 +32,8 @@ import {
   PULLED_BACK,
   playedOnUnits,
   REASSIGNED,
-  REFRESHED_AWAY,
   ranked,
+  refreshedAway,
   STRIKING_DISCARDED,
   tileOrder,
   UNIT_SETTLED,
@@ -96,7 +96,16 @@ export function warlord(goal?: string): Persona {
           leastHealthAmong(chronicle, () => true),
         ),
     }),
-    staying(REFRESHED_AWAY),
+    staying({
+      sentence:
+        'Play a card aimed at a unit whose trial refreshes the move points of a unit that attacks that has spent its action, that stands on no camp or site and that an enemy the map shows could attack next turn, where that unit then reaches a tile no such enemy could attack',
+      candidates: (catalogue, chronicle) =>
+        refreshedAway(
+          catalogue,
+          chronicle,
+          (unit) => !campOrSiteSeenOn(catalogue, chronicle, unit.tile),
+        ),
+    }),
     staying(ATTACKER_WITHDRAWN),
     staying({
       sentence:

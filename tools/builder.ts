@@ -171,7 +171,7 @@ export const HAND_CYCLED: Weighing = {
 
 export const PULLED_BACK: Weighing = {
   sentence:
-    "A unit that attacks that has lost health, outside the border, walks to the reachable tile inside the border nearest the city's tile where a card in hand aimed at a unit would raise its health, the one that has lost the most first, the cheapest tile of equals",
+    "A unit that attacks holding its action that has lost health, outside the border, walks to the reachable tile inside the border nearest the city's tile where a card in hand aimed at a unit would raise its health, the one that has lost the most first, the cheapest tile of equals",
   candidates: pulledBack,
 };
 
@@ -181,15 +181,15 @@ export const HEALED: Weighing = {
   candidates: healthRaised,
 };
 
-export const REFRESHED_AWAY: Weighing = {
+const REFRESHED_AWAY: Weighing = {
   sentence:
     'Play a card aimed at a unit whose trial refreshes the move points of a unit that attacks that has spent its action and that an enemy the map shows could attack next turn, where that unit then reaches a tile no such enemy could attack',
-  candidates: refreshedAway,
+  candidates: (catalogue, chronicle) => refreshedAway(catalogue, chronicle, () => true),
 };
 
 export const ATTACKER_WITHDRAWN: Weighing = {
   sentence:
-    "A unit that attacks that has spent its action and holds move points walks to the reachable tile no enemy the map shows could attack next turn, the nearest the city's tile of those",
+    "A unit that attacks that has spent its action, that holds move points and that an enemy the map shows could attack next turn walks to the reachable tile no such enemy could attack, the nearest the city's tile of those",
   candidates: attackerWithdrawn,
 };
 
@@ -1514,8 +1514,17 @@ function healthRaised(catalogue: Catalogue, chronicle: Chronicle): Iterable<Comm
   );
 }
 
-function refreshedAway(catalogue: Catalogue, chronicle: Chronicle): Iterable<Command> {
-  const spentAction = attackersOf(chronicle).filter((unit) => unit.action <= 0);
+/**
+ * The plays refreshing the move points of each unit that attacks that has spent its action, that
+ * `admits` lets through and that an enemy the map shows could attack next turn, in tile order, where
+ * the unit then reaches a tile no such enemy could attack.
+ */
+export function refreshedAway(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  admits: (unit: Unit) => boolean,
+): Iterable<Command> {
+  const spentAction = attackersOf(chronicle).filter((unit) => unit.action <= 0 && admits(unit));
   if (spentAction.length === 0) return [];
   const attacked = attackedNextTurn(catalogue, chronicle);
   const order = tileOrder(chronicle);
