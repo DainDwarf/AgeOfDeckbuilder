@@ -10,5 +10,3 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 - **The goals pass** — are the technologies' goals good: each checked for whether a player going for it reaches it, on which turn, and whether it asks more than a chronicle played as usual gives; Domestication's goal, which a worker standing on one herd reaches, first among them.
 
 ## Lines
-
-- **The camp roll retried** — every age's camp rolls at 0.04 and waits five turns, after it comes to stand and after each enemy its roll enters, before it rolls again; the wait is held by one test on the fixture and carried by the save, `docs/CHRONICLE.md` says a camp waits, the camps baseline is rerun on the new numbers and `CAMPS.md` reads from it. Doc-impact: `docs/CHRONICLE.md`. [board/the-camp-roll-retried.md](board/the-camp-roll-retried.md)

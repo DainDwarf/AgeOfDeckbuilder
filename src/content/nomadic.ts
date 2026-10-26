@@ -416,8 +416,8 @@ export const NOMADIC: Slice = {
       scripts: { guard: 'guard', raider: 'raider' },
       building: 'camp',
       rewards: { stores: 1, 'band-joins': 1 },
-      odds: 0.08,
-      wait: 0,
+      odds: 0.04,
+      wait: 5,
       raidCampOdds: 0.8,
     },
     sites: {
