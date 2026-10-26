@@ -4,7 +4,7 @@ import {
   captureOf,
   type Entering,
   entered,
-  type Neutral,
+  neutralOf,
   neutralScriptOf,
   type ScriptAct,
   type UnitEntryRow,
@@ -462,29 +462,41 @@ export function campEnteredAround(
 }
 
 /**
- * The units the neutral's opening names, in order, entering around the tile as a door, each under
+ * Units of the neutral's of these kinds, in order, entering around the tile as a door, each under
  * the script its kind carries.
  */
 export function neutralEnteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
-  neutral: Neutral,
+  kinds: readonly string[],
 ): Landed {
-  const rows = neutral.opening.map(
+  const neutral = neutralOf(catalogue, chronicle.age);
+  const rows = kinds.map(
     (kind): ScriptedEntry => ({ kind, script: neutralScriptOf(catalogue, neutral, kind) }),
   );
   return enteredAs(catalogue, chronicle, around, rows, { faction: 'neutral' });
 }
 
+/** Whether a free tile stands around the tile as a door for a unit of the neutral's of the kind. */
+export function neutralRoomAround(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  around: TileCoords,
+  kind: string,
+): boolean {
+  return roomyDoors(catalogue, chronicle, entrantOf(catalogue, chronicle, kind), 'neutral')(around);
+}
+
 /**
- * Whether a free tile stands around a door for the entrant, each reach walked once for every door on
- * one medium it holds: a walk reaches back every tile it reaches.
+ * Whether a free tile stands around a door for the faction's entrant, each reach walked once for
+ * every door on one medium it holds: a walk reaches back every tile it reaches.
  */
 function roomyDoors(
   catalogue: Catalogue,
   chronicle: Chronicle,
   entrant: Entrant,
+  faction: ScriptedFaction,
 ): (door: TileCoords) => boolean {
   const walked: {
     readonly embarked: boolean;
@@ -497,7 +509,7 @@ function roomyDoors(
       (reach) => reach.embarked === embarked && reach.keys.has(tileKey(door)),
     );
     if (known !== undefined) return known.roomy;
-    const { reach } = aroundDoor(catalogue, chronicle, entrant, door, 'enemy');
+    const { reach } = aroundDoor(catalogue, chronicle, entrant, door, faction);
     const roomy = reach.some((tile) => unitAt(chronicle.units, tile) === undefined);
     walked.push({ embarked, keys: new Set(reach.map(tileKey)), roomy });
     return roomy;
@@ -517,7 +529,7 @@ function raidEntry(
   const city = chronicle.city ?? refuse(catalogue, 'a raid landed while the city stands nowhere');
   const { camp } = ageOf(catalogue, chronicle.age);
   const entrant = entrantOf(catalogue, chronicle, kind);
-  const roomy = roomyDoors(catalogue, chronicle, entrant);
+  const roomy = roomyDoors(catalogue, chronicle, entrant, 'enemy');
   const camps = chronicle.tiles.filter((tile) => tile.building === camp.building && roomy(tile));
   // The chronicle holds no radius: the disc's edge is read off its tiles, which the generator deals
   // around `CENTRE`.

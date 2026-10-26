@@ -69,6 +69,7 @@ import {
   QUIET,
   REGION,
   ringed,
+  SCRIPT,
   SHRINE,
   type Standing,
   settledLaunch,
@@ -1166,7 +1167,7 @@ test('the neutral enters a unit as the player’s city plays a unit card: the ca
   ]);
 });
 
-test('the neutral enters nothing where it would take its last population, where none is idle, where a unit stands on its city’s tile or where its stocks fall short, and raises no stage', () => {
+test('the neutral enters nothing where it would take its last population, where none is idle or where its stocks fall short, and raises no stage', () => {
   const holding = (rows: Partial<CityRows>): Chronicle =>
     neutralHolding(rows, {}, NO_NEUTRAL_GROWTH);
   const blocked = [
@@ -1177,7 +1178,6 @@ test('the neutral enters nothing where it would take its last population, where 
       assigned: [NEUTRAL_TILE, { q: 2, r: 0 }],
       resources: military(2),
     }),
-    withUnits(holding({ population: 2, resources: military(2) }), [neutralStanding(NEUTRAL_TILE)]),
     holding({ population: 2, resources: military(1) }),
   ];
 
@@ -1186,6 +1186,46 @@ test('the neutral enters nothing where it would take its last population, where 
       namesOf(heldBy(apply(CATALOGUE, chronicle, { type: 'end-turn' }), 'enemy-phase')),
     ).toEqual([]);
   }
+});
+
+test('a unit standing on the neutral’s city, the unit it enters lands on the nearest free tile its kind stands on that the ground runs to from that tile, never the player’s city’s, the cost paid and the population taken; with no free tile around it, it enters nothing, pays nothing and raises no stage', () => {
+  const [held, further, free, island] = [
+    { q: 2, r: 0 },
+    { q: 3, r: 0 },
+    { q: 4, r: 0 },
+    { q: 1, r: -2 },
+  ];
+  const holding = (land: TileCoords[], units: readonly Standing[]): Chronicle =>
+    withUnits(
+      neutralHolding({ population: 2, resources: military(2) }, {}, deepBut(plains(4), land)),
+      units,
+    );
+  // Two guards and not three: a third would send the fixture neutral's wave.
+  const beside = holding(
+    [CITY, NEUTRAL_TILE, held, further, free, island],
+    [
+      neutralStanding(NEUTRAL_TILE),
+      neutralStanding(held),
+      neutralStanding(further, { script: SCRIPT, stats: { move: 0 } }),
+    ],
+  );
+  const shut = holding([CITY, NEUTRAL_TILE], [neutralStanding(NEUTRAL_TILE)]);
+  const { cost } = cardOf(CATALOGUE, 'PH_Warrior');
+
+  const phase = heldBy(apply(CATALOGUE, beside, { type: 'end-turn' }), 'enemy-phase');
+  const after = outcome(phase);
+
+  expect(namesOf(phase)).toEqual(['stock', 'population', 'enter']);
+  expect(after.neutral).toMatchObject({
+    population: 1,
+    resources: { military: 2 - (cost.military ?? 0) },
+  });
+  expect(unitAt(after.units, free)).toMatchObject({
+    faction: 'neutral',
+    script: neutralOf(CATALOGUE, QUIET).scripts.guard,
+    stats: unitKind(CATALOGUE, 'PH_Warrior'),
+  });
+  expect(namesOf(heldBy(apply(CATALOGUE, shut, { type: 'end-turn' }), 'enemy-phase'))).toEqual([]);
 });
 
 test('the neutral enters one unit where it acts, however many it could pay for, and its claim takes the idle population ahead of its entry', () => {

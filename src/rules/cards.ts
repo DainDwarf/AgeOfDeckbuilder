@@ -7,17 +7,15 @@ import {
   cardMade,
   cardOf,
   counterOf,
-  type Entering,
   entered,
   fullHealth,
   keywordOf,
-  neutralOf,
-  neutralScriptOf,
   strikeOf,
   type UnitEntry,
   unitKind,
 } from './catalogue';
 import { claimable, declaredByLanding, populationTaken, retiled } from './city';
+import { neutralEnteredAround, neutralRoomAround } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -632,47 +630,66 @@ export function healthLost(
 /**
  * How a unit card enters its unit for a city, the block and the effect as one pair so neither is
  * written without the other: the city keeps its last population, needs one idle to turn into the
- * unit, and needs its own tile free; then one idle population becomes the unit, on the city's tile.
+ * unit and a tile to land it on; then one idle population becomes the unit.
  */
 export function enters(type: string): UnitEntry {
   return {
-    blocked: (_catalogue, chronicle, whose) => {
+    blocked: (catalogue, chronicle, whose) => {
       const city = cityRows(chronicle, whose);
       const tile = cityTileOf(chronicle, whose);
       const blocks: Block[] = [];
       if ((city?.population ?? 0) <= 1) blocks.push('population');
       if (city === undefined || idle(city) <= 0) blocks.push('idle');
-      if (tile !== undefined && unitAt(chronicle.units, tile) !== undefined) blocks.push('city');
+      const landing =
+        tile === undefined ? undefined : landingBlock(catalogue, chronicle, whose, type, tile);
+      if (landing !== undefined) blocks.push(landing);
       return blocks;
     },
     effect: (catalogue, paid, whose) => {
       const tile = cityTileOf(paid, whose);
       if (tile === undefined) refuse(catalogue, `a ${type} entered while the city stands nowhere`);
       return followed(populationTaken(paid, whose), (left) =>
-        entered(catalogue, left, cityUnit(catalogue, left, whose, type, tile)),
+        cityLanded(catalogue, left, whose, type, tile),
       );
     },
   };
 }
 
-/** A unit of the kind entering for the faction's city on the tile: the neutral's under its kind's script. */
-function cityUnit(
+/**
+ * What stands against a unit of the kind landing for the faction's city on the tile, the counterpart
+ * of `cityLanded`: the player's tile held by a unit, and no free tile around the neutral's.
+ */
+function landingBlock(
   catalogue: Catalogue,
   chronicle: Chronicle,
   whose: CityFaction,
   type: string,
   tile: TileCoords,
-): Entering {
+): Block | undefined {
   switch (whose) {
     case 'player':
-      return { type, faction: 'player', tile };
+      return unitAt(chronicle.units, tile) === undefined ? undefined : 'city';
     case 'neutral':
-      return {
-        type,
-        faction: 'neutral',
-        script: neutralScriptOf(catalogue, neutralOf(catalogue, chronicle.age), type),
-        tile,
-      };
+      return neutralRoomAround(catalogue, chronicle, tile, type) ? undefined : 'unit-standing';
+  }
+}
+
+/**
+ * A unit of the kind entering for the faction's city: the player's on the tile, the neutral's around
+ * it as a door.
+ */
+function cityLanded(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  whose: CityFaction,
+  type: string,
+  tile: TileCoords,
+): Landed {
+  switch (whose) {
+    case 'player':
+      return entered(catalogue, chronicle, { type, faction: 'player', tile });
+    case 'neutral':
+      return neutralEnteredAround(catalogue, chronicle, tile, [type]);
   }
 }
 

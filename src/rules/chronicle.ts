@@ -243,7 +243,7 @@ export function beginChronicle(
   let guarded: Sequence =
     neutral === undefined || neutralAt === undefined
       ? unchanged(begun)
-      : neutralEnteredAround(catalogue, begun, neutralAt, neutral);
+      : neutralEnteredAround(catalogue, begun, neutralAt, neutral.opening);
   for (const { q, r, building } of map.tiles) {
     if (building !== camp.building) continue;
     guarded = followed(guarded, (left) => enteredOnCamp(catalogue, left, { q, r }, camp.opening));
