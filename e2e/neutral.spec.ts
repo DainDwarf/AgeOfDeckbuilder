@@ -13,6 +13,7 @@ import {
   tilesBeside,
 } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
+import { unitDamaged } from '../src/rules/schedule';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
@@ -109,13 +110,11 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   page,
 }) => {
   const problems = watch(page);
-  const opened = seedOneFreed();
-  const { neutral } = opened;
-  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
+  const { chronicle: opened, city } = seedOneFreed();
   const building = neutralBuilding(CATALOGUE, ageOf(CATALOGUE, AGE), `the age ${AGE}`);
   const camp = ageOf(CATALOGUE, opened.age).camp.building;
   const camps = opened.tiles.filter((tile) => tile.building === camp);
-  const mark = `building-${tileKey(neutral.city)}`;
+  const mark = `building-${tileKey(city)}`;
   expect(opened.age).toBe(AGE);
 
   await openSaved(page, opened, CAMPAIGN);
@@ -129,8 +128,8 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   // The whole disc drawn, the buildings on it are the camps, the sites, the neutral's and the city's.
   expect(await marksIn(page, 'buildings')).toBe(camps.length + sitesOf(opened).length + 2);
 
-  await broughtIn(page, neutral.city);
-  const at = await tileOnScreen(page, neutral.city);
+  await broughtIn(page, city);
+  const at = await tileOnScreen(page, city);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
   expect(await textOf(page, 'panel-name')).toBe(buildingName(building));
@@ -139,26 +138,20 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
 });
 
 /**
- * The chronicle the turns from this one leave once no unit stands on the neutral's city's tile, the
- * worker it opens with standing there until it steps off; nothing where the chronicle ends, the
- * neutral falls or the tenth turn passes first.
+ * The chronicle with the unit standing on the neutral's city's tile killed, as an attack's damage
+ * kills one, and that tile.
  */
-function cityFreed(chronicle: Chronicle): Chronicle | undefined {
-  let freeing = chronicle;
-  while (freeing.ending === undefined && freeing.turn <= 10) {
-    const { neutral } = freeing;
-    if (neutral === undefined) return undefined;
-    if (unitAt(freeing.units, neutral.city) === undefined) return freeing;
-    freeing = endedTurn(freeing);
-  }
-  return undefined;
+function cityFreed(chronicle: Chronicle): { chronicle: Chronicle; city: TileCoords } {
+  const city = chronicle.neutral?.city;
+  if (city === undefined) throw new Error(`seed ${chronicle.seed} opens with no neutral`);
+  const standing = unitAt(chronicle.units, city);
+  if (standing === undefined) return { chronicle, city };
+  return { chronicle: unitDamaged(chronicle, city, standing.stats.health).chronicle, city };
 }
 
-/** Seed 1's turn on the campaign once the neutral's city's tile is free. */
-function seedOneFreed(): Chronicle {
-  const freed = cityFreed(settledOn(1, [], CAMPAIGN));
-  if (freed === undefined) throw new Error('no turn of seed 1 frees the neutral’s city’s tile');
-  return freed;
+/** Seed 1's turn 1 on the campaign with the neutral's city's tile freed, and that tile. */
+function seedOneFreed(): { chronicle: Chronicle; city: TileCoords } {
+  return cityFreed(settledOn(1, [], CAMPAIGN));
 }
 
 /** The kind of the unit the neutral's script enters on this chronicle. */
@@ -184,28 +177,26 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   page,
 }) => {
   const problems = watch(page);
-  const opened = seedOneFreed();
-  const { neutral } = opened;
-  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
+  const { chronicle: opened, city } = seedOneFreed();
   const kind = kindEntered(opened);
   const guarded = unitEntered(opened, {
     type: kind,
     faction: 'neutral',
     script: neutralOf(CATALOGUE, AGE).scripts.guard,
-    tile: neutral.city,
+    tile: city,
   });
-  const mark = `unit-${tileKey(neutral.city)}`;
+  const mark = `unit-${tileKey(city)}`;
 
   await openSaved(page, guarded, CAMPAIGN);
   await consoleKey(page);
   await enter(page, 'uncharted');
   await enter(page, 'fog');
   await consoleKey(page);
-  await broughtIn(page, neutral.city);
+  await broughtIn(page, city);
 
   expect(await unitFills(page, mark)).toEqual([LOOK.neutral]);
 
-  const at = await tileOnScreen(page, neutral.city);
+  const at = await tileOnScreen(page, city);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('unit');
   expect(await textOf(page, 'panel-name')).toBe(unitName(kind));
@@ -312,10 +303,8 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
  * there.
  */
 function besideTheNeutralCity(): { chronicle: Chronicle; move: UnitCommand; from: TileCoords } {
-  const opened = seedOneFreed();
-  const { neutral } = opened;
-  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
-  for (const from of neighbours(neutral.city)) {
+  const { chronicle: opened, city } = seedOneFreed();
+  for (const from of neighbours(city)) {
     if (tileAt(opened.tiles, from) === undefined || unitAt(opened.units, from) !== undefined) {
       continue;
     }
@@ -324,11 +313,9 @@ function besideTheNeutralCity(): { chronicle: Chronicle; move: UnitCommand; from
     const unit = unitAt(chronicle.units, from);
     if (unit === undefined) continue;
     const landsOn = byHand(CATALOGUE, chronicle, unit).landings.some(
-      ({ tile }) => tileKey(tile) === tileKey(neutral.city),
+      ({ tile }) => tileKey(tile) === tileKey(city),
     );
-    if (landsOn) {
-      return { chronicle, move: { type: 'move', unit: unit.id, tile: neutral.city }, from };
-    }
+    if (landsOn) return { chronicle, move: { type: 'move', unit: unit.id, tile: city }, from };
   }
   throw new Error('no warrior of the player’s beside the neutral’s city on seed 1 lands on it');
 }
@@ -414,14 +401,11 @@ function offTheNeutralCity(): { chronicle: Chronicle; index: number; city: TileC
   return firstSeed(
     `frees the neutral’s city with ${EMBARK} in hand beside water beside it`,
     (seed) => {
-      const opened = cityFreed(settledOn(seed, [], SAILING));
-      const neutral = opened?.neutral;
-      if (opened === undefined || neutral === undefined || !idsOf(opened.hand).includes(EMBARK)) {
-        return undefined;
-      }
+      const { chronicle: opened, city } = cityFreed(settledOn(seed, [], SAILING));
+      if (!idsOf(opened.hand).includes(EMBARK)) return undefined;
       const free = (coord: TileCoords): boolean =>
         unitAt(opened.units, coord) === undefined && holderOf(opened, coord) === undefined;
-      for (const water of neighbours(neutral.city)) {
+      for (const water of neighbours(city)) {
         if (
           !free(water) ||
           movementCost(CATALOGUE, tileAt(opened.tiles, water), true) === undefined
@@ -435,8 +419,8 @@ function offTheNeutralCity(): { chronicle: Chronicle; index: number; city: TileC
           const manned = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: bank });
           const paid = paidFor(manned, EMBARK);
           if (!admits(paid.chronicle, paid.index, water)) continue;
-          const disembarking = disembarkingAt(paid, water, neutral.city, SAILING);
-          if (disembarking !== undefined) return { ...disembarking, city: neutral.city };
+          const disembarking = disembarkingAt(paid, water, city, SAILING);
+          if (disembarking !== undefined) return { ...disembarking, city };
         }
       }
       return undefined;
@@ -594,10 +578,7 @@ test('a warrior of the player’s standing on the neutral’s city through the e
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const opened = seedOneFreed();
-  const { neutral } = opened;
-  if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
-  const { city } = neutral;
+  const { chronicle: opened, city } = seedOneFreed();
   const chronicle = warDeclared(
     unitEntered(opened, { type: WARRIOR, faction: 'player', tile: city }),
   ).chronicle;

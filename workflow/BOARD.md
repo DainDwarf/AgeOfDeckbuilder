@@ -11,5 +11,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The neutral helped** — the Stone neutral opens with a worker and two warriors standing on and around its village, the opening declared by the content and entered through the raid's door, and the camps baseline rerun on it. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`. [board/the-neutral-helped.md](board/the-neutral-helped.md)
 - **The camp roll retried** — the camps' entry rate and method retried on the pass's cells: the flat rate at several values, a rate rising with the turn, and a cooldown after a roll so two early rolls never land together.

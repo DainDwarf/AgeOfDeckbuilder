@@ -4,7 +4,7 @@ import {
   captureOf,
   type Entering,
   entered,
-  neutralOf,
+  type Neutral,
   neutralScriptOf,
   type ScriptAct,
   type UnitEntryRow,
@@ -278,8 +278,8 @@ function rowDrawn(
   return { picked, chronicle: { ...chronicle, rng } };
 }
 
-/** What one enemy enters as: its kind and its script. */
-export type EnemyEntry = Pick<UnitEntryRow, 'kind' | 'script'>;
+/** What one unit acting by a script enters as: its kind and its script. */
+export type ScriptedEntry = Pick<UnitEntryRow, 'kind' | 'script'>;
 
 /**
  * What that many enemies enter as, each drawn out of the table one after another, and the
@@ -291,9 +291,9 @@ export function rowsDrawn(
   chronicle: Chronicle,
   table: UnitEntryTable,
   enemies: number,
-): { readonly rows: readonly EnemyEntry[]; readonly chronicle: Chronicle } {
+): { readonly rows: readonly ScriptedEntry[]; readonly chronicle: Chronicle } {
   unitEntryTableHeld(catalogue, table, "a unit entry's table");
-  const rows: EnemyEntry[] = [];
+  const rows: ScriptedEntry[] = [];
   let drawing = chronicle;
   for (let enemy = 0; enemy < enemies; enemy++) {
     const { picked, chronicle: drawn } = rowDrawn(drawing, table);
@@ -400,7 +400,7 @@ function enteredAs(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
-  rows: readonly Pick<UnitEntryRow, 'kind' | 'script'>[],
+  rows: readonly ScriptedEntry[],
   door: DoorFor,
 ): Landed {
   const doors = new Map<string, ReturnType<typeof aroundDoor>>();
@@ -413,7 +413,7 @@ function enteredAs(
     return walked;
   };
   const enteringOn = (
-    { kind, script }: Pick<UnitEntryRow, 'kind' | 'script'>,
+    { kind, script }: ScriptedEntry,
     tile: TileCoords,
     embarkedMove: number | undefined,
   ): Entering => {
@@ -455,24 +455,25 @@ export function campEnteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   camp: TileCoords,
-  rows: readonly EnemyEntry[],
+  rows: readonly ScriptedEntry[],
 ): Landed {
   if (rows.length === 0) return landedAs(change('runtime-error', chronicle, chronicle));
   return enteredAs(catalogue, chronicle, camp, rows, { faction: 'enemy', camp });
 }
 
 /**
- * Units of the neutral's of these kinds, in order, entering around the tile as a door, each under the
- * script its kind carries.
+ * The units the neutral's opening names, in order, entering around the tile as a door, each under
+ * the script its kind carries.
  */
 export function neutralEnteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
-  kinds: readonly string[],
+  neutral: Neutral,
 ): Landed {
-  const neutral = neutralOf(catalogue, chronicle.age);
-  const rows = kinds.map((kind) => ({ kind, script: neutralScriptOf(catalogue, neutral, kind) }));
+  const rows = neutral.opening.map(
+    (kind): ScriptedEntry => ({ kind, script: neutralScriptOf(catalogue, neutral, kind) }),
+  );
   return enteredAs(catalogue, chronicle, around, rows, { faction: 'neutral' });
 }
 
@@ -542,7 +543,7 @@ function raidEntry(
 export function raided(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  rows: readonly EnemyEntry[],
+  rows: readonly ScriptedEntry[],
 ): Landed {
   if (rows.length === 0) return landedAs(change('runtime-error', chronicle, chronicle));
   const door = raidEntry(catalogue, chronicle, rows[0].kind);
