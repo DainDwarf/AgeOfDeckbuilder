@@ -11,4 +11,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The camp roll retried** — the camps' entry rate and method retried on the pass's cells: the flat rate at several values, a rate rising with the turn, and a cooldown after a roll so two early rolls never land together.
+- **The camp roll retried** — every age's camp rolls at 0.04 and waits five turns, after it comes to stand and after each enemy its roll enters, before it rolls again; the wait is held by one test on the fixture and carried by the save, `docs/CHRONICLE.md` says a camp waits, the camps baseline is rerun on the new numbers and `CAMPS.md` reads from it. Doc-impact: `docs/CHRONICLE.md`. [board/the-camp-roll-retried.md](board/the-camp-roll-retried.md)
