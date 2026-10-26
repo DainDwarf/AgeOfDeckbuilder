@@ -1,0 +1,36 @@
+# The neutral helped
+
+**Line:** The neutral helped — the Stone neutral opens with a worker and two warriors standing on and around its village, the opening declared by the content and entered through the raid's door, and the camps baseline rerun on it. Doc-impact: `docs/CHRONICLE.md`, `docs/ages/STONE.md`.
+
+**Spec:**
+
+- `docs/CHRONICLE.md` _The neutral_, the first paragraph. The clause "the chronicle opens with it standing, its tile held with one population on it and one worker of its own standing on that tile, of the kind its content names; a neutral naming none opens with none and builds nothing" becomes: "the chronicle opens with it standing, its tile held with one population on it and the units its content names at its opening standing on and around that tile, each entering as a raid's enemies enter around their door, the first on the tile itself and each after on the nearest free tile its kind stands on that the ground runs to from it, seeded among tiles equally near, its own city's tile open to it, and each under the script its kind carries, a worker its workers' and any other its guard's; a neutral naming none opens with no unit". The rest of the paragraph stands.
+- `docs/ages/STONE.md` _The neutral_: "and it opens with one worker; its script keeps it growing" becomes "and it opens with a worker and warriors standing guard; its script keeps it growing". The count is content and stands on no page.
+- The content: the Stone neutral's opening names a worker, a warrior and a warrior, in that order.
+- No player-facing entry: the opening's units are the age's own kinds, already named and drawn.
+
+**Doc-impact:** `docs/CHRONICLE.md`, `docs/ages/STONE.md`.
+
+**Scope:**
+
+- In: the neutral's declaration gains its opening, a list of unit kinds in order; the catalogue refuses a kind it does not hold, a worker kind where the neutral names no workers, and a first kind that stands on no terrain the neutral's building stands on, as it refuses a camp's opening. The derived opening worker, the first worker kind of the ratio, goes; the check that workers are named exactly where the ratio keeps a worker kind stays. The raid's door enters for a faction: the enemies' as today, and the neutral's at its opening, the passage the faction's, the units made the faction's, the neutral's under the script its kind carries, and the cities' tiles kept off every one for an enemy and the player's alone for the neutral, so the first of its units lands on the village. The door's refusal to open before the settle belongs to the raid and the placed camp, which keep it; the opening comes before the settle. The two fixture neutrals declare their openings outright, none for the default and one worker for the working one, so no test moves. One test on the fixture proves the mechanism. The Stone content names its three, and the camps baseline is rerun and replaced.
+- Out: the neutral's wave, its ratio, its scripts, the camps' numbers. The trial measured the neutral without its wave and it moved not one row, the neutral gathering six fighters in one chronicle of 120; nothing to change there.
+- Corner cases: fewer walkable free tiles beside the village than units named — the door walks the rest one ring further, as a raid's; where its ground reaches no free tile, that unit enters nowhere, as a raid's. The ratio counts the standing warriors, so the neutral's first entries lean to the archer and the worker: the ratio's doing, not a deviation. A guard rests on its city's tile only while no other held tile is free, and the worker holds it at the opening as today, so entering a unit on it waits for the first claim as today.
+- Reconcile: entering around a tile becomes one, the raid's door taking the faction; the derived opening worker becomes the declared list; the camp's weighted opening table and the neutral's fixed list stay apart, the fixedness meant.
+- Measured at intake (seeds 1 to 20 on the six cells of `workflow/CAMPS.md`): the neutral fell in 28 chronicles of 120 against 45 at the baseline, at median turn 18.5 against 15, and the player's captures stood (97 against 93, 13 by turn 15 against 20). One warrior alone moved nothing (44 falls); the wave removed moved nothing.
+
+**Traps:**
+
+- The door's reach in `src/rules/enemies.ts` refuses while the player's city stands nowhere and keeps every city's tile out; both are the enemies' rules, and the opening is dealt before the settle and lands on the neutral's own tile. The raid's door and the placed camp keep their refusals at their own doors.
+- The door draws ties from the chronicle's generator; entering a unit steps it not. So the opening steps the generator where today it does not, and every roll after it diverges from the committed baseline rows: the baseline is replaced, never joined per seed to the old rows for a verdict.
+- The Playwright specs build their chronicle through the rules on a seed and plant units through the fixture's helpers; a tile beside the neutral's village may now be a warrior's at the opening. `e2e/neutral.spec.ts` and `e2e/population-badge.spec.ts` open Stone chronicles with the neutral; a spec that plants a unit beside the village picks a free tile.
+- The content's catalogue test builds the real content and resolves every id: the opening's kinds are among them.
+- The order of the opening today: the neutral's worker, then the camps' guards; keep the neutral's units first.
+- The sim skill's split runs the baseline, `node tools/sim.ts` one process per five seeds, eight at a time; `workflow/CAMPS.md` _The cell_ names the flags and the decks' flags are `workflow/ECONOMY.md`'s table; the table query under _Comparing a change_ reads the folders.
+
+**Plan:** two commits, the mechanism inert first.
+
+1. `src/rules/catalogue.ts`: the neutral's declaration carries its opening list, checked as above; the derived worker lookup leaves the launch. `src/rules/enemies.ts`: the door enters for a faction, the refusals at the raid and the placed camp. `src/rules/chronicle.ts`: the opening enters the neutral's list through the door around its village, before the camps' guards. `src/rules/fixtures.ts`: both fixture neutrals name their openings. One test beside the chronicle's tests: a fixture neutral naming three kinds opens with the first on its tile and the others on free tiles beside it, each under its kind's script. `src/content/stone.ts`: the opening names the worker alone. `docs/CHRONICLE.md` as the spec says. Everything plays as today; this is the inert commit, `Ship: The neutral helped, the opening declared`.
+2. `src/content/stone.ts`: the opening names a worker, a warrior and a warrior. `docs/ages/STONE.md` as the spec says. The six cells of `workflow/CAMPS.md` rerun into the scratchpad with the split, the folders under `workflow/camps/` replaced, and the page's _What the baseline says_ rewritten on the new rows: the date, the state sentence naming the opening, the table and the paragraph under it. The board line deleted. `Ship: The neutral helped`.
+
+**Verify:** `npm run check`, `npm test`, `npm run lint`. The proof spec: `npx playwright test e2e/neutral.spec.ts`, the one that opens a Stone chronicle beside the neutral's village. CI proves on the push: `e2e/population-badge.spec.ts`, `e2e/flood.spec.ts`, `e2e/grievance.spec.ts`, and the rest of the suite.
