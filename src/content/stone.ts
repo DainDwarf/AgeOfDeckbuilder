@@ -368,6 +368,7 @@ export const STONE: Slice = {
       ],
       rewards: { 'stone-stores': 1, 'stone-band-joins': 1 },
       odds: 0.08,
+      wait: 0,
       acrossWater: true,
       embarkedMove: EMBARKED_MOVE,
       wave: { gathered: 3, sent: 2 },

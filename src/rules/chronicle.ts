@@ -11,6 +11,7 @@ import {
   steppedOnto,
   struck,
   throughRefusal,
+  withBuilding,
 } from './cards';
 import {
   type Achievement,
@@ -206,7 +207,7 @@ export function beginChronicle(
       ? undefined
       : map.tiles.find((tile) => tile.building === neutral.building);
   const neutralAt = neutralTile && { q: neutralTile.q, r: neutralTile.r };
-  const begun: Chronicle = {
+  const dealt: Chronicle = {
     content: catalogue.version,
     age,
     region,
@@ -239,6 +240,12 @@ export function beginChronicle(
     discardPile: [],
     exhaustPile: [],
     achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
+  };
+  const begun: Chronicle = {
+    ...dealt,
+    tiles: dealt.tiles.map((tile) =>
+      tile.building === undefined ? tile : withBuilding(catalogue, dealt, tile, tile.building),
+    ),
   };
   let guarded: Sequence =
     neutral === undefined || neutralAt === undefined
@@ -1561,20 +1568,25 @@ function scriptedStepped(
 
 /**
  * The camps rolling their own enemies, in tile order: each camp draws once from the seeded generator
- * whatever its odds, and where the draw falls under them one enemy of its roll's table enters around
- * it. A draw that entered nothing raises no stage and rides on the chronicle handed back.
+ * whatever its odds and its wait, and a draw that entered nothing rides on the chronicle handed back.
  */
 function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
   const { camp } = ageOf(catalogue, chronicle.age);
   let rolling: Sequence = unchanged(chronicle);
-  for (const { q, r, building } of chronicle.tiles) {
+  for (const { q, r, building, waitsFrom } of chronicle.tiles) {
     if (building !== camp.building) continue;
+    const at = { q, r };
     rolling = followed(rolling, (left) => {
       const step = nextRng(left.rng);
       const drawn = { ...left, rng: step.rng };
-      if (step.value >= camp.odds) return unchanged(drawn);
+      const waiting = waitsFrom !== undefined && left.turn < waitsFrom + camp.wait;
+      if (waiting || step.value >= camp.odds) return unchanged(drawn);
       const rolled = rowsDrawn(catalogue, drawn, camp.roll, 1);
-      return campEnteredAround(catalogue, rolled.chronicle, { q, r }, rolled.rows);
+      const entering = campEnteredAround(catalogue, rolled.chronicle, at, rolled.rows);
+      if (entering.stages.length === 0) return entering;
+      return followed(entering, (entered) =>
+        retiled(entered, at, (tile) => ({ ...tile, waitsFrom: entered.turn })),
+      );
     });
   }
   return rolling;

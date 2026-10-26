@@ -356,6 +356,14 @@ test('a catalogue whose camp rolls at odds below nought or above one is refused'
   expect(() => catalogued(above)).toThrow(/^fixture: /);
 });
 
+test('a catalogue whose camp waits below nought or a part of a turn is refused', () => {
+  const below = encamped({ wait: -1 });
+  const part = encamped({ wait: 1.5 });
+
+  expect(() => catalogued(below)).toThrow(`fixture: the age ${AGE}'s camp waits -1 turns`);
+  expect(() => catalogued(part)).toThrow(`fixture: the age ${AGE}'s camp waits 1.5 turns`);
+});
+
 test('a catalogue whose raids enter through a camp at odds below nought or above one is refused', () => {
   const below = encamped({ raidCampOdds: -0.1 });
   const above = encamped({ raidCampOdds: 1.1 });

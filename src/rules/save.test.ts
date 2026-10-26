@@ -22,6 +22,7 @@ import {
   CITY,
   CIVILIZATION,
   CIVILIZATION_ID,
+  camping,
   chronicleSaved,
   cityOf,
   endedTurn,
@@ -32,7 +33,9 @@ import {
   HOARD,
   hoardedVictory,
   NO_DEALS,
+  namesOf,
   onTheNeutralCity,
+  openedWithACamp,
   opening,
   plains,
   preparedOnTheCity,
@@ -163,6 +166,25 @@ test('a chronicle saved with a unit of a kind carrying a bonus reads back whole:
 
   expect(bonusOf(CATALOGUE, led.units[0].stats)).toBeGreaterThan(0);
   expect(readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save)).chronicle).toEqual(save);
+});
+
+test('a chronicle saved with a camp mid-wait reads back with it waiting, and waits it out as it would have', () => {
+  const waiting = camping({ odds: 1, wait: 2 });
+  const entered = endedTurn(
+    endedTurn(openedWithACamp(waiting), undefined, waiting),
+    undefined,
+    waiting,
+  );
+  const save = { chronicle: entered, civilization: CIVILIZATION_ID };
+  const command: Command = { type: 'end-turn' };
+
+  const read = readSave(waiting, writeSave(waiting, campaign(), save));
+
+  expect(read.chronicle).toEqual(save);
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  const played = apply(waiting, read.chronicle.chronicle, command);
+  expect(namesOf(played)).not.toContain('enter');
+  expect(outcome(played)).toEqual(outcome(apply(waiting, entered, command)));
 });
 
 test('a chronicle saved with an enemy prepared reads back with it prepared', () => {

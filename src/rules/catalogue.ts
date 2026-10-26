@@ -465,6 +465,8 @@ export type Camp = {
   readonly rewards: Rewards;
   /** The chance, at every enemy phase, that a camp standing enters one enemy of its roll. */
   readonly odds: number;
+  /** The turns a camp waits before it rolls again. */
+  readonly wait: number;
   readonly raidCampOdds: number;
   /** The wave it sends: a camp naming none sends none. */
   readonly wave?: Wave;
@@ -803,8 +805,10 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
   unitEntryTableHeld(content, camp.roll, `the age ${id}'s camp's roll`);
   for (const script of Object.values(camp.scripts)) unitScript(content, script);
   rewardsHeld(content, camp.rewards, `the age ${id}'s camp`);
-  const { odds, raidCampOdds, embarkedMove } = camp;
+  const { odds, wait, raidCampOdds, embarkedMove } = camp;
   if (!(odds >= 0 && odds <= 1)) refuse(content, `the age ${id}'s camp rolls at odds of ${odds}`);
+  if (!Number.isInteger(wait) || wait < 0)
+    refuse(content, `the age ${id}'s camp waits ${wait} turns`);
   if (!(raidCampOdds >= 0 && raidCampOdds <= 1)) {
     refuse(content, `a raid of the age ${id} enters through a camp at odds of ${raidCampOdds}`);
   }

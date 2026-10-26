@@ -417,6 +417,7 @@ export const NOMADIC: Slice = {
       building: 'camp',
       rewards: { stores: 1, 'band-joins': 1 },
       odds: 0.08,
+      wait: 0,
       raidCampOdds: 0.8,
     },
     sites: {

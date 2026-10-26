@@ -621,6 +621,9 @@ function tileOf(catalogue: Catalogue, slot: Slot): Tile {
       id(catalogue, item, improvementKind),
     ),
     building: optional(field('building'), (item) => id(catalogue, item, buildingKind)),
+    waitsFrom: optional(field('waitsFrom'), (item) =>
+      count(catalogue, item, slot, (turn) => `waits from turn ${turn}`),
+    ),
   };
 }
 

@@ -792,7 +792,19 @@ export function built(
   cause?: NeutralFallCause,
 ): Landed {
   buildingKind(catalogue, building);
-  return retiled(paid, at, (tile) => ({ ...tile, building }), cause);
+  return retiled(paid, at, (tile) => withBuilding(catalogue, paid, tile, building), cause);
+}
+
+/** The tile with the building in its slot, the age's camp waiting from the chronicle's turn. */
+export function withBuilding(
+  catalogue: Catalogue,
+  chronicle: Pick<Chronicle, 'age' | 'turn'>,
+  tile: Tile,
+  building: string,
+): Tile {
+  return building === ageOf(catalogue, chronicle.age).camp.building
+    ? { ...tile, building, waitsFrom: chronicle.turn }
+    : { ...tile, building, waitsFrom: undefined };
 }
 
 /** The improvement an action card places: the tile carries it from now on, and the worker stays put. */
@@ -817,16 +829,13 @@ function relayered(catalogue: Catalogue, tile: Tile): Tile {
   const keeps = ({ terrains, features }: LayerKind): boolean =>
     terrains.includes(tile.terrain) &&
     (features === undefined || featureAmong(catalogue, tile, features) === undefined);
-  return {
-    ...tile,
-    improvements: tile.improvements.filter((improvement) =>
-      keeps(improvementKind(catalogue, improvement)),
-    ),
-    building:
-      tile.building !== undefined && keeps(buildingKind(catalogue, tile.building))
-        ? tile.building
-        : undefined,
-  };
+  const improvements = tile.improvements.filter((improvement) =>
+    keeps(improvementKind(catalogue, improvement)),
+  );
+  if (tile.building === undefined || keeps(buildingKind(catalogue, tile.building))) {
+    return { ...tile, improvements };
+  }
+  return { ...tile, improvements, building: undefined, waitsFrom: undefined };
 }
 
 /**

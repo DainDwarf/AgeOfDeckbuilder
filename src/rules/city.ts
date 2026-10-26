@@ -249,17 +249,22 @@ function populationFewer(
   }
 }
 
-/** The building taken off the tile, its slot empty. */
+/** The building taken off the tile, its slot empty and a camp's wait gone with it. */
 export function buildingTakenOff(
   paid: Chronicle,
   at: TileCoords,
   cause?: NeutralFallCause,
 ): Landed {
-  return retiled(paid, at, (tile) => ({ ...tile, building: undefined }), cause);
+  return retiled(
+    paid,
+    at,
+    (tile) => ({ ...tile, building: undefined, waitsFrom: undefined }),
+    cause,
+  );
 }
 
 /**
- * One tile of the map layered over, every other tile left as it stands: the one `retiled` change. A
+ * One tile of the map changed, every other tile left as it stands: the one `retiled` change. A
  * city's tile coming out without its building, that city falls on the spot, the neutral's to the
  * cause named, its building being the one the tile held before.
  */

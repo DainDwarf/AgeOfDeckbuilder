@@ -70,6 +70,8 @@ export type Tile = TileCoords & {
   readonly feature?: FeatureId;
   readonly improvements: readonly ImprovementId[];
   readonly building?: BuildingTypeId;
+  /** On a camp's tile, the turn its wait runs from. */
+  readonly waitsFrom?: number;
 };
 
 /** A map: its tiles, the rivers running along the edges between them, and its centre part. */

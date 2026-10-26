@@ -979,6 +979,7 @@ export const CAMP: Camp = {
   building: 'PH_Camp',
   rewards: { PH_Spoils: 1, PH_Cache: 1 },
   odds: 0,
+  wait: 0,
   raidCampOdds: 1,
 };
 
@@ -1669,6 +1670,15 @@ export function builtOn(tiles: Tile[], building: BuildingTypeId, coords: TileCoo
 /** The same tiles, with a camp filling the building slot of the named ones. */
 export function camped(tiles: Tile[], coords: TileCoords[]): Tile[] {
   return builtOn(tiles, CAMP.building, coords);
+}
+
+/**
+ * Turn 1 of a chronicle opened on a disc of plain out to four with one camp on its edge, its city
+ * settled on the centre, on the content handed in.
+ */
+export function openedWithACamp(catalogue: Catalogue): Chronicle {
+  const opened = opening(camped(plains(4), [{ q: 4, r: 0 }]), { catalogue });
+  return endedTurn(settledOn(opened, CITY, catalogue), undefined, catalogue);
 }
 
 function statsOf(stats: Partial<UnitStats>): UnitStats {

@@ -50,6 +50,7 @@ import {
   only,
   onlyStocks,
   onTheNeutralCity,
+  openedWithACamp,
   opening,
   plains,
   pointsOf,
@@ -396,7 +397,7 @@ function campsInTileOrder(chronicle: Chronicle): string[] {
   return chronicle.tiles.filter((tile) => tile.building === CAMP.building).map(tileKey);
 }
 
-test('at odds of one every camp enters a guard of its own once the enemies have acted, a stage each in tile order ahead of the captures: on the camp where its tile is free, and beside it where a unit stands on it', () => {
+test('at odds of one every camp enters a guard of its own once the enemies have acted and waits from there, in tile order ahead of the captures: on the camp where its tile is free, and beside it where a unit stands on it', () => {
   const held = { q: 4, r: 0 };
   const guarded = { q: 0, r: -4 };
   const city = cityOf(['urban'], {
@@ -425,7 +426,7 @@ test('at odds of one every camp enters a guard of its own once the enemies have 
     'attack',
     'action-spent',
     'damaged',
-    ...camps.map(() => 'enter'),
+    ...camps.flatMap(() => ['enter', 'retiled']),
     'capture',
     'retiled',
     'dealt',
@@ -865,7 +866,7 @@ test('the enemy phase holds nothing at odds of nought, and its chronicle carries
   );
 });
 
-test('the enemy phase holds each enemy’s move and attacks, then the warriors the camps roll, each entering on its camp', () => {
+test('the enemy phase holds each enemy’s move and attacks, then the warriors the camps roll, each entering on its camp, which waits from there', () => {
   const camp = { q: 4, r: 0 };
   const city = cityOf(['urban'], {
     ...NO_GROWTH,
@@ -876,14 +877,15 @@ test('the enemy phase holds each enemy’s move and attacks, then the warriors t
 
   const held = heldBy(apply(camping({ odds: 1 }), city, { type: 'end-turn' }), 'enemy-phase');
 
-  expect(held.map(({ name }) => name)).toEqual(['move', 'attack', 'enter']);
-  const [crossed, attack, entered] = held;
+  expect(held.map(({ name }) => name)).toEqual(['move', 'attack', 'enter', 'retiled']);
+  const [crossed, attack, entered, waiting] = held;
   if (attack.kind !== 'group' || attack.name !== 'attack') throw new Error('no attack staged');
   expect(attack.stages.map(({ name }) => name)).toEqual(['action-spent', 'damaged']);
   expect(attack.stages).toMatchObject([{ tile: attack.attacker }, { tile: attack.target }]);
   expect(attack.target).toEqual({ q: 2, r: 0 });
   expect(crossed).toMatchObject({ to: attack.attacker });
   expect(entered).toMatchObject({ tile: camp });
+  expect(waiting).toMatchObject({ tile: camp });
 });
 
 /** `enemyStanding`'s options for a guard of the fixture camp's. */
@@ -1151,6 +1153,49 @@ test('the settle phase’s end rolls no camp', () => {
 
   expect(tilesStaged('enter', opening, camping({ odds: 1 }))).toEqual([]);
   expect(enemiesOf(opened)).toEqual([]);
+});
+
+test('at odds of one and a wait of two a camp standing at the opening enters nothing until its wait has run, enters then, and waits again', () => {
+  const waiting = camping({ odds: 1, wait: 2 });
+  let chronicle = openedWithACamp(waiting);
+  const entries: number[] = [];
+
+  for (let turn = 1; turn <= 4; turn++) {
+    entries.push(tilesStaged('enter', chronicle, waiting).length);
+    chronicle = endedTurn(chronicle, undefined, waiting);
+  }
+
+  expect(entries).toEqual([0, 1, 0, 1]);
+});
+
+test('a camp placed by an answer, or left by the neutral’s city falling to the enemies, waits from the turn it came to stand', () => {
+  const waiting = camping({ odds: 1, wait: 1 });
+  const due = cityOf(['urban'], {
+    ...NO_GROWTH,
+    tiles: field(6),
+    drawPile: fullDraw(),
+    ...dealing({ turn: 2, event: 'PH_Rivals' }),
+  });
+  const placed = endedTurn(due, 'PH_Encampment', waiting);
+  const taking = withUnits(besideTheNeutral({ catalogue: waiting }), [
+    preparing(standing('enemy', NEUTRAL_TILE, { move: 0 })),
+  ]);
+  const fallen = endedTurn(taking, undefined, waiting);
+
+  expect(campsInTileOrder(placed)).toHaveLength(1);
+  expect(tilesStaged('enter', placed, waiting)).toEqual([]);
+  expect(tilesStaged('enter', endedTurn(placed, undefined, waiting), waiting)).toHaveLength(1);
+  expect(buildingAt(fallen, NEUTRAL_TILE)).toBe(CAMP.building);
+  expect(tilesStaged('enter', taking, waiting)).toEqual([]);
+  expect(tilesStaged('enter', fallen, waiting)).toHaveLength(1);
+});
+
+test('a waiting camp draws from the seeded generator as a camp whose draw misses does', () => {
+  const opened = openedWithACamp(CATALOGUE);
+
+  expect(outcome(apply(camping({ odds: 1, wait: 2 }), opened, { type: 'end-turn' }))).toEqual(
+    outcome(apply(CATALOGUE, opened, { type: 'end-turn' })),
+  );
 });
 
 test('two camps captured the turn before an event is due deal two deals of rewards, and the last take opens the turn on its draw and the event, taken in turn, nothing after the last', () => {
