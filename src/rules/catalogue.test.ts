@@ -847,6 +847,27 @@ test('a catalogue whose neutral keeps a worker kind and names no workers, names 
   expect(catalogued(workers({})).version).toBe('fixture');
 });
 
+test('a catalogue whose neutral opens with a kind it does not hold, with a worker kind and names no workers, or first with a kind that does not stand on every terrain its city stands on is refused, and one whose first kind stands on them all is not', () => {
+  const slow = (opening: string[]): Catalogue => ({
+    ...neutralWith({ opening }),
+    units: SLOW_SLINGER.units,
+  });
+  expect(buildingKind(CATALOGUE, NEUTRAL).terrains).toContain('forest');
+  const refusals: [Catalogue, string][] = [
+    [neutralWith({ opening: ['PH_Giant'] }), 'no unit kind is named PH_Giant'],
+    [neutralWith({ opening: ['PH_Worker'] }), 'the neutral enters PH_Worker and names no workers'],
+    [
+      slow(['PH_Slinger', 'PH_Warrior']),
+      `the age ${AGE}'s neutral opens with PH_Slinger, which does not stand on forest`,
+    ],
+  ];
+
+  for (const [content, refusal] of refusals) {
+    expect(() => catalogued(content)).toThrow(`fixture: ${refusal}`);
+  }
+  expect(catalogued(slow(['PH_Warrior', 'PH_Slinger'])).version).toBe('fixture');
+});
+
 test('a catalogue whose region keeps the neutral’s city nearer the centre than the first steps’ edge, keeps it to less than it keeps it from, or deals it in an age naming no neutral, is refused, and one keeping it from that edge on is not', () => {
   const disc = AGE_REGIONS[CLEARING];
   const reach = disc.centre + FIRST_STEPS;

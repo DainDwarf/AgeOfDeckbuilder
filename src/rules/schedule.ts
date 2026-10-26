@@ -12,7 +12,7 @@ import {
   scheduleOf,
 } from './catalogue';
 import { buildingTakenOff, costPaid, retiled } from './city';
-import { enteredAround, rowsDrawn } from './enemies';
+import { campEnteredAround, rowsDrawn } from './enemies';
 import {
   distance,
   type FeatureId,
@@ -560,7 +560,7 @@ export function guardedCampPlaced(
   // tile a unit stands on.
   return followed(built(catalogue, { ...chronicle, rng: drawn.rng }, camp, building), (left) => {
     const rows = rowsDrawn(catalogue, left, [{ kind, script: scripts.guard, weight: 1 }], count);
-    return enteredAround(catalogue, rows.chronicle, camp, rows.rows);
+    return campEnteredAround(catalogue, rows.chronicle, camp, rows.rows);
   });
 }
 

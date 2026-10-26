@@ -488,11 +488,15 @@ const FIRST_OFFERED: NeutralScript = {
   enters: (_catalogue, _chronicle, ratio) => ratio[0]?.card,
 };
 
-/** The neutral every fixture age names: its warriors entered through the warrior card. */
+/**
+ * The neutral every fixture age names: no unit at its opening, its warriors entered through the
+ * warrior card.
+ */
 const FIXTURE_NEUTRAL: Neutral = {
   building: NEUTRAL,
   script: FIRST_OFFERED,
   scripts: { guard: GUARD_SCRIPT, wave: SCRIPT },
+  opening: [],
   ratio: [{ card: 'PH_Warrior', kind: 'PH_Warrior', share: 1 }],
   wave: { gathered: 3, sent: 2 },
   rewards: { PH_Cache: 3 },
@@ -1260,13 +1264,15 @@ export function rescheduled(schedule: Partial<Schedule>, age = AGE): Catalogue {
 }
 
 /**
- * The fixture's content with its first age's neutral keeping workers beside its warriors, entered
- * through the worker card under `WORKER_SCRIPT` and playing the farm and the mine.
+ * The fixture's content with its first age's neutral opening with a worker and keeping workers
+ * beside its warriors, entered through the worker card under `WORKER_SCRIPT` and playing the farm
+ * and the mine.
  */
 export const WORKING: Catalogue = catalogued(
   aged({
     neutral: {
       ...FIXTURE_NEUTRAL,
+      opening: ['PH_Worker'],
       ratio: [...FIXTURE_NEUTRAL.ratio, { card: 'PH_Worker', kind: 'PH_Worker', share: 1 }],
       workers: { script: WORKER_SCRIPT, cards: ['PH_Farm', 'PH_Mine'] },
     },

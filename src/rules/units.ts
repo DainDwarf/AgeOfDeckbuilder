@@ -14,6 +14,9 @@ import type { MapContent } from './map-kinds';
 /** Who a unit acts for: the player, the enemies, or the neutral. */
 export type Faction = 'player' | 'enemy' | 'neutral';
 
+/** The factions whose units act by a script. */
+export type ScriptedFaction = Exclude<Faction, 'player'>;
+
 /** A faction's relations with the player: at peace, or hostile. */
 export type Relations = 'peace' | 'hostile';
 

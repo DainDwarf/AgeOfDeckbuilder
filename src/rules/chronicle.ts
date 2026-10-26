@@ -27,9 +27,6 @@ import {
   checkContent,
   costOf,
   damageOf,
-  entered,
-  neutralScriptOf,
-  neutralWorkerKind,
   technologyOf,
   unitKind,
   unitScript,
@@ -53,8 +50,9 @@ import {
   warDeclared,
 } from './city';
 import {
-  enteredAround,
+  campEnteredAround,
   enteredOnCamp,
+  neutralEnteredAround,
   otherCityOn,
   pillaged,
   preparedAs,
@@ -146,6 +144,7 @@ import {
   refreshedAction,
   refreshedMovePoints,
   relationsOf,
+  type ScriptedFaction,
   type Unit,
   unitAt,
   unitOf,
@@ -241,16 +240,10 @@ export function beginChronicle(
     exhaustPile: [],
     achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
   };
-  const workerKind = neutral && neutralWorkerKind(catalogue, neutral);
   let guarded: Sequence =
-    neutral === undefined || neutralAt === undefined || workerKind === undefined
+    neutral === undefined || neutralAt === undefined
       ? unchanged(begun)
-      : entered(catalogue, begun, {
-          type: workerKind,
-          faction: 'neutral',
-          script: neutralScriptOf(catalogue, neutral, workerKind),
-          tile: neutralAt,
-        });
+      : neutralEnteredAround(catalogue, begun, neutralAt, neutral.opening);
   for (const { q, r, building } of map.tiles) {
     if (building !== camp.building) continue;
     guarded = followed(guarded, (left) => enteredOnCamp(catalogue, left, { q, r }, camp.opening));
@@ -1462,9 +1455,6 @@ function withPrepare(unit: Unit, prepared: boolean): Unit {
   }
 }
 
-/** The factions whose units act by a script. */
-type ScriptedFaction = Exclude<Faction, 'player'>;
-
 /** The script a unit acts by, and nothing for a unit of the player's. */
 function scriptOf(unit: Unit): string | undefined {
   switch (unit.faction) {
@@ -1584,7 +1574,7 @@ function campsRolled(catalogue: Catalogue, chronicle: Chronicle): Sequence {
       const drawn = { ...left, rng: step.rng };
       if (step.value >= camp.odds) return unchanged(drawn);
       const rolled = rowsDrawn(catalogue, drawn, camp.roll, 1);
-      return enteredAround(catalogue, rolled.chronicle, { q, r }, rolled.rows);
+      return campEnteredAround(catalogue, rolled.chronicle, { q, r }, rolled.rows);
     });
   }
   return rolling;

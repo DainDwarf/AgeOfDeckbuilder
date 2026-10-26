@@ -4,6 +4,8 @@ import {
   captureOf,
   type Entering,
   entered,
+  neutralOf,
+  neutralScriptOf,
   type ScriptAct,
   type UnitEntryRow,
   type UnitEntryTable,
@@ -32,6 +34,7 @@ import {
   type Faction,
   passageFor,
   relationsOf,
+  type ScriptedFaction,
   standsOn,
   type Unit,
   type UnitStats,
@@ -332,8 +335,9 @@ export function standsAs(
 }
 
 /**
- * The tiles the entrant stands on the way a walk over the whole map on its moves reaches them from
- * the tile, standing on it embarked or ashore as named, never a city's: the neutral's as the player's.
+ * The tiles the entrant stands on the way a walk over the whole map on its moves and the faction's
+ * passage reaches them from the tile, standing on it embarked or ashore as named, never the tile of a
+ * city not the faction's own.
  */
 function reached(
   catalogue: Catalogue,
@@ -341,16 +345,14 @@ function reached(
   entrant: Entrant,
   from: TileCoords,
   embarked: boolean,
+  faction: ScriptedFaction,
 ): Tile[] {
-  if (chronicle.city === undefined) {
-    refuse(catalogue, 'an enemy entered while the city stands nowhere');
-  }
   const { tiles, rivers } = chronicle;
-  const passage = passageFor(chronicle, 'enemy');
+  const passage = passageFor(chronicle, faction);
   const routes = routesFrom(catalogue, tiles, rivers, from, embarked, entrant.moves, passage);
   return tiles.filter(
     (tile) =>
-      cityOn(chronicle, tile) === undefined &&
+      otherCityOn(chronicle, tile, faction) === undefined &&
       [false, true].some(
         (standsEmbarked) =>
           (standsEmbarked ? routes.embarked : routes.ashore).has(tileKey(tile)) &&
@@ -365,45 +367,62 @@ function embarkedOnly(catalogue: Catalogue, entrant: Entrant, tile: Tile | undef
 }
 
 /**
- * The tiles the entrant enters on around a door: those the door's own ground runs to, or, where it
- * stands on the door embarked only, those its own water runs to, entered on that move.
+ * The tiles a unit of the faction's of the entrant's kind enters on around a door: those the door's
+ * own ground runs to, or, where it stands on the door embarked only, those its own water runs to,
+ * entered on that move.
  */
 function aroundDoor(
   catalogue: Catalogue,
   chronicle: Chronicle,
   entrant: Entrant,
   door: TileCoords,
+  faction: ScriptedFaction,
 ): { readonly reach: Tile[]; readonly embarkedMove: number | undefined } {
   const { ashore, embarked } = entrant.moves;
-  return embarkedOnly(catalogue, entrant, tileAt(chronicle.tiles, door))
-    ? {
-        reach: reached(catalogue, chronicle, { ...entrant, moves: { embarked } }, door, true),
-        embarkedMove: embarked,
-      }
-    : {
-        reach: reached(catalogue, chronicle, { ...entrant, moves: { ashore } }, door, false),
-        embarkedMove: undefined,
-      };
+  const afloat = embarkedOnly(catalogue, entrant, tileAt(chronicle.tiles, door));
+  const moves = afloat ? { embarked } : { ashore };
+  return {
+    reach: reached(catalogue, chronicle, { ...entrant, moves }, door, afloat, faction),
+    embarkedMove: afloat ? embarked : undefined,
+  };
 }
 
+/** Whose units a door enters: the enemies', a camp's where one is named, or the neutral's. */
+type DoorFor =
+  | { readonly faction: 'enemy'; readonly camp?: TileCoords }
+  | { readonly faction: 'neutral' };
+
 /**
- * Enemies of these rows, in order, each on the nearest free tile its kind enters on around the tile
- * as a door, the camp's where one is named; the ones no free tile is left for enter nowhere.
+ * Units of these rows, in order, each on the nearest free tile its kind enters on around the tile as
+ * a door, made the door's faction's; the ones no free tile is left for enter nowhere.
  */
 function enteredAs(
   catalogue: Catalogue,
   chronicle: Chronicle,
   around: TileCoords,
-  rows: readonly EnemyEntry[],
-  camp: TileCoords | undefined,
+  rows: readonly Pick<UnitEntryRow, 'kind' | 'script'>[],
+  door: DoorFor,
 ): Landed {
   const doors = new Map<string, ReturnType<typeof aroundDoor>>();
   const doorOf = (kind: string): ReturnType<typeof aroundDoor> => {
     const known = doors.get(kind);
     if (known !== undefined) return known;
-    const walked = aroundDoor(catalogue, chronicle, entrantOf(catalogue, chronicle, kind), around);
+    const entrant = entrantOf(catalogue, chronicle, kind);
+    const walked = aroundDoor(catalogue, chronicle, entrant, around, door.faction);
     doors.set(kind, walked);
     return walked;
+  };
+  const enteringOn = (
+    { kind, script }: Pick<UnitEntryRow, 'kind' | 'script'>,
+    tile: TileCoords,
+    embarkedMove: number | undefined,
+  ): Entering => {
+    switch (door.faction) {
+      case 'enemy':
+        return { ...enemyEntering(kind, script, tile), embarkedMove, camp: door.camp };
+      case 'neutral':
+        return { type: kind, faction: 'neutral', script, tile, embarkedMove };
+    }
   };
 
   let landing = unchanged(chronicle);
@@ -418,11 +437,11 @@ function enteredAs(
     const drawn = equal.length === 1 ? undefined : pickUniform(standing.rng, equal);
     const { q, r } = drawn === undefined ? equal[0] : drawn.picked;
     landing = followed(landing, (left) =>
-      entered(catalogue, drawn === undefined ? left : { ...left, rng: drawn.rng }, {
-        ...enemyEntering(row.kind, row.script, { q, r }),
-        embarkedMove,
-        camp,
-      }),
+      entered(
+        catalogue,
+        drawn === undefined ? left : { ...left, rng: drawn.rng },
+        enteringOn(row, { q, r }, embarkedMove),
+      ),
     );
   }
   return landing;
@@ -432,14 +451,29 @@ function enteredAs(
  * Enemies of the camp's, one of each row in order, entering around it as a door; no row at all is a
  * `runtime-error`.
  */
-export function enteredAround(
+export function campEnteredAround(
   catalogue: Catalogue,
   chronicle: Chronicle,
   camp: TileCoords,
   rows: readonly EnemyEntry[],
 ): Landed {
   if (rows.length === 0) return landedAs(change('runtime-error', chronicle, chronicle));
-  return enteredAs(catalogue, chronicle, camp, rows, camp);
+  return enteredAs(catalogue, chronicle, camp, rows, { faction: 'enemy', camp });
+}
+
+/**
+ * Units of the neutral's of these kinds, in order, entering around the tile as a door, each under the
+ * script its kind carries.
+ */
+export function neutralEnteredAround(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  around: TileCoords,
+  kinds: readonly string[],
+): Landed {
+  const neutral = neutralOf(catalogue, chronicle.age);
+  const rows = kinds.map((kind) => ({ kind, script: neutralScriptOf(catalogue, neutral, kind) }));
+  return enteredAs(catalogue, chronicle, around, rows, { faction: 'neutral' });
 }
 
 /**
@@ -462,7 +496,7 @@ function roomyDoors(
       (reach) => reach.embarked === embarked && reach.keys.has(tileKey(door)),
     );
     if (known !== undefined) return known.roomy;
-    const { reach } = aroundDoor(catalogue, chronicle, entrant, door);
+    const { reach } = aroundDoor(catalogue, chronicle, entrant, door, 'enemy');
     const roomy = reach.some((tile) => unitAt(chronicle.units, tile) === undefined);
     walked.push({ embarked, keys: new Set(reach.map(tileKey)), roomy });
     return roomy;
@@ -487,7 +521,7 @@ function raidEntry(
   // The chronicle holds no radius: the disc's edge is read off its tiles, which the generator deals
   // around `CENTRE`.
   const edge = Math.max(...chronicle.tiles.map((tile) => distance(tile, CENTRE)));
-  const ring = reached(catalogue, chronicle, entrant, city, false).filter(
+  const ring = reached(catalogue, chronicle, entrant, city, false, 'enemy').filter(
     (tile) => distance(tile, CENTRE) === edge && roomy(tile),
   );
   if (camps.length === 0 && ring.length === 0) return undefined;
@@ -513,5 +547,5 @@ export function raided(
   if (rows.length === 0) return landedAs(change('runtime-error', chronicle, chronicle));
   const door = raidEntry(catalogue, chronicle, rows[0].kind);
   if (door === undefined) return landedAs(change('runtime-error', chronicle, chronicle));
-  return enteredAs(catalogue, door.chronicle, door.entry, rows, undefined);
+  return enteredAs(catalogue, door.chronicle, door.entry, rows, { faction: 'enemy' });
 }

@@ -376,6 +376,7 @@ export const STONE: Slice = {
       building: 'neutral-village',
       script: VILLAGER,
       scripts: { guard: 'neutral-guard', wave: 'neutral-wave' },
+      opening: ['worker'],
       ratio: [
         { card: 'warrior', kind: 'warrior', share: 2 },
         { card: 'archer', kind: 'archer', share: 1 },

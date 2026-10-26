@@ -28,6 +28,7 @@ import {
 } from './city';
 import {
   AGE,
+  aged,
   aimedAt,
   assignTo,
   attacksOf,
@@ -42,6 +43,7 @@ import {
   changed,
   cityOf,
   claimOf,
+  deepBut,
   EMBARKED_MOVE,
   endedTurn,
   enemyPhaseOf,
@@ -49,6 +51,7 @@ import {
   everyCard,
   FALLOW,
   field,
+  GUARD_SCRIPT,
   gainedBetween,
   heldBy,
   idsOf,
@@ -96,7 +99,7 @@ import { RESOURCES, type Resources, withNone } from './resources';
 import { inSight } from './sight';
 import { followed, type Stage } from './stages';
 import { type Chronicle, type CityRows, idle, type Snapshot, withCityRows } from './state';
-import { FIRST_UNIT_NUMBER, type Unit, unitAt } from './units';
+import { type Unit, unitAt } from './units';
 import { tileYield } from './yields';
 
 /** The command a drag in city mode sends: the population off one tile and onto another. */
@@ -1277,24 +1280,35 @@ test('a neutral’s script naming a card its ratio does not name raises a runtim
   ]);
 });
 
-test('a chronicle launched on a region dealing the neutral’s city opens with one worker of the neutral’s standing on its city’s tile under its workers’ script, the first unit dealt, its city as it stands without; a neutral keeping no worker kind opens with none', () => {
-  for (const seed of [0, 1234]) {
-    const working = launched(WORKING, AGE, CLEARING, seed, CIVILIZATION, []).chronicle;
-    const bare = launched(CATALOGUE, AGE, CLEARING, seed, CIVILIZATION, []).chronicle;
-    const neutralsOf = (chronicle: Chronicle) =>
-      chronicle.units.filter((unit) => unit.faction === 'neutral');
+test('a chronicle opens with the units its neutral’s opening names, in order, the first on its city’s tile and each after on the nearest free tile its kind stands on that the ground runs to, each under the script its kind carries, its city as it stands without; a neutral naming none opens with no unit', () => {
+  const opens = catalogued(
+    aged({
+      neutral: {
+        ...neutralOf(WORKING, AGE),
+        opening: ['PH_Worker', 'PH_Warrior', 'PH_Warrior'],
+      },
+    }),
+  );
+  const [beside, further] = [
+    { q: 2, r: 0 },
+    { q: 3, r: 0 },
+  ];
+  const ground = builtOn(deepBut(plains(3), [NEUTRAL_TILE, beside, further]), NEUTRAL, [
+    NEUTRAL_TILE,
+  ]);
+  const opened = opening(ground, { catalogue: opens, age: AGE });
+  const bare = opening(ground, { age: AGE });
 
-    expect(neutralsOf(working)).toEqual([
-      expect.objectContaining({
-        id: FIRST_UNIT_NUMBER,
-        script: WORKER_SCRIPT,
-        tile: working.neutral?.city,
-        stats: unitKind(WORKING, 'PH_Worker'),
-      }),
-    ]);
-    expect(working.neutral).toEqual(bare.neutral);
-    expect(neutralsOf(bare)).toEqual([]);
-  }
+  const neutralOn = (tile: TileCoords, kind: string, script: string) =>
+    expect.objectContaining({ faction: 'neutral', tile, script, stats: unitKind(opens, kind) });
+
+  expect(opened.units).toEqual([
+    neutralOn(NEUTRAL_TILE, 'PH_Worker', WORKER_SCRIPT),
+    neutralOn(beside, 'PH_Warrior', GUARD_SCRIPT),
+    neutralOn(further, 'PH_Warrior', GUARD_SCRIPT),
+  ]);
+  expect(opened.neutral).toEqual(bare.neutral);
+  expect(bare.units).toEqual([]);
 });
 
 /** What the neutral pays for the fixture's farm, and nothing besides. */

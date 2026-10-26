@@ -79,14 +79,14 @@ export type NeutralUnitScript = 'guard' | 'wave';
 export type NeutralWorkers = { readonly script: string; readonly cards: readonly CardId[] };
 
 /**
- * The neutral an age names: its city's building, its script, the scripts its units carry, the
- * ratio its units are kept near, the wave it sends, a neutral naming none sending none, its workers,
- * named where its ratio keeps a worker kind and nowhere else, and what the capture of its city deals.
+ * The neutral an age names: the kinds of its opening enter in their order, a neutral naming no wave
+ * sends none, and its workers are named where its ratio keeps a worker kind and nowhere else.
  */
 export type Neutral = {
   readonly building: string;
   readonly script: NeutralScript;
   readonly scripts: Readonly<Record<NeutralUnitScript, string>>;
+  readonly opening: readonly string[];
   readonly ratio: readonly UnitShare[];
   readonly wave?: Wave;
   readonly workers?: NeutralWorkers;
@@ -830,7 +830,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
 
   const sitedBy = new Map<string, string>([[camp.building, 'camp']]);
   if (neutral !== undefined) {
-    const { building, scripts, ratio, wave, workers, rewards } = neutral;
+    const { building, scripts, opening, ratio, wave, workers, rewards } = neutral;
     for (const script of Object.values(scripts)) unitScript(content, script);
     if (wave !== undefined) waveHeld(content, wave, `the age ${id}'s neutral`);
     rewardsHeld(content, rewards, `the age ${id}'s neutral`);
@@ -881,6 +881,18 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
     for (const terrain of neutralKind.terrains) {
       if (campKind.terrains.includes(terrain)) continue;
       refuse(content, `the age ${id}'s camp ${camp.building} does not stand on ${terrain}`);
+    }
+    for (const kind of opening) neutralScriptOf(content, neutral, kind);
+    const [first] = opening;
+    if (first !== undefined) {
+      for (const terrain of neutralKind.terrains) {
+        const tile = { q: 0, r: 0, terrain, improvements: [] };
+        if (standsOn(content, unitKind(content, first), false, tile)) continue;
+        refuse(
+          content,
+          `the age ${id}'s neutral opens with ${first}, which does not stand on ${terrain}`,
+        );
+      }
     }
     const other = sitedBy.get(building);
     if (other !== undefined) {
