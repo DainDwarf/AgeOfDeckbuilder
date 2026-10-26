@@ -104,21 +104,6 @@ export const ENTERED_EARLY: Weighing = {
       : [],
 };
 
-export const ENTERED_UNDER_THREAT: Weighing = {
-  sentence:
-    'While more enemies the map shows stand within three tiles of the city than units that attack there, and a population is idle, play a unit card whose trial enters a unit that attacks',
-  candidates: (catalogue, chronicle) =>
-    idle(chronicle) > 0 && outnumbered(catalogue, chronicle)
-      ? unitCardsEntering(catalogue, chronicle, false)
-      : [],
-};
-
-export const UNASSIGNED_UNDER_THREAT: Weighing = {
-  sentence:
-    'While more enemies the map shows stand within three tiles of the city than units that attack there, none is idle, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
-  candidates: (catalogue, chronicle) => unassignedForUnit(catalogue, chronicle, outnumbered),
-};
-
 export const IDLE_ASSIGNED: Weighing = guardingIncome({
   sentence:
     'While a population is idle and the city holds a tile nobody works, assign it to the free held tile that yields the most food, the most of everything together of equals',
@@ -254,8 +239,19 @@ export function builder(goal?: string): Persona {
     declaringNoWar(HAZARD_PAID),
     ...goalGambits(goal).map(declaringNoWar),
     declaringNoWar(ENTERED_EARLY),
-    declaringNoWar(ENTERED_UNDER_THREAT),
-    declaringNoWar(UNASSIGNED_UNDER_THREAT),
+    declaringNoWar({
+      sentence:
+        'While more enemies the map shows stand within three tiles of the city than units that attack there, and a population is idle, play a unit card whose trial enters a unit that attacks',
+      candidates: (catalogue, chronicle) =>
+        idle(chronicle) > 0 && outnumbered(catalogue, chronicle)
+          ? unitCardsEntering(catalogue, chronicle, false)
+          : [],
+    }),
+    declaringNoWar({
+      sentence:
+        'While more enemies the map shows stand within three tiles of the city than units that attack there, none is idle, and a unit card in hand that enters a unit that attacks is held back by the idle alone, unassign the worked tile that yields the least of everything together, the least food of equals',
+      candidates: (catalogue, chronicle) => unassignedForUnit(catalogue, chronicle, outnumbered),
+    }),
     declaringNoWar(IDLE_ASSIGNED),
     declaringNoWar(REASSIGNED),
     declaringNoWar(CLAIMED),
@@ -294,10 +290,9 @@ export function builder(goal?: string): Persona {
     }),
     declaringNoWar({
       sentence:
-        'While at least two units that attack stand, a unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
-      candidates: onceTwoStand((catalogue, chronicle) =>
+        'A unit that attacks walks to the cheapest reachable tile within five tiles of the city whose trial charts a tile, the one charting most of equals',
+      candidates: (catalogue, chronicle) =>
         chartingWalks(catalogue, chronicle, attackersOf(chronicle), 5),
-      ),
     }),
     declaringNoWar({
       sentence:

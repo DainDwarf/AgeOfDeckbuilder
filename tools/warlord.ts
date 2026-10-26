@@ -12,7 +12,6 @@ import {
   DEAL_TAKEN,
   declaringNoWar,
   ENTERED_EARLY,
-  ENTERED_UNDER_THREAT,
   enemyAttacked,
   GAIN_PLAYED,
   GAINED_THROUGH_WORKER,
@@ -32,7 +31,6 @@ import {
   STRIKING_DISCARDED,
   tileOrder,
   trial,
-  UNASSIGNED_UNDER_THREAT,
   UNIT_SETTLED,
   unassignedForUnit,
   unitCardPlayed,
@@ -54,8 +52,6 @@ export function warlord(goal?: string): Persona {
     staying(HAZARD_PAID),
     ...goalGambits(goal).map(staying),
     staying(ENTERED_EARLY),
-    staying(ENTERED_UNDER_THREAT),
-    staying(UNASSIGNED_UNDER_THREAT),
     staying({
       sentence:
         'While a population is idle and more stand than the tiles the city holds, three at most, play a unit card whose trial enters a unit that attacks',
