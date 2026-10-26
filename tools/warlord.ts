@@ -101,7 +101,7 @@ export function warlord(goal?: string): Persona {
     }),
     staying({
       sentence:
-        'While at least two units that attack stand, while no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
+        'While at least two units that attack stand and no camp and no site is charted, a unit that attacks walks to the cheapest reachable tile whose trial charts a tile, the one charting most of equals',
       candidates: onceTwoStand(campSought),
     }),
     staying({
