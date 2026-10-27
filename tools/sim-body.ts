@@ -14,7 +14,10 @@ import {
   type Civilization,
   catalogued,
   civilizationMisfit,
+  eventOf,
   type Region,
+  type Schedule,
+  scheduleOf,
 } from '../src/rules/catalogue';
 import { countOn, launched, outcome } from '../src/rules/chronicle';
 import type { TileCoords } from '../src/rules/map';
@@ -33,12 +36,20 @@ import {
   technologyUnlocking,
 } from './learned-with-needs';
 import { PERSONAS } from './personas';
-import { type Driven, type End, type Persona, playedBy } from './sim-driver';
+import {
+  type Driven,
+  type End,
+  type FixedAnswer,
+  fixedNamed,
+  type Persona,
+  playedBy,
+} from './sim-driver';
 
 const USAGE = [
   'usage: npm run sim -- [--age <age>] [--region <region>] [--civilization <json|path>] [--persona <name>]',
-  '                      [--goal <technology>] [--without <n>[,<n>...]] [--off <switch>[,<switch>...]] [--seeds <n>|<a>-<b>]',
-  '                      [--turns <n>] [--every <n>] [--out <path>] [<technology>...]',
+  '                      [--goal <technology>] [--without <n>[,<n>...]] [--off <switch>[,<switch>...]]',
+  '                      [--event <id>[,<id>...]] [--capstone <id>] [--answer <event>:<answer>[,...]]',
+  '                      [--seeds <n>|<a>-<b>] [--turns <n>] [--every <n>] [--out <path>] [<technology>...]',
   '       npm run sim -- [<cell flags>] [--turns <n>] --trace <seed> [<technology>...]',
   '       npm run sim -- --personas',
 ].join('\n');
@@ -51,6 +62,9 @@ const FLAGS = {
   goal: { type: 'string' },
   without: { type: 'string' },
   off: { type: 'string' },
+  event: { type: 'string' },
+  capstone: { type: 'string' },
+  answer: { type: 'string' },
   seeds: { type: 'string' },
   turns: { type: 'string' },
   every: { type: 'string' },
@@ -75,9 +89,15 @@ const SWITCHES = ['camps', 'neutral', 'events', 'capstone'] as const;
 /** One thing a cell may be played with switched off. */
 type Switch = (typeof SWITCHES)[number];
 
+/** What a cell cuts its region's schedule to: the events named and the capstone named, where any are. */
+type Cut = { readonly events?: readonly string[]; readonly capstone?: string };
+
 /** What a chronicle of the cell is launched on and played by. */
 type Cell = {
-  /** The content the cell's chronicles are played on: the game's, its region switched off as `off` names. */
+  /**
+   * The content the cell's chronicles are played on: the game's, its region switched off as `off`
+   * names and its schedule cut as `cut` names.
+   */
   readonly catalogue: Catalogue;
   readonly age: string;
   readonly region: string;
@@ -94,6 +114,10 @@ type Cell = {
   readonly walk: Persona;
   /** What the cell is played with switched off, in the order `--off` names them. */
   readonly off: readonly Switch[];
+  /** What the region's schedule is cut to, in the order `--event` names the events. */
+  readonly cut: Cut;
+  /** The answers taken whenever their event is dealt, in the order `--answer` names them. */
+  readonly fixed: readonly FixedAnswer[];
 };
 
 /** The seeds of the cell, the first and the last included, and the flag as it was given. */
@@ -141,8 +165,8 @@ export function simulated(
       throw new Error(`--every beside --trace: the trace writes no row\n${USAGE}`);
     print(recordOf(cell, undefined, turnCap, { trace: traced }));
     const { driven } = chronicleOf(cell, traced, turnCap);
-    for (const { turn, gambit, command } of driven.landed) {
-      print(`turn ${turn} | ${gambit} | ${JSON.stringify(command)}`);
+    for (const { turn, sentBy, command } of driven.landed) {
+      print(`turn ${turn} | ${sentBy} | ${JSON.stringify(command)}`);
     }
     print(`turn ${driven.end.turn} | ${endRead(driven.end)}`);
     return;
@@ -212,7 +236,8 @@ function rowOf(
  * on a new campaign that has learned what reaches them, then the technologies named, each with its
  * needs; the civilization, the campaign's first unless one is handed in; the persona, the idle
  * unless named, built for the goal `--goal` names, its gambits `--without` numbers left out of its walk;
- * and the content, its region switched off as `--off` names.
+ * the content, its region switched off as `--off` names and its schedule cut as `--event` and
+ * `--capstone` name; and the answers `--answer` fixes.
  */
 function cellOf(game: Catalogue, values: FlagValues, positionals: readonly string[]): Cell {
   const fresh = freshCampaign(game);
@@ -221,7 +246,10 @@ function cellOf(game: Catalogue, values: FlagValues, positionals: readonly strin
   const opening = openingChoices(game, reached);
   const region = stringFlag(values, 'region', USAGE) ?? opening.region;
   const off = switchesOf(values);
-  const catalogue = switchedOff(game, age, region, off);
+  const schedule = scheduleOf(game, age, region);
+  const cut = cutOf(values, schedule, off);
+  const fixed = fixedOf(game, values, cut.events ?? Object.keys(schedule.entries), off);
+  const catalogue = reshaped(game, age, region, off, cut);
   const unlocking = technologyUnlocking(catalogue, region);
   const campaign = learnedWithNeeds(catalogue, reached, [
     ...(unlocking === undefined ? [] : [unlocking]),
@@ -265,6 +293,8 @@ function cellOf(game: Catalogue, values: FlagValues, positionals: readonly strin
     without,
     walk,
     off,
+    cut,
+    fixed,
   };
 }
 
@@ -282,22 +312,107 @@ function switchesOf(values: FlagValues): Switch[] {
 }
 
 /**
- * The content handed in, the region of the age switched off as named, validated as the content is.
- * An age or a region the content does not hold is refused.
+ * What `--event` and `--capstone` cut the region's schedule to; an event the schedule does not deal, a
+ * capstone it does not name, and an event cut beside the events switched off are refused.
  */
-export function switchedOff(
+function cutOf(values: FlagValues, schedule: Schedule, off: readonly Switch[]): Cut {
+  refusedBesideEventsOff(values, 'event', off);
+  const dealt = Object.keys(schedule.entries);
+  const events = listFlag(values, 'event', USAGE, (event) => eventDealt('event', event, dealt));
+  const capstone = stringFlag(values, 'capstone', USAGE);
+  if (capstone !== undefined && !schedule.capstones.includes(capstone)) {
+    throw new Error(
+      `--capstone names no capstone ${capstone} the region's schedule names; its capstones: ${schedule.capstones.join(', ')}`,
+    );
+  }
+  return { events, capstone };
+}
+
+/**
+ * The answers `--answer` fixes, each `<event>:<answer>`, in the order named; an item without the colon,
+ * an event the cell does not deal, an answer its event does not deal, an event fixed twice, and an
+ * answer fixed beside the events switched off are refused.
+ */
+function fixedOf(
+  catalogue: Catalogue,
+  values: FlagValues,
+  dealt: readonly string[],
+  off: readonly Switch[],
+): FixedAnswer[] {
+  refusedBesideEventsOff(values, 'answer', off);
+  const fixed = (listFlag(values, 'answer', USAGE, (item) => item) ?? []).map(
+    (named): FixedAnswer => {
+      const colon = named.indexOf(':');
+      if (colon === -1) throw new Error(`--answer is not <event>:<answer>: ${named}\n${USAGE}`);
+      const event = eventDealt('answer', named.slice(0, colon), dealt);
+      const answer = named.slice(colon + 1);
+      const answers = Object.keys(eventOf(catalogue, event).answers);
+      if (!answers.includes(answer)) {
+        throw new Error(
+          `--answer names no answer ${answer} of ${event}; its answers: ${answers.join(', ')}`,
+        );
+      }
+      return { event, answer };
+    },
+  );
+  const twice = fixed.find(
+    ({ event }, at) => fixed.findIndex((other) => other.event === event) !== at,
+  );
+  if (twice !== undefined) throw new Error(`--answer names ${twice.event} twice`);
+  return fixed;
+}
+
+/** The event a flag names, among the ones the cell deals; any other is refused naming those. */
+function eventDealt(flag: string, event: string, dealt: readonly string[]): string {
+  if (!dealt.includes(event)) {
+    throw new Error(
+      `--${flag} names no event ${event} the cell deals; the events it deals: ${dealt.join(', ')}`,
+    );
+  }
+  return event;
+}
+
+/** Refused where the flag is set beside the events switched off. */
+function refusedBesideEventsOff(values: FlagValues, flag: string, off: readonly Switch[]): void {
+  if (values[flag] !== undefined && off.includes('events')) {
+    throw new Error(`--${flag} beside --off events: the cell deals no event\n${USAGE}`);
+  }
+}
+
+/**
+ * The content handed in, the region of the age switched off and its schedule cut as named, validated
+ * as the content is. An age or a region the content does not hold is refused.
+ */
+export function reshaped(
   catalogue: Catalogue,
   age: string,
   region: string,
   off: readonly Switch[],
+  cut: Cut,
 ): Catalogue {
   const owned = ageOf(catalogue, age);
   const switched = off.reduce(
     regionSwitchedOff,
-    entryOf(catalogue, owned.regions, region, 'region'),
+    regionCut(entryOf(catalogue, owned.regions, region, 'region'), cut),
   );
   const regions = { ...owned.regions, [region]: switched };
   return catalogued({ ...catalogue, ages: { ...catalogue.ages, [age]: { ...owned, regions } } });
+}
+
+/**
+ * The region with its schedule cut to the events named, each at the weight the schedule gives it, and
+ * to the capstone named, where any are.
+ */
+function regionCut(region: Region, { events, capstone }: Cut): Region {
+  const { schedule } = region;
+  const entries =
+    events === undefined
+      ? schedule.entries
+      : Object.fromEntries(
+          Object.entries(schedule.entries).filter(([event]) => events.includes(event)),
+        );
+  const capstones = capstone === undefined ? schedule.capstones : [capstone];
+  return { ...region, schedule: { ...schedule, entries, capstones } };
 }
 
 /**
@@ -397,27 +512,28 @@ function isIds(value: unknown): value is string[] {
 }
 
 /**
- * The seed's chronicle of the cell launched, then driven by its persona, and the whole milliseconds
- * it took.
+ * The seed's chronicle of the cell launched, then driven by its persona and its fixed answers, and the
+ * whole milliseconds it took.
  */
 function chronicleOf(
-  { catalogue, age, region, campaign, civilization, walk }: Cell,
+  { catalogue, age, region, campaign, civilization, walk, fixed }: Cell,
   seed: number,
   turnCap: number,
 ): { readonly launch: Sequence; readonly driven: Driven; readonly ms: number } {
   const started = Date.now();
   const launch = launched(catalogue, age, region, seed, civilization, campaign.technologies);
-  const driven = playedBy(catalogue, walk, launch, turnCap);
+  const driven = playedBy(catalogue, walk, launch, turnCap, fixed);
   return { launch, driven, ms: Date.now() - started };
 }
 
 /**
  * The cell as the command that made it, one comment line of JSON, the campaign's technologies whole;
  * `without` is dropped by the JSON where no gambit is left out, `goal` where none is named, `off`
- * where nothing is switched off, and `every` where no row is read over the turns.
+ * where nothing is switched off, `event`, `capstone` and `answer` where nothing is cut, named or
+ * fixed, and `every` where no row is read over the turns.
  */
 function recordOf(
-  { age, region, campaign, recorded: civilization, persona, without, goal, off }: Cell,
+  { age, region, campaign, recorded: civilization, persona, without, goal, off, cut, fixed }: Cell,
   every: number | undefined,
   turns: number,
   run: { readonly seeds: Seeds['given'] } | { readonly trace: number },
@@ -432,6 +548,9 @@ function recordOf(
     without,
     goal,
     off: off.length === 0 ? undefined : off,
+    event: cut.events,
+    capstone: cut.capstone,
+    answer: fixed.length === 0 ? undefined : fixed.map(fixedNamed),
     every,
     turns,
     ...run,

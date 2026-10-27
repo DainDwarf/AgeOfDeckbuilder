@@ -24,11 +24,13 @@ The Nomadic Age is its own cell: `--age nomadic --region temperate`, the campaig
 
 The region's schedule cut to one event, the capstone off, so the chronicle runs to the cap and the event is dealt at every spacing, eight or nine times in sixty turns against one or two in a chronicle: the cell measures the event's slope across its escalation, not its weight in a chronicle, and is read as such. One cell per answer, the answer fixed for every deal, and one cell more with the persona's own choice, which never takes an answer whose trial leaves more cards that strike while another stands, so the challenge answers are measured through the fixed cells alone. The deck is the end-of-Stone one first, the one on which every answer is affordable, science from Fire and money from the Tannery; the others where a line asks. The fortunate pair, the Herd and Travellers, need no cell.
 
-The rival band on the Nomadic Age is read the same way on the whole-game cell, the band's answer fixed each way while the other deals go as the persona takes them.
+The cell is the whole game's flags with `--event <id>` and `--off capstone`, one cell per answer with `--answer <id>:<answer>` and one with none; `--capstone <id>` beside them names the trial the goal gambits go for, the same on every seed.
+
+The rival band on the Nomadic Age is read the same way on the whole-game cell, the band's answer fixed each way while the other deals go as the persona takes them. `--answer rival-band:fight` and `--answer rival-band:make-room`, one cell each.
 
 ## One trial named
 
-The whole game with the capstone named instead of drawn, one cell per trial, on the end-of-Stone deck first, since the trials are meant beatable once the tree is climbed and hard to impossible before. What the cell reads: the `ending` and its turn per trial, victory against defeat and the stop on the cap, and the turn the capstone landed on. The three are compared against one another, not against a number.
+The whole game with the capstone named instead of drawn, one cell per trial, on the end-of-Stone deck first, since the trials are meant beatable once the tree is climbed and hard to impossible before. The cell is the whole game's flags with `--capstone <id>`, one cell per trial. What the cell reads: the `ending` and its turn per trial, victory against defeat and the stop on the cap, and the turn the capstone landed on. The three are compared against one another, not against a number.
 
 ## Comparing a change
 

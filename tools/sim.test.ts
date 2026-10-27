@@ -74,6 +74,7 @@ import {
   settledOn,
   standing,
   TILLAGE,
+  TOWER,
   UPHEAVAL,
   withUnits,
   worker,
@@ -96,7 +97,7 @@ import { type Chronicle, cardsInPiles } from '../src/rules/state';
 import { type Faction, type UnitStats, unitAt } from '../src/rules/units';
 import { CLAIMED, chartingWalks, GAIN_PLAYED } from './builder';
 import { PERSONAS } from './personas';
-import { chronicleColumns, simulated, switchedOff } from './sim-body';
+import { chronicleColumns, reshaped, simulated } from './sim-body';
 import { type Driven, type Persona, playedBy } from './sim-driver';
 
 /** What the simulator prints on the fixture's content, or on the content handed in. */
@@ -509,7 +510,7 @@ test('a cell played with its camps, its neutral, its events and its capstone swi
   expect(eventsOn.deals).not.toBe('');
   for (const region of [REGION, CLEARING]) {
     expect(opposing(openingOn(CATALOGUE, region))).not.toEqual([]);
-    expect(opposing(openingOn(switchedOff(CATALOGUE, AGE, region, off), region))).toEqual([]);
+    expect(opposing(openingOn(reshaped(CATALOGUE, AGE, region, off, {}), region))).toEqual([]);
   }
   expect(row).toMatchObject({
     ending: 'stopped',
@@ -555,6 +556,175 @@ test('a switch that is none of the four, or one named twice, is refused', () => 
     /^--off names no switch camp; the switches: camps, neutral, events, capstone$/,
   );
   expectRefused(['--off', 'events,capstone,events'], /^--off names events twice$/);
+});
+
+/** The deals a row lists, each by its event and the turn it was taken on. */
+function dealsListed(row: Record<string, string>): { event: string; turn: number }[] {
+  if (row.deals === '') return [];
+  return row.deals.split(' ').map((entry) => {
+    const [taken, turn] = entry.split(':');
+    return { event: taken.split('>')[0], turn: Number(turn) };
+  });
+}
+
+test('a cell with its schedule cut to an event deals that event alone, on the turns the whole schedule deals on, its capstone and its turn as the whole one draws them', () => {
+  const whole = rowsOf(printed(['--seeds', '3']));
+  const cut = rowsOf(printed(['--seeds', '3', '--event', 'PH_Blight']));
+  const before = (row: Record<string, string>, turn: number): ReturnType<typeof dealsListed> =>
+    dealsListed(row).filter((deal) => deal.turn < turn);
+
+  expect(whole.flatMap(dealsListed).map(({ event }) => event)).toContain('PH_Hardship');
+  for (const [at, row] of cut.entries()) {
+    const both = Math.min(Number(row.turn), Number(whole[at].turn));
+    expect(dealsListed(row).every(({ event }) => event === 'PH_Blight')).toBe(true);
+    expect(before(row, both).map(({ turn }) => turn)).toEqual(
+      before(whole[at], both).map(({ turn }) => turn),
+    );
+    expect([row.capstone, row['capstone-turn']]).toEqual([
+      whole[at].capstone,
+      whole[at]['capstone-turn'],
+    ]);
+  }
+  expect(cut.flatMap((row, at) => before(row, Number(whole[at].turn)))).not.toEqual([]);
+});
+
+test('a cell with its capstone named draws it on every seed and lands it on the turn the seed draws a capstone on, and draws it with the capstone off, its turn blank', () => {
+  const quiet = ['--age', QUIET, '--seeds', '6', '--turns', '1'];
+  const whole = rowsOf(printed(quiet));
+
+  expect(new Set(whole.map(({ capstone }) => capstone))).toEqual(new Set(['PH_Tillage', TOWER]));
+  for (const capstone of ['PH_Tillage', TOWER]) {
+    const read = (args: readonly string[]): string[][] =>
+      rowsOf(printed([...quiet, '--capstone', capstone, ...args])).map((row) => [
+        row.capstone,
+        row['capstone-turn'],
+      ]);
+    expect(read([])).toEqual(whole.map((row) => [capstone, row['capstone-turn']]));
+    expect(read(['--off', 'capstone'])).toEqual(whole.map(() => [capstone, '']));
+  }
+});
+
+test('a fixed answer is taken on every deal of its event ahead of the persona’s walk, the trace naming it as given where it names a gambit, and the other events’ deals go as the persona takes them', () => {
+  const fixing = ['--answer', 'PH_Hardship:PH_Famine'];
+  const whole = rowsOf(printed(['--seeds', '3']));
+  const fixed = rowsOf(printed(['--seeds', '3', ...fixing]));
+  const taken = (rows: readonly Record<string, string>[], event: string): string[] =>
+    rows.flatMap(({ deals }) => deals.split(' ').filter((entry) => entry.startsWith(`${event}>`)));
+  const [traced, ...trace] = printed(['--trace', '1', ...fixing]);
+  const knobbed = trace.filter((line) => line.includes(' | PH_Hardship:PH_Famine | '));
+  const famine = {
+    type: 'take',
+    at: Object.keys(CATALOGUE.events.PH_Hardship.answers).indexOf('PH_Famine'),
+  };
+
+  expect(
+    taken(whole, 'PH_Hardship').some((entry) => !entry.startsWith('PH_Hardship>PH_Famine:')),
+  ).toBe(true);
+  expect(taken(fixed, 'PH_Hardship')).not.toEqual([]);
+  expect(
+    taken(fixed, 'PH_Hardship').every((entry) => entry.startsWith('PH_Hardship>PH_Famine:')),
+  ).toBe(true);
+  expect(taken(fixed, 'PH_Blight')).not.toEqual([]);
+  expect(taken(fixed, 'PH_Blight').every((entry) => entry.startsWith('PH_Blight>PH_Endure:'))).toBe(
+    true,
+  );
+  expect(recordRead([traced]).answer).toEqual(['PH_Hardship:PH_Famine']);
+  expect(knobbed).not.toEqual([]);
+  expect(knobbed).toEqual(
+    dealsListed(fixed[0])
+      .filter(({ event }) => event === 'PH_Hardship')
+      .map(({ turn }) => `turn ${turn} | PH_Hardship:PH_Famine | ${JSON.stringify(famine)}`),
+  );
+});
+
+test('a fixed answer refused on a deal stops the chronicle as stuck on that deal’s turn', () => {
+  const { answers } = CATALOGUE.events.PH_Blight;
+  const dear = changed({
+    events: {
+      ...CATALOGUE.events,
+      PH_Blight: {
+        answers: {
+          ...answers,
+          PH_Explosion: { ...answers.PH_Explosion, cost: { production: 10 ** 6 } },
+        },
+      },
+    },
+  });
+  const cut = ['--seeds', '1', '--event', 'PH_Blight'];
+  const fixing = ['--answer', 'PH_Blight:PH_Explosion'];
+  const [first] = dealsListed(rowsOf(printed(cut, dear))[0]);
+  const [stop] = rowsOf(printed([...cut, ...fixing], dear));
+  const trace = printed(['--trace', '1', '--event', 'PH_Blight', ...fixing], dear);
+
+  expect(first).toBeDefined();
+  expect([stop.ending, stop.cause, stop.turn, stop.deals]).toEqual([
+    'stopped',
+    'stuck',
+    `${first.turn}`,
+    '',
+  ]);
+  expect(trace.at(-1)).toBe(`turn ${first.turn} | stopped stuck`);
+});
+
+test('the record names the events the schedule is cut to, the capstone named and the answers fixed, each as given, after what is switched off', () => {
+  const choices = { age: AGE, region: REGION, civilization: CIVILIZATION_ID };
+  const [record] = printed([
+    '--seeds',
+    '1',
+    '--turns',
+    '1',
+    '--off',
+    'camps',
+    '--event',
+    'PH_Blight,PH_Hardship',
+    '--capstone',
+    'PH_Tillage',
+    '--answer',
+    'PH_Blight:PH_Levy,PH_Hardship:PH_Raid',
+  ]);
+
+  expect(record).toBe(
+    `# ${JSON.stringify({ ...choices, learned: [], persona: 'idle', off: ['camps'], event: ['PH_Blight', 'PH_Hardship'], capstone: 'PH_Tillage', answer: ['PH_Blight:PH_Levy', 'PH_Hardship:PH_Raid'], turns: 1, seeds: 1 })}`,
+  );
+});
+
+test('an event the cell does not deal, a capstone its schedule does not name, an answer its event does not deal, an answer named without its event, and one cut, named or fixed twice are refused naming what is allowed, and so is an event cut or fixed beside the events switched off', () => {
+  const refusals: [string[], RegExp][] = [
+    [
+      ['--event', 'PH_Blight,PH_Upheaval'],
+      /^--event names no event PH_Upheaval the cell deals; the events it deals: PH_Hardship, PH_Blight$/,
+    ],
+    [['--event', 'PH_Blight,PH_Blight'], /^--event names PH_Blight twice$/],
+    [
+      ['--capstone', TOWER],
+      new RegExp(
+        `^--capstone names no capstone ${TOWER} the region's schedule names; its capstones: PH_Tillage$`,
+      ),
+    ],
+    [['--answer', 'PH_Blight'], /^--answer is not <event>:<answer>: PH_Blight\n/],
+    [
+      ['--answer', 'PH_Upheaval:PH_Ambush'],
+      /^--answer names no event PH_Upheaval the cell deals; the events it deals: PH_Hardship, PH_Blight$/,
+    ],
+    [
+      ['--event', 'PH_Blight', '--answer', 'PH_Hardship:PH_Raid'],
+      /^--answer names no event PH_Hardship the cell deals; the events it deals: PH_Blight$/,
+    ],
+    [
+      ['--answer', 'PH_Blight:PH_Raid'],
+      /^--answer names no answer PH_Raid of PH_Blight; its answers: PH_Endure, PH_Explosion, PH_Levy$/,
+    ],
+    [['--answer', 'PH_Blight:PH_Endure,PH_Blight:PH_Levy'], /^--answer names PH_Blight twice$/],
+    [
+      ['--off', 'events', '--event', 'PH_Blight'],
+      /^--event beside --off events: the cell deals no event\n/,
+    ],
+    [
+      ['--off', 'events', '--answer', 'PH_Blight:PH_Endure'],
+      /^--answer beside --off events: the cell deals no event\n/,
+    ],
+  ];
+  for (const [args, refusal] of refusals) expectRefused(args, refusal);
 });
 
 test('an achievement the launch reaches reads the settle phase’s turn, and one reached as the turn moves the turn it moved to', () => {

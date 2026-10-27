@@ -10,7 +10,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The cell's schedule knobs** — `npm run sim` plays a cell with its region's schedule cut to the events named, its capstone named instead of drawn, or an event's answer fixed, the cell's record naming each as given, so [`EVENTS.md`](EVENTS.md)'s cells can run. Doc-impact: `docs/SIMULATOR.md`, `CLAUDE.md`. [board/cell-schedule-knobs.md](board/cell-schedule-knobs.md)
 - **The Nomadic events** — the band's four events relisted and evicted or added to, then measured on the pass's Nomadic cell with everything on and the rival band's answer fixed each way, the Fight both personas take and the player never first among the questions.
 - **The Stone Age whole** — both personas on the three decks with everything on, joined per seed to the camps baseline, the rows saying which events precede the defeats and which never do; the Flood taking the village when nothing else stands read here.
 - **The Stone events one by one** — the suspects the whole run names, each measured on a schedule of it alone with the capstone off, one cell per answer and one for the persona's own choice; its intake names the suspects and cuts a line per event or pair.
