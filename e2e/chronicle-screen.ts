@@ -50,6 +50,7 @@ import {
   refusalOf,
 } from '../src/rules/chronicle';
 import { arrived, claimable, cultureThreshold, growthThreshold } from '../src/rules/city';
+import { enemyEntering } from '../src/rules/enemies';
 import {
   CENTRE,
   distance,
@@ -1529,19 +1530,24 @@ export function firstDealtAlone(event: string, campaign = freshCampaign(CATALOGU
 }
 
 /**
- * The chronicle of the first seed whose city is captured inside forty turns of ending the turn and
- * nothing else, standing on the turn whose end captures it.
+ * Seed 1's turn 1 with one enemy of the camp's kind entered with the raider script beside the city,
+ * its turns ended, standing on the turn whose end captures the city before the timeline's first deal.
  */
 export function beforeTheFall(): Chronicle {
-  return firstSeed('is captured inside forty turns', (seed) => {
-    let chronicle = settledOn(seed);
-    for (let turn = 1; turn <= 40 && chronicle.ending === undefined; turn++) {
-      const ended = endedTurn(chronicle);
-      if (ended.ending?.outcome === 'defeat' && ended.ending.cause === 'capture') return chronicle;
-      chronicle = ended;
-    }
-    return undefined;
-  });
+  const settled = settledOn(1);
+  const kind = campKind(settled);
+  const stats = unitKind(CATALOGUE, kind);
+  const beside = neighbours(playerCityTile(settled)).find((tile) => freeFor(settled, stats, tile));
+  if (beside === undefined) throw new Error('seed 1 leaves no ground beside its city');
+  const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
+  let chronicle = unitEntered(settled, enemyEntering(kind, raider, beside));
+  const due = chronicle.timeline.next;
+  while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
+    const ended = endedTurn(chronicle);
+    if (ended.ending?.outcome === 'defeat' && ended.ending.cause === 'capture') return chronicle;
+    chronicle = ended;
+  }
+  throw new Error("the raider beside seed 1's city captures nothing before the first deal");
 }
 
 /** The chronicle with every unit acting as an enemy killed, as an attack's damage kills one. */
