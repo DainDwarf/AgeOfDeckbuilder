@@ -24,11 +24,10 @@ import {
   addedToDrawPileTop,
   campPlaceable,
   featureDealtNear,
-  guardedCampPlaced,
   tileCharted,
 } from '../rules/schedule';
 import { followed, unchanged } from '../rules/stages';
-import { guarding, RAIDER } from './scripts';
+import { campedOrRaided, guarding, RAIDER } from './scripts';
 
 /** How many enemies a raid enters on this turn: one, and one more for every ten turns. */
 function raiders(turn: number): number {
@@ -44,7 +43,11 @@ function wildfireTakes(turn: number): number {
 }
 
 function firebreak(turn: number): number {
-  return 4 * (1 + Math.floor(turn / 5));
+  return 2 * (1 + Math.floor(turn / 5));
+}
+
+function spears(turn: number): number {
+  return 2 * raiders(turn);
 }
 
 /** What an event's raid enters. */
@@ -209,27 +212,27 @@ const TABLES: Tables = {
     },
     'rival-band': {
       answers: {
-        fight: {
-          cost: {},
-          reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) + 1 }),
-          lands: (catalogue, chronicle) => {
-            const drawn = rowsDrawn(catalogue, chronicle, RAID, raiders(chronicle.turn) + 1);
-            return raided(catalogue, drawn.chronicle, drawn.rows);
-          },
-        },
         'make-room': {
           cost: {},
-          blocked: (catalogue, chronicle) =>
-            campPlaceable(catalogue, chronicle, RIVAL_CAMP_APART) ? [] : ['no-camp-tile'],
           reads: (_catalogue, chronicle) => ({ warriors: raiders(chronicle.turn) }),
+          cases: {
+            declared: ['camp', 'raid'],
+            names: (catalogue, chronicle) =>
+              campPlaceable(catalogue, chronicle, RIVAL_CAMP_APART) ? 'camp' : 'raid',
+          },
           lands: (catalogue, chronicle) =>
-            guardedCampPlaced(
+            campedOrRaided(
               catalogue,
               chronicle,
               'warrior',
               raiders(chronicle.turn),
               RIVAL_CAMP_APART,
             ),
+        },
+        'show-your-spears': {
+          cost: (_catalogue, chronicle) => ({ military: spears(chronicle.turn) }),
+          reads: (_catalogue, chronicle) => ({ military: spears(chronicle.turn) }),
+          lands: (_catalogue, chronicle) => unchanged(chronicle),
         },
       },
     },

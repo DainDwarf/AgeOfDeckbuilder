@@ -18,7 +18,7 @@ The decks are the economy pass's, each its own cell, the folders and the flags a
 
 The camps baseline is this cell with the events and the capstone off: the camps and the neutral are drawn in both, so seed _n_ deals the same map and the same timeline in [`CAMPS.md`](CAMPS.md)'s rows and in these, and the per-seed diff between the two is what the schedule does to a chronicle. The `deals` listing names every event dealt with the entry taken and its turn, so a query over the falls says which events precede the defeats and which never do; those are the pass's suspects.
 
-The Nomadic Age is its own cell: `--age nomadic --region temperate`, the campaign's first civilization, both personas, nothing off, the seeds and the rows as above.
+The Nomadic Age is its own cell: `--age nomadic --region temperate`, the campaign's first civilization, both personas, nothing off, the seeds and the rows as above, its folders `<persona>-nomadic-age`, since `<persona>-nomadic` is the economy pass's name for the nomadic deck on the Stone Age.
 
 ## One event alone
 
@@ -26,7 +26,7 @@ The region's schedule cut to one event, the capstone off, so the chronicle runs 
 
 The cell is the whole game's flags with `--event <id>` and `--off capstone`, one cell per answer with `--answer <id>:<answer>` and one with none; `--capstone <id>` beside them names the trial the goal gambits go for, the same on every seed.
 
-The rival band on the Nomadic Age is read the same way on the whole-game cell, the band's answer fixed each way while the other deals go as the persona takes them. `--answer rival-band:fight` and `--answer rival-band:make-room`, one cell each.
+The rival band on the Nomadic Age is read the same way on the whole-game cell, the band's answer fixed each way while the other deals go as the persona takes them. `--answer rival-band:show-your-spears` and `--answer rival-band:make-room`, one cell each.
 
 ## One trial named
 

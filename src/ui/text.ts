@@ -246,11 +246,13 @@ const TEXT = {
   'answer.ration': 'Keep to yourself',
   'answer-rules.ration': 'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
   'event.rival-band': 'A rival band',
-  'answer.fight': 'Fight them', // glossary exception: fight
-  'answer-rules.fight': 'Your [building:{building}] is attacked by {warriors} [enemy:warrior]', // glossary exception: fight
   'answer.make-room': 'Make room',
-  'answer-rules.make-room':
+  'answer-rules.make-room.camp':
     'A [building:{camp}] with {warriors} [enemy:warrior] is placed near your [building:{building}]',
+  'answer-rules.make-room.raid':
+    'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
+  'answer.show-your-spears': 'Show your spears',
+  'answer-rules.show-your-spears': 'Pay {military}[military]',
   'event.wildfire': 'Wildfire',
   'answer.let-the-fields-burn': 'Let the fields burn', // glossary exception: burn
   'answer-rules.let-the-fields-burn': 'Lose {food}[food]', // glossary exception: burn
