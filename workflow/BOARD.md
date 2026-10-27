@@ -10,7 +10,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The Nomadic events** — the band's four events relisted and evicted or added to, then measured on the pass's Nomadic cell with everything on and the rival band's answer fixed each way, the Fight both personas take and the player never first among the questions.
+- **The Nomadic events** — A rival band deals Make room, placing its camp or raiding where no tile takes one, and Show your spears, military paid; Cut a firebreak costs as much production as the fire takes in food; both measured on the whole-game Nomadic cell with the rival band's answer fixed each way, the persona's own rows standing as the events baseline's first Nomadic folders. Doc-impact: `docs/ages/NOMADIC.md`. [board/nomadic-events.md](board/nomadic-events.md)
 - **The Stone Age whole** — both personas on the three decks with everything on, joined per seed to the camps baseline, the rows saying which events precede the defeats and which never do; the Flood taking the village when nothing else stands read here.
 - **The Stone events one by one** — the suspects the whole run names, each measured on a schedule of it alone with the capstone off, one cell per answer and one for the persona's own choice; its intake names the suspects and cuts a line per event or pair.
 - **The capstones levelled** — each of the three trials named alone on the end-of-Stone deck, both personas, victory rate and turn per trial compared and the three brought to one level, the monument never finished first among them.
