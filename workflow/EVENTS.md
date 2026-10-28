@@ -20,6 +20,29 @@ The camps baseline is this cell with the events and the capstone off: the camps 
 
 The Nomadic Age is its own cell: `--age nomadic --region temperate`, the campaign's first civilization, both personas, nothing off, the seeds and the rows as above, its folders `<persona>-nomadic-age`, since `<persona>-nomadic` is the economy pass's name for the nomadic deck on the Stone Age.
 
+## What the whole game says
+
+Measured on 2026-10-27 at the commit that lands these rows, both personas on the three decks, 20 seeds each, the ending rows per cell:
+
+| Cell | Population | Capture | Removal | Capstone | Victory | Stood to the cap |
+| --- | --- | --- | --- | --- | --- | --- |
+| Builder, nomadic | 10 | 4 | 2 | 0 | 2 | 2 |
+| Builder, end of Stone | 3 | 7 | 2 | 0 | 0 | 8 |
+| Builder, no scouts | 2 | 8 | 2 | 1 | 1 | 6 |
+| Warlord, nomadic | 10 | 5 | 2 | 0 | 1 | 2 |
+| Warlord, end of Stone | 10 | 3 | 2 | 0 | 1 | 4 |
+| Warlord, no scouts | 8 | 3 | 2 | 0 | 3 | 4 |
+
+Against the camps baseline on the same seeds: 87 chronicles stood to the cap there, and 35 of them now fall to population, 20 to the camps, 8 to a removal and 6 win; of the 33 the camps took, 9 stand to the cap and 2 win. The capstone is passed in 10 of 120: the siege in 4 of 18 drawn, the long winter in 2 of 24, the monument in 2 of 78.
+
+The suspects, for the lines that take the schedule apart:
+
+- **A grievance's Pay tribute** precedes 36 of the 43 population falls. The personas take it in 68 of 70 deals, Send gifts twice and Escalate never, war being what Escalate is while the neutral stands at peace; money is nought in every cell, so the Tribute's money strike costs a population every strike, and no Stone deck holds a card aimed at the hand. The city falls a median 12.5 turns after the deal, from a population of 2 or 3.
+- **The Flood's Settle the floodplain on a city with nothing placed** is every one of the 12 removals, seeds 11 and 19 in all six cells: dealt on turn 5 or 14, it is the answer whose trial costs least, and the Floodplain removes the village four turns later at the median.
+- **Wildfire's Let the fields burn** is the last deal before 13 of the other population falls, six turns before at the median.
+
+Travellers, The herd, the painted cave and the beast bones are never the last deal before a fall, and Drought is dealt in no chronicle that wins.
+
 ## One event alone
 
 The region's schedule cut to one event, the capstone off, so the chronicle runs to the cap and the event is dealt at every spacing, eight or nine times in sixty turns against one or two in a chronicle: the cell measures the event's slope across its escalation, not its weight in a chronicle, and is read as such. One cell per answer, the answer fixed for every deal, and one cell more with the persona's own choice, which never takes an answer whose trial leaves more cards that strike while another stands, so the challenge answers are measured through the fixed cells alone. The deck is the end-of-Stone one first, the one on which every answer is affordable, science from Fire and money from the Tannery; the others where a line asks. The fortunate pair, the Herd and Travellers, need no cell.
