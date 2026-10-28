@@ -10,7 +10,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The grievance alone** — the grievance measured on a schedule of it alone with the capstone off, both personas on the end-of-Stone deck, one cell per answer and one for the persona's own choice, the Tribute's strikes on a city with no money first among the readings; what the reading blames is tuned, measured again and shipped in this line.
+- **The grievance alone** — the Tribute takes food and production alone, two of each at its first strike and two more of each at every strike after, no money; the Stone whole-game baseline rerun on it and its six Stone folders replaced, the events workfile's reading rewritten off the new rows. Doc-impact: `docs/ages/STONE.md`. [board/grievance-alone.md](board/grievance-alone.md)
 - **The Flood alone** — the Flood measured on the same cells, Settle the floodplain on a city with nothing placed first among the readings; what the reading blames is tuned, measured again and shipped in this line.
 - **Wildfire alone** — Wildfire measured on the same cells, its three answers, Let the fields burn first among the readings; what the reading blames is tuned, measured again and shipped in this line.
 - **The capstones levelled** — each of the three trials named alone on the end-of-Stone deck, both personas, victory rate and turn per trial compared and the three brought to one level, the monument never finished first among them.
