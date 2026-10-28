@@ -242,7 +242,7 @@ function escalation(catalogue: Catalogue, chronicle: Chronicle): (typeof ESCALAT
 }
 
 /** What the Tribute takes at its first strike, and how much more at each strike after. */
-const TRIBUTE = { food: 2, production: 2, money: 1 };
+const TRIBUTE = { food: 2, production: 2 };
 
 /** The culture sending gifts costs on this turn: six, and one more for every five turns. */
 function gifts(turn: number): number {

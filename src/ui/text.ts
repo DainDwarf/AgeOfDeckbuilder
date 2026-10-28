@@ -222,8 +222,7 @@ const TEXT = {
   'card.embers': 'Embers',
   'rules.embers': 'Burns one [terrain:forest] near your city into [terrain:plain]',
   'card.tribute': 'Tribute',
-  'rules.tribute':
-    'Takes {food}[food], {production}[production] and {money}[money], more each time',
+  'rules.tribute': 'Takes {food}[food] and {production}[production], more each time',
   'card.cold-night': 'Cold night',
   'rules.cold-night': 'Kills one population',
   'card.foundations': 'Foundations',
@@ -325,7 +324,7 @@ const TEXT = {
     'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
   'answer.pay-tribute': 'Pay tribute',
   'answer-rules.pay-tribute':
-    'Add [card:tribute] to the discard pile. Each turn it stays in your hand, it takes {food}[food], {production}[production] and {money}[money], more each time',
+    'Add [card:tribute] to the discard pile. Each turn it stays in your hand, it takes {food}[food] and {production}[production], more each time',
   'answer.send-gifts': 'Send gifts',
   'answer-rules.send-gifts': 'Pay {culture}[culture]',
   'event.herd': 'The herd',

@@ -22,26 +22,25 @@ The Nomadic Age is its own cell: `--age nomadic --region temperate`, the campaig
 
 ## What the whole game says
 
-Measured on 2026-10-27 at the commit that lands these rows, both personas on the three decks, 20 seeds each, the ending rows per cell:
+Measured on 2026-10-28 at the commit that lands these rows, both personas on the three decks, 20 seeds each, the ending rows per cell:
 
 | Cell | Population | Capture | Removal | Capstone | Victory | Stood to the cap |
 | --- | --- | --- | --- | --- | --- | --- |
-| Builder, nomadic | 10 | 4 | 2 | 0 | 2 | 2 |
-| Builder, end of Stone | 3 | 7 | 2 | 0 | 0 | 8 |
-| Builder, no scouts | 2 | 8 | 2 | 1 | 1 | 6 |
+| Builder, nomadic | 9 | 5 | 2 | 0 | 2 | 2 |
+| Builder, end of Stone | 2 | 7 | 2 | 0 | 0 | 9 |
+| Builder, no scouts | 1 | 8 | 2 | 0 | 2 | 7 |
 | Warlord, nomadic | 10 | 5 | 2 | 0 | 1 | 2 |
-| Warlord, end of Stone | 10 | 3 | 2 | 0 | 1 | 4 |
-| Warlord, no scouts | 8 | 3 | 2 | 0 | 3 | 4 |
+| Warlord, end of Stone | 7 | 5 | 2 | 0 | 1 | 5 |
+| Warlord, no scouts | 5 | 4 | 3 | 0 | 2 | 6 |
 
-Against the camps baseline on the same seeds: 87 chronicles stood to the cap there, and 35 of them now fall to population, 20 to the camps, 8 to a removal and 6 win; of the 33 the camps took, 9 stand to the cap and 2 win. The capstone is passed in 10 of 120: the siege in 4 of 18 drawn, the long winter in 2 of 24, the monument in 2 of 78.
+Against the camps baseline on the same seeds: 87 chronicles stood to the cap there, and 26 of them now fall to population, 25 to the camps, 9 to a removal and 6 win; of the 33 the camps took, 10 stand to the cap and 2 win. The capstone is passed in 8 of 120: the siege in 3 of 18 drawn, the long winter in 3 of 24, the monument in 2 of 78.
 
 The suspects, for the lines that take the schedule apart:
 
-- **A grievance's Pay tribute** precedes 36 of the 43 population falls. The personas take it in 68 of 70 deals, Send gifts twice and Escalate never, war being what Escalate is while the neutral stands at peace; money is nought in every cell, so the Tribute's money strike costs a population every strike, and no Stone deck holds a card aimed at the hand. The city falls a median 12.5 turns after the deal, from a population of 2 or 3.
-- **The Flood's Settle the floodplain on a city with nothing placed** is every one of the 12 removals, seeds 11 and 19 in all six cells: dealt on turn 5 or 14, it is the answer whose trial costs least, and the Floodplain removes the village four turns later at the median.
-- **Wildfire's Let the fields burn** is the last deal before 13 of the other population falls, six turns before at the median.
+- **The Flood's Settle the floodplain on a city with nothing placed** is 12 of the 13 removals, seeds 11 and 19 in all six cells: dealt on turn 5 or 14, it is the answer whose trial costs least, and the Floodplain removes the village four turns later at the median.
+- **Wildfire's Let the fields burn** is the last deal before 3 of the 34 population falls, four turns before at the median.
 
-Travellers, The herd, the painted cave and the beast bones are never the last deal before a fall, and Drought is dealt in no chronicle that wins.
+The herd, the painted cave and the beast bones are never the last deal before a fall, and Drought is dealt in no chronicle that wins.
 
 ## One event alone
 
