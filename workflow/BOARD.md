@@ -10,5 +10,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **The Stone events one by one** — the suspects the whole run names, each measured on a schedule of it alone with the capstone off, one cell per answer and one for the persona's own choice; its intake names the suspects and cuts a line per event or pair.
+- **The grievance alone** — the grievance measured on a schedule of it alone with the capstone off, both personas on the end-of-Stone deck, one cell per answer and one for the persona's own choice, the Tribute's strikes on a city with no money first among the readings; what the reading blames is tuned, measured again and shipped in this line.
+- **The Flood alone** — the Flood measured on the same cells, Settle the floodplain on a city with nothing placed first among the readings; what the reading blames is tuned, measured again and shipped in this line.
+- **Wildfire alone** — Wildfire measured on the same cells, its three answers, Let the fields burn first among the readings; what the reading blames is tuned, measured again and shipped in this line.
 - **The capstones levelled** — each of the three trials named alone on the end-of-Stone deck, both personas, victory rate and turn per trial compared and the three brought to one level, the monument never finished first among them.
