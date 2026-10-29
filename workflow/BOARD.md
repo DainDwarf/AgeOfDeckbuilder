@@ -6,10 +6,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
-- **The goals pass** — are the technologies' goals good: each checked for whether a player going for it reaches it, on which turn, and whether it asks more than a chronicle played as usual gives; Domestication's goal, which a worker standing on one herd reaches, first among them.
-
 ## Lines
-
-- **The Flood alone** — the Flood measured on the same cells, Settle the floodplain on a city with nothing placed first among the readings; what the reading blames is tuned, measured again and shipped in this line.
-- **Wildfire alone** — Wildfire measured on the same cells, its three answers, Let the fields burn first among the readings; what the reading blames is tuned, measured again and shipped in this line.
-- **The capstones levelled** — each of the three trials named alone on the end-of-Stone deck, both personas, victory rate and turn per trial compared and the three brought to one level, the monument never finished first among them.
