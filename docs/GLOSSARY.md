@@ -93,8 +93,8 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **upkeep** | What a city pays each turn, at income, for what it keeps. | maintenance, running cost, tax |
 | **sight** | A unit's stat and the player's city's own: how far it sees; a tile it reaches is in sight. | vision, line of sight |
 | **elevation** | How high a terrain stands over the ground; what blocks sight, and what lifts the river layer's height. | altitude, tallness |
-| **fog** | A tile seen before and out of sight now. | fog of war, shroud, dimmed, remembered |
-| **charted** | A tile that has been in sight, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
+| **fog** | A charted tile out of sight now. | fog of war, shroud, dimmed, remembered |
+| **charted** | A tile the chronicle knows, in sight now or in fog. | explored, revealed, discovered, known, seen (of a tile's state) |
 | **uncharted** | A tile never yet in sight. | unexplored, unrevealed, black, hidden |
 | **instant** | A card with an immediate effect that no unit's action goes to. | spell, effect card |
 | **hazard** | A card no deck holds: an event adds it to a chronicle's piles, and it strikes while held. | penalty, curse, drawback, affliction, bane |

@@ -34,7 +34,7 @@ type FirstScreen =
  */
 function firstScreen(): FirstScreen {
   const asked = new URLSearchParams(window.location.search).get('continue');
-  if (asked === null || asked.trim() === '') return { on: 'campaign' };
+  if (asked === null) return { on: 'campaign' };
   const saved = savedOpening();
   if (saved === undefined) throw new Error('the save holds no chronicle to continue');
   return { on: 'chronicle', opening: saved };

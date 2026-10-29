@@ -4,7 +4,7 @@
 
 ## The age ✅
 
-The Nomadic Age is where humanity stops wandering, and it is the first chronicle: the deck it is played with is the one a new player is handed, so every card in it teaches one thing, and nothing in it needs a verb the player has not met. Its people work the land rather than their city. The player's city is a hearth and a border of a few tiles; the wealth is out on the map, reached on foot, and the Stone Age is the moment the economy comes home. Four resources are in play: **food, production, military and culture**. Money and science have no source and no sink in this age. One building exists, the one the capstone adds, and building it ends the age.
+The Nomadic Age is where humanity stops wandering, and it is the first chronicle: the deck it is played with is the one a new player is handed, so every card in it teaches one thing, and nothing in it needs a verb the player has not met. Its people work the land rather than their city. The player's city is a hearth and a border of a few tiles; the wealth is out on the map, reached on foot, and the Stone Age is the moment the economy comes home. Four resources are in play: **food, production, military and culture**. Money and science have no source and no sink in this age. One building is built, the one the capstone adds, and building it ends the age.
 
 ## The settle ✅
 
@@ -23,7 +23,7 @@ A terrain gives one point of one resource, and a feature gives the second. So a 
 | ocean    | nothing                    | —                         | —        |
 | mountain | nothing; beyond every unit | —                         | —        |
 
-Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; ocean and mountain are crossed by nothing, and coast by embarked units alone. Features are dealt rarely enough to be sought after, fertile, deer and cattle rarer than flint, so going for more of any of them is a journey; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout.
+Forest and hills give the same at income and cost the same to walk, and differ in what they see over and which feature they carry: a new player learns that hills are the lookout. Forest is raised, hills higher and mountain highest, and the rest lies flat; ocean and mountain are crossed by nothing, and coast by embarked units alone. Features are dealt rarely enough to be sought after, fertile, deer and cattle rarer than flint, so going for more of any of them is a journey; their shares are tuning. Forest is scattered over the land and also gathers in woodlands, biomes of their own that are forest nearly throughout. Rivers rise in the mountain ranges.
 
 ## The sites 🔧
 
