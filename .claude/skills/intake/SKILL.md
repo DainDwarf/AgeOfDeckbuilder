@@ -11,7 +11,7 @@ One board line per invocation: the first line with no dossier link, unless the u
 
 ## 1. Read
 
-The line; the design pages, `docs/GLOSSARY.md` and `DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes; for a line landing in `src/ui/`, `src/main.ts` or `e2e/`, `docs/PHASER.md`, which the dossier's Traps cite rather than restate. Time and measure what a number would settle.
+The line; the design pages, `docs/GLOSSARY.md` and `DOGMAS.md` where they touch it; the code it lands in, enough to know what it changes; for a line landing in `src/ui/`, `src/main.ts` or `e2e/`, `docs/PHASER.md`, which the dossier's Traps cite rather than restate. Time and measure what a number would settle. A balance line is measured before it is restated: its cell run through the sim skill at intake, served as one table over the chronicles and three readings at most, then the line's question with its mechanical cause and the levers, no design and no analysis; the measurements after it are the user's to name.
 
 ## 2. Challenge
 
