@@ -8,4 +8,4 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Lines
 
-- **Close v0.0.5** — the version closed as v0.0.4 was: the version bump, the players' changelog entry, the README's latest build and its two ages, the rung off the roadmap, the annotated tag and Latest moved onto it.
+- **Close v0.0.5** — `package.json` and `package-lock.json` read version 0.0.5; `CHANGELOG.md` holds the `[0.0.5]` entry under an empty `[Unreleased]`; `README.md` names v0.0.5 as the latest build and its two ages; the v0.0.5 rung is gone from `workflow/ROADMAP.md`; `git grep -n "0\.0\.4" -- . ":!CHANGELOG.md"` prints nothing; the annotated tag `v0.0.5` stands on the ship's commit and is pushed; `origin/Latest` points at that same commit. Doc-impact: none. No dossier: the entry and the README's sentences are the ship's brief, verbatim.
