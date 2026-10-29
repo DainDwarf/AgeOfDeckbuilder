@@ -7,3 +7,5 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 ## Rungs
 
 ## Lines
+
+- **Close v0.0.5** — the version closed as v0.0.4 was: the version bump, the players' changelog entry, the README's latest build and its two ages, the rung off the roadmap, the annotated tag and Latest moved onto it.
