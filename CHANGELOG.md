@@ -4,6 +4,68 @@ Player-facing release notes. Written at a version bump, for players; never a dev
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-10-29
+
+The meta. A chronicle now pays into a campaign: the achievements it reaches learn technologies, which unlock cards, a region, your city's building and the next age, and the influence it earns buys more copies of the cards you own. The Stone Age is the second age, the one the Nomadic victory unlocks, where the economy comes home. Every number is provisional; the balance pass waits for the demo.
+
+### Added
+
+- The campaign. The game boots on the campaign screen, which shows the technology tree across the ages. Each technology is learned by one achievement reached in a chronicle and needs the ones before it; its plate reads its goal and its reward. A learned technology is checked, an available one reads its goal and its reward, and one that needs more reads ??? alone. Click an available technology to pin it: while a chronicle can reach its achievement, that achievement stands in the chronicle's top-left corner with its count, and sinks once reached.
+- The ending pays. When a chronicle ends, victory or defeat alike, the technologies of the achievements it reached are learned, the cards they unlock join the collection, and their influence is paid, along with the influence of the trophies and challenges still in it: a trophy pays on any ending, a challenge on victory alone. The ending screen reads the ledger, a struck-through row for a challenge lost to a defeat, and End chronicle opens the campaign.
+- Influence, the meta-currency, read on the bar of every meta screen, and worn at the foot of every card that gains it.
+- The collection screen. Every card you own stands as a stack of its copies with its price under it; a press buys one more copy for influence, the price doubling with every copy owned. Open a civilization's deck beside the collection and add a card to it with a press or a drag, or remove one; settle cards go to the settle section. Open the civilization alone to read the whole deck as stacks, a button to add and one to remove under each.
+- A civilization is a city section and a deck. The city section holds your city's building, how far it sees, the population it opens with, and the card that settles it; the deck is what the collection screen edits. One civilization so far, the Nomadic.
+- The launch screen. Choose the age on the time arrow, the region among clusters of hexagons drawn in its terrains' colours, the civilization among piles of cards. Continue reads where the chronicle in progress stands and what it has earned, and opens it where it stood; Launch warns first when it would end a chronicle that has earned something. A right click on a pile browses its cards.
+- Save and resume. The game saves by itself after every move and boots on the save; a chronicle in progress waits for Continue, and the menu's Campaign leaves it standing. Manage Save on the menu exports the save as a file, imports one and clears it, each behind a warning; the game says so once when the browser refuses to keep the save.
+- The navbar down the left edge of every meta screen: Campaign, Chronicle and Collection.
+- The Stone Age, the second age: the village, your city's building from the Nomadic victory on, gives military and culture; fifteen technologies to learn, each by a goal of its own — Herbalism, Agriculture, Trapping, Fire, Irrigation, Domestication, Bow and arrow, Pottery, Calendar, Bread, Tanning, Raft, Megalith, Bartering and Fishing — and its victory, Metalworking, whose age is still to come.
+- The Stone Age's cards. Four buildings built through a worker inside the border, each taking production every turn as its upkeep: Farm on plain for food, Tannery on deer or cattle for money, Megalith for culture, Fishery on coast through an embarked worker, giving food to the coast tiles around it. Four improvements placed through a worker wherever it stands: Trapping on deer, Pasture on cattle, Irrigation on a river bank, Clay pit on hills. Six instants: Fire discards another card of the hand for science, Heal brings a unit inside the border back to full health, Calendar shows the turn of the next event, Bread turns food into culture, Food trade and Goods trade turn money into food or production. Archer, a unit that attacks over a range. Embark steps a unit onto the coast and becomes Disembark, which steps it back ashore.
+- Upkeep. A city pays at income for the buildings it keeps, out of what its tiles yielded. A stock taken past nothing, by the upkeep or by a strike, costs one population for each stock so taken.
+- Embarked units. A unit on the water keeps its health and its sight, moves slowly, attacks nothing and is attacked only from range. Enemies embark on their way too.
+- Two Stone Age regions. Temperate, the band's land on a bigger disc with a desert on it, whose oases are the only food in it; Archipelago, unlocked by Raft, islands in a sea with no river and no desert. The Stone Age's camps stand across the water.
+- The neutral, in every Stone Age region: a second city with a village, a border, population, stocks and units of its own. It works its land, claims tiles, enters warriors, archers and workers, builds farms and improvements, and sends its warriors at the camps. At peace its units never attack yours and neither side crosses the other's tiles; a step onto its land or an attack on its unit declares war, after a warning, and from then on its units are enemies that go for your city. Its city falls to a unit of yours standing on it through the enemy phase, and deals one of three trophies: Capture, Their land or Their stores. The enemies capture it too, and a camp stands where it stood.
+- Three sites, in both ages: the painted cave, the old cairn and the bones of a great beast, each captured once by standing on it. In the Nomadic Age each deals one trophy, culture once. In the Stone Age each deals a choice of two: Cave paintings or Old stories, Honour the dead or Dig the graves, Bone carvings or Bone tools.
+- Challenges, a kind of card an answer may deal. It is played by nothing and cycles to the ending; it may strike at the end of every turn it stays in the hand, and kept to a victory it pays its influence.
+- Trophies, the kind a capture deals: played, its effect lands and the card is banished; kept to the ending, it pays its influence.
+- The Stone Age's events. Flood: lose the fields, settle the floodplain for a challenge that keeps taking them, or dig channels for production.
+- Bad air and angry spirits: bury the dead, live with the sickness for a challenge, or help the healers for science.
+- Strangers: take them in, population now and a challenge that takes culture, or refuse them.
+- Predators: abandon a herd, let the farmers handle the wolves for a challenge that kills, or defend the herds for military.
+- Drought: a rain dance for a challenge that dries the land into desert, rationing for food, or buy grain for money.
+- Travellers: trade with them for money or share stories for culture.
+- A grievance: the neutral demands amends. Escalate and declare war, or a camp beside you where it has none; pay tribute for a challenge that takes food and production; or send gifts for culture.
+- Wildfire, in the Stone Age, has a third answer: burn the forest for a challenge that burns it tile by tile.
+- Departure is the Stone Age's now, and Keep them costs culture.
+- Three Stone Age capstones, one drawn at the opening. The long winter adds Cold night to the discard pile, several copies, and the land stops feeding until every one is paid. The monument adds Foundations, the first of three buildings built one over the other while a hazard lands every turn; the monument standing is victory and one of its buildings removed is defeat. The siege enters a raid led by a leader, whose band hits harder beside it; the leader killed is victory.
+- Stone Age camps enter warriors and archers, and a new script walks out of them: the pillager goes for your workers and what you built, and stands on an improvement or a building to pillage it at the next enemy phase. Once enough guards gather, some leave together as a raid.
+- An enemy that prepares a capture or a pillage shows it: its tile wears the enemy's colour and its card reads Capturing or Pillaging.
+- The exhaust pile, a tab at the screen's right edge. A building card played goes there instead of cycling, so the copies your deck holds are how many of that building you build. A right click browses it.
+- A right click on any pile opens its browse: every card as a stack of its copies, in the collection's order, so the draw order is given away to nobody.
+- The resource bar reads, after each stock, what ending the turn now would do to it, in the colour of a stock taken past nothing where the end of turn would.
+- A city's own tile wears a badge reading its population.
+- A unit of yours attacks only a unit on a tile in sight, and an enemy only one its own sight reaches.
+- Two settings under Controls: which way the wheel zooms, and which way it scrolls. The keys that pan up and down scroll panels and browses too.
+- The debug console holds seed, which reads the chronicle's seed or launches on one, and unit, which enters a unit on the selected tile.
+
+### Changed
+
+- The Nomadic Age is the tutorial. Its hearth gives nothing on top of its terrain, so flint is the only military and the sites the only culture, and the age pays influence once, for its victory. Lean season's Share food puts Hunger on top of the draw pile and Keep to yourself brings the envious as a raid; Make room places a camp with its guards on and around it; Follow it charts the tile the herd went to.
+- Pillage and Capture are trophies: played, they are banished.
+- Events land after the draw, so the turn opens on its hand every time.
+- Strikes come after income and before growth, so a strike never takes the person the same turn's growth made.
+- Gather gains whatever the tile yields.
+- Eight kinds of card: settle, building, unit, action, instant, hazard, trophy and challenge. A card played is exhausted, banished or discarded as its kind or its keyword says.
+- A raid enters through one door: a camp still standing, or the map's edge, embarked where that edge is coast. A camp that has just entered an enemy waits before it rolls again.
+- A captured camp's rewards stand in the deal window under the camp's lore, each capture's in turn.
+- The capstone's window is raised twice, at the opening and at the landing; a left click on its card closes it.
+- The menu lists Manage Save, Settings and Campaign; New chronicle is gone, the launch screen is where a chronicle starts.
+- A press on a scrim is one step back: it takes down a card shown large, drops a window's selection, closes the window, and never opens the menu. Under a scrim the screen hears no key, and the wheel scrolls what scrolls on it.
+- A press is held by the button that landed it, and only that button's release lets it go.
+
+### Removed
+
+- The launch page and its address. The address names continue alone, to open the chronicle in progress; the seed is read and set from the console.
+
 ## [0.0.4] - 2026-09-24
 
 The first real age. The stand-in deck gives way to the Nomadic Age: a band that stops wandering, settles where it chooses, and wins the age by building its first shelter. Every number in it is provisional.
