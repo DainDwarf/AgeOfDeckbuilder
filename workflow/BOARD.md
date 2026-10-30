@@ -20,4 +20,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.
+- **Cut `src/ui/map.ts`** — the map's one file is cut by concern into modules, each behind a door narrower than what it hides, nothing renamed and the game unchanged. Doc-impact: none. [board/cut-map.md](board/cut-map.md)
