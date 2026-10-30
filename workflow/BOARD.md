@@ -20,6 +20,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **A card's key** — every card in a chronicle carries a key that tells it from every other, its copies included, so the flow can say which card moved and a face can follow its card.
 - **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
 - **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
 - **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.
