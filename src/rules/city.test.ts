@@ -30,6 +30,7 @@ import {
   AGE,
   aged,
   aimedAt,
+  aimedAtNothing,
   assignTo,
   attacksOf,
   besideTheNeutral,
@@ -171,7 +172,7 @@ function withWorkerBeside(
 ): Chronicle | undefined {
   const at = idsOf(chronicle.hand).indexOf('PH_Worker');
   if (at === -1) return undefined;
-  const entered = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: at, aim: 'none' }));
+  const entered = outcome(apply(CATALOGUE, chronicle, aimedAtNothing(chronicle, at)));
   if (entered.units.length === chronicle.units.length) return undefined;
   const worker = entered.units[entered.units.length - 1];
   const between = neighbours(city).find((coord) => distance(coord, tile) === 1);
@@ -195,7 +196,7 @@ function darkBorder(): { opened: Chronicle; dark: TileCoords; city: TileCoords }
       let settling = settledOn(unsettled, city);
       if (settling.city === undefined) continue;
       for (const tile of neighbours(city)) {
-        settling = outcome(apply(CATALOGUE, settling, aimedAt(tile)));
+        settling = outcome(apply(CATALOGUE, settling, aimedAt(settling, tile)));
       }
       const ended = outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
       const opened = outcome(apply(CATALOGUE, ended, { type: 'end-turn' }));
@@ -225,7 +226,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
   const settled = settledOn(opening(plains(3)), CITY);
   const [tile] = neighbours(CITY);
 
-  const stages = apply(CATALOGUE, settled, aimedAt(tile));
+  const stages = apply(CATALOGUE, settled, aimedAt(settled, tile));
   const after = outcome(stages);
 
   expect(idsOf(settled.hand)).toEqual(['PH_Claim']);
@@ -241,7 +242,7 @@ test('a free claim holds the tile, brings one population that stands on it, and 
 test('six free claims make the next claim cost fourteen culture', () => {
   let chronicle = settledOn(opening(plains(3), { civilization: claiming(6) }), CITY);
   for (const tile of neighbours(CITY)) {
-    chronicle = outcome(apply(CATALOGUE, chronicle, aimedAt(tile)));
+    chronicle = outcome(apply(CATALOGUE, chronicle, aimedAt(chronicle, tile)));
   }
   const next = { q: 2, r: 0 };
   const paying: Chronicle = { ...chronicle, resources: onlyStocks({ culture: 14 }) };
@@ -259,7 +260,7 @@ test('a free claim aimed at a tile the city holds, one the border does not touch
   expect(admitted(CATALOGUE, opened, claimCard())).toEqual([]);
   for (const tile of [CITY, { q: 2, r: 0 }, camp]) {
     expect(claimRefusal(settled, tile)).toBe('no-claim');
-    expect(stagedBy(settled, aimedAt(tile))).toEqual(['refused']);
+    expect(stagedBy(settled, aimedAt(settled, tile))).toEqual(['refused']);
   }
   expect(admitted(CATALOGUE, settled, claimCard()).map(tileKey).sort()).toEqual(
     claimable(CATALOGUE, settled, 'player').map(tileKey).sort(),
@@ -357,7 +358,7 @@ test('a building that gives beside it gives every tile of its terrain beside it,
   const own = buildingKind(CATALOGUE, WELL).yields;
 
   const income = heldBy(apply(CATALOGUE, city, { type: 'end-turn' }), 'income');
-  const foraged = outcome(apply(CATALOGUE, city, aimedAt(out)));
+  const foraged = outcome(apply(CATALOGUE, city, aimedAt(city, out)));
 
   // The city's urban tile stands beside a well, each well beside the other, and the tile foraged
   // outside the border beside both.
@@ -413,7 +414,7 @@ test('from the landing of a capstone ruling the yield, the terrain’s and the f
     const landing = landed ? 1 : 2;
     const player = city(landing);
     const income = heldBy(apply(CATALOGUE, player, { type: 'end-turn' }), 'income');
-    const foraged = outcome(apply(CATALOGUE, player, aimedAt(out)));
+    const foraged = outcome(apply(CATALOGUE, player, aimedAt(player, out)));
     const theirs = neutral(landing);
     const theirIncome = heldBy(apply(CATALOGUE, theirs, { type: 'end-turn' }), 'income').at(-1);
 

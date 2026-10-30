@@ -60,7 +60,6 @@ const PLAY_HEIGHT = 110;
 type Slot = {
   readonly face: CardFace;
   readonly card: ChronicleCard;
-  readonly index: number;
   readonly home: { x: number; y: number; rotation: number };
   readonly refusal: Refusal;
   readonly playable: boolean;
@@ -103,23 +102,23 @@ export type Hand = {
 };
 
 /**
- * What the presses on the hand are answered by. Each aim is handed the card's place in the hand and
- * what to call when it comes down, and answers the way to take it down from outside.
+ * What the presses on the hand are answered by. Each aim is handed the card and what to call when
+ * it comes down, and answers the way to take it down from outside.
  */
 export type HandPresses = {
-  /** Plays the card at this place in the hand, at nothing or at another card of the hand. */
-  play(index: number, aimed: Extract<Aimed, { readonly aim: 'none' | 'hand' }>): void;
+  /** Plays the card of this key, at nothing or at another card of the hand. */
+  play(key: number, aimed: Extract<Aimed, { readonly aim: 'none' | 'hand' }>): void;
   /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
   dismiss(): void;
   /**
    * The map lit for the card's aim; `released` says the aim is off it and the card let go of, and
-   * `retargeted` that the card is being aimed at another kind of thing from then.
+   * `reaimed` that the card is being aimed at another kind of thing from then.
    */
   aimTile(
-    index: number,
+    held: ChronicleCard,
     card: AimedCard,
     released: () => void,
-    retargeted: (aim: PointedAim) => void,
+    reaimed: (aim: PointedAim) => void,
   ): () => void;
   inspect(card: ChronicleCard): void;
   /** What a name on a card of the hand names, shown large. */
@@ -283,7 +282,7 @@ export function createHand(
         break;
       case 'tile':
       case 'unit':
-        standing.cancel = presses.aimTile(slot.index, card, releasing(slot), (aim) => {
+        standing.cancel = presses.aimTile(slot.card, card, releasing(slot), (aim) => {
           if (selected?.slot === slot) aiming(slot, aim);
         });
         aiming(slot, card.aim);
@@ -307,7 +306,7 @@ export function createHand(
     switch (card.aim) {
       case 'none':
         letGo = slot;
-        presses.play(slot.index, { aim: 'none' });
+        presses.play(slot.card.key, { aim: 'none' });
         break;
       case 'hand':
         standing.atHand = true;
@@ -325,7 +324,7 @@ export function createHand(
    */
   const playAt = (standing: Selected, at: Slot): void => {
     letGo = standing.slot;
-    presses.play(standing.slot.index, { aim: 'hand', card: at.index });
+    presses.play(standing.slot.card.key, { aim: 'hand', card: at.card.key });
   };
 
   /** The card carried to where the pointer stands, ringed once it is clear of the play height. */
@@ -446,7 +445,6 @@ export function createHand(
       const slot: Slot = {
         face,
         card,
-        index,
         home: {
           x: first + CARD_WIDTH / 2 + index * advance,
           y: CARD_BASELINE + off * off * FAN * 1.6,

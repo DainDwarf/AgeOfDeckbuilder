@@ -263,7 +263,9 @@ function cheapestEffect(chronicle: Chronicle, id: string): Landed | undefined {
         : card.effect(CATALOGUE, chronicle, at, through.tile);
     }
     case 'hand':
-      return chronicle.hand.length <= 1 ? undefined : card.effect(CATALOGUE, chronicle, 0);
+      return chronicle.hand.length <= 1
+        ? undefined
+        : card.effect(CATALOGUE, chronicle, chronicle.hand[0].key);
   }
 }
 

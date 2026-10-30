@@ -5,6 +5,7 @@ import { warDeclared } from './city';
 import {
   actionOf,
   aimedAt,
+  aimedAtNothing,
   attackOn,
   attacksOf,
   besideTheNeutral,
@@ -121,7 +122,7 @@ test('a unit entering by its card enters with its move points full, and moves th
     resources: FOOD,
   });
 
-  const entered = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const entered = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
 
   expect(pointsOf(entered, 1)).toBe(CATALOGUE.units.PH_Worker.move);
 
@@ -199,7 +200,7 @@ test('a worker entered by its card holds an action and attacks nothing beside it
     units: [standing('enemy', { q: 1, r: 0 })],
   });
 
-  const entered = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const entered = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
 
   expect(actionOf(entered, 2)).toBeGreaterThan(0);
   expect(attackable(entered.units, unitNamed(entered, 2), relationsOf(entered))).toEqual([]);
@@ -345,7 +346,7 @@ test('a number a killed unit carried is dealt to nobody after it, and commands n
   });
 
   const killed = outcome(apply(CATALOGUE, city, attackOn(2, { q: 2, r: 0 })));
-  const entered = outcome(apply(CATALOGUE, killed, { type: 'play', index: 0, aim: 'none' }));
+  const entered = outcome(apply(CATALOGUE, killed, aimedAtNothing(killed)));
 
   expect(entered.units.map((unit) => unit.id)).toEqual([2, 3]);
   expect(stagedBy(entered, moveTo(1, { q: 0, r: 1 }))).toEqual(['refused']);
@@ -707,7 +708,7 @@ test('an embarked unit moves on the card’s move over the water embarked units 
     hand: ['PH_Embark'],
     units: [standing('player', CITY, { sight: 4 })],
   });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast[0])));
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast[0])));
   const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
 
   expect(pointsOf(ticked, 1)).toBe(EMBARKED_MOVE);
@@ -728,7 +729,7 @@ test('an embarked unit attacks nothing, whatever its range and damage', () => {
       standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 }),
     ],
   });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
   const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
 
   expect(actionOf(ticked, 1)).toBeGreaterThan(0);
@@ -748,7 +749,7 @@ test('a unit whose range is one attacks no embarked unit, and one of a longer ra
       standing('enemy', { q: 3, r: 0 }, { move: 0, range: 2 }),
     ],
   });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
 
   expect(attacksOf(embarked)).toEqual([
     ['1,1', '1,0'],

@@ -947,21 +947,21 @@ export function healed(catalogue: Catalogue, paid: Chronicle, at: TileCoords): L
 }
 
 /**
- * The cards named gone from the hand to the discard pile, in hand order, and nothing where none is
- * named; a card the hand does not hold is a `runtime-error` and discards nothing.
+ * The hand's cards of those keys gone to the discard pile, in hand order, and nothing where no key
+ * is named; a key the hand does not hold is a `runtime-error` and discards nothing.
  */
-export function discarded(chronicle: Chronicle, cards: readonly ChronicleCard[]): Landed {
-  if (cards.length === 0) return unchanged(chronicle);
-  if (cards.some(({ key }) => cardKeyed(chronicle.hand, key) === undefined)) {
+export function discarded(chronicle: Chronicle, keys: readonly number[]): Landed {
+  if (keys.length === 0) return unchanged(chronicle);
+  if (keys.some((key) => cardKeyed(chronicle.hand, key) === undefined)) {
     return landedAs(change('runtime-error', chronicle, chronicle));
   }
-  const leaving = chronicle.hand.filter(({ key }) => cardKeyed(cards, key) !== undefined);
+  const leaving = chronicle.hand.filter(({ key }) => keys.includes(key));
   return landedAs(
     change(
       'discarded',
       {
         ...chronicle,
-        hand: chronicle.hand.filter(({ key }) => cardKeyed(cards, key) === undefined),
+        hand: chronicle.hand.filter(({ key }) => !keys.includes(key)),
         discardPile: [...chronicle.discardPile, ...leaving],
       },
       chronicle,

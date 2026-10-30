@@ -546,25 +546,26 @@ function playsOfCard(
   index: number,
   order: (tile: TileCoords) => number,
 ): { readonly command: Command; readonly at: number }[] {
-  const card = cardOf(catalogue, chronicle.hand[index].id);
+  const { id, key } = chronicle.hand[index];
+  const card = cardOf(catalogue, id);
   const aim = aimOf(card);
   switch (aim.aim) {
     case 'none':
-      return [{ command: { type: 'play', index, aim: 'none' }, at: 0 }];
+      return [{ command: { type: 'play', key, aim: 'none' }, at: 0 }];
     case 'tile':
       if (workerAim(card) === undefined) return [];
       return admitted(catalogue, chronicle, aim).map((tile) => ({
-        command: { type: 'play', index, aim: 'tile', tile },
+        command: { type: 'play', key, aim: 'tile', tile },
         at: order(tile),
       }));
     case 'unit':
       return admitted(catalogue, chronicle, aim).map((tile) => ({
-        command: { type: 'play', index, aim: 'unit', tile },
+        command: { type: 'play', key, aim: 'unit', tile },
         at: order(tile),
       }));
     case 'hand':
-      return chronicle.hand.flatMap((_, card) =>
-        card === index ? [] : [{ command: { type: 'play', index, aim: 'hand', card }, at: card }],
+      return chronicle.hand.flatMap((other, at) =>
+        at === index ? [] : [{ command: { type: 'play', key, aim: 'hand', card: other.key }, at }],
       );
   }
 }
@@ -667,7 +668,7 @@ function citySettled(catalogue: Catalogue, chronicle: Chronicle): Command[] {
     admitted(catalogue, chronicle, aim).map((tile): Ranked<Command> => {
       const ring = [tile, ...neighbours(tile)].reduce((sum, at) => sum + worthOf(yields(at)), 0);
       return {
-        item: { type: 'play', index: 0, aim: 'tile', tile },
+        item: { type: 'play', key: chronicle.hand[0].key, aim: 'tile', tile },
         rank: [-ring, distance(tile, CENTRE), order(tile)],
       };
     }),
@@ -679,7 +680,7 @@ function* unitSettled(catalogue: Catalogue, chronicle: Chronicle): Generator<Com
   if (!onSettlePhase(chronicle) || city === undefined) return;
   const yields = seenYields(catalogue, chronicle);
   const order = tileOrder(chronicle);
-  for (const [index, held] of chronicle.hand.entries()) {
+  for (const held of chronicle.hand) {
     const card = cardOf(catalogue, held.id);
     const aim = aimOf(card);
     if (card.kind !== 'settle' || aim.aim !== 'tile') continue;
@@ -688,7 +689,7 @@ function* unitSettled(catalogue: Catalogue, chronicle: Chronicle): Generator<Com
       beside.map((tile) => ({ item: tile, rank: [-worthOf(yields(tile)), order(tile)] })),
     );
     for (const tile of tiles) {
-      const command: Command = { type: 'play', index, aim: 'tile', tile };
+      const command: Command = { type: 'play', key: held.key, aim: 'tile', tile };
       const after = trial(catalogue, chronicle, command);
       if (after !== undefined && unitEnteredBetween(chronicle, after) !== undefined) yield command;
     }
@@ -696,10 +697,10 @@ function* unitSettled(catalogue: Catalogue, chronicle: Chronicle): Generator<Com
 }
 
 function hazardPaid(catalogue: Catalogue, chronicle: Chronicle): Command[] {
-  return chronicle.hand.flatMap((held, index): Command[] =>
+  return chronicle.hand.flatMap((held): Command[] =>
     cardOf(catalogue, held.id).kind === 'hazard' &&
     playable(refusalOf(catalogue, chronicle, held.id))
-      ? [{ type: 'play', index, aim: 'none' }]
+      ? [{ type: 'play', key: held.key, aim: 'none' }]
       : [],
   );
 }
@@ -943,7 +944,7 @@ function playedThroughWorker(
   index: number,
   tile: Tile,
 ): { readonly command: Command; readonly places: boolean } | undefined {
-  const { id } = chronicle.hand[index];
+  const { id, key } = chronicle.hand[index];
   const aim = workerAim(cardOf(catalogue, id));
   if (
     aim === undefined ||
@@ -953,7 +954,7 @@ function playedThroughWorker(
     return undefined;
   }
   return {
-    command: { type: 'play', index, aim: 'tile', tile: { q: tile.q, r: tile.r } },
+    command: { type: 'play', key, aim: 'tile', tile: { q: tile.q, r: tile.r } },
     places: aim.places === true,
   };
 }
@@ -1078,7 +1079,7 @@ function pulledBack(catalogue: Catalogue, chronicle: Chronicle): Iterable<Comman
     (_unit, tile) => holds(chronicle, tile),
     (there, index, tile, unit) => {
       if (!playableAtUnit(catalogue, there, index)) return undefined;
-      const after = trial(catalogue, there, playOnUnit(index, tile));
+      const after = trial(catalogue, there, playOnUnit(there.hand[index].key, tile));
       return after !== undefined && healthRaisedOn(unit, after)
         ? [distance(tile, city)]
         : undefined;
@@ -1143,9 +1144,9 @@ export function unitCardsEntering(
   chronicle: Chronicle,
   worker: boolean,
 ): Command[] {
-  return chronicle.hand.flatMap((held, index): Command[] => {
+  return chronicle.hand.flatMap((held): Command[] => {
     if (cardOf(catalogue, held.id).kind !== 'unit') return [];
-    const command: Command = { type: 'play', index, aim: 'none' };
+    const command: Command = { type: 'play', key: held.key, aim: 'none' };
     const after = trial(catalogue, chronicle, command);
     const entered = after && unitEnteredBetween(chronicle, after);
     return entered?.stats.worker === worker ? [command] : [];
@@ -1467,8 +1468,8 @@ function playableAtUnit(catalogue: Catalogue, chronicle: Chronicle, index: numbe
   );
 }
 
-function playOnUnit(index: number, tile: TileCoords): Command {
-  return { type: 'play', index, aim: 'unit', tile: { q: tile.q, r: tile.r } };
+function playOnUnit(key: number, tile: TileCoords): Command {
+  return { type: 'play', key, aim: 'unit', tile: { q: tile.q, r: tile.r } };
 }
 
 /** Whether the unit stands on the chronicle with more health than it has. */
@@ -1493,12 +1494,12 @@ export function* playedOnUnits(
   units: readonly Unit[],
   raised: (unit: Unit, after: Chronicle) => boolean,
 ): Generator<Command> {
-  const cards = chronicle.hand.flatMap((_, index) =>
-    playableAtUnit(catalogue, chronicle, index) ? [index] : [],
+  const cards = chronicle.hand.flatMap(({ key }, index) =>
+    playableAtUnit(catalogue, chronicle, index) ? [key] : [],
   );
   for (const unit of units) {
-    for (const index of cards) {
-      const command = playOnUnit(index, unit.tile);
+    for (const key of cards) {
+      const command = playOnUnit(key, unit.tile);
       const after = trial(catalogue, chronicle, command);
       if (after !== undefined && raised(unit, after)) yield command;
     }
@@ -1550,11 +1551,11 @@ function* trialsAtNothing(
   catalogue: Catalogue,
   chronicle: Chronicle,
 ): Generator<{ readonly command: Command; readonly id: CardId; readonly after: Chronicle }> {
-  for (const [index, { id }] of chronicle.hand.entries()) {
+  for (const { id, key } of chronicle.hand) {
     const card = cardOf(catalogue, id);
     if (card.kind === 'hazard' || aimOf(card).aim !== 'none') continue;
     if (!playable(refusalOf(catalogue, chronicle, id))) continue;
-    const command: Command = { type: 'play', index, aim: 'none' };
+    const command: Command = { type: 'play', key, aim: 'none' };
     const after = trial(catalogue, chronicle, command);
     if (after !== undefined) yield { command, id, after };
   }
@@ -1586,17 +1587,17 @@ function* lessGivenRaised(catalogue: Catalogue, chronicle: Chronicle): Generator
 
 /**
  * The plays of the cards in hand aimed at the hand that the refusal lets through, in hand order,
- * each on the card of the hand `target` names for the slot it is played from.
+ * each on the card of the hand `aimedAt` names for the slot it is played from.
  */
 function playedOnHand(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  target: (index: number) => number,
+  aimedAt: (index: number) => number,
 ): Command[] {
   return chronicle.hand.flatMap((held, index): Command[] => {
     if (aimOf(cardOf(catalogue, held.id)).aim !== 'hand') return [];
     if (!playable(refusalOf(catalogue, chronicle, held.id))) return [];
-    return [{ type: 'play', index, aim: 'hand', card: target(index) }];
+    return [{ type: 'play', key: held.key, aim: 'hand', card: chronicle.hand[aimedAt(index)].key }];
   });
 }
 

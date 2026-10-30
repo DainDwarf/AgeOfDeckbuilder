@@ -654,7 +654,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       kind: 'instant',
       cost: { science: 1 },
       aim: 'hand',
-      effect: (_catalogue, paid, at) => discarded(paid, [paid.hand[at]]),
+      effect: (_catalogue, paid, key) => discarded(paid, [key]),
     },
     PH_Almanac: { kind: 'instant', cost: {}, ...showsNextLanding() },
     PH_Spoils: {
@@ -1506,7 +1506,7 @@ export function settledOn(
   tile: TileCoords,
   catalogue: Catalogue = CATALOGUE,
 ): Chronicle {
-  return outcome(apply(catalogue, chronicle, aimedAt(tile)));
+  return outcome(apply(catalogue, chronicle, aimedAt(chronicle, tile)));
 }
 
 /**
@@ -1579,7 +1579,7 @@ export function hoardedVictory(kept: Pick<Carrying, ChroniclePile> = {}): Chroni
     hand: ['PH_Cache', ...(kept.hand ?? [])],
     resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
-  return outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  return outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
 }
 
 /** The tiles a fixture plays the stake on toward `SURVEY`: two plains, then a forest. */
@@ -1603,17 +1603,24 @@ export function surveying(carrying: Carrying = {}): Chronicle {
   });
 }
 
-/** The first card of the hand played at nothing. */
-export const PLAYED: Command = { type: 'play', index: 0, aim: 'none' };
-
-/** A card of the hand, the first unless the test names another, aimed at a tile, ready to hand to `apply`. */
-export function aimedAt(tile: TileCoords, index = 0): Command {
-  return { type: 'play', index, aim: 'tile', tile };
+/** The card at that place of the chronicle's hand, the first unless the test names another, played at nothing. */
+export function aimedAtNothing(chronicle: Chronicle, at = 0): Command {
+  return { type: 'play', key: chronicle.hand[at].key, aim: 'none' };
 }
 
-/** A card aimed at the unit standing on a tile, ready to hand to `apply`. */
-export function aimedAtUnit(tile: TileCoords): Command {
-  return { type: 'play', index: 0, aim: 'unit', tile };
+/** The card at that place of the chronicle's hand, the first unless the test names another, aimed at a tile. */
+export function aimedAt(chronicle: Chronicle, tile: TileCoords, at = 0): Command {
+  return { type: 'play', key: chronicle.hand[at].key, aim: 'tile', tile };
+}
+
+/** The first card of the chronicle's hand aimed at the unit standing on a tile. */
+export function aimedAtUnit(chronicle: Chronicle, tile: TileCoords): Command {
+  return { type: 'play', key: chronicle.hand[0].key, aim: 'unit', tile };
+}
+
+/** The card of that key aimed at the card of `aimedAtKey`. */
+export function aimedAtHand(key: number, aimedAtKey: number): Command {
+  return { type: 'play', key, aim: 'hand', card: aimedAtKey };
 }
 
 /** The achievement of the chronicle's row that the id names. A row without it throws. */

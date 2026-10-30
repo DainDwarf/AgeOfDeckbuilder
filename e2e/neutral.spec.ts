@@ -433,7 +433,8 @@ test('a card played at peace that lands a unit of the playerâ€™s on the neutralâ
 }) => {
   const problems = watch(page);
   const { chronicle, index, city } = offTheNeutralCity();
-  const play = { type: 'play', index, aim: 'tile', tile: city } as const;
+  const { key } = chronicle.hand[index];
+  const play = { type: 'play', key, aim: 'tile', tile: city } as const;
   const landed = playedOn(chronicle, index, city);
   const warning = 'play-warning';
   expect(declaresWar(CATALOGUE, chronicle, play)).toBe(true);

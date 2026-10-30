@@ -15,6 +15,7 @@ import {
   AGE,
   achievementIn,
   aimedAt,
+  aimedAtNothing,
   besideTheNeutral,
   builtOn,
   CATALOGUE,
@@ -132,7 +133,8 @@ test('a chronicle saved and read back is the chronicle, and plays the next comma
 
 test('a chronicle saved and read back keeps every achievement’s tally, and counts on from it', () => {
   const [plain, , forest] = SURVEYED;
-  const surveyed = outcome(apply(CATALOGUE, surveying(), aimedAt(plain)));
+  const opened = surveying();
+  const surveyed = outcome(apply(CATALOGUE, opened, aimedAt(opened, plain)));
   const save = { chronicle: surveyed, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
@@ -140,7 +142,8 @@ test('a chronicle saved and read back keeps every achievement’s tally, and cou
   expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
   expect(read.chronicle).toEqual(save);
   if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
-  const counted = outcome(apply(CATALOGUE, read.chronicle.chronicle, aimedAt(forest)));
+  const loaded = read.chronicle.chronicle;
+  const counted = outcome(apply(CATALOGUE, loaded, aimedAt(loaded, forest)));
   expect(achievementIn(counted, SURVEY).reached).toBe(true);
 });
 
@@ -151,7 +154,7 @@ test('a chronicle saved with a unit embarked reads back with it embarked', () =>
     hand: ['PH_Embark'],
     units: [standing('player', CITY)],
   });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(coast)));
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
   const save = { chronicle: embarked, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
@@ -215,7 +218,7 @@ test('a chronicle saved with the neutral hostile and a unit of its prepared read
 
 test('a chronicle saved with a card on its exhaust pile reads back with it there', () => {
   const city = cityOf(['urban'], { hand: ['PH_Sow'] });
-  const sown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const sown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
   const save = { chronicle: sown, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
@@ -243,7 +246,7 @@ test('a chronicle saved with a turn shown reads back with it shown', () => {
     timeline: { ...NO_DEALS, next: 4 },
     hand: ['PH_Almanac', 'PH_Almanac'],
   });
-  const shown = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const shown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
   const save = { chronicle: shown, civilization: CIVILIZATION_ID };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));

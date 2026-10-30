@@ -499,17 +499,16 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     });
 
     const hand = createHand(this, ui, faces, CATALOGUE, {
-      play: (index, aimed) => {
-        const command: PlayCommand = { type: 'play', index, ...aimed };
+      play: (key, aimed) => {
+        const command: PlayCommand = { type: 'play', key, ...aimed };
         warnedOrLanded(command, () => {
           void playOut(command);
         });
       },
       dismiss,
-      aimTile: (index, card, released, retargeted) => {
+      aimTile: ({ key, id }, card, released, reaimed) => {
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
-        const { id } = this.current.hand[index];
         const refusal = refusalOf(CATALOGUE, this.current, id);
         /** Whether the aim at the tile is coming down for the aim at the unit it is played through. */
         let picking = false;
@@ -526,7 +525,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
               }
               const command: PlayCommand = {
                 type: 'play',
-                index,
+                key,
                 aim: 'tile',
                 tile: played,
                 through: tile,
@@ -557,10 +556,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
               picking = true;
               letGo();
               letGo = throughOne(tile, at, units);
-              retargeted('unit');
+              reaimed('unit');
               return;
             }
-            const command: PlayCommand = { type: 'play', index, aim: card.aim, tile };
+            const command: PlayCommand = { type: 'play', key, aim: card.aim, tile };
             warnedOrLanded(command, () => {
               hand.unselect();
               void playOut(command);

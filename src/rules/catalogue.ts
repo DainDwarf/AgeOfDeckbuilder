@@ -178,7 +178,7 @@ export type Aim =
     }
   | {
       readonly aim: 'hand';
-      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: number) => Landed;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, key: number) => Landed;
     };
 
 /**

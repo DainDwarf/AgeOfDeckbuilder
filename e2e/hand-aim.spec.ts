@@ -23,7 +23,7 @@ test('a card aimed at the hand is being aimed from its second click, says it is 
 
   await openSaved(page, opened, campaign);
   const home = await onScreen(page, `hand-${card}`);
-  const target = await onScreen(page, `hand-${other}`);
+  const aimedAt = await onScreen(page, `hand-${other}`);
 
   await page.mouse.click(home.x, home.y);
   await rested(page);
@@ -37,7 +37,7 @@ test('a card aimed at the hand is being aimed from its second click, says it is 
   expect(await aimLine(page)).toBe(text('aim.hand', { card: cardName(AIMED_AT_HAND) }));
   expect(await chronicleOf(page)).toEqual(opened);
 
-  await page.mouse.click(target.x, target.y);
+  await page.mouse.click(aimedAt.x, aimedAt.y);
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(playedAtCard(opened, card, other));
   expect(await aimLine(page)).toBeUndefined();

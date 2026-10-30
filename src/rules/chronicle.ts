@@ -120,8 +120,10 @@ import {
   type CardId,
   type Chronicle,
   type ChronicleAchievement,
+  type ChronicleCard,
   type CityFaction,
   capstoneLanded,
+  cardKeyed,
   cityRows,
   FIRST_KEY,
   keysDealt,
@@ -156,7 +158,7 @@ export type Command =
   | { readonly type: 'end-turn' }
   /** One entry of the deal standing taken, named by its place in the order dealt. */
   | { readonly type: 'take'; readonly at: number }
-  | ({ readonly type: 'play'; readonly index: number } & Aimed)
+  | ({ readonly type: 'play'; readonly key: number } & Aimed)
   | { readonly type: 'move'; readonly unit: number; readonly tile: TileCoords }
   | { readonly type: 'attack'; readonly unit: number; readonly tile: TileCoords }
   | CityCommand;
@@ -904,7 +906,12 @@ function citiesHalf(
     everyCity(chronicle, (city, whose) => income(catalogue, city, whose)),
   );
   const strikes = followed(earned, (left) => struck(catalogue, left));
-  const discarding = followed<Stage>(strikes, (left) => discarded(left, left.hand));
+  const discarding = followed<Stage>(strikes, (left) =>
+    discarded(
+      left,
+      left.hand.map(({ key }) => key),
+    ),
+  );
   const growth = followed<Stage>(discarding, (left) =>
     grouped({ name: 'grow' }, everyCity(left, grow)),
   );
@@ -1126,7 +1133,7 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
  * effect lands; a play refused is `refused`, nothing paid or discarded.
  */
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Sequence {
-  const held = chronicle.hand[command.index];
+  const held = cardKeyed(chronicle.hand, command.key);
   if (held === undefined || !playable(refusalOf(catalogue, chronicle, held.id))) {
     return refused(chronicle);
   }
@@ -1137,14 +1144,14 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   const cost = (left: Chronicle): Landed => costPaid(left, 'player', costs);
   return grouped(
     { name: 'played', card: held.id, aimed: aimedBy(command) },
-    followed(followed(landedAs(playedAway(catalogue, chronicle, command.index)), cost), effect),
+    followed(followed(landedAs(playedAway(catalogue, chronicle, held)), cost), effect),
   );
 }
 
-/** The card at that place of the hand leaving it played, for where it goes and as the card it goes as. */
-function playedAway(catalogue: Catalogue, chronicle: Chronicle, index: number): Change {
-  const hand = chronicle.hand.filter((_, at) => at !== index);
-  const lying = lyingAs(catalogue, chronicle.hand[index]);
+/** The card of the hand leaving it played, for where it goes and as the card it goes as. */
+function playedAway(catalogue: Catalogue, chronicle: Chronicle, played: ChronicleCard): Change {
+  const hand = chronicle.hand.filter(({ key }) => key !== played.key);
+  const lying = lyingAs(catalogue, played);
   switch (goesTo(cardOf(catalogue, lying.id))) {
     case 'discard-pile':
       return change(
@@ -1163,7 +1170,7 @@ function playedAway(catalogue: Catalogue, chronicle: Chronicle, index: number): 
   }
 }
 
-/** What a play aimed its card at, the hand's place it played from aside. */
+/** What a play aimed its card at, the key of the card played aside. */
 function aimedBy(command: PlayCommand): Aimed {
   switch (command.aim) {
     case 'none':
@@ -1181,8 +1188,7 @@ function aimedBy(command: PlayCommand): Aimed {
 
 /**
  * The card's effect with what the play aimed it at, judged before anything is paid; `undefined`
- * refuses the play. A card of the hand aimed at is handed to the effect one place earlier when it
- * lay after the card played.
+ * refuses the play.
  */
 function aimedEffect(
   catalogue: Catalogue,
@@ -1219,10 +1225,9 @@ function aimedEffect(
     }
     case 'hand': {
       if (command.aim !== 'hand') return undefined;
-      const at = command.card;
-      if (at === command.index || chronicle.hand[at] === undefined) return undefined;
-      const left = at > command.index ? at - 1 : at;
-      return (paid) => card.effect(catalogue, paid, left);
+      const { key, card: aimedAt } = command;
+      if (aimedAt === key || cardKeyed(chronicle.hand, aimedAt) === undefined) return undefined;
+      return (paid) => card.effect(catalogue, paid, aimedAt);
     }
   }
 }

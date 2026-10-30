@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A card named by its key** — a play command and the hand aim name their card by its key instead of its place in the hand, a key the hand does not hold refused; the personas, the fixtures and the spec helpers build their commands by key, the spec helpers still taking the slot; the simulator's trace names the card a play played, the card a hand aim was aimed at and the entry a take took. Doc-impact: `docs/SIMULATOR.md`. [board/a-card-named-by-its-key.md](board/a-card-named-by-its-key.md)
 - **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
 - **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
 - **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.

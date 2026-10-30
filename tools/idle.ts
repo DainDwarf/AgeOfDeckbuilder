@@ -44,7 +44,7 @@ export const IDLE: Persona = [
     sentence: "On the settle phase, settle on the map's centre tile",
     command: (_catalogue, chronicle) =>
       onSettlePhase(chronicle) && chronicle.city === undefined
-        ? { type: 'play', index: 0, aim: 'tile', tile: CENTRE }
+        ? { type: 'play', key: chronicle.hand[0].key, aim: 'tile', tile: CENTRE }
         : undefined,
   },
   TURN_ENDED,

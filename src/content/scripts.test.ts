@@ -369,8 +369,10 @@ test('a guard whose range is one passes over an embarked unit as over one out of
         enemyStanding({ q: 4, r: -2 }, camp, { stats: { move: 2 * MOVE_POINT, range } }),
       ],
     });
-  const embarked = (range: number): Chronicle =>
-    outcome(apply(CATALOGUE, guarded(range), aimedAt(coast)));
+  const embarked = (range: number): Chronicle => {
+    const city = guarded(range);
+    return outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
+  };
 
   expect(asked(GUARDING, embarked(1))).toEqual(asked(GUARDING, guarded(1)));
   expect(movesOf(embarked(2), GUARDING)).toEqual([['4,-2', '3,0']]);
@@ -537,8 +539,8 @@ test('a raider whose embark is held embarks onto another free tile on a route as
     hand: ['PH_Embark', 'PH_Embark'],
     units: [standing('player', CITY), standing('player', beside), standing('enemy', shore)],
   });
-  const one = outcome(apply(CATALOGUE, free, aimedAt(north)));
-  const both = outcome(apply(CATALOGUE, one, aimedAt(east)));
+  const one = outcome(apply(CATALOGUE, free, aimedAt(free, north)));
+  const both = outcome(apply(CATALOGUE, one, aimedAt(one, east)));
   const content = camping({ embarkedMove: EMBARKED_MOVE }, RAIDING);
 
   expect(movesOf(free, content)).toEqual([[tileKey(shore), tileKey(north)]]);

@@ -13,6 +13,7 @@ import { cityCommand, claimable, warDeclared } from './city';
 import { attackOrNone, enteredOnCamp, raided, rowsDrawn } from './enemies';
 import {
   aimedAt,
+  aimedAtNothing,
   attackOn,
   attacksOf,
   besideTheNeutral,
@@ -577,7 +578,7 @@ test('the chronicle opens with one guard of each camp the map was dealt standing
     civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Band'] },
   });
   const camps = campsInTileOrder(opened);
-  const banded = outcome(apply(CATALOGUE, opened, aimedAt(CITY, 1)));
+  const banded = outcome(apply(CATALOGUE, opened, aimedAt(opened, CITY, 1)));
 
   expect(
     opened.units.map((unit) => ({
@@ -1247,13 +1248,9 @@ test('two camps captured the turn before an event is due deal two deals of rewar
 test('the camp’s reward is a trophy: played, its effect lands and it is banished', () => {
   const city = cityOf(['urban'], { hand: ['PH_Spoils'] });
 
-  const played = outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' }));
+  const played = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
 
-  expect(stagedBy(city, { type: 'play', index: 0, aim: 'none' })).toEqual([
-    'played',
-    'banished',
-    'stock',
-  ]);
+  expect(stagedBy(city, aimedAtNothing(city))).toEqual(['played', 'banished', 'stock']);
   expect(played.resources).toEqual({
     food: 10,
     production: 10,
@@ -1405,17 +1402,12 @@ test('an enemy attacks only a unit within its range: one its script names beyond
 test('an enemy whose range is one attacks no embarked unit: one its script names beside it is a runtime-error and no attack, and ashore the attack lands', () => {
   const coast = { q: 1, r: 0 };
   const enemy = standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 });
-  const embarked = outcome(
-    apply(
-      CATALOGUE,
-      cityOf(['urban'], {
-        tiles: field(3, [coast]),
-        hand: ['PH_Embark'],
-        units: [standing('player', CITY), enemy],
-      }),
-      aimedAt(coast),
-    ),
-  );
+  const city = cityOf(['urban'], {
+    tiles: field(3, [coast]),
+    hand: ['PH_Embark'],
+    units: [standing('player', CITY), enemy],
+  });
+  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
   const ashore = cityOf(['urban'], {
     tiles: field(3),
     units: [standing('player', coast), enemy],

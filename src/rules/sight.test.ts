@@ -4,6 +4,7 @@ import { apply, outcome } from './chronicle';
 import { cultureThreshold } from './city';
 import {
   aimedAt,
+  aimedAtNothing,
   CATALOGUE,
   CITY,
   CIVILIZATION,
@@ -285,7 +286,7 @@ test('nothing sees on the settle phase: a unit entered at the centre part’s ed
     reach: 3,
     civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Band'] },
   });
-  const entered = outcome(apply(CATALOGUE, opened, aimedAt(at, 1)));
+  const entered = outcome(apply(CATALOGUE, opened, aimedAt(opened, at, 1)));
   const settled = settledOn(entered, CITY);
   const ticked = outcome(apply(CATALOGUE, settled, { type: 'end-turn' }));
 
@@ -316,17 +317,14 @@ test('what a command brings into sight is charted at its stage: a tile claimed o
   );
   const workerSight = CATALOGUE.units.PH_Worker.sight;
   const far = { q: workerSight, r: 0 };
-  const recruiting = apply(
-    CATALOGUE,
-    cityOf(['urban'], {
-      tiles: field(RADIUS),
-      hand: ['PH_Worker'],
-      population: 2,
-      resources: onlyStocks({ food: 2 }),
-      citySection: { ...CIVILIZATION.city, sight: workerSight - 1 },
-    }),
-    { type: 'play', index: 0, aim: 'none' },
-  );
+  const recruiter = cityOf(['urban'], {
+    tiles: field(RADIUS),
+    hand: ['PH_Worker'],
+    population: 2,
+    resources: onlyStocks({ food: 2 }),
+    citySection: { ...CIVILIZATION.city, sight: workerSight - 1 },
+  });
+  const recruiting = apply(CATALOGUE, recruiter, aimedAtNothing(recruiter));
 
   const [unheld, held] = aroundStage(claiming, 'held');
   const [unentered, entering] = aroundStage(recruiting, 'enter');

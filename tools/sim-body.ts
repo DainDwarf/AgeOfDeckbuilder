@@ -25,8 +25,15 @@ import { entryOf } from '../src/rules/map-kinds';
 import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
 import { offered } from '../src/rules/schedule';
-import { type Change, plays, type Sequence, walked } from '../src/rules/stages';
-import { type Chronicle, cardsInPiles, type Deal } from '../src/rules/state';
+import {
+  type Change,
+  type Play,
+  plays,
+  type Sequence,
+  type Stage,
+  walked,
+} from '../src/rules/stages';
+import { type Chronicle, cardKeyed, cardsInPiles } from '../src/rules/state';
 import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, listFlag, readFlags, stringFlag, wholeFlag, wholeNumber } from './flags';
 import {
@@ -41,6 +48,7 @@ import {
   type End,
   type FixedAnswer,
   fixedNamed,
+  type LandedCommand,
   type Persona,
   playedBy,
 } from './sim-driver';
@@ -165,8 +173,10 @@ export function simulated(
       throw new Error(`--every beside --trace: the trace writes no row\n${USAGE}`);
     print(recordOf(cell, undefined, turnCap, { trace: traced }));
     const { driven } = chronicleOf(cell, traced, turnCap);
-    for (const { turn, sentBy, command } of driven.landed) {
-      print(`turn ${turn} | ${sentBy} | ${JSON.stringify(command)}`);
+    for (const landed of driven.landed) {
+      const { turn, sentBy, command } = landed;
+      const line = [`turn ${turn}`, sentBy, JSON.stringify(command), ...namedBy(catalogue, landed)];
+      print(line.join(' | '));
     }
     print(`turn ${driven.end.turn} | ${endRead(driven.end)}`);
     return;
@@ -587,9 +597,7 @@ export function chronicleColumns(
     }
   }
   const deals = landed.flatMap(({ turn, command, stages: resolved }): [string, number][] =>
-    command.type === 'take'
-      ? [[dealTaken(catalogue, resolved[0].before.deals[0], command.at), turn]]
-      : [],
+    command.type === 'take' ? [[dealTaken(catalogue, resolved, command.at), turn]] : [],
   );
   const unplayed = cardsInPiles(chronicle)
     .map(({ id }) => id)
@@ -640,14 +648,47 @@ function unitKilled({ before, tile }: Change & { readonly tile: TileCoords }): U
   return unit;
 }
 
-/** The deal and the entry taken of it, by its place in the order dealt. */
-function dealTaken(catalogue: Catalogue, deal: Deal, at: number): string {
+/** The deal a take's stages opened on and the entry taken of it, by its place in the order dealt. */
+function dealTaken(catalogue: Catalogue, stages: readonly Stage[], at: number): string {
+  const [deal] = stages[0].before.deals;
   const entry = offered(catalogue, deal)[at];
   switch (deal.of) {
     case 'event':
       return `${deal.event}>${entry}`;
     case 'capture':
       return `${deal.building}>${entry}`;
+  }
+}
+
+/** The card a play played, joined to the card of the hand it was aimed at where it was. */
+function playNamed({ card, aimed, before }: Play): string {
+  switch (aimed.aim) {
+    case 'none':
+    case 'tile':
+    case 'unit':
+      return card;
+    case 'hand': {
+      const aimedAt = cardKeyed(before.hand, aimed.card);
+      if (aimedAt === undefined) throw new Error('a card aimed at a key the hand did not hold');
+      return `${card}>${aimedAt.id}`;
+    }
+  }
+}
+
+/** What a trace line names after its command: the card a play played, the entry a take took. */
+function namedBy(catalogue: Catalogue, { command, stages }: LandedCommand): string[] {
+  switch (command.type) {
+    case 'play':
+      return [playNamed(plays(stages)[0])];
+    case 'take':
+      return [dealTaken(catalogue, stages, command.at)];
+    case 'end-turn':
+    case 'move':
+    case 'attack':
+    case 'assign':
+    case 'reassign':
+    case 'claim':
+      return [];
   }
 }
 

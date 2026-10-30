@@ -7,6 +7,7 @@ import {
   AGE,
   AMBUSH,
   aimedAt,
+  aimedAtNothing,
   assignTo,
   besideTheNeutral,
   buildingAt,
@@ -41,7 +42,6 @@ import {
   only,
   onlyStocks,
   opening,
-  PLAYED,
   plains,
   QUIET,
   REGION,
@@ -507,7 +507,7 @@ test('a chronicle waiting on a deal takes no command but the take', () => {
   });
   const refused: Command[] = [
     { type: 'end-turn' },
-    { type: 'play', index: 0, aim: 'none' },
+    aimedAtNothing(waiting),
     assignTo({ q: 1, r: 0 }),
   ];
 
@@ -1268,7 +1268,7 @@ test('a tile whose feature a card removed is dealt that feature again by an answ
   const at = { q: HERD, r: 0 };
   const city = herded([], { hand: ['PH_Hunt'], units: [worker(at)] });
 
-  const hunted = outcome(apply(CATALOGUE, city, aimedAt(at)));
+  const hunted = outcome(apply(CATALOGUE, city, aimedAt(city, at)));
   const { landed } = followed(hunted);
 
   expect(featureOf(city, at)).toBe('PH_Fertile');
@@ -1572,25 +1572,14 @@ const FARMING: Carrying = {
 
 /** The chronicle with the farm card in its hand played on the tilled tile. A refused play throws. */
 function tilled(chronicle: Chronicle): Chronicle {
-  const play: Command = {
-    type: 'play',
-    index: idsOf(chronicle.hand).indexOf('PH_Farm'),
-    aim: 'tile',
-    tile: TILLED,
-  };
-  const played = outcome(apply(CATALOGUE, chronicle, play));
+  const played = outcome(apply(CATALOGUE, chronicle, tilling(chronicle)));
   if (played === chronicle) throw new Error('the farm is refused on the tilled tile');
   return played;
 }
 
 /** The farm card played on the tilled tile: what a play of it resolves as. */
 function tilling(chronicle: Chronicle): Command {
-  return {
-    type: 'play',
-    index: idsOf(chronicle.hand).indexOf('PH_Farm'),
-    aim: 'tile',
-    tile: TILLED,
-  };
+  return playedOnTilled(chronicle, 'PH_Farm');
 }
 
 test('a building that passes a capstone ends the chronicle in victory on the play that builds it, the landing turn included', () => {
@@ -1719,7 +1708,7 @@ function awaitingTower(carrying: Carrying = {}): Chronicle {
 
 /** The card in the chronicle's hand played on the tilled tile. */
 function playedOnTilled(chronicle: Chronicle, card: string): Command {
-  return { type: 'play', index: idsOf(chronicle.hand).indexOf(card), aim: 'tile', tile: TILLED };
+  return aimedAt(chronicle, TILLED, idsOf(chronicle.hand).indexOf(card));
 }
 
 test('a capstone naming what fails it ends the chronicle in defeat on the change after which it holds, from its landing on: a building it names removed, never before the landing, and never the next built over it', () => {
@@ -1754,7 +1743,7 @@ test('a card showing the turn of the next landing shows the next due turn, and i
     hand: ['PH_Almanac', 'PH_Almanac'],
     drawPile: ['PH_Almanac'],
   });
-  const shown = outcome(apply(CATALOGUE, city, PLAYED));
+  const shown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
   const next = endedTurn(shown, 'PH_Stay');
   const due = endedTurn(next, 'PH_Stay');
 
@@ -1762,13 +1751,13 @@ test('a card showing the turn of the next landing shows the next due turn, and i
   expect(turnShown(shown)).toBe(city.timeline.next);
   expect(shown.timeline).toEqual(city.timeline);
   expect(refusalOf(CATALOGUE, shown, 'PH_Almanac').blocked).toEqual(['turn-shown']);
-  expect(stagedBy(shown, PLAYED)).toEqual(['refused']);
+  expect(stagedBy(shown, aimedAtNothing(shown))).toEqual(['refused']);
   expect(next.turn).toBe(city.turn + 1);
   expect(refusalOf(CATALOGUE, next, 'PH_Almanac').blocked).toEqual(['turn-shown']);
   expect(due.turn).toBe(city.timeline.next);
   expect(turnShown(due)).toBeUndefined();
   expect(refusalOf(CATALOGUE, due, 'PH_Almanac').blocked).toEqual([]);
-  expect(turnShown(outcome(apply(CATALOGUE, due, PLAYED)))).toBeGreaterThan(due.turn);
+  expect(turnShown(outcome(apply(CATALOGUE, due, aimedAtNothing(due))))).toBeGreaterThan(due.turn);
 });
 
 test('a card showing the turn of the next landing shows the capstone’s where it lands before the next due turn, and the due turn once the capstone has landed', () => {
@@ -1778,9 +1767,9 @@ test('a card showing the turn of the next landing shows the capstone’s where i
     hand: ['PH_Almanac'],
     drawPile: ['PH_Almanac'],
   });
-  const shown = outcome(apply(CATALOGUE, city, PLAYED));
+  const shown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
   const landed = endedTurn(endedTurn(shown));
-  const after = outcome(apply(CATALOGUE, landed, PLAYED));
+  const after = outcome(apply(CATALOGUE, landed, aimedAtNothing(landed)));
 
   expect(turnShown(shown)).toBe(capstone);
   expect(landed.turn).toBe(capstone);

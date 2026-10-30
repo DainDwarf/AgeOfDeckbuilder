@@ -18,6 +18,7 @@ import {
   achieved,
   achievementIn,
   aimedAt,
+  aimedAtNothing,
   aimedAtUnit,
   attackOn,
   begunOn,
@@ -48,7 +49,6 @@ import {
   NO_GROWTH,
   namesOf,
   opening,
-  PLAYED,
   plains,
   QUIET,
   REGION,
@@ -199,11 +199,29 @@ test('the hand holds five cards on turn 1, and five again after every turn', () 
 
 test('a play the rules refuse is one refused stage, on the chronicle as it stood', () => {
   const penniless = cityOf(['urban'], { hand: ['PH_Warrior'] });
-  const command: Command = { type: 'play', index: 0, aim: 'none' };
+  const command = aimedAtNothing(penniless);
 
   expect(stagedBy(penniless, command)).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, penniless, command))).toBe(penniless);
-  expect(stagedBy(penniless, { type: 'play', index: 3, aim: 'none' })).toEqual(['refused']);
+  expect(stagedBy(penniless, { type: 'play', key: penniless.nextKey, aim: 'none' })).toEqual([
+    'refused',
+  ]);
+});
+
+test('a play names its card by its key from any place of the hand, and a key the hand does not hold is refused', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Harvest', 'PH_March', 'PH_Harvest'],
+    discardPile: ['PH_Stake'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+  const [first, march, last] = city.hand;
+  const lying = city.discardPile[0];
+
+  const after = outcome(apply(CATALOGUE, city, { type: 'play', key: last.key, aim: 'none' }));
+
+  expect(after.hand).toEqual([first, march]);
+  expect(after.discardPile).toEqual([lying, last]);
+  expect(stagedBy(city, { type: 'play', key: lying.key, aim: 'none' })).toEqual(['refused']);
 });
 
 test('a card that lands whole is played as one played group, closing on the chronicle its effect left', () => {
@@ -212,7 +230,7 @@ test('a card that lands whole is played as one played group, closing on the chro
     resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
 
-  const stages = apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' });
+  const stages = apply(CATALOGUE, city, aimedAtNothing(city));
 
   expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'stock']);
   expect(stages[0].chronicle.resources).toEqual({ ...city.resources, food: 3, science: 0 });
@@ -236,7 +254,7 @@ test('a card played goes to the discard pile, then pays its cost as one stock, t
     resources: { food: 1, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
 
-  const [discarded, paid, gained, ...rest] = playedOver(city, PLAYED);
+  const [discarded, paid, gained, ...rest] = playedOver(city, aimedAtNothing(city));
 
   expect([discarded, paid, gained].map(({ name }) => name)).toEqual([
     'discarded',
@@ -254,7 +272,7 @@ test('a card played goes to the discard pile, then pays its cost as one stock, t
 test('a free card played raises no stock for its cost, and a card carrying banish is in no pile once played', () => {
   const city = cityOf(['urban'], { hand: ['PH_Idol'] });
 
-  const [banished, gained, ...rest] = playedOver(city, PLAYED);
+  const [banished, gained, ...rest] = playedOver(city, aimedAtNothing(city));
 
   expect([banished, gained].map(({ name }) => name)).toEqual(['banished', 'stock']);
   expect(rest).toEqual([]);
@@ -264,7 +282,7 @@ test('a free card played raises no stock for its cost, and a card carrying banis
 
 test('a card carrying exhaust, played, lies on the exhaust pile from its place in the hand and never comes around; discarded unplayed, it comes around', () => {
   const city = cityOf(['urban'], { ...NO_GROWTH, hand: ['PH_Harvest', 'PH_Sprout'] });
-  const played: Command = { type: 'play', index: 1, aim: 'none' };
+  const played = aimedAtNothing(city, 1);
 
   const [exhausted] = playedOver(city, played);
   const after = outcome(apply(CATALOGUE, city, played));
@@ -281,8 +299,8 @@ test('a card carrying exhaust, played, lies on the exhaust pile from its place i
 test('a card that becomes one carrying exhaust, played, lies on the exhaust pile as that card at its own counters', () => {
   const city = cityOf(['urban'], { hand: ['PH_Sow'] });
 
-  const [moved] = playedOver(city, PLAYED);
-  const sown = outcome(apply(CATALOGUE, city, PLAYED));
+  const [moved] = playedOver(city, aimedAtNothing(city));
+  const sown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
 
   expect(moved.name).toBe('exhausted');
   expect(sown.exhaustPile).toEqual([
@@ -294,10 +312,10 @@ test('a card that becomes one carrying exhaust, played, lies on the exhaust pile
 test('a card that becomes another, played, lies on the discard pile as that card at its own counters and comes around as it', () => {
   const city = cityOf(['urban'], { hand: ['PH_Flood'] });
 
-  const [moved] = playedOver(city, PLAYED);
-  const flooded = outcome(apply(CATALOGUE, city, PLAYED));
+  const [moved] = playedOver(city, aimedAtNothing(city));
+  const flooded = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
   const drawn = endedTurn(flooded);
-  const ebbed = outcome(apply(CATALOGUE, drawn, PLAYED));
+  const ebbed = outcome(apply(CATALOGUE, drawn, aimedAtNothing(drawn)));
 
   const { key } = city.hand[0];
   expect(moved.name).toBe('discarded');
@@ -318,7 +336,10 @@ test('a card whose effect moves nothing is played over its leaving and its cost 
     resources: { food: 0, production: 3, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  expect(playedOver(city, PLAYED).map(({ name }) => name)).toEqual(['banished', 'stock']);
+  expect(playedOver(city, aimedAtNothing(city)).map(({ name }) => name)).toEqual([
+    'banished',
+    'stock',
+  ]);
 });
 
 /** The first change of that name the walk meets. A tree holding none throws. */
@@ -361,7 +382,7 @@ test('the cards out of the hand are found by key in the pile they went to, and a
     hand: ['PH_Harvest', 'PH_Harvest'],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
-  const second = apply(CATALOGUE, copies, { type: 'play', index: 1, aim: 'none' });
+  const second = apply(CATALOGUE, copies, aimedAtNothing(copies, 1));
   const played = changeNamed(second, 'discarded');
 
   expect(cardsOutOfHand(played.before, played.chronicle)).toEqual([copies.hand[1]]);
@@ -422,7 +443,7 @@ test('a unit card is played over its cost, one population fewer, and the unit en
     resources: { food: 2, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const held = playedOver(city, PLAYED);
+  const held = playedOver(city, aimedAtNothing(city));
   const [, , fewer, entering] = held;
 
   expect(held.map(({ name }) => name)).toEqual(['discarded', 'stock', 'population', 'enter']);
@@ -437,7 +458,7 @@ test('a second settle raises no change for a row it leaves where it stood: the p
   const first = settledOn(opened, CITY);
   const moved = { q: 1, r: 0 };
 
-  const held = playedOver(first, aimedAt(moved));
+  const held = playedOver(first, aimedAt(first, moved));
 
   expect(first.population).toBe(1 + CIVILIZATION.city.idle);
   expect(held.map(({ name }) => name)).toEqual([
@@ -448,13 +469,13 @@ test('a second settle raises no change for a row it leaves where it stood: the p
     'assigned',
     'settled',
   ]);
-  expect(outcome(apply(CATALOGUE, first, aimedAt(moved))).city).toEqual(moved);
+  expect(outcome(apply(CATALOGUE, first, aimedAt(first, moved))).city).toEqual(moved);
 });
 
 test('the settle is played over the card leaving and the settle’s own changes, all on the city’s tile', () => {
   const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
 
-  const held = playedOver(opened, aimedAt(CITY));
+  const held = playedOver(opened, aimedAt(opened, CITY));
   const [banished, ...changes] = held;
   const [, built, holding, population, assigned, stood] = changes;
 
@@ -477,13 +498,13 @@ test('the settle is played over the card leaving and the settle’s own changes,
   expect(assigned.chronicle.assigned).toEqual([CITY]);
   for (const change of changes.slice(0, 4)) expect(change.chronicle.city).toBeUndefined();
   expect(stood.chronicle.city).toEqual(CITY);
-  expect(outcome(apply(CATALOGUE, opened, aimedAt(CITY))).ending).toBeUndefined();
+  expect(outcome(apply(CATALOGUE, opened, aimedAt(opened, CITY))).ending).toBeUndefined();
 });
 
 test('the settle raises no ending: the city stands only once everything it runs on is in place', () => {
   const opened = opening(plainDisc(), { civilization: { ...CIVILIZATION, settle: [] } });
 
-  const names = stagedBy(opened, aimedAt(CITY));
+  const names = stagedBy(opened, aimedAt(opened, CITY));
 
   expect(names).not.toContain('ended');
   expect(names[names.length - 1]).toBe('settled');
@@ -638,7 +659,7 @@ test('every card of the deck is in exactly one pile through a full cycle', () =>
   expect(deck).toHaveLength(CIVILIZATION.cards.length);
 
   for (let turn = 0; turn < 8; turn++) {
-    chronicle = outcome(apply(CATALOGUE, chronicle, { type: 'play', index: 0, aim: 'none' }));
+    chronicle = outcome(apply(CATALOGUE, chronicle, aimedAtNothing(chronicle)));
     chronicle = endedTurn(chronicle);
     expect(everyCard(chronicle)).toEqual(deck);
   }
@@ -682,9 +703,7 @@ test('ending the settle phase is refused while the city stands nowhere, and a ch
   expect(opened.population).toBe(0);
   expect(stagedBy(opened, { type: 'end-turn' })).toEqual(['refused']);
   expect(outcome(apply(CATALOGUE, opened, { type: 'end-turn' }))).toBe(opened);
-  expect(outcome(apply(CATALOGUE, opened, { type: 'play', index: 0, aim: 'none' })).ending).toBe(
-    undefined,
-  );
+  expect(outcome(apply(CATALOGUE, opened, aimedAtNothing(opened))).ending).toBe(undefined);
 });
 
 test('the end of the settle phase runs none of the cycle: turn 1 and its hand drawn, no income, no growth, and the settle cards left in hand banished', () => {
@@ -713,7 +732,7 @@ test('a settle card played is banished, and the hand holds the city section’s 
     civilization: { ...CIVILIZATION, cards: [], settle: ['PH_Stores', 'PH_Band'] },
   });
 
-  const stocked = outcome(apply(CATALOGUE, opened, { type: 'play', index: 1, aim: 'none' }));
+  const stocked = outcome(apply(CATALOGUE, opened, aimedAtNothing(opened, 1)));
 
   expect(idsOf(opened.hand)).toEqual([CIVILIZATION.city.card, 'PH_Stores', 'PH_Band']);
   expect(stocked.resources.food).toBe(2);
@@ -858,7 +877,7 @@ test('two achievements one change meets are each recorded as a reached of its ow
     },
   });
 
-  const stages = apply(CATALOGUE, city, PLAYED);
+  const stages = apply(CATALOGUE, city, aimedAtNothing(city));
   const [, , gained, first, second] = [...walked(stages)];
 
   expect(FEAST_NEED).toBeGreaterThan(HOARD_NEED);
@@ -916,7 +935,7 @@ test('a victory is followed by its achievement, recorded after the ending, and a
     resources: { food: HOARD_NEED, production: 0, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const stages = apply(CATALOGUE, city, PLAYED);
+  const stages = apply(CATALOGUE, city, aimedAtNothing(city));
   const [, banished, hoarded, ended, won] = [...walked(stages)];
 
   expect(namesOf(stages)).toEqual(['played', 'banished', 'reached', 'ended', 'reached']);
@@ -1007,10 +1026,14 @@ test('an achievement that counts the charted tiles is recorded right after the m
 
 test('an achievement keeping a tally is reached at the end of the command whose deed brings its count to the need, whatever was played between', () => {
   const [plain, other, forest] = SURVEYED;
-  const first = apply(CATALOGUE, surveying(), aimedAt(plain));
-  const between = apply(CATALOGUE, outcome(first), { type: 'play', index: 2, aim: 'none' });
-  const second = apply(CATALOGUE, outcome(between), aimedAt(other));
-  const third = apply(CATALOGUE, outcome(second), aimedAt(forest));
+  const staking = surveying();
+  const first = apply(CATALOGUE, staking, aimedAt(staking, plain));
+  const staked = outcome(first);
+  const between = apply(CATALOGUE, staked, aimedAtNothing(staked, 2));
+  const harvested = outcome(between);
+  const second = apply(CATALOGUE, harvested, aimedAt(harvested, other));
+  const twice = outcome(second);
+  const third = apply(CATALOGUE, twice, aimedAt(twice, forest));
 
   expect(namesOf(first).at(-1)).toBe('tallied');
   expect(achievementIn(outcome(first), SURVEY)).toEqual({
@@ -1050,18 +1073,15 @@ test('a command the chronicle ends on moves no tally, so a deed whose count it w
       },
     },
   };
-  const surveyed = outcome(
-    apply(
-      staking,
-      surveying({ timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } } }),
-      aimedAt(plain),
-    ),
-  );
+  const opened = surveying({
+    timeline: { ...NO_DEALS, capstone: { id: 'PH_Tillage', turn: 1 } },
+  });
+  const surveyed = outcome(apply(staking, opened, aimedAt(opened, plain)));
 
-  const stages = apply(staking, surveyed, aimedAt(forest));
+  const stages = apply(staking, surveyed, aimedAt(surveyed, forest));
 
   expect(achievementIn(surveyed, SURVEY).tally).toEqual({ plain: 1 });
-  expect(namesOf(apply(CATALOGUE, surveyed, aimedAt(forest))).slice(-2)).toEqual([
+  expect(namesOf(apply(CATALOGUE, surveyed, aimedAt(surveyed, forest))).slice(-2)).toEqual([
     'tallied',
     'reached',
   ]);
@@ -1081,7 +1101,8 @@ test('a command moving the tallies of two achievements raises a tallied for each
     [HOARD]: { ...achievementOf(CATALOGUE, AGE, HOARD), tallies, count, need: 1 },
   });
 
-  const stages = apply(twoTallies, surveying(), aimedAt(plain));
+  const opened = surveying();
+  const stages = apply(twoTallies, opened, aimedAt(opened, plain));
   const [hoarded, surveyed, met] = [...walked(stages)].slice(-3);
 
   expect(namesOf(stages).slice(-3)).toEqual(['tallied', 'tallied', 'reached']);
@@ -1118,7 +1139,7 @@ test('an achievement counting the kinds of terrain a card is played on counts a 
     hand: ['PH_March'],
   });
 
-  const stages = apply(marching, city, aimedAtUnit(forest));
+  const stages = apply(marching, city, aimedAtUnit(city, forest));
 
   expect(achievementIn(outcome(stages), HOARD)).toEqual({
     id: HOARD,
@@ -1150,9 +1171,11 @@ test('an achievement counting a card’s plays anywhere counts each one whatever
     hand: ['PH_Hunt', 'PH_Cache', 'PH_Hunt'],
   });
 
-  const first = apply(hunting, city, aimedAt(fertile));
-  const other = apply(hunting, outcome(first), { type: 'play', index: 0, aim: 'none' });
-  const second = apply(hunting, outcome(other), aimedAt(game));
+  const first = apply(hunting, city, aimedAt(city, fertile));
+  const hunted = outcome(first);
+  const other = apply(hunting, hunted, aimedAtNothing(hunted));
+  const cached = outcome(other);
+  const second = apply(hunting, cached, aimedAt(cached, game));
 
   expect(achievementIn(outcome(first), HOARD).tally).toEqual({ plays: 1 });
   expect(namesOf(other)).not.toContain('tallied');
@@ -1178,9 +1201,11 @@ test('an achievement counting a card’s plays along a river counts each one aim
     resources: { food: 0, production: 9, military: 0, money: 0, science: 0, culture: 0 },
   });
 
-  const first = apply(CATALOGUE, city, aimedAt(banked));
-  const elsewhere = apply(CATALOGUE, outcome(first), aimedAt(dry));
-  const second = apply(CATALOGUE, outcome(elsewhere), aimedAt(bent));
+  const first = apply(CATALOGUE, city, aimedAt(city, banked));
+  const built = outcome(first);
+  const elsewhere = apply(CATALOGUE, built, aimedAt(built, dry));
+  const twice = outcome(elsewhere);
+  const second = apply(CATALOGUE, twice, aimedAt(twice, bent));
 
   expect(achievementIn(outcome(first), RIVERSIDE)).toEqual({
     id: RIVERSIDE,
@@ -1220,8 +1245,9 @@ test('an achievement counting a card’s plays on a feature counts one on a tile
     hand: ['PH_Hunt', 'PH_Hunt'],
   });
 
-  const elsewhere = apply(hunting, city, aimedAt(other));
-  const hunted = apply(hunting, outcome(elsewhere), aimedAt(carrying));
+  const elsewhere = apply(hunting, city, aimedAt(city, other));
+  const once = outcome(elsewhere);
+  const hunted = apply(hunting, once, aimedAt(once, carrying));
 
   expect(tileAt(outcome(elsewhere).tiles, other)?.feature).toBeUndefined();
   expect(namesOf(elsewhere)).not.toContain('tallied');
@@ -1294,8 +1320,8 @@ test('an achievement counting the turns on which that many cards were played cou
   const { count } = achievementOf(counting, AGE, HOARD);
   const countOn = (chronicle: Chronicle): number =>
     count(counting, chronicle, achievementIn(chronicle, HOARD).tally);
-  const played = (chronicle: Chronicle, index = 0): Chronicle =>
-    outcome(apply(counting, chronicle, { type: 'play', index, aim: 'none' }));
+  const played = (chronicle: Chronicle, at = 0): Chronicle =>
+    outcome(apply(counting, chronicle, aimedAtNothing(chronicle, at)));
 
   const settling = opening(plains(3), {
     age: AGE,
@@ -1345,8 +1371,9 @@ test('an achievement counting a resource gained from the tiles of a terrain coun
   });
   const food = (terrain: string): number => terrainKind(CATALOGUE, terrain).yields.food ?? 0;
 
-  const foraged = apply(gathering, city, aimedAt(out));
-  const harvested = apply(gathering, outcome(foraged), { type: 'play', index: 0, aim: 'none' });
+  const foraged = apply(gathering, city, aimedAt(city, out));
+  const gathered = outcome(foraged);
+  const harvested = apply(gathering, gathered, aimedAtNothing(gathered));
   const ended = endedTurn(outcome(harvested), undefined, gathering);
 
   expect(food('forest')).toBeGreaterThan(0);
@@ -1384,11 +1411,9 @@ test('a chronicle that has ended takes no command at all', () => {
     ending: { outcome: 'defeat', cause: 'capture', turn: city.turn },
   };
 
-  expect(
-    outcome(apply(CATALOGUE, city, { type: 'play', index: 0, aim: 'none' })).resources.food,
-  ).toBeGreaterThan(0);
+  expect(outcome(apply(CATALOGUE, city, aimedAtNothing(city))).resources.food).toBeGreaterThan(0);
   expect(outcome(apply(CATALOGUE, fallen, { type: 'end-turn' }))).toBe(fallen);
-  expect(outcome(apply(CATALOGUE, fallen, { type: 'play', index: 0, aim: 'none' }))).toBe(fallen);
+  expect(outcome(apply(CATALOGUE, fallen, aimedAtNothing(fallen)))).toBe(fallen);
   expect(stagedBy(fallen, { type: 'end-turn' })).toEqual(['refused']);
-  expect(stagedBy(fallen, { type: 'play', index: 0, aim: 'none' })).toEqual(['refused']);
+  expect(stagedBy(fallen, aimedAtNothing(fallen))).toEqual(['refused']);
 });

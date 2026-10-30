@@ -65,10 +65,7 @@ export type Aimed =
     }
   | {
       readonly aim: 'hand';
-      /**
-       * Where in the hand the card aimed at lies, in the hand as it stood before the play: the play
-       * takes the card being played out of the hand before the effect resolves.
-       */
+      /** The key of the card aimed at. */
       readonly card: number;
     };
 

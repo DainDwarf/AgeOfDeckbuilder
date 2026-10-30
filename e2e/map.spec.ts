@@ -440,8 +440,8 @@ test('a drag during a tile aim pans the map, and the aim still plays after it', 
   expect(await standing(page, 'aim')).toBe(true);
   expect(await chronicleOf(page)).toEqual(step.stepped);
 
-  const target = await onScreen(page, `tile-${tileKey(step.tile)}`);
-  await page.mouse.click(target.x, target.y);
+  const aimedAt = await onScreen(page, `tile-${tileKey(step.tile)}`);
+  await page.mouse.click(aimedAt.x, aimedAt.y);
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(gathered);
 

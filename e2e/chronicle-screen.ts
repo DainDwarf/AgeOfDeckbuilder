@@ -266,7 +266,7 @@ export function playedAtNothing(chronicle: Chronicle, index: number): Chronicle 
  * hand; a refusal throws.
  */
 export function playedAtCard(chronicle: Chronicle, index: number, card: number): Chronicle {
-  return playedAs(chronicle, index, { aim: 'hand', card });
+  return playedAs(chronicle, index, { aim: 'hand', card: chronicle.hand[card].key });
 }
 
 /**
@@ -278,9 +278,11 @@ export function playedAtUnit(chronicle: Chronicle, index: number, tile: TileCoor
 }
 
 function playedAs(chronicle: Chronicle, index: number, aimed: Aimed): Chronicle {
-  const played = outcome(apply(CATALOGUE, chronicle, { type: 'play', index, ...aimed }));
-  if (played === chronicle) {
-    const card = chronicle.hand[index]?.id ?? `no card at ${index}`;
+  const held = chronicle.hand[index];
+  const played =
+    held && outcome(apply(CATALOGUE, chronicle, { type: 'play', key: held.key, ...aimed }));
+  if (played === undefined || played === chronicle) {
+    const card = held?.id ?? `no card at ${index}`;
     throw new Error(`seed ${chronicle.seed} refuses ${card} aimed as ${JSON.stringify(aimed)}`);
   }
   return played;
