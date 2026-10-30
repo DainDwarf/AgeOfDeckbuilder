@@ -26,6 +26,7 @@ import {
   glyphsOf,
   marksIn,
   nearestUncharted,
+  onDesignedSpeed,
   openSaved,
   playerCityTile,
   playersOf,
@@ -276,6 +277,7 @@ test('an attack that kills the unit whose sight alone held its tiles plays befor
   const mark = `unit-${tileKey(alone)}`;
   const scrim = `fog-${tileKey(alone)}`;
   expect(playersOf(outcome(apply(CATALOGUE, stood, { type: 'end-turn' })))).toEqual([]);
+  onDesignedSpeed(page);
 
   await openSaved(page, stood);
 

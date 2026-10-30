@@ -88,6 +88,11 @@ import {
   unitAt,
 } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
+import {
+  ANIMATION_SPEED_ENTRY,
+  ANIMATION_SPEEDS,
+  serialiseAnimationSpeed,
+} from '../src/ui/animation-speed';
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -294,7 +299,10 @@ const DRAG = 140;
 /** What the dev server's first transform costs the spec that opens on it, and then some. */
 const COLD_START_MS = 10_000;
 
-/** What one end of turn takes with every stage of it played out, and then some. */
+/**
+ * What one end of turn takes with every stage of it played out, and then some: measured 2026-10-30
+ * locally at 1.85 s at ×1 and 0.66 s at ×4, so five times the designed turn and fifteen the suite's.
+ */
 const TURN_MS = 10_000;
 
 /**
@@ -340,8 +348,39 @@ export async function capstoneClosed(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** Gives the pages this one loads from now on `window.named` and `window.readName`. */
+/** The pages `onDesignedSpeed` took out of the plant. */
+const ON_DESIGNED_SPEED = new WeakSet<Page>();
+
+/**
+ * This page opens on the designed speed, called before its open. The entry is left alone, not
+ * written: a write at every load would take back the speed a press kept across a reload.
+ */
+export function onDesignedSpeed(page: Page): void {
+  ON_DESIGNED_SPEED.add(page);
+}
+
+/** The text written under the entry at every load of the pages this one loads from now on. */
+export async function plantEntry(page: Page, entry: string, text: string): Promise<void> {
+  await page.addInitScript(
+    ({ entry, text }) => {
+      window.localStorage.setItem(entry, text);
+    },
+    { entry, text },
+  );
+}
+
+/** The fastest speed the player can set, kept as the one the pages this one loads from now on find. */
+async function plantFastestSpeed(page: Page): Promise<void> {
+  const fastest = ANIMATION_SPEEDS[ANIMATION_SPEEDS.length - 1];
+  await plantEntry(page, ANIMATION_SPEED_ENTRY, serialiseAnimationSpeed(fastest));
+}
+
+/**
+ * Gives the pages this one loads from now on `window.named` and `window.readName`, and the fastest
+ * speed unless `onDesignedSpeed` took the page.
+ */
 export async function readNames(page: Page): Promise<void> {
+  if (!ON_DESIGNED_SPEED.has(page)) await plantFastestSpeed(page);
   await page.addInitScript(() => {
     const within = (
       list: Phaser.GameObjects.GameObject[],
@@ -576,12 +615,7 @@ export async function plantCampaign(page: Page, campaign: Campaign): Promise<voi
 
 /** The bindings kept as the ones the pages this one loads from now on find, the wheel as it began. */
 export async function plantControls(page: Page, bindings: Bindings): Promise<void> {
-  await page.addInitScript(
-    ({ entry, kept }) => {
-      window.localStorage.setItem(entry, kept);
-    },
-    { entry: STORED, kept: serialiseControls(bindings, UPRIGHT) },
-  );
+  await plantEntry(page, STORED, serialiseControls(bindings, UPRIGHT));
 }
 
 /** What the browser keeps under the entry right now, and nothing where it keeps nothing. */

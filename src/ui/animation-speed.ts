@@ -7,7 +7,7 @@ export const ANIMATION_SPEEDS = [1, 2, 4] as const;
 type AnimationSpeed = (typeof ANIMATION_SPEEDS)[number];
 
 /** Where the browser keeps the speed, apart from what the Controls window's Default puts back. */
-const ANIMATION_SPEED_ENTRY = 'age-of-deckbuilder.animation-speed';
+export const ANIMATION_SPEED_ENTRY = 'age-of-deckbuilder.animation-speed';
 
 /** The speed kept: whatever is not one of the speeds stands at the designed one. */
 export function parseAnimationSpeed(stored: string | null): AnimationSpeed {

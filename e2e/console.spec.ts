@@ -24,6 +24,7 @@ import {
   heldSave,
   launchedAs,
   marksIn,
+  onDesignedSpeed,
   openLaunch,
   openSaved,
   playerCityTile,
@@ -407,6 +408,7 @@ test('unit run while an end of turn plays out stands the screen on the chronicle
     fogMarks: oracle.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
     endTurn: text('button.turn', { turn: oracle.turn }),
   };
+  onDesignedSpeed(page);
 
   await openSaved(page, stood);
   await consoleKey(page);

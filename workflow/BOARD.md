@@ -18,5 +18,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
-
-- **The suite on the fastest animation speed** — every spec opens at ×4 through the entry the game keeps the speed in, the seven tests that catch the screen inside a motion open at ×1, the turn budget keeps its numbers against the measurement, and `DOGMAS.md` says so. Doc-impact: none in `docs/`; `DOGMAS.md` → Testing. [board/suite-at-fastest-speed.md](board/suite-at-fastest-speed.md)

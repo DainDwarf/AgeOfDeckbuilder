@@ -9,6 +9,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  onDesignedSpeed,
   onScreen,
   openSaved,
   playing,
@@ -43,6 +44,7 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
   const names = [...walked(stages)].map((stage) => stage.name);
   expect(names.indexOf('drawn')).toBeLessThan(names.indexOf('shuffled'));
   const once = outcome(stages);
+  onDesignedSpeed(page);
 
   await openSaved(page, opened);
 

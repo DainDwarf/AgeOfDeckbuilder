@@ -24,6 +24,7 @@ import {
   heldSave,
   influenceCardGaining,
   landed,
+  onDesignedSpeed,
   onScreen,
   openSaved,
   playedOn,
@@ -195,6 +196,7 @@ test('End chronicle answers no press and reads an arrow while the ending screen 
   const problems = watch(page);
   test.setTimeout(budget(1));
   const { chronicle, index, tile } = landed();
+  onDesignedSpeed(page);
 
   await playTheWin(page, chronicle, index, tile);
   // The rise is a tween on the overlay's clock, held in the first frame the screen shows at all, so

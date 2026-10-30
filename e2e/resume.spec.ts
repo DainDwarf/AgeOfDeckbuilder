@@ -15,6 +15,7 @@ import {
   firstDealt,
   launchedAs,
   openSaved,
+  plantEntry,
   plantSaved,
   playedOut,
   readNames,
@@ -65,9 +66,7 @@ test('a save that cannot be read is dropped, the console says why, and the campa
     if (message.type() === 'warning') warnings.push(message.text());
   });
   await readNames(page);
-  await page.addInitScript((entry) => {
-    window.localStorage.setItem(entry, 'no save');
-  }, SAVE_ENTRY);
+  await plantEntry(page, SAVE_ENTRY, 'no save');
 
   await page.goto('/');
 

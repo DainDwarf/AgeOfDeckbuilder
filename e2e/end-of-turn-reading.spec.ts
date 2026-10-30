@@ -16,6 +16,7 @@ import {
   firstSeed,
   hungry,
   inHand,
+  onDesignedSpeed,
   onScreen,
   openSaved,
   playedOut,
@@ -89,6 +90,7 @@ test('the bar reads what ending the turn would do, a stock the strikes take past
   const problems = watch(page);
   test.setTimeout(budget(1));
   const struck = hungry();
+  onDesignedSpeed(page);
 
   await openSaved(page, struck);
 
@@ -134,6 +136,7 @@ test('a card played leaves the bar reading what ending the turn would do through
       return index === -1 ? undefined : { chronicle, index };
     },
   );
+  onDesignedSpeed(page);
 
   await openSaved(page, opened);
   const card = await onScreen(page, `hand-${index}`);

@@ -8,6 +8,7 @@ import {
   endedTurn,
   endTurn,
   intoSettings,
+  onDesignedSpeed,
   openSaved,
   playedOut,
   playing,
@@ -61,6 +62,7 @@ test('a press on the row moves the speed on, kept across a reload, and ×4 goes 
   page,
 }) => {
   const problems = watch(page);
+  onDesignedSpeed(page);
 
   await openSaved(page, OPENED);
   await intoGraphics(page);
@@ -94,6 +96,7 @@ test('a press on the row moves the speed on, kept across a reload, and ×4 goes 
 test('an end of turn played out at ×4 finishes', async ({ page }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
+  onDesignedSpeed(page);
 
   await openSaved(page, OPENED);
   await intoGraphics(page);
@@ -112,6 +115,7 @@ test('a press over a play-out in the air takes at once, and the play-out finishe
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
+  onDesignedSpeed(page);
 
   await openSaved(page, OPENED);
 
@@ -129,6 +133,18 @@ test('a press over a play-out in the air takes at once, and the play-out finishe
     window.game?.scene.getScene('ui').tweens.resumeAll();
   });
   await playedOut(page);
+
+  expect(problems).toEqual([]);
+});
+
+test('a spec opens at ×4: the three scenes play at it and the row reads it', async ({ page }) => {
+  const problems = watch(page);
+
+  await openSaved(page, OPENED);
+  expect(await scenesPlayAt(page)).toEqual([4, 4, 4]);
+
+  await intoGraphics(page);
+  expect(await textOf(page, `${ROW}-label`)).toBe(speedRead(4));
 
   expect(problems).toEqual([]);
 });
