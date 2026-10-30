@@ -247,6 +247,14 @@ export function overPage(colour: number, strength: number): number {
   return (channel(16) << 16) | (channel(8) << 8) | channel(0);
 }
 
+/** What a card's every colour goes through as it is drawn. */
+export type Tone = (colour: number) => number;
+
+/** A colour as a card lying anywhere but worn shows it. */
+export function unworn(colour: number): number {
+  return colour;
+}
+
 /** A colour worn down as the discard pile's top card and a dry draw pile are: CSS `grayscale(0.35) brightness(0.75)`. */
 export function worn(colour: number): number {
   const red = (colour >> 16) & 0xff;

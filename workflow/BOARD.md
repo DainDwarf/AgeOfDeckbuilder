@@ -20,6 +20,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A card face read in place, and the hand** — a card face re-reads another card, refusal and tone in place through its objects' setters, its cost chips, its rules glyphs and its name zones pooled, its ring and its aim point made once; the chronicle screen holds one face per card key, made for every card of the chronicle when the screen opens and for every card gained at a render, destroyed at the render that finds the card gone and with the screen, and shared by the hand and the piles; the hand lays out the faces of the cards it holds, every one written in place at every render and taking the pointer only while its card lies in the hand; a card leaving the hand flies on its own face and turns over in place into the card it lies in the pile as, a card drawn rides a back from a pool; a render of the hand destroys nothing. Doc-impact: `docs/PHASER.md`. [board/a-card-face-read-in-place-and-the-hand.md](board/a-card-face-read-in-place-and-the-hand.md)
 - **The piles' tops retained** — the draw pile's back made once and worn or plain in place, the discard pile showing its top card's own face from the chronicle's faces, worn, and the shuffle carrying it through the shared turn-over.
 - **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.

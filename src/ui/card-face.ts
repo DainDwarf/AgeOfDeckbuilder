@@ -13,7 +13,8 @@ import {
   UI_FONT,
 } from './design-space';
 import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
-import { css, LOOK, type Paper, worn } from './look';
+import { css, LOOK, type Paper, type Tone, unworn, worn } from './look';
+import { poolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
@@ -113,6 +114,8 @@ export type NamePresses = {
 
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
+  /** The face read as this card, under this refusal and tone, unringed and with no point. */
+  read(face: Face, refusal: Refusal, tone?: Tone): void;
   /** Draws the card as the selection, or as one more card lying where it lies. */
   select(selected: boolean): void;
   /** Draws the card as the one being aimed: the point on its ring, or no point at all. */
@@ -135,23 +138,86 @@ export type CardFace = {
   explainFoot(tooltip: Tooltip, label: FootLabel): void;
 };
 
+/** The paper a face is drawn on: any refusal at all draws it unplayable. */
+function paperOf(refusal: Refusal): Paper {
+  return playable(refusal) ? LOOK.affordableCard : LOOK.unaffordableCard;
+}
+
+/** A Text's ink, written where it moved: `setColor` redraws the Text whatever it is handed. */
+function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjects.Text {
+  const ink = css(colour);
+  return label.style.color === ink ? label : label.setColor(ink);
+}
+
+/** An interactive zone of a face that a pool or a re-read gives its place and its size. */
+function faceZone(scene: Phaser.Scene): Phaser.GameObjects.Zone {
+  return answersPress(scene.add.zone(0, 0, 1, 1).setInteractive());
+}
+
+/** The zones over a face's names: handed the names, it lays one over each. */
+function nameZonesOf(
+  root: Phaser.GameObjects.Container,
+  presses: NamePresses,
+): (names: readonly Name[]) => void {
+  const laidOver = new Map<Phaser.GameObjects.Zone, Name>();
+  const zones = zonePoolOf(root, () => {
+    const zone = faceZone(root.scene);
+    onHover(
+      zone,
+      () => presses.over(laidOver.get(zone)),
+      () => presses.over(undefined),
+    );
+    onClick(
+      zone,
+      () => {
+        const name = laidOver.get(zone);
+        if (name !== undefined) presses.inspect(name);
+      },
+      'right',
+    );
+    return zone;
+  });
+  return (names) => {
+    zones.hide();
+    for (const name of names) {
+      const zone = zones.take().setPosition(name.x, name.y).setSize(name.width, name.height);
+      laidOver.set(zone, name);
+    }
+  };
+}
+
+/** The zone over a label of a face's foot, answering no press. */
+function footZoneOf(
+  scene: Phaser.Scene,
+  label: FootLabel,
+  at: (label: FootLabel | undefined) => void,
+): Phaser.GameObjects.Zone {
+  const zone = faceZone(scene);
+  onHover(
+    zone,
+    () => at(label),
+    () => at(undefined),
+  );
+  return zone;
+}
+
 /**
  * A face, drawn about its own bottom centre so a container's angle fans it from that corner, every
  * colour of it through the tone. The refusal marks the costs the city cannot pay, and any refusal
- * at all draws the face unplayable.
+ * at all draws the face unplayable. Its width and whether its names answer presses are its for life.
  */
 export function createCardFace(
   scene: Phaser.Scene,
   face: Face,
   refusal: Refusal,
   {
-    tone = (colour: number): number => colour,
+    tone = unworn,
     width = CARD_WIDTH,
     names: presses,
-  }: { tone?: (colour: number) => number; width?: number; names?: NamePresses } = {},
+  }: { tone?: Tone; width?: number; names?: NamePresses } = {},
 ): CardFace {
   const { height, em, pad, radius } = metricsOf(width);
-  const palette: Paper = playable(refusal) ? LOOK.affordableCard : LOOK.unaffordableCard;
+  const palette = paperOf(refusal);
 
   const left = -width / 2 + 1 + pad;
   const right = width / 2 - 1 - pad;
@@ -159,37 +225,9 @@ export function createCardFace(
 
   const root = scene.add.container(0, 0);
   const paper = scene.add.graphics();
-  drawCardSurface(paper, -width / 2, -height, {
-    width,
-    face: tone(palette.face),
-    edge: tone(LOOK.cardEdge),
-  });
   root.add(paper);
 
   const middle = top + 0.55 * em;
-  let x = left;
-  for (const { resource, amount } of face.costs) {
-    const marked = refusal.unaffordable.includes(resource);
-    const chip = scene.add
-      .rectangle(x + 0.4 * em, middle, 0.8 * em, 0.8 * em, tone(LOOK.reading[resource]))
-      .setAngle(45);
-    root.add(chip);
-    if (marked) {
-      const ring = scene.add
-        .rectangle(x + 0.4 * em, middle, 1.15 * em, 1.15 * em)
-        .setStrokeStyle(0.12 * em, tone(LOOK.unaffordableMark))
-        .setAngle(45);
-      root.add(ring);
-    }
-    const value = addText(scene, x + 1.3 * em, middle, String(amount), {
-      fontFamily: UI_FONT,
-      fontSize: `${em}px`,
-      fontStyle: 'bold',
-      color: css(tone(marked ? LOOK.unaffordableMark : palette.ink)),
-    }).setOrigin(0, 0.5);
-    root.add(value);
-    x = value.x + value.width + 0.35 * em;
-  }
 
   const name = addText(scene, right, middle, face.name, {
     fontFamily: UI_FONT,
@@ -208,29 +246,15 @@ export function createCardFace(
     .setName('kind-label');
   const kindMiddle = kind.y - kind.height / 2;
 
-  const gains = (():
-    | { number: Phaser.GameObjects.Text; diamond: Phaser.GameObjects.Rectangle; left: number }
-    | undefined => {
-    if (face.influence === 0) return undefined;
-    const number = addText(scene, right, kindMiddle, String(face.influence), {
-      fontFamily: UI_FONT,
-      fontSize: `${0.65 * em}px`,
-      fontStyle: 'bold',
-      color: css(tone(palette.ink)),
-    })
-      .setOrigin(1, 0.5)
-      .setName('influence-label');
-    const diamond = scene.add
-      .rectangle(
-        number.x - number.width - 0.3 * em,
-        kindMiddle,
-        0.55 * em,
-        0.55 * em,
-        tone(LOOK.influence),
-      )
-      .setAngle(45);
-    return { number, diamond, left: diamond.x - 0.4 * em };
-  })();
+  const influence = addText(scene, right, kindMiddle, String(face.influence), {
+    fontFamily: UI_FONT,
+    fontSize: `${0.65 * em}px`,
+    fontStyle: 'bold',
+    color: css(tone(palette.ink)),
+  })
+    .setOrigin(1, 0.5)
+    .setName('influence-label');
+  const diamond = scene.add.rectangle(0, kindMiddle, 0.55 * em, 0.55 * em).setAngle(45);
 
   const size = 0.62 * em;
   const span = (2 / 3) * size;
@@ -257,69 +281,8 @@ export function createCardFace(
     .setOrigin(0.5, 1)
     .setName('rules');
 
-  const ownRules = ownBoxOf(rules);
-  const lineHeight = ownRules.height / run.widths.length;
-  const runTop = ownRules.y;
-  const glyphs = run.glyphs.map((glyph) =>
-    scene.add
-      .rectangle(
-        glyph.x,
-        runTop + (glyph.line + 0.5) * lineHeight,
-        span / Math.SQRT2,
-        span / Math.SQRT2,
-        tone(LOOK.reading[glyph.resource]),
-      )
-      .setAngle(45),
-  );
-
-  const names: Name[] = run.names.map((named) => ({
-    reference: named.reference,
-    reading: face.reading,
-    x: (named.from + named.to) / 2,
-    y: runTop + (named.line + 0.5) * lineHeight,
-    width: named.to - named.from,
-    height: lineHeight,
-  }));
-  root.setData('names', names);
-  const zones: Phaser.GameObjects.Zone[] =
-    presses === undefined
-      ? []
-      : names.map((name) => {
-          const zone = answersPress(
-            scene.add.zone(name.x, name.y, name.width, name.height).setInteractive(),
-          );
-          onHover(
-            zone,
-            () => presses.over(name),
-            () => presses.over(undefined),
-          );
-          onClick(zone, () => presses.inspect(name), 'right');
-          return zone;
-        });
-  if (presses?.footOver !== undefined) {
-    const at = presses.footOver;
-    const footZone = (label: FootLabel, x: number, width: number): Phaser.GameObjects.Zone => {
-      const zone = answersPress(scene.add.zone(x, kindMiddle, width, kind.height).setInteractive());
-      onHover(
-        zone,
-        () => at(label),
-        () => at(undefined),
-      );
-      return zone;
-    };
-    zones.push(footZone('kind', 0, kind.width));
-    if (gains !== undefined) {
-      zones.push(footZone('influence', (gains.left + right) / 2, right - gains.left));
-    }
-  }
-
   const artTop = middle + 1.15 * em;
-  const artHeight = rules.y - rules.height - 0.45 * em - artTop;
   const art = scene.add.graphics();
-  art.fillStyle(tone(palette.art));
-  art.fillRoundedRect(left, artTop, right - left, artHeight, 0.2 * em);
-  art.lineStyle(1, tone(palette.artEdge));
-  art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
 
   const ring = scene.add.graphics().setName('ring').setVisible(false);
   for (const [weight, colour] of [
@@ -336,39 +299,152 @@ export function createCardFace(
     );
   }
 
-  root.add([
-    art,
-    name,
-    kind,
-    ...(gains === undefined ? [] : [gains.diamond, gains.number]),
-    rules,
-    ...glyphs,
-    ring,
-    ...zones,
-  ]);
+  const point = scene.add
+    .polygon(
+      0,
+      -height - RING_STANDOFF - RING_WEIGHT / 2 - POINT_HEIGHT / 2,
+      corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
+      LOOK.selected,
+    )
+    .setStrokeStyle(1, LOOK.selectedEdge)
+    .setName('aim-point')
+    .setVisible(false);
 
-  /** The point while the card is being aimed, and nothing at all on the card while it is not. */
-  let point: Phaser.GameObjects.Polygon | undefined;
+  root.add([art, name, kind, diamond, influence, rules, ring, point]);
+
+  // A long name runs over the costs, and stands over them.
+  const underName = {
+    scene,
+    add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(name)),
+  };
+  const chips = poolOf(underName, () =>
+    scene.add.rectangle(0, middle, 0.8 * em, 0.8 * em).setAngle(45),
+  );
+  const chipRings = poolOf(underName, () =>
+    scene.add.rectangle(0, middle, 1.15 * em, 1.15 * em).setAngle(45),
+  );
+  const amounts = poolOf(underName, () =>
+    addText(scene, 0, middle, '', {
+      fontFamily: UI_FONT,
+      fontSize: `${em}px`,
+      fontStyle: 'bold',
+    }).setOrigin(0, 0.5),
+  );
+  const glyphs = poolOf(root, () =>
+    scene.add.rectangle(0, 0, span / Math.SQRT2, span / Math.SQRT2).setAngle(45),
+  );
+  const layNameZones = presses === undefined ? undefined : nameZonesOf(root, presses);
+  const footZones =
+    presses?.footOver === undefined
+      ? undefined
+      : {
+          kind: footZoneOf(scene, 'kind', presses.footOver),
+          influence: footZoneOf(scene, 'influence', presses.footOver),
+        };
+  if (footZones !== undefined) root.add([footZones.kind, footZones.influence]);
+
+  /** What the face reads now. */
+  let reads = face;
+  /** The names its rules draw. */
+  let names: Name[] = [];
+  /** Where the influence it gains starts along its foot. */
+  let gainsLeft = right;
+
+  const read = (next: Face, refused: Refusal, toned: Tone = unworn): void => {
+    reads = next;
+    const paint = paperOf(refused);
+
+    paper.clear();
+    drawCardSurface(paper, -width / 2, -height, {
+      width,
+      face: toned(paint.face),
+      edge: toned(LOOK.cardEdge),
+    });
+
+    chips.hide();
+    chipRings.hide();
+    amounts.hide();
+    let x = left;
+    for (const { resource, amount } of next.costs) {
+      const marked = refused.unaffordable.includes(resource);
+      chips
+        .take()
+        .setX(x + 0.4 * em)
+        .setFillStyle(toned(LOOK.reading[resource]));
+      if (marked) {
+        chipRings
+          .take()
+          .setX(x + 0.4 * em)
+          .setStrokeStyle(0.12 * em, toned(LOOK.unaffordableMark));
+      }
+      const value = inked(amounts.take(), toned(marked ? LOOK.unaffordableMark : paint.ink))
+        .setX(x + 1.3 * em)
+        .setText(String(amount));
+      x = value.x + value.width + 0.35 * em;
+    }
+
+    inked(name, toned(paint.ink)).setText(next.name);
+    inked(kind, toned(LOOK.faintInk)).setText(kindLabel(next.kind).toUpperCase());
+
+    const gains = next.influence !== 0;
+    influence.setVisible(gains);
+    diamond.setVisible(gains);
+    if (gains) {
+      inked(influence, toned(paint.ink)).setText(String(next.influence));
+      diamond.setX(influence.x - influence.width - 0.3 * em).setFillStyle(toned(LOOK.influence));
+      gainsLeft = diamond.x - 0.4 * em;
+    }
+
+    inked(rules, toned(paint.ink)).setText(next.rules);
+    const ownRules = ownBoxOf(rules);
+    const lineHeight = ownRules.height / run.widths.length;
+    const runTop = ownRules.y;
+    glyphs.hide();
+    for (const glyph of run.glyphs) {
+      glyphs
+        .take()
+        .setPosition(glyph.x, runTop + (glyph.line + 0.5) * lineHeight)
+        .setFillStyle(toned(LOOK.reading[glyph.resource]));
+    }
+
+    names = run.names.map((named) => ({
+      reference: named.reference,
+      reading: next.reading,
+      x: (named.from + named.to) / 2,
+      y: runTop + (named.line + 0.5) * lineHeight,
+      width: named.to - named.from,
+      height: lineHeight,
+    }));
+    root.setData('names', names);
+    layNameZones?.(names);
+    if (footZones !== undefined) {
+      footZones.kind.setPosition(0, kindMiddle).setSize(kind.width, kind.height);
+      footZones.influence
+        .setVisible(gains)
+        .setPosition((gainsLeft + right) / 2, kindMiddle)
+        .setSize(right - gainsLeft, kind.height);
+    }
+
+    const artHeight = rules.y - rules.height - 0.45 * em - artTop;
+    art.clear();
+    art.fillStyle(toned(paint.art));
+    art.fillRoundedRect(left, artTop, right - left, artHeight, 0.2 * em);
+    art.lineStyle(1, toned(paint.artEdge));
+    art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
+
+    ring.setVisible(false);
+    point.setVisible(false);
+  };
+  read(face, refusal, tone);
 
   return {
     root,
+    read,
     select(on: boolean): void {
       ring.setVisible(on);
     },
     aim(on: boolean): void {
-      point?.destroy();
-      point = undefined;
-      if (!on) return;
-      point = scene.add
-        .polygon(
-          0,
-          -height - RING_STANDOFF - RING_WEIGHT / 2 - POINT_HEIGHT / 2,
-          corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
-          LOOK.selected,
-        )
-        .setStrokeStyle(1, LOOK.selectedEdge)
-        .setName('aim-point');
-      root.add(point);
+      point.setVisible(on);
     },
     nameAt(x: number, y: number): Name | undefined {
       const local = root.getLocalPoint(x, y);
@@ -386,7 +462,7 @@ export function createCardFace(
       const local = root.getLocalPoint(x, y);
       if (Math.abs(local.y - kindMiddle) > kind.height / 2) return undefined;
       if (Math.abs(local.x) <= kind.width / 2) return 'kind';
-      if (gains !== undefined && local.x >= gains.left && local.x <= right) return 'influence';
+      if (reads.influence !== 0 && local.x >= gainsLeft && local.x <= right) return 'influence';
       return undefined;
     },
     cardAt(x: number, y: number): boolean {
@@ -394,18 +470,18 @@ export function createCardFace(
       return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
     explainFoot(tooltip: Tooltip, label: FootLabel): void {
-      const besideOf = (part: Phaser.GameObjects.Text, reads: string): void => {
-        tooltip.beside(reads, () => {
+      const besideOf = (part: Phaser.GameObjects.Text, saying: string): void => {
+        tooltip.beside(saying, () => {
           const own = ownBoxOf(part);
           return root.getWorldTransformMatrix().transformPoint(own.x + own.width, kindMiddle);
         });
       };
       switch (label) {
         case 'kind':
-          besideOf(kind, kindTooltip(face.kind));
+          besideOf(kind, kindTooltip(reads.kind));
           return;
         case 'influence':
-          if (gains !== undefined) besideOf(gains.number, text('tooltip.influence'));
+          if (reads.influence !== 0) besideOf(influence, text('tooltip.influence'));
           return;
       }
       const unlisted: never = label;
@@ -460,7 +536,7 @@ export function createCardBack(
   scene: Phaser.Scene,
   { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
 ): Phaser.GameObjects.Container {
-  const tone = faded ? worn : (colour: number): number => colour;
+  const tone = faded ? worn : unworn;
   const height = heightOf(width);
   const paper = scene.add.graphics();
   drawCardSurface(paper, -width / 2, -height, {

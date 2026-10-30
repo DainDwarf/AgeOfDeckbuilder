@@ -422,6 +422,24 @@ export async function readNames(page: Page): Promise<void> {
       }
     };
 
+    // A Container's own `getBounds` counts the children it hides (`Container.js:398-416`).
+    const shownBounds = (
+      object: Phaser.GameObjects.GameObject,
+    ): Phaser.Geom.Rectangle | undefined => {
+      const box = (object as Partial<Phaser.GameObjects.Components.GetBounds>).getBounds?.();
+      const children = (object as Partial<Phaser.GameObjects.Container>).list;
+      if (box === undefined || !Array.isArray(children)) return box;
+      const shown = children
+        .filter((child) => (child as Parented).visible !== false)
+        .flatMap((child) => shownBounds(child) ?? []);
+      if (shown.length === 0) return box;
+      const left = Math.min(...shown.map(({ x }) => x));
+      const top = Math.min(...shown.map(({ y }) => y));
+      const right = Math.max(...shown.map(({ x, width }) => x + width));
+      const bottom = Math.max(...shown.map(({ y, height }) => y + height));
+      return box.setTo(left, top, right - left, bottom - top);
+    };
+
     window.readName = (name) => {
       const all = everyNamed(name);
       const first = firstOf(all);
@@ -443,8 +461,7 @@ export async function readNames(page: Page): Promise<void> {
         return at;
       };
       const bounds = (): Phaser.Geom.Rectangle => {
-        const bounded = found().object as Partial<Phaser.GameObjects.Components.GetBounds>;
-        const box = bounded.getBounds?.();
+        const box = shownBounds(found().object);
         if (box === undefined) throw new Error(`${name} has no bounds`);
         return box;
       };

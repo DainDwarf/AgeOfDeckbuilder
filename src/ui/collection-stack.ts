@@ -4,7 +4,7 @@ import { type CardFace, createCardFace, drawCardSurface, heightOf } from './card
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
-import { css, LOOK, overPage } from './look';
+import { css, LOOK, overPage, type Tone, unworn } from './look';
 import type { Filled, Held } from './panel';
 import { chipAt } from './resource-bar';
 import { type Answers, answersOf, type Laying } from './stack';
@@ -140,7 +140,7 @@ export function stackedCardsOf(
     width,
     name,
     refusal = NO_REFUSAL,
-    tone = (colour: number): number => colour,
+    tone = unworn,
   }: {
     readonly shown: Face;
     readonly copies: number;
@@ -149,7 +149,7 @@ export function stackedCardsOf(
     readonly width: number;
     readonly name: string;
     readonly refusal?: Refusal;
-    readonly tone?: (colour: number) => number;
+    readonly tone?: Tone;
   },
 ): StackedCards {
   const height = heightOf(width);

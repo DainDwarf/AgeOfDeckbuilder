@@ -24,17 +24,21 @@ export function blockLength(cards: number): number {
 const waitedOn = new WeakSet<Phaser.Tweens.Tween>();
 
 /**
- * A tween as a promise, settling at its completion or at the stop that takes it off early, the only
- * two ends a tween announces: one destroyed (`dropWaitedMotion`, Phaser's `killTweensOf`) leaves
- * whoever waits here waiting for ever.
+ * A tween as a promise of whether it ran its course, settling at its completion or at the stop that
+ * takes it off early, the only two ends a tween announces: one destroyed (`dropWaitedMotion`,
+ * Phaser's `killTweensOf`) leaves whoever waits here waiting for ever.
  */
-export function ended(tween: Phaser.Tweens.Tween): Promise<void> {
+function completed(tween: Phaser.Tweens.Tween): Promise<boolean> {
   waitedOn.add(tween);
   return new Promise((done) => {
-    const over = (): void => done();
-    tween.once(Phaser.Tweens.Events.TWEEN_COMPLETE, over);
-    tween.once(Phaser.Tweens.Events.TWEEN_STOP, over);
+    tween.once(Phaser.Tweens.Events.TWEEN_COMPLETE, () => done(true));
+    tween.once(Phaser.Tweens.Events.TWEEN_STOP, () => done(false));
   });
+}
+
+/** A tween as a promise, settling at either end `completed` hears. */
+export async function ended(tween: Phaser.Tweens.Tween): Promise<void> {
+  await completed(tween);
 }
 
 /**
@@ -83,19 +87,16 @@ export function travel(
 }
 
 /**
- * A card turning over where it lies: `hides` narrows to an edge and `shows` widens from it. `hides`
- * is destroyed at the turn, and `shows` is left visible at its full width however either half
- * ended.
+ * A card narrowing to an edge, where `atEdge` runs and answers what widens: the card or what shows
+ * in its place. A stop on either half leaves it where it stands, part-narrowed with the edge
+ * unreached or part-widened, so whatever stopped it owns the card from there.
  */
 export async function turnOver(
   scene: Phaser.Scene,
-  hides: Phaser.GameObjects.Container,
-  shows: Phaser.GameObjects.Container,
+  card: Phaser.GameObjects.Container,
+  atEdge: () => Phaser.GameObjects.Container,
 ): Promise<void> {
   const half = { duration: TURN_OVER / 2, ease: EASE };
-  await ended(scene.tweens.add({ targets: hides, scaleX: 0, ...half }));
-  hides.destroy();
-  shows.setScale(0, 1).setVisible(true);
-  await ended(scene.tweens.add({ targets: shows, scaleX: 1, ...half }));
-  shows.setScale(1, 1);
+  if (!(await completed(scene.tweens.add({ targets: card, scaleX: 0, ...half })))) return;
+  await ended(scene.tweens.add({ targets: atEdge(), scaleX: 1, ...half }));
 }

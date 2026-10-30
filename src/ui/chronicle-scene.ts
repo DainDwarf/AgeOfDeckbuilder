@@ -25,6 +25,7 @@ import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
+import { createChronicleFaces } from './chronicle-faces';
 import { offerEntries, resetConsole } from './debug-console';
 import {
   addText,
@@ -236,6 +237,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       small: createSmallCards(this, ui.smallCard, CATALOGUE, footBubble, (name) => {
         overlay.inspectNamed(name);
       }),
+      cards: createChronicleFaces(this, ui.resting, CATALOGUE, this.current),
     };
 
     const parts: Part[] = [];
@@ -820,6 +822,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     });
 
     parts.push(
+      // A card added has its face before the hand reads it, and a card banished keeps its face until
+      // the hand has let it go.
+      { render: faces.cards.fillIn },
       view,
       bar,
       createPiles(this, ui, CATALOGUE, faces, {
@@ -827,6 +832,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         inspectNamed: (name) => overlay.inspectNamed(name),
       }),
       hand,
+      { render: faces.cards.lose },
       endTurn,
       createShownEvent(this, ui.endTurn, endTurn.box),
       { render: showSettleStanding },

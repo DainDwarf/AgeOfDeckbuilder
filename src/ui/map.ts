@@ -66,6 +66,7 @@ import {
   terrainColourOf,
   unitMarkOf,
 } from './marks';
+import { asPainted, poolOf } from './pool';
 import { PAN_SPEED } from './scroll';
 import { text } from './text';
 import { VEILS_ON, type Veils } from './veils';
@@ -632,46 +633,6 @@ function glowTile(
   glow: Glow,
 ): Phaser.GameObjects.Polygon {
   return asGlow(unreadGlow(scene), coord, colour, glow);
-}
-
-/** What the map keeps and hides rather than destroys. */
-type Retained = Mark | Phaser.GameObjects.Rectangle | Phaser.GameObjects.Graphics;
-
-/** An object as a paint finds it, whatever a motion left: shown, whole, at full strength. */
-function asPainted<T extends Retained>(object: T): T {
-  object.setVisible(true);
-  object.setAlpha(1);
-  object.setScale(1);
-  return object;
-}
-
-/** The objects of one kind a layer keeps, as many as a paint has ever wanted at once. */
-type Pool<T> = {
-  /** Every object stopped where it stands and hidden, the next `take` starting over. */
-  hide(): void;
-  /** The next object as a paint finds it; its shape, colour, name and place are its last use's. */
-  take(): T;
-};
-
-function poolOf<T extends Retained>(on: Phaser.GameObjects.Layer, make: () => T): Pool<T> {
-  const made: T[] = [];
-  let taken = 0;
-  return {
-    hide(): void {
-      stopMotion(on.scene, made);
-      for (const object of made) object.setVisible(false);
-      taken = 0;
-    },
-    take(): T {
-      if (taken === made.length) {
-        const object = make();
-        on.add(object);
-        made.push(object);
-      }
-      taken += 1;
-      return asPainted(made[taken - 1]);
-    },
-  };
 }
 
 /** What each tile of the disc keeps from the chronicle's open, shown as the tile stands. */
