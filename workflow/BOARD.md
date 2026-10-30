@@ -20,7 +20,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The map's tiles retained** — every layer keyed by tile made once and changed in place: the ground and the fog of every tile of the disc from the start, hidden until charted, the features, improvements, buildings, rings and city marks shown or hidden as the tile stands, the yield glyphs, lit tiles, prepared hues and city-mode marks pooled; the suite's counts read the visible.
+- **The map's tiles retained** — every object the map view draws apart from the live unit markers is made once and changed in place: the ground and the fog of every tile of the disc from the chronicle's open, hidden until charted; a tile's feature, improvements, building and ring shown or hidden as the tile stands; the yield glyphs, lit tiles, prepared hues, city-mode marks, river runs and fog unit marks pooled; the selection ring, the culture threshold and the city badges written in place; a render destroys nothing, and the suite's readers count the shown. Doc-impact: none. [board/map-tiles-retained.md](board/map-tiles-retained.md)
 - **The map's units retained** — one marker per unit id, made at entry and destroyed at death, its prepared hue with it, a unit's motion played on its own marker.
 - **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
 - **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
