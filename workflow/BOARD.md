@@ -20,7 +20,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A card's key** — every card in a chronicle carries a key that tells it from every other, its copies included, so the flow can say which card moved and a face can follow its card.
+- **A card's key** — every card in a chronicle carries a key that tells it from every other, its copies included, dealt from a counter of the chronicle's as a unit's number is and kept through every pile and through becoming another card; a discarded, exhausted or banished change carries nothing beside its two chronicles, the cards it moved read off them by their keys; the save writes and validates the keys. Doc-impact: `DOGMAS.md` _Architecture_, `docs/CHRONICLE.md` _Cards_. [board/a-cards-key.md](board/a-cards-key.md)
+- **A card named by its key** — a play command and the hand aim name the card by its key instead of its place in the hand, the personas and the specs with them.
 - **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
 - **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
 - **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.
