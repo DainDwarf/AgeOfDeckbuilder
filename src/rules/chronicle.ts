@@ -106,6 +106,7 @@ import {
   followed,
   type Group,
   grouped,
+  idInHand,
   type Landed,
   landedAs,
   plays,
@@ -553,7 +554,7 @@ export function terrainsPlayedOn(card: CardId): Required<Pick<Achievement, 'tall
       cardOf(catalogue, card);
       let kept = tally;
       for (const play of plays(stages)) {
-        if (play.card !== card) continue;
+        if (idInHand(play, play.card) !== card) continue;
         const aimedAt = tileAimed(play.aimed);
         if (aimedAt === undefined) continue;
         const terrain = tileAt(started.tiles, aimedAt)?.terrain;
@@ -586,7 +587,8 @@ export function playsOn(
       cardOf(catalogue, card);
       if (ground.on === 'feature') featureKind(catalogue, ground.feature);
       const counted = plays(stages).filter(
-        (play) => play.card === card && onGround(started, tileAimed(play.aimed), ground),
+        (play) =>
+          idInHand(play, play.card) === card && onGround(started, tileAimed(play.aimed), ground),
       ).length;
       return counted === 0 ? tally : { ...tally, plays: (tally.plays ?? 0) + counted };
     },
@@ -1143,7 +1145,7 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
   const costs = costOf(catalogue, held.id);
   const cost = (left: Chronicle): Landed => costPaid(left, 'player', costs);
   return grouped(
-    { name: 'played', card: held.id, aimed: aimedBy(command) },
+    { name: 'played', card: held.key, aimed: aimedBy(command) },
     followed(followed(landedAs(playedAway(catalogue, chronicle, held)), cost), effect),
   );
 }

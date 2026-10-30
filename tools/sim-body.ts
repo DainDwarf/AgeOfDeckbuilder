@@ -27,13 +27,14 @@ import { freshCampaign } from '../src/rules/save';
 import { offered } from '../src/rules/schedule';
 import {
   type Change,
+  idInHand,
   type Play,
   plays,
   type Sequence,
   type Stage,
   walked,
 } from '../src/rules/stages';
-import { type Chronicle, cardKeyed, cardsInPiles } from '../src/rules/state';
+import { type Chronicle, cardsInPiles } from '../src/rules/state';
 import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, listFlag, readFlags, stringFlag, wholeFlag, wholeNumber } from './flags';
 import {
@@ -581,7 +582,7 @@ export function chronicleColumns(
   off: readonly Switch[],
 ): Column[] {
   const stages = [...launch.stages, ...landed.flatMap((command) => command.stages)];
-  const played = plays(stages).map(({ card }) => card);
+  const played = plays(stages).map((play) => idInHand(play, play.card));
   const killed: Unit[] = [];
   const neutralFell: [string, number][] = [];
   const reachedOn = new Map<string, number>();
@@ -661,17 +662,16 @@ function dealTaken(catalogue: Catalogue, stages: readonly Stage[], at: number): 
 }
 
 /** The card a play played, joined to the card of the hand it was aimed at where it was. */
-function playNamed({ card, aimed, before }: Play): string {
+function playNamed(play: Play): string {
+  const card = idInHand(play, play.card);
+  const { aimed } = play;
   switch (aimed.aim) {
     case 'none':
     case 'tile':
     case 'unit':
       return card;
-    case 'hand': {
-      const aimedAt = cardKeyed(before.hand, aimed.card);
-      if (aimedAt === undefined) throw new Error('a card aimed at a key the hand did not hold');
-      return `${card}>${aimedAt.id}`;
-    }
+    case 'hand':
+      return `${card}>${idInHand(play, aimed.card)}`;
   }
 }
 

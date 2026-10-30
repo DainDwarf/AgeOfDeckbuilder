@@ -1,5 +1,12 @@
 import type { TileCoords } from './map';
-import type { CardId, Chronicle, Cost, DefeatCause, NeutralFallCause } from './state';
+import {
+  type CardId,
+  type Chronicle,
+  type Cost,
+  cardKeyed,
+  type DefeatCause,
+  type NeutralFallCause,
+} from './state';
 
 /** One row of the chronicle moved, on the chronicle it was raised on, leaving the one it carries. */
 export type Change = {
@@ -38,11 +45,11 @@ export type Group = {
   readonly stages: readonly Stage[];
 } & GroupHead;
 
-/** What a group is named and carries, before the stages it holds. */
+/** What a group is named and carries, a card by its key, before the stages it holds. */
 type GroupHead =
   | { readonly name: PlainGroup }
-  | { readonly name: 'played'; readonly card: CardId; readonly aimed: Aimed }
-  | { readonly name: 'strike'; readonly card: CardId }
+  | { readonly name: 'played'; readonly card: number; readonly aimed: Aimed }
+  | { readonly name: 'strike'; readonly card: number }
   | { readonly name: 'attack'; readonly attacker: TileCoords; readonly target: TileCoords }
   | { readonly name: 'capture'; readonly tile: TileCoords };
 
@@ -69,7 +76,7 @@ export type Aimed =
       readonly card: number;
     };
 
-/** One card played: the group carrying the card and what it was aimed at. */
+/** One card played: the group carrying the card's key and what it was aimed at. */
 export type Play = Extract<Group, { readonly name: 'played' }>;
 
 /** Every card the stages played, in the order the walk plays them. */
@@ -77,6 +84,15 @@ export function plays(stages: readonly Stage[]): Play[] {
   return [...walked(stages)].filter(
     (stage): stage is Play => stage.kind === 'group' && stage.name === 'played',
   );
+}
+
+/** The id of the card of that key in the hand the group was raised on. A key it does not hold throws. */
+export function idInHand({ before }: Group, key: number): CardId {
+  const card = cardKeyed(before.hand, key);
+  if (card === undefined) {
+    throw new Error(`a group named the key ${key}, which the hand it was raised on did not hold`);
+  }
+  return card.id;
 }
 
 /** The changes that carry nothing but the chronicle they leave. */

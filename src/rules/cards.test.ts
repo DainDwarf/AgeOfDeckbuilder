@@ -111,7 +111,7 @@ import {
 } from './map';
 import { buildingKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
-import { followed, plays, walked } from './stages';
+import { followed, idInHand, plays, walked } from './stages';
 import {
   type CardId,
   type Chronicle,
@@ -2036,7 +2036,13 @@ test('a hazard whose strike reads a counter its card does not declare is refused
 function strikesOf(city: Chronicle): { card: CardId; holds: string[]; left: Chronicle }[] {
   return apply(CATALOGUE, city, { type: 'end-turn' }).flatMap((stage) =>
     stage.kind === 'group' && stage.name === 'strike'
-      ? [{ card: stage.card, holds: namesOf(stage.stages), left: stage.chronicle }]
+      ? [
+          {
+            card: idInHand(stage, stage.card),
+            holds: namesOf(stage.stages),
+            left: stage.chronicle,
+          },
+        ]
       : [],
   );
 }

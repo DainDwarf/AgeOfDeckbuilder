@@ -175,7 +175,7 @@ export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Gro
     if (strike === undefined) continue;
     strikes = followed(strikes, (left) =>
       grouped(
-        { name: 'strike', card: held.id },
+        { name: 'strike', card: held.key },
         strike(catalogue, left, counterOf(catalogue, held), (on, set) =>
           countersSetOn(catalogue, on, held.key, set),
         ),

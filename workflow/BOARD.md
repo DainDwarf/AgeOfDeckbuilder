@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A group head names its card by key** — the `played` and `strike` group heads carry the key of their card and no content id, every reader of either looks the content id up through the hand of the chronicle the group was raised on, and `DOGMAS.md` says a group names a card by its key. Doc-impact: none. [board/a-group-head-names-its-card-by-key.md](board/a-group-head-names-its-card-by-key.md)
 - **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
 - **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
 - **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.
