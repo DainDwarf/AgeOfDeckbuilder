@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import type { Change, Group, Stage } from '../rules/stages';
-import { type Chronicle, type ChronicleCard, NO_REFUSAL } from '../rules/state';
+import { type Chronicle, type ChronicleCard, cardsOutOfHand, NO_REFUSAL } from '../rules/state';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
@@ -173,7 +173,7 @@ export function createPiles(
     switch (stage.name) {
       case 'discarded':
       case 'exhausted':
-        return landed(stage.places.length, stage.chronicle);
+        return landed(cardsOutOfHand(stage.before, stage.chronicle).length, stage.chronicle);
       case 'shuffled':
         return shuffle(stage.chronicle);
       case 'enter':

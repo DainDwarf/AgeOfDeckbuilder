@@ -9,14 +9,6 @@ export type Change = {
 } & (
   | { readonly name: PlainChange }
   | {
-      readonly name: PlacedChange;
-      /**
-       * Indices into the hand in `before`; a `discarded` or an `exhausted` card lies on top of its
-       * pile, in the order of the places.
-       */
-      readonly places: readonly number[];
-    }
-  | {
       readonly name: 'stock';
       /** The tile that yielded it, where one did. */
       readonly tile?: TileCoords;
@@ -94,6 +86,9 @@ export function plays(stages: readonly Stage[]): Play[] {
 type PlainChange =
   | 'added'
   | 'drawn'
+  | 'discarded'
+  | 'exhausted'
+  | 'banished'
   | 'shuffled'
   | 'counters-set'
   | 'turn'
@@ -106,8 +101,6 @@ type PlainChange =
   | 'reached'
   | 'relations'
   | 'runtime-error';
-
-type PlacedChange = 'discarded' | 'exhausted' | 'banished';
 
 /** The changes that carry the tile they moved a row on. */
 type TiledChange =
@@ -157,15 +150,6 @@ export function changeOn(
   before: Chronicle,
 ): Change {
   return { kind: 'change', name, tile, before, chronicle };
-}
-
-export function changeFrom(
-  name: PlacedChange,
-  places: readonly number[],
-  chronicle: Chronicle,
-  before: Chronicle,
-): Change {
-  return { kind: 'change', name, places, before, chronicle };
 }
 
 /** Every stage of the tree in order, a group before the stages it holds. */

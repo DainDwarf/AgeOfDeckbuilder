@@ -45,6 +45,7 @@ import {
   type Deal,
   holderOf,
   holds,
+  keysDealt,
   type Refusal,
   type Timeline,
   turnShown,
@@ -215,8 +216,13 @@ export function rewarded(
   copies: number,
 ): Landed {
   const made = Array.from({ length: copies }, () => cardMade(catalogue, card));
+  const { cards, nextKey } = keysDealt(chronicle.nextKey, made);
   return landedAs(
-    change('added', { ...chronicle, discardPile: [...chronicle.discardPile, ...made] }, chronicle),
+    change(
+      'added',
+      { ...chronicle, nextKey, discardPile: [...chronicle.discardPile, ...cards] },
+      chronicle,
+    ),
   );
 }
 
@@ -503,9 +509,13 @@ export function addedToDrawPileTop(
   card: CardId,
   set: Counters = {},
 ): Landed {
-  const made = cardMade(catalogue, card, set);
+  const { cards, nextKey } = keysDealt(chronicle.nextKey, [cardMade(catalogue, card, set)]);
   return landedAs(
-    change('added', { ...chronicle, drawPile: [made, ...chronicle.drawPile] }, chronicle),
+    change(
+      'added',
+      { ...chronicle, nextKey, drawPile: [...cards, ...chronicle.drawPile] },
+      chronicle,
+    ),
   );
 }
 

@@ -29,8 +29,14 @@ export type CardId = string;
 /** A card's counters, by name. */
 export type Counters = Readonly<Record<string, number>>;
 
-/** A card in a chronicle: the content it is, by its id, and the counters it carries. */
-export type ChronicleCard = { readonly id: CardId; readonly counters: Counters };
+/** A card as its content makes it: the content it is, by its id, and the counters it carries. */
+export type MadeCard = { readonly id: CardId; readonly counters: Counters };
+
+/** A card in a chronicle: a made card, and the key that tells it from every other, its copies included. */
+export type ChronicleCard = MadeCard & { readonly key: number };
+
+/** The key a chronicle's first card is dealt. */
+export const FIRST_KEY = 1;
 
 /**
  * A civilization's city section: the city's building by id, how far the city sees, how many
@@ -175,6 +181,8 @@ export type Chronicle = {
    * never dealt again, and the first unit of a chronicle is one — never zero.
    */
   readonly nextUnit: number;
+  /** The key the next card to enter a pile is dealt. It only counts up, so a banished card's key is never dealt again. */
+  readonly nextKey: number;
   readonly drawPile: ChronicleCard[];
   readonly hand: ChronicleCard[];
   readonly discardPile: ChronicleCard[];
@@ -288,6 +296,30 @@ export function cardsInPiles(
     ...chronicle.discardPile,
     ...chronicle.exhaustPile,
   ];
+}
+
+/** Cards entering a pile: each dealt its key in the order handed, from the next key, and the next key they leave. */
+export function keysDealt(
+  nextKey: number,
+  cards: readonly MadeCard[],
+): { readonly cards: ChronicleCard[]; readonly nextKey: number } {
+  return {
+    cards: cards.map((card, at) => ({ ...card, key: nextKey + at })),
+    nextKey: nextKey + cards.length,
+  };
+}
+
+/** The card of the pile carrying the key, and nothing where the pile holds none. */
+export function cardKeyed(pile: readonly ChronicleCard[], key: number): ChronicleCard | undefined {
+  return pile.find((card) => card.key === key);
+}
+
+/** The cards of the hand in `before` whose keys the hand in `after` does not hold, in hand order. */
+export function cardsOutOfHand(
+  before: Pick<Chronicle, 'hand'>,
+  after: Pick<Chronicle, 'hand'>,
+): ChronicleCard[] {
+  return before.hand.filter(({ key }) => cardKeyed(after.hand, key) === undefined);
 }
 
 /** The turn of the next landing a card has shown, and nothing once that turn has come. */

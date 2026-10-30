@@ -114,7 +114,9 @@ import {
   cardsInPiles,
   cityOn,
   type Deal,
+  FIRST_KEY,
   holds,
+  keysDealt,
   type Timeline,
 } from './state';
 import {
@@ -652,7 +654,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       kind: 'instant',
       cost: { science: 1 },
       aim: 'hand',
-      effect: (_catalogue, paid, at) => discarded(paid, [at]),
+      effect: (_catalogue, paid, at) => discarded(paid, [paid.hand[at]]),
     },
     PH_Almanac: { kind: 'instant', cost: {}, ...showsNextLanding() },
     PH_Spoils: {
@@ -1353,7 +1355,9 @@ export type ChroniclePile = 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile';
  * What a fixture authors on the chronicle it asks for: its state, the units standing on it, and the
  * cards of each pile by id.
  */
-export type Carrying = Partial<Omit<Chronicle, 'units' | 'nextUnit' | ChroniclePile>> & {
+export type Carrying = Partial<
+  Omit<Chronicle, 'units' | 'nextUnit' | 'nextKey' | ChroniclePile>
+> & {
   readonly units?: readonly Standing[];
 } & Partial<Record<ChroniclePile, readonly CardId[]>>;
 
@@ -1376,7 +1380,21 @@ export function cityOf(
     exhaustPile = [],
     ...state
   } = carrying;
-  const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
+  let nextKey = FIRST_KEY;
+  const pile = (ids: readonly CardId[]): ChronicleCard[] => {
+    const dealt = keysDealt(
+      nextKey,
+      ids.map((id) => cardMade(catalogue, id)),
+    );
+    nextKey = dealt.nextKey;
+    return dealt.cards;
+  };
+  const piles = {
+    drawPile: pile(drawPile),
+    hand: pile(hand),
+    discardPile: pile(discardPile),
+    exhaustPile: pile(exhaustPile),
+  };
   const city: Chronicle = {
     content: catalogue.version,
     age: QUIET,
@@ -1406,12 +1424,10 @@ export function cityOf(
     assigned: [...held],
     units: [],
     nextUnit: FIRST_UNIT_NUMBER,
+    nextKey,
     achievements: [],
     ...state,
-    drawPile: drawPile.map(made),
-    hand: hand.map(made),
-    discardPile: discardPile.map(made),
-    exhaustPile: exhaustPile.map(made),
+    ...piles,
   };
   return withUnits(city, units);
 }

@@ -566,7 +566,7 @@ export const STONE: Slice = {
         cost: {},
         aim: 'hand',
         effect: (_catalogue, paid, at) =>
-          followed(discarded(paid, [at]), (left) => gained(left, { science: 1 })),
+          followed(discarded(paid, [paid.hand[at]]), (left) => gained(left, { science: 1 })),
       },
       heal: {
         kind: 'instant',

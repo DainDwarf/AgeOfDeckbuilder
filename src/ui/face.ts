@@ -11,7 +11,7 @@ import {
   influenceOf,
 } from '../rules/catalogue';
 import { answerCase, answerOf, capstoneReading } from '../rules/schedule';
-import type { CardId, Chronicle, ChronicleCard, Cost } from '../rules/state';
+import type { CardId, Chronicle, Cost, MadeCard } from '../rules/state';
 import {
   answerName,
   answerRules,
@@ -82,14 +82,10 @@ export type Face = {
 };
 
 /**
- * The face a card in a chronicle is drawn as, its rules entry reading the counters it carries and
- * `city`, the building of the city section it is drawn under: a chronicle's, or a civilization's.
+ * The face a card is drawn as, its rules entry reading the counters it carries and `city`, the
+ * building of the city section it is drawn under: a chronicle's, or a civilization's.
  */
-export function cardFace(
-  catalogue: Catalogue,
-  card: ChronicleCard,
-  city: string | undefined,
-): Face {
+export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | undefined): Face {
   const content = cardOf(catalogue, card.id);
   return {
     id: card.id,
@@ -111,11 +107,7 @@ export function cardFaceAtStart(catalogue: Catalogue, id: CardId, city: string |
  * The card a face names, made at the counters that face's reading hands under the names the card
  * declares, and at its start under every other.
  */
-export function namedCardMade(
-  catalogue: Catalogue,
-  id: CardId,
-  reading: AnswerReading,
-): ChronicleCard {
+export function namedCardMade(catalogue: Catalogue, id: CardId, reading: AnswerReading): MadeCard {
   const declared = cardOf(catalogue, id).counters ?? {};
   const set = Object.fromEntries(
     Object.entries(reading).filter(([counter]) => Object.hasOwn(declared, counter)),

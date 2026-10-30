@@ -108,6 +108,7 @@ function cityOn(
     assigned: [...held],
     units: [],
     nextUnit: 1,
+    nextKey: 1,
     drawPile: [],
     hand: [],
     discardPile: [],

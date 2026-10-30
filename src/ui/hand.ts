@@ -6,6 +6,7 @@ import type { Aimed, Change, Group, Stage } from '../rules/stages';
 import {
   type Chronicle,
   type ChronicleCard,
+  cardKeyed,
   NO_REFUSAL,
   playable,
   type Refusal,
@@ -534,25 +535,16 @@ export function createHand(
   };
 
   /**
-   * The cards at the places the change names leaving for the pile, in the order named, each first
+   * The cards of the hand whose keys now lie in the pile leaving for it, in hand order, each first
    * turned over into the card it lies there as; the hand is laid out anew where they all land.
    */
   const toPile = async (
     pile: 'discard-pile' | 'exhaust-pile',
-    places: readonly number[],
     chronicle: Chronicle,
   ): Promise<void> => {
-    // The change carries no ids: its cards are the top of the pile, in its places' order (`Change`).
-    const cards = pileOf(chronicle, pile);
-    const lying = cards.slice(cards.length - places.length);
-    const going: { readonly slot: Slot; readonly lies: ChronicleCard }[] = [];
-    places.forEach((place, at) => {
-      const slot = slots[place];
-      if (slot === undefined) {
-        console.error(`no card of the hand at place ${place}, the hand holding ${slots.length}`);
-        return;
-      }
-      going.push({ slot, lies: lying[at] });
+    const going = slots.flatMap((slot) => {
+      const lies = cardKeyed(pileOf(chronicle, pile), slot.card.key);
+      return lies === undefined ? [] : [{ slot, lies }];
     });
     const flights = going.map(({ slot, lies }, index) => {
       const face = slot.face.root;
@@ -627,9 +619,9 @@ export function createHand(
   const changed = (stage: Change): Promise<void> | undefined => {
     switch (stage.name) {
       case 'discarded':
-        return toPile('discard-pile', stage.places, stage.chronicle);
+        return toPile('discard-pile', stage.chronicle);
       case 'exhausted':
-        return toPile('exhaust-pile', stage.places, stage.chronicle);
+        return toPile('exhaust-pile', stage.chronicle);
       case 'drawn':
         return fromDrawPile(stage.chronicle);
       case 'enter':

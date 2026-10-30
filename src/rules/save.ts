@@ -37,20 +37,21 @@ import {
 } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
 import type { Rng } from './rng';
-import type {
-  CardId,
-  Chronicle,
-  ChronicleCard,
-  CityFaction,
-  CityRows,
-  CitySection,
-  Deal,
-  DefeatCause,
-  Ending,
-  Rewards,
-  Snapshot,
-  SnapshotUnit,
-  Timeline,
+import {
+  type CardId,
+  type Chronicle,
+  type ChronicleCard,
+  type CityFaction,
+  type CityRows,
+  type CitySection,
+  type Deal,
+  type DefeatCause,
+  type Ending,
+  FIRST_KEY,
+  type Rewards,
+  type Snapshot,
+  type SnapshotUnit,
+  type Timeline,
 } from './state';
 import {
   type Faction,
@@ -483,7 +484,6 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   const field = record(catalogue, slot);
   const content = string(catalogue, field('content'));
   checkContent(catalogue, { content });
-  const card = (item: Slot): ChronicleCard => cardIn(catalogue, item);
   const coords = (item: Slot): TileCoords => coordsIn(catalogue, record(catalogue, item));
   const age = id(catalogue, field('age'), ageOf);
   const region = id(catalogue, field('region'), (read, named) => scheduleOf(read, age, named));
@@ -504,6 +504,28 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     units.map(({ slot: item, unit }) => ({ slot: item, number: unit.id })),
     nextUnit,
     { next: 'the next unit number', numbered: 'unit' },
+  );
+  const nextKey = count(
+    catalogue,
+    field('nextKey'),
+    slot,
+    (next) => `holds the next key ${next}, below the first key ${FIRST_KEY}`,
+    FIRST_KEY,
+  );
+  const pile = (name: string): { slot: Slot; card: ChronicleCard }[] =>
+    list(catalogue, field(name), (item) => ({ slot: item, card: cardIn(catalogue, item) }));
+  const drawPile = pile('drawPile');
+  const hand = pile('hand');
+  const discardPile = pile('discardPile');
+  const exhaustPile = pile('exhaustPile');
+  dealtOnce(
+    catalogue,
+    [...drawPile, ...hand, ...discardPile, ...exhaustPile].map(({ slot: item, card }) => ({
+      slot: item,
+      number: card.key,
+    })),
+    nextKey,
+    { next: 'the next key', numbered: 'card' },
   );
   const tiles = list(catalogue, field('tiles'), (item) => tileOf(catalogue, item));
   return {
@@ -534,10 +556,11 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     relations: optional(field('relations'), (item) => relationsIn(catalogue, item)),
     units: units.map(({ unit }) => unit),
     nextUnit,
-    drawPile: list(catalogue, field('drawPile'), card),
-    hand: list(catalogue, field('hand'), card),
-    discardPile: list(catalogue, field('discardPile'), card),
-    exhaustPile: list(catalogue, field('exhaustPile'), card),
+    nextKey,
+    drawPile: drawPile.map(({ card }) => card),
+    hand: hand.map(({ card }) => card),
+    discardPile: discardPile.map(({ card }) => card),
+    exhaustPile: exhaustPile.map(({ card }) => card),
     achievements: list(catalogue, field('achievements'), (item) => {
       const held = record(catalogue, item);
       return {
@@ -804,7 +827,7 @@ function statsOf(catalogue: Catalogue, slot: Slot): UnitStats {
   };
 }
 
-/** A card of a pile, carrying every counter its content declares and no other. */
+/** A card of a pile, under its key, carrying every counter its content declares and no other. */
 function cardIn(catalogue: Catalogue, slot: Slot): ChronicleCard {
   const field = record(catalogue, slot);
   const card = string(catalogue, field('id'));
@@ -816,7 +839,14 @@ function cardIn(catalogue: Catalogue, slot: Slot): ChronicleCard {
       refused(catalogue, counters, `lacks the counter ${name} the card ${card} declares`);
     }
   }
-  return cardMade(catalogue, card, carried);
+  const key = count(
+    catalogue,
+    field('key'),
+    slot,
+    (below) => `is numbered ${below}, below the first key ${FIRST_KEY}`,
+    FIRST_KEY,
+  );
+  return { ...cardMade(catalogue, card, carried), key };
 }
 
 function endingOf(catalogue: Catalogue, slot: Slot): Ending {

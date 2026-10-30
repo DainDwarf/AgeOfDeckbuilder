@@ -10,6 +10,7 @@ import {
   made,
   playedThrough,
   refuses,
+  struck,
   terraformable,
   terraformed,
   throughRefusal,
@@ -23,6 +24,7 @@ import {
   cardOf,
   catalogued,
   civilizationOf,
+  type Strike,
   unitKind,
 } from './catalogue';
 import {
@@ -107,8 +109,16 @@ import {
 } from './map';
 import { buildingKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources } from './resources';
-import { plays, walked } from './stages';
-import { type CardId, type Chronicle, idle, playable, type TileBlock, withCityRows } from './state';
+import { followed, plays, walked } from './stages';
+import {
+  type CardId,
+  type Chronicle,
+  idle,
+  keysDealt,
+  playable,
+  type TileBlock,
+  withCityRows,
+} from './state';
 import { relationsOf, standsOn } from './units';
 
 /** The first card of the hand aimed at a tile through the unit standing on `through`, ready to hand to `apply`. */
@@ -330,10 +340,10 @@ test('a hand holding no other card blocks the discard instant in it', () => {
   expect(playable(refusalOf(CATALOGUE, alone, 'PH_Discard'))).toBe(false);
 });
 
-test('a discard of a place the hand does not hold raises a runtime error and discards nothing', () => {
-  const city = cityOf(['urban'], { hand: ['PH_Farm'] });
+test('a discard of a card the hand does not hold raises a runtime error and discards nothing', () => {
+  const city = cityOf(['urban'], { hand: ['PH_Farm'], discardPile: ['PH_Stake'] });
 
-  const landing = discarded(city, [0, 1]);
+  const landing = discarded(city, [...city.hand, ...city.discardPile]);
 
   expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
   expect(landing.chronicle).toBe(city);
@@ -2007,7 +2017,7 @@ test('a card added with its counter set carries the value set, and its strike ta
   const frozen = chilled('PH_Freeze');
   const [strike] = strikesOf(frozen);
 
-  expect(frozen.hand).toEqual([{ id: 'PH_Frost', counters: { amount: FREEZE } }]);
+  expect(frozen.hand).toMatchObject([{ id: 'PH_Frost', counters: { amount: FREEZE } }]);
   expect(strike.left.resources.food).toBe(frozen.resources.food - FREEZE);
 });
 
@@ -2015,7 +2025,7 @@ test('a card added with no counter set carries the value its content starts it a
   const chill = chilled('PH_Chill');
   const [strike] = strikesOf(chill);
 
-  expect(chill.hand).toEqual([{ id: 'PH_Frost', counters: { amount: FROST } }]);
+  expect(chill.hand).toMatchObject([{ id: 'PH_Frost', counters: { amount: FROST } }]);
   expect(strike.left.resources.food).toBe(chill.resources.food - FROST);
 });
 
@@ -2067,10 +2077,11 @@ test('every hazard in hand strikes as one strike of its own, in hand order, each
 });
 
 test('a hazard whose strike moves nothing still strikes, holding nothing', () => {
-  const bare = {
-    ...unfed([], STOCKED.food, { assigned: [] }),
-    hand: [cardMade(CATALOGUE, 'PH_Frost', { amount: 0 })],
-  };
+  const city = unfed([], STOCKED.food, { assigned: [] });
+  const { cards, nextKey } = keysDealt(city.nextKey, [
+    cardMade(CATALOGUE, 'PH_Frost', { amount: 0 }),
+  ]);
+  const bare = { ...city, nextKey, hand: cards };
 
   const [strike] = strikesOf(bare);
 
@@ -2094,12 +2105,46 @@ test('a strike setting its own card’s counters leaves the card in the hand at 
 
   expect(first.holds).toEqual(['stock', 'counters-set']);
   expect(first.left.resources.food).toBe(city.resources.food - TITHE);
-  expect(first.left.hand).toEqual([{ id: 'PH_Tithe', counters: { food: TITHE + TITHE_RISE } }]);
+  expect(first.left.hand).toEqual([{ ...city.hand[0], counters: { food: TITHE + TITHE_RISE } }]);
   expect(cycled.hand).toEqual(first.left.hand);
   expect(second.left.resources.food).toBe(cycled.resources.food - TITHE - TITHE_RISE);
   expect(second.left.hand).toEqual([
-    { id: 'PH_Tithe', counters: { food: TITHE + 2 * TITHE_RISE } },
+    { ...city.hand[0], counters: { food: TITHE + 2 * TITHE_RISE } },
   ]);
+});
+
+/** The fixture's content holding a challenge that strikes as handed. */
+function striking(strikes: Strike): Catalogue {
+  const PH_Striking = { kind: 'challenge', cost: {}, influence: 2, strikes } as const;
+  return changed({ cards: { ...CATALOGUE.cards, PH_Striking } });
+}
+
+test('a strike sets the counters of its own card, a strike before it having shifted that card in the hand', () => {
+  const shifting = striking((_catalogue, chronicle) => discarded(chronicle, [chronicle.hand[0]]));
+  const city = cityOf(
+    ['urban'],
+    { hand: ['PH_Striking', 'PH_Tithe', 'PH_Harvest'], resources: STOCKED },
+    shifting,
+  );
+
+  const [, tithe, harvest] = city.hand;
+
+  expect(struck(shifting, city).chronicle.hand).toEqual([
+    { ...tithe, counters: { food: TITHE + TITHE_RISE } },
+    harvest,
+  ]);
+});
+
+test('a strike setting its card’s counters once that card has left the hand raises a runtime error and sets nothing', () => {
+  const leaving = striking((_catalogue, chronicle, _counter, set) =>
+    followed(discarded(chronicle, chronicle.hand), (left) => set(left, {})),
+  );
+  const city = cityOf(['urban'], { hand: ['PH_Striking'] }, leaving);
+
+  const { stages, chronicle } = struck(leaving, city);
+
+  expect(namesOf(stages)).toEqual(['strike', 'discarded', 'runtime-error']);
+  expect(chronicle.discardPile).toEqual(city.hand);
 });
 
 /** A city with the hunger in its hand and that much food for it to strike. */

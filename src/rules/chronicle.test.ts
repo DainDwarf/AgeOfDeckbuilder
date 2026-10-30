@@ -72,7 +72,16 @@ import { RESOURCES } from './resources';
 import { seedRng } from './rng';
 import { inSight } from './sight';
 import { type Change, leaf, type Stage, walked } from './stages';
-import { type CardId, type Chronicle, type ChronicleAchievement, idle } from './state';
+import {
+  type CardId,
+  type Chronicle,
+  type ChronicleAchievement,
+  cardKeyed,
+  cardsInPiles,
+  cardsOutOfHand,
+  FIRST_KEY,
+  idle,
+} from './state';
 
 /** A disc of plain out to eight, with nothing on it but a fertile plain on its centre tile. */
 function plainDisc(): Tile[] {
@@ -261,7 +270,7 @@ test('a card carrying exhaust, played, lies on the exhaust pile from its place i
   const after = outcome(apply(CATALOGUE, city, played));
   const cycled = endedTurn(endedTurn(after));
 
-  expect(exhausted).toMatchObject({ name: 'exhausted', places: [1] });
+  expect(cardsOutOfHand(exhausted.before, exhausted.chronicle)).toEqual([city.hand[1]]);
   expect(idsOf(after.exhaustPile)).toEqual(['PH_Sprout']);
   expect(after.discardPile).toEqual([]);
   expect(idsOf(cycled.hand)).toEqual(['PH_Harvest']);
@@ -276,7 +285,9 @@ test('a card that becomes one carrying exhaust, played, lies on the exhaust pile
   const sown = outcome(apply(CATALOGUE, city, PLAYED));
 
   expect(moved.name).toBe('exhausted');
-  expect(sown.exhaustPile).toEqual([{ id: 'PH_Sprout', counters: { growth: 3 } }]);
+  expect(sown.exhaustPile).toEqual([
+    { id: 'PH_Sprout', counters: { growth: 3 }, key: city.hand[0].key },
+  ]);
   expect(sown.discardPile).toEqual([]);
 });
 
@@ -288,10 +299,11 @@ test('a card that becomes another, played, lies on the discard pile as that card
   const drawn = endedTurn(flooded);
   const ebbed = outcome(apply(CATALOGUE, drawn, PLAYED));
 
+  const { key } = city.hand[0];
   expect(moved.name).toBe('discarded');
-  expect(flooded.discardPile).toEqual([{ id: 'PH_Ebb', counters: { tide: 2 } }]);
-  expect(drawn.hand).toEqual([{ id: 'PH_Ebb', counters: { tide: 2 } }]);
-  expect(ebbed.discardPile).toEqual([{ id: 'PH_Flood', counters: { tide: 1 } }]);
+  expect(flooded.discardPile).toEqual([{ id: 'PH_Ebb', counters: { tide: 2 }, key }]);
+  expect(drawn.hand).toEqual([{ id: 'PH_Ebb', counters: { tide: 2 }, key }]);
+  expect(ebbed.discardPile).toEqual([{ id: 'PH_Flood', counters: { tide: 1 }, key }]);
 });
 
 test('a card that becomes another, discarded unplayed, comes around as it is', () => {
@@ -317,29 +329,61 @@ function changeNamed(stages: readonly Stage[], name: Change['name']): Change {
   throw new Error(`no ${name} change is staged`);
 }
 
-test('a pile change carries the places in the hand its cards came out of, and a reward, out of no pile, carries none', () => {
+test('every card of a launched chronicle carries a key of its own, the copies in its hand included, each below the next key', () => {
+  const launch = opening(plainDisc(), {
+    civilization: { ...CIVILIZATION, settle: ['PH_Settle', 'PH_Settle'] },
+  });
+  const [, one, other] = launch.hand;
+  const keys = cardsInPiles(launch).map(({ key }) => key);
+
+  expect(one.id).toBe(other.id);
+  expect(one.key).not.toBe(other.key);
+  expect(new Set(keys).size).toBe(keys.length);
+  expect(Math.min(...keys)).toBe(FIRST_KEY);
+  expect(Math.max(...keys)).toBe(launch.nextKey - 1);
+});
+
+test('a card keeps its key from the draw pile through the hand, the discard pile, the shuffle and the next draw', () => {
+  const city = cityOf(['urban'], { ...NO_GROWTH, drawPile: ['PH_Harvest', 'PH_Harvest'] });
+  const [card] = city.drawPile;
+
+  const drawn = endedTurn(city);
+  const stages = apply(CATALOGUE, drawn, { type: 'end-turn' });
+
+  expect(cardKeyed(drawn.hand, card.key)).toEqual(card);
+  expect(cardKeyed(changeNamed(stages, 'discarded').chronicle.discardPile, card.key)).toEqual(card);
+  expect(cardKeyed(changeNamed(stages, 'shuffled').chronicle.drawPile, card.key)).toEqual(card);
+  expect(cardKeyed(outcome(stages).hand, card.key)).toEqual(card);
+});
+
+test('the cards out of the hand are found by key in the pile they went to, and a reward’s cards carry keys none held', () => {
   const copies = cityOf(['urban'], {
     hand: ['PH_Harvest', 'PH_Harvest'],
     resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
   });
   const second = apply(CATALOGUE, copies, { type: 'play', index: 1, aim: 'none' });
+  const played = changeNamed(second, 'discarded');
 
-  expect(changeNamed(second, 'discarded')).toMatchObject({ places: [1] });
-  expect(idsOf(outcome(second).hand)).toEqual(['PH_Harvest']);
+  expect(cardsOutOfHand(played.before, played.chronicle)).toEqual([copies.hand[1]]);
+  expect(cardKeyed(played.chronicle.discardPile, copies.hand[1].key)).toEqual(copies.hand[1]);
+  expect(outcome(second).hand).toEqual([copies.hand[0]]);
 
   const held = cityOf(['urban'], { hand: ['PH_Harvest', 'PH_March', 'PH_Harvest'] });
+  const ended = changeNamed(apply(CATALOGUE, held, { type: 'end-turn' }), 'discarded');
 
-  expect(changeNamed(apply(CATALOGUE, held, { type: 'end-turn' }), 'discarded')).toMatchObject({
-    places: [0, 1, 2],
-  });
+  expect(cardsOutOfHand(ended.before, ended.chronicle)).toEqual(held.hand);
+  expect(ended.chronicle.discardPile).toEqual(held.hand);
 
-  const settling = opening(plainDisc(), {
-    civilization: { ...CIVILIZATION, settle: ['PH_Settle', 'PH_Settle'] },
-  });
+  const settling = settledOn(
+    opening(plainDisc(), {
+      civilization: { ...CIVILIZATION, settle: ['PH_Settle', 'PH_Settle'] },
+    }),
+    CITY,
+  );
+  const banished = changeNamed(apply(CATALOGUE, settling, { type: 'end-turn' }), 'banished');
 
-  expect(
-    changeNamed(apply(CATALOGUE, settledOn(settling, CITY), { type: 'end-turn' }), 'banished'),
-  ).toMatchObject({ places: [0, 1] });
+  expect(cardsOutOfHand(banished.before, banished.chronicle)).toEqual(settling.hand);
+  expect(banished.chronicle.hand).toEqual([]);
 
   const camp = { q: 4, r: 0 };
   const dealt = outcome(
@@ -355,9 +399,20 @@ test('a pile change carries the places in the hand its cards came out of, and a 
     ),
   );
 
-  expect(
-    changeNamed(heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'), 'added'),
-  ).not.toHaveProperty('places');
+  const added = changeNamed(
+    heldBy(apply(CATALOGUE, dealt, { type: 'take', at: 0 }), 'reward'),
+    'added',
+  );
+  const rewards = added.chronicle.discardPile.filter(
+    ({ key }) => cardKeyed(cardsInPiles(added.before), key) === undefined,
+  );
+
+  expect(rewards.length).toBeGreaterThan(0);
+  expect(new Set(rewards.map(({ key }) => key)).size).toBe(rewards.length);
+  expect(cardsInPiles(added.chronicle).length).toBe(
+    cardsInPiles(added.before).length + rewards.length,
+  );
+  expect(added.chronicle.nextKey).toBe(added.before.nextKey + rewards.length);
 });
 
 test('a unit card is played over its cost, one population fewer, and the unit entering on the city’s tile', () => {

@@ -24,6 +24,7 @@ import {
   type Cost,
   type Counters,
   costsOf,
+  type MadeCard,
   type Rewards,
   type Tally,
   type TileBlock,
@@ -1242,11 +1243,10 @@ export function cardAge(catalogue: Catalogue, id: string): string {
 }
 
 /**
- * A card made in a chronicle at the counters its content declares, each one set taking the value
- * handed instead; a card the catalogue does not hold, and a counter set that its content does not
- * declare, are refused.
+ * A card made at the counters its content declares, each one set taking the value handed instead; a
+ * card the catalogue does not hold, and a counter set that its content does not declare, are refused.
  */
-export function cardMade(catalogue: Catalogue, id: CardId, set: Counters = {}): ChronicleCard {
+export function cardMade(catalogue: Catalogue, id: CardId, set: Counters = {}): MadeCard {
   const declared = cardOf(catalogue, id).counters ?? {};
   for (const counter of Object.keys(set)) {
     if (!Object.hasOwn(declared, counter)) {

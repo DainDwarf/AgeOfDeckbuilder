@@ -1,4 +1,4 @@
-import type { ChronicleCard } from '../rules/state';
+import type { MadeCard } from '../rules/state';
 import type { Reference } from './text-run';
 
 // A `rules.`, `answer-rules.`, `capstone-rules.` or `goal.` entry, `plate.cards` and `plate.building`
@@ -620,7 +620,7 @@ export function referenceName(reference: Reference): string {
  * building of the city section it is drawn under, where it is drawn under one; a card no entry names
  * is refused, and so is an entry reading a city's building where none is handed.
  */
-export function cardRules(card: ChronicleCard, city: string | undefined): string {
+export function cardRules(card: MadeCard, city: string | undefined): string {
   const values = city === undefined ? card.counters : { ...card.counters, building: city };
   return named('rules', card.id, 'the card', values);
 }

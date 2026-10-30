@@ -3,7 +3,7 @@
 import { type Campaign, type CampaignCivilization, civilizationIn } from '../rules/campaign';
 import { CARD_KINDS } from '../rules/cards';
 import { type Catalogue, cardAge, cardOf } from '../rules/catalogue';
-import type { CardId, ChronicleCard } from '../rules/state';
+import type { CardId, MadeCard } from '../rules/state';
 
 /** A card standing once, and how many copies of it are held where it stands. */
 export type CollectionStack = { readonly id: CardId; readonly copies: number };
@@ -65,7 +65,7 @@ export function stacksOf(
 }
 
 /** A card of a chronicle's pile standing once, and how many copies that read the same the pile holds. */
-export type PileStack = { readonly card: ChronicleCard; readonly copies: number };
+export type PileStack = { readonly card: MadeCard; readonly copies: number };
 
 /**
  * Every card of a chronicle's pile once for each reading of its counters, with the copies that read
@@ -74,17 +74,17 @@ export type PileStack = { readonly card: ChronicleCard; readonly copies: number 
  */
 export function pileStacksOf(
   catalogue: Catalogue,
-  pile: readonly ChronicleCard[],
+  pile: readonly MadeCard[],
   nameOf: (card: CardId) => string,
 ): PileStack[] {
-  const byCounters = (a: ChronicleCard, b: ChronicleCard): number => {
+  const byCounters = (a: MadeCard, b: MadeCard): number => {
     for (const counter of Object.keys(cardOf(catalogue, a.id).counters ?? {})) {
       const apart = a.counters[counter] - b.counters[counter];
       if (apart !== 0) return apart;
     }
     return 0;
   };
-  const stacks: { card: ChronicleCard; copies: number }[] = [];
+  const stacks: { card: MadeCard; copies: number }[] = [];
   for (const card of pile) {
     const alike = stacks.find(
       (stack) => stack.card.id === card.id && byCounters(stack.card, card) === 0,

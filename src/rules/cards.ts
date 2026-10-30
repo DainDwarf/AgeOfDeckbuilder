@@ -38,7 +38,6 @@ import {
 import { RESOURCES, type Resources } from './resources';
 import {
   change,
-  changeFrom,
   changeOn,
   followed,
   type Group,
@@ -54,6 +53,7 @@ import {
   type ChronicleCard,
   type CityFaction,
   type Counters,
+  cardKeyed,
   cityOn,
   cityRows,
   cityTileOf,
@@ -130,10 +130,13 @@ function charted(aim: Aim): Aim {
   }
 }
 
-/** What a card played goes to its pile as: the card it becomes, made as its content makes it, or itself. */
+/**
+ * What a card played goes to its pile as: the card it becomes, made as its content makes it under the
+ * key it holds, or itself.
+ */
 export function lyingAs(catalogue: Catalogue, played: ChronicleCard): ChronicleCard {
   const { becomes } = cardOf(catalogue, played.id);
-  return becomes === undefined ? played : cardMade(catalogue, becomes);
+  return becomes === undefined ? played : { ...cardMade(catalogue, becomes), key: played.key };
 }
 
 /** Where a card goes as it leaves the hand played, read on the card it goes as. */
@@ -167,46 +170,42 @@ export function goesTo(card: Card): 'discard-pile' | 'exhaust-pile' | 'nowhere' 
  */
 export function struck(catalogue: Catalogue, chronicle: Chronicle): Sequence<Group> {
   let strikes = unchanged<Group>(chronicle);
-  chronicle.hand.forEach((held, at) => {
+  for (const held of chronicle.hand) {
     const strike = strikeOf(cardOf(catalogue, held.id));
-    if (strike === undefined) return;
+    if (strike === undefined) continue;
     strikes = followed(strikes, (left) =>
       grouped(
         { name: 'strike', card: held.id },
         strike(catalogue, left, counterOf(catalogue, held), (on, set) =>
-          countersSetAt(catalogue, on, at, set),
+          countersSetOn(catalogue, on, held.key, set),
         ),
       ),
     );
-  });
+  }
   return strikes;
 }
 
 /**
- * The card at that place of the hand carrying the values handed under the counters named, every
- * other as it carries it: one `counters-set`, and nothing where it already carries them. A counter
- * its content does not declare is refused.
+ * The hand's card of that key at the values handed under the counters named: one `counters-set`, and
+ * nothing where it already carries them. A key the hand does not hold is a `runtime-error` and sets
+ * nothing; a counter its content does not declare is refused.
  */
-function countersSetAt(
+function countersSetOn(
   catalogue: Catalogue,
   chronicle: Chronicle,
-  at: number,
+  key: number,
   set: Counters,
 ): Landed {
-  // `at` is the striking card's place in the hand `struck` began on: a strike that adds a card to the
-  // hand or takes one out of it, before or after this one, shifts the card set here.
-  const card = chronicle.hand[at];
-  const reset = cardMade(catalogue, card.id, { ...card.counters, ...set });
+  const card = cardKeyed(chronicle.hand, key);
+  if (card === undefined) return landedAs(change('runtime-error', chronicle, chronicle));
+  const reset = { ...cardMade(catalogue, card.id, { ...card.counters, ...set }), key };
   if (Object.entries(set).every(([counter, value]) => card.counters[counter] === value)) {
     return unchanged(chronicle);
   }
   return landedAs(
     change(
       'counters-set',
-      {
-        ...chronicle,
-        hand: chronicle.hand.map((held, place) => (place === at ? reset : held)),
-      },
+      { ...chronicle, hand: chronicle.hand.map((held) => (held.key === key ? reset : held)) },
       chronicle,
     ),
   );
@@ -948,23 +947,22 @@ export function healed(catalogue: Catalogue, paid: Chronicle, at: TileCoords): L
 }
 
 /**
- * The cards at those places of the hand gone to the discard pile, in hand order, and nothing where no
- * place is named; a place the hand does not hold is a `runtime-error` and discards nothing.
+ * The cards named gone from the hand to the discard pile, in hand order, and nothing where none is
+ * named; a card the hand does not hold is a `runtime-error` and discards nothing.
  */
-export function discarded(chronicle: Chronicle, places: readonly number[]): Landed {
-  if (places.length === 0) return unchanged(chronicle);
-  if (places.some((at) => chronicle.hand[at] === undefined)) {
+export function discarded(chronicle: Chronicle, cards: readonly ChronicleCard[]): Landed {
+  if (cards.length === 0) return unchanged(chronicle);
+  if (cards.some(({ key }) => cardKeyed(chronicle.hand, key) === undefined)) {
     return landedAs(change('runtime-error', chronicle, chronicle));
   }
-  const leaving = chronicle.hand.map((_, at) => at).filter((at) => places.includes(at));
+  const leaving = chronicle.hand.filter(({ key }) => cardKeyed(cards, key) !== undefined);
   return landedAs(
-    changeFrom(
+    change(
       'discarded',
-      leaving,
       {
         ...chronicle,
-        hand: chronicle.hand.filter((_, at) => !places.includes(at)),
-        discardPile: [...chronicle.discardPile, ...leaving.map((at) => chronicle.hand[at])],
+        hand: chronicle.hand.filter(({ key }) => cardKeyed(cards, key) === undefined),
+        discardPile: [...chronicle.discardPile, ...leaving],
       },
       chronicle,
     ),

@@ -61,6 +61,7 @@ import {
   type Chronicle,
   type CitySection,
   type Counters,
+  FIRST_KEY,
   type NeutralCity,
   turnShown,
 } from './state';
@@ -233,7 +234,7 @@ test('a chronicle saved after a strike set its card’s counters reads back with
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
-  expect(struck.hand).toEqual([{ id: 'PH_Tithe', counters: { food: TITHE + TITHE_RISE } }]);
+  expect(struck.hand).toEqual([{ ...city.hand[0], counters: { food: TITHE + TITHE_RISE } }]);
   expect(read.chronicle).toEqual(save);
 });
 
@@ -415,6 +416,12 @@ function firstUnit(chronicle: Chronicle, change: (unit: Unit) => object): Chroni
   return { ...chronicle, units: [change(unit) as Unit, ...others] };
 }
 
+/** The chronicle with the first card of its hand keyed as handed. */
+function firstCardKeyed(chronicle: Chronicle, key: number): Chronicle {
+  const [card, ...others] = chronicle.hand;
+  return { ...chronicle, hand: [{ ...card, key }, ...others] };
+}
+
 test.each<[string, (chronicle: Chronicle) => object, string]>([
   [
     'a city that sees a negative sight',
@@ -484,6 +491,17 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     `chronicle.units[0] is numbered ${FIRST_UNIT_NUMBER - 1}, below the first unit number ${FIRST_UNIT_NUMBER}`,
   ],
   [
+    'a next key below the first key',
+    (chronicle) => ({ ...chronicle, nextKey: FIRST_KEY - 1 }),
+    `chronicle holds the next key ${FIRST_KEY - 1}, below the first key ${FIRST_KEY}`,
+  ],
+  [
+    'a card keyed below the first key',
+    (chronicle) => firstCardKeyed(chronicle, FIRST_KEY - 1),
+    `chronicle.hand[0] is numbered ${FIRST_KEY - 1}, below the first key ${FIRST_KEY}`,
+  ],
+  ['no next key', ({ nextKey: _, ...written }) => written, 'chronicle.nextKey is not an integer'],
+  [
     'a unit with negative move points left',
     (chronicle) => firstUnit(chronicle, (unit) => ({ ...unit, movePoints: -1 })),
     'chronicle.units[0] has -1 move points left',
@@ -523,6 +541,28 @@ test('a save whose chronicle holds a unit number the next unit number does not e
     ),
   ).toEqual([
     `fixture: the save's chronicle.units[0] is numbered ${nextUnit}, not below the next unit number ${nextUnit}`,
+  ]);
+});
+
+test('a save whose chronicle holds a card key the next key does not exceed drops it', () => {
+  const { nextKey } = chronicleSaved().chronicle;
+
+  expect(
+    chronicleDropped(tampered(chronicleSaved(), (chronicle) => firstCardKeyed(chronicle, nextKey))),
+  ).toEqual([
+    `fixture: the save's chronicle.hand[0] is numbered ${nextKey}, not below the next key ${nextKey}`,
+  ]);
+});
+
+test('a save whose chronicle holds one key on two cards of two piles drops it', () => {
+  const { drawPile } = chronicleSaved().chronicle;
+
+  expect(
+    chronicleDropped(
+      tampered(chronicleSaved(), (chronicle) => firstCardKeyed(chronicle, drawPile[0].key)),
+    ),
+  ).toEqual([
+    `fixture: the save's chronicle.hand[0] is numbered ${drawPile[0].key}, a number another card holds`,
   ]);
 });
 

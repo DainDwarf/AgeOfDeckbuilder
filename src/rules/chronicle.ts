@@ -101,7 +101,6 @@ import {
   type Aimed,
   type Change,
   change,
-  changeFrom,
   changeOn,
   fall,
   followed,
@@ -121,10 +120,12 @@ import {
   type CardId,
   type Chronicle,
   type ChronicleAchievement,
-  type ChronicleCard,
   type CityFaction,
   capstoneLanded,
   cityRows,
+  FIRST_KEY,
+  keysDealt,
+  type MadeCard,
   type NeutralFallCause,
   onSettlePhase,
   playable,
@@ -200,8 +201,10 @@ export function beginChronicle(
       `the map's centre part names ${tileKey(coord)}, a tile the map does not hold`,
     );
   }
-  const made = (id: CardId): ChronicleCard => cardMade(catalogue, id);
-  const shuffled = shuffleItems(seedRng(seed), civilization.cards.map(made));
+  const made = (id: CardId): MadeCard => cardMade(catalogue, id);
+  const inHand = keysDealt(FIRST_KEY, [civilization.city.card, ...civilization.settle].map(made));
+  const deck = keysDealt(inHand.nextKey, civilization.cards.map(made));
+  const shuffled = shuffleItems(seedRng(seed), deck.cards);
   const neutralTile =
     neutral === undefined
       ? undefined
@@ -235,8 +238,9 @@ export function beginChronicle(
     relations: neutralAt && 'peace',
     units: [],
     nextUnit: FIRST_UNIT_NUMBER,
+    nextKey: deck.nextKey,
     drawPile: shuffled.items,
-    hand: [civilization.city.card, ...civilization.settle].map(made),
+    hand: inHand.cards,
     discardPile: [],
     exhaustPile: [],
     achievements: achievementsOfAvailableTechnologies(catalogue, age, learned),
@@ -900,7 +904,7 @@ function citiesHalf(
     everyCity(chronicle, (city, whose) => income(catalogue, city, whose)),
   );
   const strikes = followed(earned, (left) => struck(catalogue, left));
-  const discarding = followed<Stage>(strikes, (left) => discarded(left, everyPlace(left.hand)));
+  const discarding = followed<Stage>(strikes, (left) => discarded(left, left.hand));
   const growth = followed<Stage>(discarding, (left) =>
     grouped({ name: 'grow' }, everyCity(left, grow)),
   );
@@ -995,9 +999,7 @@ function openedUnlessDealt(catalogue: Catalogue, chronicle: Chronicle): Sequence
 function ticked(chronicle: Chronicle): Sequence<Group> {
   let tick = landedAs(change('turn', { ...chronicle, turn: chronicle.turn + 1 }, chronicle));
   if (onSettlePhase(chronicle) && chronicle.hand.length > 0) {
-    tick = followed(tick, (left) =>
-      landedAs(changeFrom('banished', everyPlace(left.hand), { ...left, hand: [] }, left)),
-    );
+    tick = followed(tick, (left) => landedAs(change('banished', { ...left, hand: [] }, left)));
   }
   for (const unit of chronicle.units) {
     tick = followed(tick, (left) => refreshedUnit(left, unit));
@@ -1145,21 +1147,19 @@ function playedAway(catalogue: Catalogue, chronicle: Chronicle, index: number): 
   const lying = lyingAs(catalogue, chronicle.hand[index]);
   switch (goesTo(cardOf(catalogue, lying.id))) {
     case 'discard-pile':
-      return changeFrom(
+      return change(
         'discarded',
-        [index],
         { ...chronicle, hand, discardPile: [...chronicle.discardPile, lying] },
         chronicle,
       );
     case 'exhaust-pile':
-      return changeFrom(
+      return change(
         'exhausted',
-        [index],
         { ...chronicle, hand, exhaustPile: [...chronicle.exhaustPile, lying] },
         chronicle,
       );
     case 'nowhere':
-      return changeFrom('banished', [index], { ...chronicle, hand }, chronicle);
+      return change('banished', { ...chronicle, hand }, chronicle);
   }
 }
 
@@ -1356,11 +1356,6 @@ function shuffle(chronicle: Chronicle): Chronicle {
 
   const shuffled = shuffleItems(chronicle.rng, chronicle.discardPile);
   return { ...chronicle, rng: shuffled.rng, drawPile: shuffled.items, discardPile: [] };
-}
-
-/** Every place of a pile, in pile order. */
-function everyPlace(pile: readonly ChronicleCard[]): number[] {
-  return pile.map((_, at) => at);
 }
 
 /**

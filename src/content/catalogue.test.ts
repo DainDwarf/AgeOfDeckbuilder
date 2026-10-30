@@ -32,7 +32,7 @@ import {
   timelineOf,
 } from '../rules/schedule';
 import type { Landed } from '../rules/stages';
-import type { Chronicle, Rewards } from '../rules/state';
+import { type Chronicle, keysDealt, type Rewards } from '../rules/state';
 import { yieldParts } from '../rules/yields';
 import { answerFace, answerFaceOfCase } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
@@ -535,7 +535,8 @@ test('every card of the catalogue carrying a strike strikes at the counters it s
     const chronicle = settledIn(age);
     for (const id of Object.keys(CATALOGUE.cards)) {
       if (strikeOf(cardOf(CATALOGUE, id)) === undefined) continue;
-      const holding = { ...chronicle, hand: [cardMade(CATALOGUE, id)] };
+      const { cards, nextKey } = keysDealt(chronicle.nextKey, [cardMade(CATALOGUE, id)]);
+      const holding = { ...chronicle, nextKey, hand: cards };
       expect(() => struck(CATALOGUE, holding)).not.toThrow();
     }
   }
