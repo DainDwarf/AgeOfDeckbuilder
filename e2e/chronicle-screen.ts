@@ -820,6 +820,17 @@ export async function openSaved(
   await capstoneClosed(page);
 }
 
+/**
+ * The page loaded again on the address that continued the save, the capstone's window a resumed
+ * chronicle opens under waited for.
+ */
+export async function reloadedOnCapstone(page: Page): Promise<void> {
+  await page.reload();
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  await rested(page);
+}
+
 /** Waits for a drawn frame, so a camera moved since answers for where it now stands. */
 export function rested(page: Page): Promise<void> {
   return page.evaluate(
@@ -2331,6 +2342,14 @@ export async function enter(page: Page, line: string): Promise<void> {
 export async function click(page: Page, name: string): Promise<void> {
   const at = await onScreen(page, name);
   await page.mouse.click(at.x, at.y);
+}
+
+/** From the chronicle screen into Settings, the way the player walks there. */
+export async function intoSettings(page: Page): Promise<void> {
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await click(page, 'menu-settings');
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
 }
 
 /**

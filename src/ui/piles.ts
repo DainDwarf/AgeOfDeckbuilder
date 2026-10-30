@@ -110,7 +110,7 @@ export function createPiles(
   on.flight.layer.add(carrier);
 
   /** What the piles have in the air; a render owns both and takes them down. */
-  let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
+  let waiting: Phaser.Tweens.Tween | undefined;
   let carried: CardFace | undefined;
 
   const putCarrierAway = (): void => {
@@ -132,8 +132,7 @@ export function createPiles(
 
   const render = (chronicle: Chronicle): void => {
     // Whoever is waiting on the wait is let go, so a cancelled one leaves nothing hanging on it.
-    waiting?.event.remove();
-    waiting?.done();
+    waiting?.stop();
     waiting = undefined;
     putCarrierAway();
 
@@ -186,12 +185,16 @@ export function createPiles(
     const turning = leaving.some(({ key, id }) => cardKeyed(lands, key)?.id !== id);
     return new Promise((done) => {
       const length = blockLength(leaving.length) + (turning ? TURN_OVER : 0);
-      const event = scene.time.delayedCall(length, () => {
-        waiting = undefined;
-        render(chronicle);
-        done();
+      // A tween and no timer event: the animation speed scales no clock (docs/PHASER.md).
+      waiting = scene.tweens.addCounter({
+        duration: length,
+        onComplete: () => {
+          waiting = undefined;
+          render(chronicle);
+          done();
+        },
+        onStop: () => done(),
       });
-      waiting = { event, done };
     });
   };
 

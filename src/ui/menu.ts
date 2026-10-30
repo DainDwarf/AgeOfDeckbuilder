@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import { animationSpeed, pressAnimationSpeed } from './animation-speed';
 import { menuZone } from './bar-layout';
 import {
   type Bind,
@@ -36,7 +37,7 @@ export type Warning =
   | 'play-warning';
 
 /** Every window the menu opens. */
-export type MenuWindow = 'menu' | 'settings' | 'controls' | 'manage-save' | Warning;
+export type MenuWindow = 'menu' | 'settings' | 'controls' | 'graphics' | 'manage-save' | Warning;
 
 /** A window a press or a step back opens: every one but a warning. */
 export type Opens = Exclude<MenuWindow, Warning>;
@@ -49,6 +50,7 @@ export type MenuPress =
   | 'manage-save'
   | 'settings'
   | 'controls'
+  | 'graphics'
   | 'campaign'
   | 'export'
   | 'import'
@@ -60,6 +62,7 @@ const LABELS: Record<MenuPress, TextKey> = {
   'manage-save': 'menu.manage-save',
   settings: 'menu.settings',
   controls: 'menu.controls',
+  graphics: 'menu.graphics',
   campaign: 'menu.campaign',
   export: 'manage-save.export',
   import: 'manage-save.import',
@@ -80,7 +83,7 @@ const THROUGH: Record<Warning, TextKey> = {
 /**
  * The windows: the title each one reads, the lines under it, what it lists, in the order it lists
  * them, and the one it closes back to; one that names none closes onto the screen standing. Controls
- * lists the bindings instead of buttons.
+ * lists the bindings instead of buttons, and Graphics its row over them.
  */
 const WINDOWS: Record<
   MenuWindow,
@@ -92,8 +95,9 @@ const WINDOWS: Record<
   }
 > = {
   menu: { title: 'menu.menu', buttons: ['manage-save', 'settings', 'campaign'] },
-  settings: { title: 'menu.settings', buttons: ['controls'], from: 'menu' },
+  settings: { title: 'menu.settings', buttons: ['controls', 'graphics'], from: 'menu' },
   controls: { title: 'menu.controls', buttons: [], from: 'settings' },
+  graphics: { title: 'menu.graphics', buttons: ['back'], from: 'settings' },
   'manage-save': {
     title: 'menu.manage-save',
     lines: ['manage-save.line'],
@@ -198,6 +202,9 @@ const BUTTON_GAP = 12;
 const SLOT_WIDTH = 120;
 const SLOT_HEIGHT = 34;
 const SLOT_GAP = 10;
+
+/** Where a row's buttons end, on the right of the window. */
+const ROW_RIGHT = DESIGN_WIDTH / 2 + WIDTH / 2 - PADDING;
 const ROW_GAP = 8;
 
 /** A row of the Controls window: a control's two slots, or one of the wheel's two buttons. */
@@ -291,11 +298,43 @@ export function createButton(
   return { face, label: label.setText(reads) };
 }
 
+/** How far down a window's body its buttons stand: Graphics holds its row over them. */
+function rowsAbove(which: MenuWindow): number {
+  return which === 'graphics' ? SLOT_HEIGHT + PADDING : 0;
+}
+
 /** How far below the title a window's own content reaches, the padding above it included. */
 function bodyHeight(which: MenuWindow, buttons: number): number {
   if (which === 'controls') return PADDING + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT;
   if (buttons === 0) return 0;
-  return PADDING + buttons * BUTTON_HEIGHT + (buttons - 1) * BUTTON_GAP;
+  return PADDING + rowsAbove(which) + buttons * BUTTON_HEIGHT + (buttons - 1) * BUTTON_GAP;
+}
+
+/** A row's label, on the left of the window. */
+function rowLabel(scene: Phaser.Scene, reads: string, y: number): Phaser.GameObjects.Text {
+  return addText(scene, DESIGN_WIDTH / 2 - WIDTH / 2 + PADDING, y, reads, LABEL_STYLE).setOrigin(
+    0,
+    0.5,
+  );
+}
+
+/** A row a press turns: its label, and its one button right of it, as wide as a control's two slots. */
+function turningRow(
+  scene: Phaser.Scene,
+  y: number,
+  name: string,
+  reads: string,
+  pressed: () => void,
+): { parts: Phaser.GameObjects.GameObject[]; label: Phaser.GameObjects.Text } {
+  const width = 2 * SLOT_WIDTH + SLOT_GAP;
+  const { face, label } = pressable(
+    scene,
+    { x: ROW_RIGHT - width / 2, y, width, height: SLOT_HEIGHT },
+    name,
+    SLOT_STYLE,
+    pressed,
+  );
+  return { parts: [rowLabel(scene, reads, y), face, label], label };
 }
 
 /**
@@ -309,7 +348,6 @@ function layControls(
   back: () => void,
 ): (press: Bind) => boolean {
   const middle = DESIGN_WIDTH / 2;
-  const right = middle + WIDTH / 2 - PADDING;
   /** The slot waiting for a key, and nothing while none waits. */
   let listening: { control: Control; slot: number } | undefined;
   const slots: { control: Control; slot: number; label: Phaser.GameObjects.Text }[] = [];
@@ -334,20 +372,17 @@ function layControls(
     }
   };
 
-  const rowLabel = (reads: string, y: number): Phaser.GameObjects.Text =>
-    addText(scene, middle - WIDTH / 2 + PADDING, y, reads, LABEL_STYLE).setOrigin(0, 0.5);
-
   const rowOf = (row: Row, y: number): Phaser.GameObjects.GameObject[] => {
     switch (row.kind) {
       case 'control': {
         const { control } = row;
         return [
-          rowLabel(text(`control.${control}`), y),
+          rowLabel(scene, text(`control.${control}`), y),
           ...[0, 1].flatMap((slot) => {
             const { face, label } = pressable(
               scene,
               {
-                x: right - (1 - slot) * (SLOT_WIDTH + SLOT_GAP) - SLOT_WIDTH / 2,
+                x: ROW_RIGHT - (1 - slot) * (SLOT_WIDTH + SLOT_GAP) - SLOT_WIDTH / 2,
                 y,
                 width: SLOT_WIDTH,
                 height: SLOT_HEIGHT,
@@ -366,12 +401,11 @@ function layControls(
       }
       case 'wheel': {
         const { wheeled } = row;
-        const width = 2 * SLOT_WIDTH + SLOT_GAP;
-        const { face, label } = pressable(
+        const { parts, label } = turningRow(
           scene,
-          { x: right - width / 2, y, width, height: SLOT_HEIGHT },
+          y,
           `controls-wheel-${wheeled}`,
-          SLOT_STYLE,
+          text(WHEEL_READS[wheeled].row),
           () => {
             listening = undefined;
             invert(wheeled);
@@ -379,7 +413,7 @@ function layControls(
           },
         );
         wheels.push({ wheeled, label });
-        return [rowLabel(text(WHEEL_READS[wheeled].row), y), face, label];
+        return parts;
       }
     }
   };
@@ -433,6 +467,23 @@ function layControls(
     paint();
     return true;
   };
+}
+
+/** The Graphics window's row, reading the animation speed, a press moving it to the next. */
+function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, top: number): void {
+  const reads = (): string => text('graphics.speed', { speed: animationSpeed() });
+  const { parts, label } = turningRow(
+    scene,
+    top + SLOT_HEIGHT / 2,
+    'graphics-animation-speed',
+    text('graphics.animation-speed'),
+    () => {
+      pressAnimationSpeed(scene.game.scene);
+      label.setText(reads());
+    },
+  );
+  label.setText(reads());
+  root.add(parts);
 }
 
 /** A line a window reads, wrapped to the window and named after its entry. */
@@ -557,7 +608,7 @@ function layWindow(
     const { face, label } = createButton(
       scene,
       middle,
-      body + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
+      body + rowsAbove(which) + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
       name,
       reads,
       pressed,
@@ -565,6 +616,7 @@ function layWindow(
     root.add([face, label]);
   });
 
+  if (which === 'graphics') layGraphics(scene, root, body);
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;
   return { root, binds };
 }

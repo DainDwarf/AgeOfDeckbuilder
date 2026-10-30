@@ -161,6 +161,7 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
         case 'manage-save':
         case 'settings':
         case 'controls':
+        case 'graphics':
           raise(press);
           return;
         case 'back':

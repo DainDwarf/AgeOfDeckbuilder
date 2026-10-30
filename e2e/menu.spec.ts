@@ -17,6 +17,7 @@ import {
   click,
   dragOut,
   idsOf,
+  intoSettings,
   launchedFromScreen,
   mapFrame,
   onScreen,
@@ -84,10 +85,7 @@ test('a right click on the scrim of the menu steps back one window, as a left cl
   const opened = settledOn(1);
 
   await openSaved(page, opened);
-  await click(page, 'menu-button');
-  await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await click(page, 'menu-settings');
-  await expect.poll(() => standing(page, 'settings')).toBe(true);
+  await intoSettings(page);
   await click(page, 'settings-controls');
   await expect.poll(() => standing(page, 'controls')).toBe(true);
 

@@ -19,5 +19,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The animation speed setting** — Settings lists Graphics, Graphics lists the Animation speed row reading ×1, ×2 or ×4 and Back, a press on the row moving to the next speed and ×4 back to ×1; every tween on the chronicle screen's three scenes and the piles' wait play that many times faster, the hover rests do not; the speed set is kept in the browser beside the controls and read as the chronicle screen opens; a change made over a play-out in the air takes at once. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/PHASER.md`. [board/animation-speed-setting.md](board/animation-speed-setting.md)
 - **The suite on the fastest animation speed** — every spec opens on the fastest speed the player can set and never past it, the specs that read the screen mid-play-out keeping the designed one, and the turn budget re-measured.

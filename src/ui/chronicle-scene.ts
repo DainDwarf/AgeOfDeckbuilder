@@ -21,6 +21,7 @@ import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
 import { type Unit, unitOf } from '../rules/units';
+import { chronicleScreenAtSpeed } from './animation-speed';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createFootBubble } from './card-face';
@@ -198,6 +199,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   }
 
   create(): void {
+    chronicleScreenAtSpeed(this.game.scene);
     const map = mapOf(this);
     const camera = this.cameras.main;
     const stratum = (): Stratum => stratumOf(this.add.layer(), camera);

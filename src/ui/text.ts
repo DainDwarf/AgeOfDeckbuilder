@@ -392,6 +392,7 @@ const TEXT = {
   'menu.menu': 'Menu',
   'menu.settings': 'Settings',
   'menu.controls': 'Controls',
+  'menu.graphics': 'Graphics',
   'menu.campaign': 'Campaign',
   'menu.manage-save': 'Manage Save',
   'manage-save.line': 'The game saves by itself. This is for a copy to keep or to send.',
@@ -424,6 +425,8 @@ const TEXT = {
   'wheel.up-zooms-out': 'Up zooms out',
   'wheel.up-scrolls-up': 'Up scrolls up',
   'wheel.up-scrolls-down': 'Up scrolls down',
+  'graphics.animation-speed': 'Animation speed', // glossary exception: speed
+  'graphics.speed': '×{speed}', // glossary exception: speed
   'key.arrow-up': '↑',
   'key.arrow-left': '←',
   'key.arrow-down': '↓',

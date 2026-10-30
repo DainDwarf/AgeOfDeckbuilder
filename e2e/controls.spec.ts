@@ -5,6 +5,7 @@ import {
   browse,
   capstoneClosed,
   click,
+  intoSettings,
   launchedAs,
   liftedName,
   nameOnScreen,
@@ -12,6 +13,7 @@ import {
   onScreen,
   openSaved,
   overflowingPiles,
+  reloadedOnCapstone,
   rested,
   ringedTile,
   scrolled,
@@ -77,10 +79,7 @@ async function rows(page: Page): Promise<string[][]> {
 
 /** From the chronicle screen into Controls, the way the player walks there. */
 async function intoControls(page: Page): Promise<void> {
-  await click(page, 'menu-button');
-  await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await click(page, 'menu-settings');
-  await expect.poll(() => standing(page, 'settings')).toBe(true);
+  await intoSettings(page);
   await click(page, 'settings-controls');
   await expect.poll(() => standing(page, 'controls')).toBe(true);
 }
@@ -219,9 +218,7 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   await page.keyboard.press('k');
   await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('K');
 
-  await page.reload();
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  await rested(page);
+  await reloadedOnCapstone(page);
   await intoControls(page);
   expect(await slotReads(page, 'pan-up', 1)).toBe('K');
   expect(await slotReads(page, 'pan-up', 0)).toBe('W');
@@ -543,10 +540,7 @@ test('a press on a row of the wheel turns the map or what scrolls the other way,
   await click(page, 'controls-wheel-scroll');
   await expect.poll(() => wheelReads(page, 'scroll')).toBe('Up scrolls down');
 
-  await page.reload();
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
-  await expect.poll(() => standing(page, 'capstone')).toBe(true);
-  await rested(page);
+  await reloadedOnCapstone(page);
   await capstoneClosed(page);
 
   expect(await grewBy(page, () => page.mouse.wheel(0, -100))).toBeCloseTo(1 / NOTCH, 2);
