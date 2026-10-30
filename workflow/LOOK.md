@@ -7,10 +7,6 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The pure UI modules stay beside the Phaser ones with their Vitest tests, no folder, no convention: settled at the cut.
 - The CI browse flake (the `ci-browse-frame-starvation` memory): the browse and deck-editing specs ran red on CI while panels overflowed, ~8 fps under 5 s polls and Phaser's 120-frame delta cap; green since the padding left. Expected back when a panel overflows again, and bigger assets can bring it back; read off each line's CI run.
 
-## Animation speed
-
-- **Animation speed settings**: the player sets how fast the staged motions play. The e2e suite runs on the fastest one: an end of turn plays out its animations in 2–3 s at today's speed, and most of the suite's time is spent watching them; only the specs that test a motion or a rest mid-way keep real speed.
-
 ## The style lock
 
 - The art-style call is made against what the sites in `docs/ASSET-SOURCES.md` actually hold in depth, under the dogmas: no generative AI in assets, a licence record for every pack. Pitched running: two or three real packs, one tile, one unit and one card dressed in each by a throwaway edit, shot in the real game.

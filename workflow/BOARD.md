@@ -8,7 +8,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **Animation speed** — a setting for how fast the staged motions play, and the suite on the fastest.
 - **The style lock** — the art style settled against real packs dressed on the real screen, the font bundled, the render factor strategy, the type-size floor, and the colour discussion: several colours for several meanings, the ledger, shape redundancy for anything gameplay-critical; ends in the look's design page.
 - **The map** — terrain, features, rivers, fog, the Stone ground, the rings and the marks, in the locked style.
 - **The pieces on the map** — units, buildings, sites, the city badge, a health bar on units, a building's reach drawn.
@@ -19,3 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
+
+- **The animation speed setting** — the player sets in Settings how fast every motion on the chronicle screen plays, through Phaser's time scale on its scenes, the designed speed or a faster one and never none, kept in the browser beside the controls; the piles' wait on the clock follows it, the hover rests do not.
+- **The suite on the fastest animation speed** — every spec opens on the fastest speed the player can set and never past it, the specs that read the screen mid-play-out keeping the designed one, and the turn budget re-measured.

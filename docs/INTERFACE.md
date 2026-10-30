@@ -4,7 +4,7 @@
 
 ## The menu ✅
 
-The menu lists **Manage Save**, **Settings** and **Campaign**, which leaves the chronicle as [`META.md`](META.md) says. **Settings** is where everything the player sets lives, and **Controls** is its first entry. The **Menu** button stands on every screen and opens the menu over whatever stands; **Campaign** is listed over a chronicle and its ending screen, and nowhere else.
+The menu lists **Manage Save**, **Settings** and **Campaign**, which leaves the chronicle as [`META.md`](META.md) says. **Settings** is where everything the player sets lives, and **Controls** is its first entry; the speed the chronicle screen's motions play at is set there too ([`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)), and kept in the browser as the controls are. The **Menu** button stands on every screen and opens the menu over whatever stands; **Campaign** is listed over a chronicle and its ending screen, and nowhere else.
 
 A window closes back one step, to the window it was opened from and then to the screen under it. A press on the menu's scrim closes it back one step too. The **back key**, Escape until it is rebound, backs out of whatever is open or under way, one step per press, and raises the menu only where nothing is left to back out of. Nothing pauses, because nothing runs: the game is untimed, and a menu over the chronicle screen is the chronicle screen waiting. While a window of the menu stands, no key and no press reaches the screen under it.
 
