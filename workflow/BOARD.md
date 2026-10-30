@@ -19,5 +19,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
-
-- **Cut `src/ui/map.ts`** — the map's one file is cut by concern into modules, each behind a door narrower than what it hides, nothing renamed and the game unchanged. Doc-impact: none. [board/cut-map.md](board/cut-map.md)
