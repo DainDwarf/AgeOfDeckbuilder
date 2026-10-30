@@ -15,7 +15,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The cards and the windows** — the face, the icons through one glyph renderer, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
 - **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
 - **The meta screens** — the launch screen with its region stills, the tree, the collection, the ending.
-- **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, and the unit legibility readings.
+- **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, a transition into a chronicle and out of it, and the unit legibility readings.
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
