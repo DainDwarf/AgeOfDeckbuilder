@@ -207,10 +207,10 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
 /** How many rings of the map's border stand stroked in each colour, by the colour's value. */
 function ringsByColour(page: Page): Promise<Record<number, number>> {
   return page.evaluate(() => {
-    const border = window.named?.('border')?.object as Phaser.GameObjects.Layer | undefined;
+    const border = window.shownIn?.('border') as Phaser.GameObjects.Polygon[] | undefined;
     if (border === undefined) throw new Error('there is no border on the chronicle screen');
     const counts: Record<number, number> = {};
-    for (const ring of border.list as Phaser.GameObjects.Polygon[]) {
+    for (const ring of border) {
       counts[ring.strokeColor] = (counts[ring.strokeColor] ?? 0) + 1;
     }
     return counts;

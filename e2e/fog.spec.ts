@@ -286,7 +286,7 @@ test('an attack that kills the unit whose sight alone held its tiles plays befor
       const marker = window.named?.(names.mark)?.object as Phaser.GameObjects.Container | undefined;
       if (marker === undefined || marker.scale <= 0 || marker.scale >= 1) return undefined;
       window.game?.scene.getScene('map').tweens.pauseAll();
-      return { fogged: window.named?.(names.scrim) !== undefined };
+      return { fogged: window.readName?.(names.scrim).standing };
     },
     { mark, scrim },
   );

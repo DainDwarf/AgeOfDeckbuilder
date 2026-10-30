@@ -139,6 +139,8 @@ declare global {
       | undefined;
     /** What one name reads on the running scenes. */
     readName?: (name: string) => PageReading;
+    /** The named Layer's or container's own objects that are shown. */
+    shownIn?: (name: string) => Phaser.GameObjects.GameObject[] | undefined;
   }
 }
 
@@ -370,7 +372,34 @@ export async function readNames(page: Page): Promise<void> {
         within(place.list, name, []).map((object) => ({ object, camera: place.camera })),
       );
 
-    window.named = (name) => everyNamed(name)[0];
+    /** Where an object's visibility may be taken from it: itself and every parent over it. */
+    type Parented = {
+      visible?: boolean;
+      parentContainer?: Parented | null;
+      displayList?: Parented | null;
+    };
+
+    // A Layer's or a Container's own `visible` hides its children, whose own flag stays up.
+    const isShown = (object: Parented): boolean => {
+      if (object.visible === false) return false;
+      const parent = object.parentContainer ?? object.displayList;
+      return parent === undefined || parent === null || isShown(parent);
+    };
+
+    const shownOf = <T extends { object: Phaser.GameObjects.GameObject }>(all: T[]): T[] =>
+      all.filter(({ object }) => isShown(object as Parented));
+
+    /** The first of the name that is shown, else the first: a pool keeps a name on what it hid. */
+    const firstOf = <T extends { object: Phaser.GameObjects.GameObject }>(
+      all: T[],
+    ): T | undefined => shownOf(all)[0] ?? all[0];
+
+    window.named = (name) => firstOf(everyNamed(name));
+
+    window.shownIn = (name) => {
+      const parent = window.named?.(name)?.object as Phaser.GameObjects.Container | undefined;
+      return parent?.list.filter((child) => isShown(child as Parented));
+    };
 
     /** Where a point of the camera's world sits on the page, and what one unit of it measures there. */
     const onPage = (camera: Phaser.Cameras.Scene2D.Camera, x: number, y: number): OnScreen => {
@@ -393,12 +422,12 @@ export async function readNames(page: Page): Promise<void> {
 
     window.readName = (name) => {
       const all = everyNamed(name);
-      const object = all[0]?.object;
+      const first = firstOf(all);
+      const object = first?.object;
       const found = (): {
         object: Phaser.GameObjects.GameObject;
         camera: Phaser.Cameras.Scene2D.Camera;
       } => {
-        const first = all[0];
         if (first === undefined) throw new Error(`nothing named ${name} stands on the screen`);
         return first;
       };
@@ -423,9 +452,10 @@ export async function readNames(page: Page): Promise<void> {
         if (inside === undefined) throw new Error(complaint);
         return inside;
       };
+      const standingCount = shownOf(all).length;
       return {
-        standing: object !== undefined,
-        count: all.length,
+        standing: standingCount > 0,
+        count: standingCount,
         text: (object as Phaser.GameObjects.Text | undefined)?.text,
         ink: (object as Partial<Phaser.GameObjects.Text> | undefined)?.style?.color as
           | string
@@ -1032,7 +1062,7 @@ export async function textOf(page: Page, name: string): Promise<string | undefin
   return (await reading(page, name)).text;
 }
 
-/** Whether an object of that name stands on any running scene. */
+/** Whether an object of that name stands shown on any running scene, every parent over it shown too. */
 export async function standing(page: Page, name: string): Promise<boolean> {
   return (await reading(page, name)).standing;
 }
@@ -1070,7 +1100,10 @@ export async function ringed(page: Page, name: string): Promise<boolean> {
   return (await reading(page, name)).ringed;
 }
 
-/** Whether the named object is shown; what a mode raises stands there hidden while it is off. */
+/**
+ * Whether the named object's own flag is up, whatever its parents show; what a mode raises stands
+ * there hidden while it is off.
+ */
 export async function shows(page: Page, name: string): Promise<boolean> {
   return (await reading(page, name)).shows;
 }
@@ -1086,7 +1119,7 @@ export function wellFill(page: Page, key: string): Promise<number | undefined> {
   }, key);
 }
 
-/** How many objects of that name stand on the chronicle screen: one still painted, plus any left over. */
+/** How many objects of that name stand shown on the chronicle screen: one still painted, plus any left over. */
 export async function counted(page: Page, name: string): Promise<number> {
   return (await reading(page, name)).count;
 }
@@ -1259,9 +1292,9 @@ export function readOrder<T>(
 /** How many marks the named container of the map is showing. */
 export function marksIn(page: Page, name: string): Promise<number> {
   return page.evaluate((target) => {
-    const container = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (container === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
-    return container.list.length;
+    const marks = window.shownIn?.(target);
+    if (marks === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
+    return marks.length;
   }, name);
 }
 
@@ -2103,7 +2136,7 @@ export function refusalLines(page: Page): Promise<string[] | undefined> {
 export function thresholdShown(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     const mark = window.named?.('threshold')?.object as Phaser.GameObjects.Container | undefined;
-    if (mark === undefined) return undefined;
+    if (mark === undefined || !mark.visible) return undefined;
     return mark.list
       .filter((part) => part.type === 'Text')
       .map((part) => (part as Phaser.GameObjects.Text).text)[0];
@@ -2179,14 +2212,14 @@ export function marked(page: Page): Promise<{
 }> {
   return page.evaluate(() => {
     const ring = window.named?.('selected')?.object;
-    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
+    const lit = window.shownIn?.('lit');
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
     if (ring === undefined || lit === undefined || panel === undefined) {
       throw new Error('the map is not on the chronicle screen');
     }
     return {
       ringed: ring.getData('tile') as string | undefined,
-      lit: lit.list.length,
+      lit: lit.length,
       inspecting: panel.visible
         ? { card: panel.getData('card') as string, x: panel.x, y: panel.y }
         : undefined,
@@ -2197,9 +2230,9 @@ export function marked(page: Page): Promise<{
 /** The tiles the map lights for the unit it is lighting for, by tile key, in key order. */
 export function litTiles(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const lit = window.named?.('lit')?.object as Phaser.GameObjects.Layer | undefined;
+    const lit = window.shownIn?.('lit');
     if (lit === undefined) throw new Error('the map is not on the chronicle screen');
-    return lit.list.map((glow) => glow.getData('tile') as string).sort();
+    return lit.map((glow) => glow.getData('tile') as string).sort();
   });
 }
 

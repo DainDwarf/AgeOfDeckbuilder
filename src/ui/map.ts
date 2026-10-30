@@ -108,6 +108,10 @@ const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 
 /** Placeholder primitive until the art pass: the disc's rim a plain line around the map. */
 const RIM_WIDTH = 2;
 
+// Phaser reads a polygon's first point at its construction, and one with none throws.
+/** What a polygon holds until a mark is read onto it. */
+const UNREAD: number[] = [0, 0, 1, 0, 0, 1];
+
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
@@ -274,28 +278,54 @@ export type MapView = {
   zoom(notches: number): void;
 };
 
-/** The one way a tile's terrain is drawn: the hexagonal face, at the size a tile is drawn at. */
-export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Polygon {
-  return scene.add
-    .polygon(0, 0, hexagon(TILE_SIZE), terrainColourOf(terrain))
-    .setStrokeStyle(1, LOOK.mapOutline);
+/** The hexagonal face of a tile, at the size a tile is drawn at, with no terrain on it yet. */
+function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
+  return scene.add.polygon(0, 0, hexagon(TILE_SIZE)).setStrokeStyle(1, LOOK.mapOutline);
 }
 
-/** The one way a building is drawn: its placeholder mark, in the colour that building is known by. */
+/** A face made to draw a terrain, whatever it drew before. */
+function asTerrain(face: Phaser.GameObjects.Polygon, terrain: Terrain): Phaser.GameObjects.Polygon {
+  return face.setFillStyle(terrainColourOf(terrain));
+}
+
+/** The one way a tile's terrain is drawn: the hexagonal face, at the size a tile is drawn at. */
+export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Polygon {
+  return asTerrain(tileFace(scene), terrain);
+}
+
+/** A polygon made to draw a building: its placeholder mark, in the colour it is known by. */
+function asBuilding(
+  mark: Phaser.GameObjects.Polygon,
+  building: BuildingTypeId,
+): Phaser.GameObjects.Polygon {
+  return mark
+    .setTo(corners(buildingMarkOf(building)))
+    .setFillStyle(buildingColourOf(building))
+    .setStrokeStyle(2, LOOK.mapOutline);
+}
+
+/** The one way a building is drawn. */
 export function buildingMark(
   scene: Phaser.Scene,
   building: BuildingTypeId,
 ): Phaser.GameObjects.Polygon {
-  return scene.add
-    .polygon(0, 0, corners(buildingMarkOf(building)), buildingColourOf(building))
-    .setStrokeStyle(2, LOOK.mapOutline);
+  return asBuilding(scene.add.polygon(0, 0, UNREAD), building);
 }
 
-/** The one way a feature is drawn: its placeholder mark, in the colour that feature is known by. */
-export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Polygon {
-  return scene.add
-    .polygon(0, 0, corners(featureMarkOf(feature)), featureColourOf(feature))
+/** A polygon made to draw a feature: its placeholder mark, in the colour it is known by. */
+function asFeature(
+  mark: Phaser.GameObjects.Polygon,
+  feature: FeatureId,
+): Phaser.GameObjects.Polygon {
+  return mark
+    .setTo(corners(featureMarkOf(feature)))
+    .setFillStyle(featureColourOf(feature))
     .setStrokeStyle(1, LOOK.mapOutline);
+}
+
+/** The one way a feature is drawn. */
+export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Polygon {
+  return asFeature(scene.add.polygon(0, 0, UNREAD), feature);
 }
 
 /** The one way a river is drawn off the map: its placeholder mark, in the blue a river runs in. */
@@ -303,20 +333,42 @@ export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
   return scene.add.polygon(0, 0, RIVER_MARK, LOOK.river).setStrokeStyle(1, LOOK.mapOutline);
 }
 
-/** The one way an improvement is drawn: its placeholder mark, in the stone everything worked is. */
+/** A polygon made to draw an improvement: its placeholder mark, in the stone everything worked is. */
+function asImprovement(
+  mark: Phaser.GameObjects.Polygon,
+  improvement: ImprovementId,
+): Phaser.GameObjects.Polygon {
+  return mark
+    .setTo(corners(improvementMarkOf(improvement)))
+    .setFillStyle(LOOK.built)
+    .setStrokeStyle(2, LOOK.mapOutline);
+}
+
+/** The one way an improvement is drawn. */
 export function improvementMark(
   scene: Phaser.Scene,
   improvement: ImprovementId,
 ): Phaser.GameObjects.Polygon {
-  return scene.add
-    .polygon(0, 0, corners(improvementMarkOf(improvement)), LOOK.built)
-    .setStrokeStyle(2, LOOK.mapOutline);
+  return asImprovement(scene.add.polygon(0, 0, UNREAD), improvement);
 }
 
 /** The shapes a unit's mark is drawn from, bottom first, each its corners and its drop below the middle. */
 function unitShapes(type: string, embarked: boolean): { corners: number[]; drop: number }[] {
   const kind = { corners: corners(unitMarkOf(type)), drop: 0 };
   return embarked ? [{ corners: corners(HULL), drop: HULL_DROP }, kind] : [kind];
+}
+
+/** A polygon made to draw one shape of a unit's mark, in the colour of the faction it acts for. */
+function asUnitPart(
+  part: Phaser.GameObjects.Polygon,
+  shape: { corners: number[]; drop: number },
+  faction: Faction,
+): Phaser.GameObjects.Polygon {
+  return part
+    .setTo(shape.corners)
+    .setY(shape.drop)
+    .setFillStyle(FACTION_COLOURS[faction])
+    .setStrokeStyle(2, LOOK.mapOutline);
 }
 
 /**
@@ -333,11 +385,32 @@ export function unitMark(
     0,
     0,
     unitShapes(type, embarked).map((shape) =>
-      scene.add
-        .polygon(0, shape.drop, shape.corners, FACTION_COLOURS[faction])
-        .setStrokeStyle(2, LOOK.mapOutline),
+      asUnitPart(scene.add.polygon(0, 0, UNREAD), shape, faction),
     ),
   );
+}
+
+/** A unit's mark with no unit on it yet: a polygon for each shape an embarked unit is drawn from. */
+function unreadUnitMark(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return scene.add.container(0, 0, [
+    scene.add.polygon(0, 0, UNREAD),
+    scene.add.polygon(0, 0, UNREAD),
+  ]);
+}
+
+/** An `unreadUnitMark` made to draw a unit, the polygon its shapes leave over hidden. */
+function asUnit(
+  mark: Phaser.GameObjects.Container,
+  type: string,
+  faction: Faction,
+  embarked: boolean,
+): Phaser.GameObjects.Container {
+  const shapes = unitShapes(type, embarked);
+  (mark.list as Phaser.GameObjects.Polygon[]).forEach((part, at) => {
+    part.setVisible(at < shapes.length);
+    if (at < shapes.length) asUnitPart(part, shapes[at], faction);
+  });
+  return mark;
 }
 
 /**
@@ -373,20 +446,17 @@ function diamond(scene: Phaser.Scene, span: number, colour: number): Phaser.Game
     .setAngle(45);
 }
 
-/** The one way a point of yield is drawn: a diamond in the colour its resource is known by. */
-function yieldMark(scene: Phaser.Scene, resource: Resource): Phaser.GameObjects.Rectangle {
-  return diamond(scene, GLYPH, LOOK.reading[resource]).setName(`yield-${resource}`);
+/** A diamond made to draw a point of yield, in the colour its resource is known by. */
+function asYield(
+  mark: Phaser.GameObjects.Rectangle,
+  resource: Resource,
+): Phaser.GameObjects.Rectangle {
+  return mark.setFillStyle(LOOK.reading[resource]).setName(`yield-${resource}`);
 }
 
 /** The one way a tile is ringed: a hexagon just inside its face, in the colour given. */
-function ringMark(
-  scene: Phaser.Scene,
-  coord: TileCoords,
-  colour: number,
-  weight: number,
-): Phaser.GameObjects.Polygon {
-  const { x, y } = positionOf(coord);
-  return scene.add.polygon(x, y, hexagon(TILE_SIZE - 4), 0, 0).setStrokeStyle(weight, colour);
+function ringMark(scene: Phaser.Scene, colour: number, weight: number): Phaser.GameObjects.Polygon {
+  return scene.add.polygon(0, 0, hexagon(TILE_SIZE - 4), 0, 0).setStrokeStyle(weight, colour);
 }
 
 /** The one way an assigned tile is marked: a diamond in the colour population is known by. */
@@ -394,76 +464,91 @@ function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
   return diamond(scene, ASSIGNED_GLYPH, LOOK.population).setName('assigned');
 }
 
+/** What a claim asks for: its number and its resource's own diamond, in one container. */
+type ThresholdMark = {
+  readonly root: Phaser.GameObjects.Container;
+  readonly number: Phaser.GameObjects.Text;
+  readonly glyph: Phaser.GameObjects.Rectangle;
+};
+
+function thresholdMark(scene: Phaser.Scene): ThresholdMark {
+  const number = addText(scene, 0, 0, '', THRESHOLD_STYLE).setOrigin(0.5, 0.5);
+  const glyph = diamond(scene, THRESHOLD_GLYPH, 0);
+  const root = scene.add.container(0, 0, [number, glyph]).setName('threshold').setVisible(false);
+  return { root, number, glyph };
+}
+
 /**
- * The one way what a claim asks for stands on its tile: the threshold as a minus and its number,
- * its resource's own diamond beside it, the pair centred on the tile's middle.
+ * What a claim asks for standing on its tile: the threshold as a minus and its number, its
+ * resource's own diamond beside it, the pair centred on the tile's middle.
  */
-function thresholdMark(
-  scene: Phaser.Scene,
+function showThreshold(
+  { root, number, glyph }: ThresholdMark,
   coord: TileCoords,
   cost: Cost,
-  resolution: number,
-): Phaser.GameObjects.Container {
-  const number = addText(
-    scene,
-    0,
-    0,
-    text('threshold.culture', { culture: cost.amount }),
-    THRESHOLD_STYLE,
-  )
-    .setResolution(resolution)
-    .setOrigin(0.5, 0.5);
-  const glyph = diamond(scene, THRESHOLD_GLYPH, LOOK.reading[cost.resource]);
-
+): void {
+  number.setText(text('threshold.culture', { culture: cost.amount }));
+  glyph.setFillStyle(LOOK.reading[cost.resource]);
   const width = number.width + THRESHOLD_GAP + THRESHOLD_GLYPH;
   number.setX((number.width - width) / 2);
   glyph.setX((width - THRESHOLD_GLYPH) / 2);
   const { x, y } = positionOf(coord);
-  return scene.add.container(x, y, [number, glyph]).setName('threshold');
+  root.setPosition(x, y).setVisible(true);
+}
+
+/** A city's badge: its pill, its number, and the width the pill is drawn at, none until it is. */
+type PopulationBadge = {
+  readonly pill: Phaser.GameObjects.Graphics;
+  readonly number: Phaser.GameObjects.Text;
+  width: number | undefined;
+};
+
+function populationBadge(scene: Phaser.Scene, whose: CityFaction): PopulationBadge {
+  const number = addText(scene, 0, 0, '', { ...BADGE_STYLE, color: css(CITY_BADGE_INKS[whose]) })
+    .setOrigin(0.5, 0.5)
+    .setVisible(false);
+  const pill = scene.add.graphics().setData('fill', CITY_COLOURS[whose]).setVisible(false);
+  return { pill, number, width: undefined };
 }
 
 /**
  * The one way a city's own tile wears its population: the number on a pill in that city's colour at
  * the tile's lower-right corner, a disc until the number needs more room, widening about its middle.
  */
-function populationBadge(
-  scene: Phaser.Scene,
+function showBadge(
+  badge: PopulationBadge,
   coord: TileCoords,
   whose: CityFaction,
   population: number,
-  resolution: number,
-): Phaser.GameObjects.GameObject[] {
+): void {
+  const { pill, number } = badge;
   const { x, y } = positionOf(coord);
   const at = { x: x + BADGE_OFF, y: y + BADGE_OFF };
   const key = tileKey(coord);
-  const number = addText(scene, at.x, at.y, String(population), {
-    ...BADGE_STYLE,
-    color: css(CITY_BADGE_INKS[whose]),
-  })
-    .setResolution(resolution)
-    .setOrigin(0.5, 0.5)
-    .setName(`population-${key}-number`);
+  number
+    .setText(String(population))
+    .setPosition(at.x, at.y)
+    .setName(`population-${key}-number`)
+    .setVisible(true);
+  pill.setPosition(at.x, at.y).setName(`population-${key}`).setVisible(true);
+
   const width = Math.max(BADGE_HEIGHT, ownBoxOf(number).width + 2 * BADGE_PAD);
-  const fill = CITY_COLOURS[whose];
+  if (width === badge.width) return;
+  badge.width = width;
   const box = { x: -width / 2, y: -BADGE_HEIGHT / 2, width, height: BADGE_HEIGHT };
   const radius = BADGE_HEIGHT / 2;
-  const pill = scene.add
-    .graphics()
-    .setPosition(at.x, at.y)
-    .fillStyle(fill)
+  pill
+    .clear()
+    .fillStyle(CITY_COLOURS[whose])
     .fillRoundedRect(box.x, box.y, box.width, box.height, radius)
     .lineStyle(1.5, LOOK.mapOutline)
-    .strokeRoundedRect(box.x, box.y, box.width, box.height, radius)
-    .setData('fill', fill)
-    .setName(`population-${key}`);
-  return [pill, number];
+    .strokeRoundedRect(box.x, box.y, box.width, box.height, radius);
 }
 
 /** The one way a held tile with nobody on it is dimmed: a scrim over it and all it carries. */
-function cityDim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
-  const { x, y } = positionOf(coord);
+function cityDim(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
+    .polygon(0, 0, hexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
     .setName('city-dim');
 }
 
@@ -542,27 +627,87 @@ function boxOf(tiles: readonly Tile[]): {
   };
 }
 
+/** A hexagon just inside a tile's face, with no glow on it yet. */
+function unreadGlow(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
+  return scene.add.polygon(0, 0, hexagon(TILE_SIZE - 2));
+}
+
+/** An `unreadGlow` made to glow on a tile, whatever it glowed on before. */
+function asGlow(
+  mark: Phaser.GameObjects.Polygon,
+  coord: TileCoords,
+  colour: number,
+  glow: Glow,
+): Phaser.GameObjects.Polygon {
+  const { x, y } = positionOf(coord);
+  return mark
+    .setPosition(x, y)
+    .setFillStyle(colour, glow.fill)
+    .setStrokeStyle(2, colour, glow.stroke)
+    .setData('tile', tileKey(coord));
+}
+
 function glowTile(
   scene: Phaser.Scene,
   coord: TileCoords,
   colour: number,
   glow: Glow,
 ): Phaser.GameObjects.Polygon {
-  const { x, y } = positionOf(coord);
-  return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE - 2), colour, glow.fill)
-    .setStrokeStyle(2, colour, glow.stroke)
-    .setData('tile', tileKey(coord));
+  return asGlow(unreadGlow(scene), coord, colour, glow);
 }
 
-/**
- * Everything a group holds stopped where it stands and destroyed: a Layer's `removeAll` destroys
- * nothing, whatever it is handed.
- */
-function wipe(group: Phaser.GameObjects.Layer): void {
-  stopMotion(group.scene, group.list);
-  for (const object of [...group.list]) object.destroy();
+/** What the map keeps and hides rather than destroys. */
+type Retained = Mark | Phaser.GameObjects.Rectangle | Phaser.GameObjects.Graphics;
+
+/** An object as a paint finds it, whatever a motion left: shown, whole, at full strength. */
+function asPainted<T extends Retained>(object: T): T {
+  object.setVisible(true);
+  object.setAlpha(1);
+  object.setScale(1);
+  return object;
 }
+
+/** The objects of one kind a layer keeps, as many as a paint has ever wanted at once. */
+type Pool<T> = {
+  /** Every object stopped where it stands and hidden, the next `take` starting over. */
+  hide(): void;
+  /** The next object as a paint finds it; its shape, colour, name and place are its last use's. */
+  take(): T;
+  holds(object: Phaser.GameObjects.GameObject): boolean;
+};
+
+function poolOf<T extends Retained>(on: Phaser.GameObjects.Layer, make: () => T): Pool<T> {
+  const made: T[] = [];
+  let taken = 0;
+  return {
+    hide(): void {
+      stopMotion(on.scene, made);
+      for (const object of made) object.setVisible(false);
+      taken = 0;
+    },
+    take(): T {
+      if (taken === made.length) {
+        const object = make();
+        on.add(object);
+        made.push(object);
+      }
+      taken += 1;
+      return asPainted(made[taken - 1]);
+    },
+    holds(object: Phaser.GameObjects.GameObject): boolean {
+      return made.some((one) => one === object);
+    },
+  };
+}
+
+/** What each tile of the disc keeps from the chronicle's open, shown as the tile stands. */
+type TileObjects = {
+  readonly face: Phaser.GameObjects.Polygon;
+  readonly feature: Phaser.GameObjects.Polygon;
+  readonly ring: Phaser.GameObjects.Polygon;
+  readonly building: Phaser.GameObjects.Polygon;
+  readonly scrim: Phaser.GameObjects.Polygon;
+};
 
 /** What the map draws of a chronicle and what of it it draws live, by tile key, and the snapshots it draws in fog. */
 type Drawing = {
@@ -613,8 +758,8 @@ export type Mark = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
- * Every layer of every tile, the border and the units are redrawn on each state change; and a card
- * is aimed here — the rules say which tiles light up, never this file.
+ * Every layer of every tile and the border are written again on each state change and the live units
+ * redrawn; and a card is aimed here — the rules say which tiles light up, never this file.
  */
 export function createMapView(
   scene: Phaser.Scene,
@@ -666,6 +811,68 @@ export function createMapView(
       rim.strokePoints(shared.map(cornerAt), false);
     }
   }
+
+  /** What each tile of the disc keeps, by its key. */
+  const tileObjects: Record<string, TileObjects> = Object.fromEntries(
+    chronicle.tiles.map((tile) => {
+      const key = tileKey(tile);
+      const { x, y } = positionOf(tile);
+      const kept = (
+        on: Phaser.GameObjects.Layer,
+        mark: Phaser.GameObjects.Polygon,
+      ): Phaser.GameObjects.Polygon => {
+        on.add(mark.setPosition(x, y).setVisible(false));
+        return mark;
+      };
+      return [
+        key,
+        {
+          face: kept(ground, tileFace(scene).setName(`tile-${key}`)),
+          feature: kept(features, scene.add.polygon(0, 0, UNREAD).setName(`feature-${key}`)),
+          ring: kept(rings, ringMark(scene, 0, RING)),
+          building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
+          scrim: kept(fog, fogScrim(scene, tile)),
+        },
+      ];
+    }),
+  );
+  const paintedOnTiles = Object.values(tileObjects).flatMap(
+    ({ face, feature, building, scrim }) => [face, feature, building, scrim],
+  );
+
+  const crossfadePool = poolOf(ground, () => tileFace(scene).setDepth(1));
+  const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
+  const fogUnitPool = poolOf(marks, () => unreadUnitMark(scene));
+  const waterPool = poolOf(rivers, () => scene.add.graphics().setName('river'));
+  const glyphPool = poolOf(glyphs, () => diamond(scene, GLYPH, 0));
+  const litPool = poolOf(lighted, () => unreadGlow(scene));
+  const huePool = poolOf(hues, () => unreadGlow(scene));
+  const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
+  const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
+  const claimablePool = poolOf(cityMarks, () =>
+    ringMark(scene, LOOK.reading.culture, RING).setName('claimable'),
+  );
+
+  /** Every outline of a river, on one surface under all the water. */
+  const riverOutlines = scene.add.graphics();
+  rivers.add(riverOutlines);
+  /** The runs the rivers stand stroked along. */
+  let strokedRuns: string | undefined;
+
+  const selectionRing = scene.add
+    .polygon(0, 0, hexagon(TILE_SIZE - 2), 0, 0)
+    .setStrokeStyle(4, LOOK.selected)
+    .setVisible(false);
+  selected.add(selectionRing);
+
+  const thresholdOnTile = thresholdMark(scene);
+  thresholds.add(thresholdOnTile.root);
+
+  const cityBadges: Record<CityFaction, PopulationBadge> = {
+    player: populationBadge(scene, 'player'),
+    neutral: populationBadge(scene, 'neutral'),
+  };
+  for (const whose of CITY_FACTIONS) badges.add([cityBadges[whose].pill, cityBadges[whose].number]);
 
   /** The mark drawn for each unit the map shows, by the number that unit is named by. */
   let markers = new Map<number, Phaser.GameObjects.Container>();
@@ -1060,7 +1267,7 @@ export function createMapView(
    * what the overlay is asked for, if anything.
    */
   const paintYields = (): void => {
-    wipe(glyphs);
+    glyphPool.hide();
     dim.setVisible(showing.size > 0);
     liftOverDim();
     if (shown === undefined) return;
@@ -1085,11 +1292,9 @@ export function createMapView(
       owed.forEach((resource, index) => {
         const row = Math.floor(index / GLYPH_ROW);
         const inRow = Math.min(GLYPH_ROW, owed.length - row * GLYPH_ROW);
-        glyphs.add(
-          yieldMark(scene, resource).setPosition(
-            x + ((index % GLYPH_ROW) - (inRow - 1) / 2) * GLYPH_PITCH,
-            y + (row - (rows - 1) / 2) * GLYPH_PITCH,
-          ),
+        asYield(glyphPool.take(), resource).setPosition(
+          x + ((index % GLYPH_ROW) - (inRow - 1) / 2) * GLYPH_PITCH,
+          y + (row - (rows - 1) / 2) * GLYPH_PITCH,
         );
       });
     }
@@ -1103,9 +1308,8 @@ export function createMapView(
 
   /** The culture threshold on the tile that wears it: what the selection changes, and nothing else. */
   const paintThreshold = (): void => {
-    wipe(thresholds);
-    if (threshold === undefined) return;
-    thresholds.add(thresholdMark(scene, threshold.tile, threshold.cost, atZoom()));
+    thresholdOnTile.root.setVisible(false);
+    if (threshold !== undefined) showThreshold(thresholdOnTile, threshold.tile, threshold.cost);
   };
 
   /**
@@ -1113,19 +1317,26 @@ export function createMapView(
    * stands on: a growth, a take and a capture change the number, so this follows every render.
    */
   const paintBadges = (): void => {
-    wipe(badges);
     const current = shown;
     if (current === undefined) return;
     for (const whose of CITY_FACTIONS) {
+      const badge = cityBadges[whose];
+      badge.pill.setVisible(false);
+      badge.number.setVisible(false);
       const tile = cityTileOf(current, whose);
       const rows = cityRows(current, whose);
       if (tile === undefined || rows === undefined || !live.has(tileKey(tile))) continue;
-      badges.add(populationBadge(scene, tile, whose, rows.population, atZoom()));
+      showBadge(badge, tile, whose, rows.population);
     }
   };
 
   /** Every text the map raises at its own zoom, raised again. */
   const paintAtZoom = (): void => {
+    const resolution = atZoom();
+    const numbers = CITY_FACTIONS.map((whose) => cityBadges[whose].number);
+    for (const label of [thresholdOnTile.number, ...numbers]) {
+      if (label.style.resolution !== resolution) label.setResolution(resolution);
+    }
     paintThreshold();
     paintBadges();
   };
@@ -1141,118 +1352,108 @@ export function createMapView(
    * render.
    */
   const paintCityMarks = (): void => {
-    wipe(cityMarks);
+    assignedPool.hide();
+    cityDimPool.hide();
+    claimablePool.hide();
     assignedMarks = new Map();
     if (!marking || shown === undefined) return;
 
     for (const coord of shown.held) {
       if (!assignedTo(shown, coord)) {
-        cityMarks.add(cityDim(scene, coord));
+        const { x, y } = positionOf(coord);
+        cityDimPool.take().setPosition(x, y);
         continue;
       }
       const at = assignedAt(coord);
-      const mark = assignedMark(scene).setPosition(at.x, at.y);
-      cityMarks.add(mark);
-      assignedMarks.set(tileKey(coord), mark);
+      assignedMarks.set(tileKey(coord), assignedPool.take().setPosition(at.x, at.y));
     }
     for (const coord of claimable(catalogue, shown, 'player')) {
-      cityMarks.add(ringMark(scene, coord, LOOK.reading.culture, RING).setName('claimable'));
+      const { x, y } = positionOf(coord);
+      claimablePool.take().setPosition(x, y);
     }
   };
 
+  /** A placed improvement from the pool, read for that improvement on the tile of that key. */
+  const improvementOn = (improvement: ImprovementId, key: string): Phaser.GameObjects.Polygon =>
+    asImprovement(improvementPool.take(), improvement).setName(`improvement-${improvement}-${key}`);
+
   /**
-   * Every layer of one tile as the map draws it on a chronicle, and every object painted for it. The
-   * units of a live tile are hung by the render; a tile out of sight carries its unit under its scrim.
+   * Every layer of one tile as the map draws it on a chronicle, and every object painted for it,
+   * whole, over whatever a motion left. The units of a live tile are hung by the render; a tile out
+   * of sight carries its unit under its scrim.
    */
   const paintTile = (chronicle: Chronicle, seen: Drawing, tile: Tile): Mark[] => {
     const drawing = faceIn(seen, tile);
     if (drawing === undefined) return [];
     const face = drawing.tile;
     const key = tileKey(tile);
+    const own = tileObjects[key];
     const painted: Mark[] = [];
-    const paint = (on: Phaser.GameObjects.Layer, object: Mark): void => {
-      on.add(object);
-      painted.push(object);
+    const paint = (object: Mark): void => {
+      painted.push(asPainted(object));
     };
 
     const { x, y } = positionOf(tile);
-    paint(ground, terrainMark(scene, face.terrain).setPosition(x, y).setName(`tile-${key}`));
+    paint(asTerrain(own.face, face.terrain));
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
-      paint(
-        features,
-        featureMark(scene, face.feature)
-          .setPosition(row.feature, y - ROW_RISE)
-          .setName(`feature-${key}`),
-      );
+      paint(asFeature(own.feature, face.feature).setPosition(row.feature, y - ROW_RISE));
     }
     face.improvements.forEach((improvement, index) => {
-      paint(
-        improvements,
-        improvementMark(scene, improvement)
-          .setPosition(row.improvements[index], y - ROW_RISE)
-          .setName(`improvement-${improvement}-${key}`),
-      );
+      paint(improvementOn(improvement, key).setPosition(row.improvements[index], y - ROW_RISE));
     });
-    if (face.building !== undefined) {
-      paint(built, buildingMark(scene, face.building).setPosition(x, y).setName(`building-${key}`));
-    }
+    if (face.building !== undefined) paint(asBuilding(own.building, face.building));
     if (seen.live.has(key)) return painted;
+    const unitMarked = (type: string, faction: Faction, embarked: boolean): void => {
+      paint(asUnit(fogUnitPool.take(), type, faction, embarked).setPosition(x, y));
+    };
     // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
     // walked onto it since.
     if (drawing.asStands) {
       const standing = unitAt(chronicle.units, tile);
       if (standing !== undefined) {
-        paint(
-          marks,
-          unitMark(scene, standing.stats.type, standing.faction, standing.embarked).setPosition(
-            x,
-            y,
-          ),
-        );
+        unitMarked(standing.stats.type, standing.faction, standing.embarked);
       }
     } else {
       const kept = seen.charted.get(key)?.unit;
-      if (kept !== undefined)
-        paint(marks, unitMark(scene, kept.type, kept.faction, kept.embarked).setPosition(x, y));
+      if (kept !== undefined) unitMarked(kept.type, kept.faction, kept.embarked);
     }
-    paint(fog, fogScrim(scene, tile));
+    paint(own.scrim);
     return painted;
   };
 
   /**
-   * Every layer of every tile the map draws, on the chronicle it stands on. A terraform changes a
-   * tile's terrain and takes its feature with it, an improvement is placed on it and a building is
-   * built on it, so every layer follows every render.
+   * Every layer of every tile the map draws, on the chronicle it stands on, and nothing of any other
+   * tile. A terraform changes a tile's terrain and takes its feature with it, an improvement is
+   * placed on it and a building is built on it, so every layer follows every render.
    */
   const paintTiles = (): void => {
-    wipe(ground);
-    wipe(features);
-    wipe(improvements);
-    wipe(built);
-    wipe(fog);
+    stopMotion(scene, paintedOnTiles);
+    for (const object of paintedOnTiles) object.setVisible(false);
+    crossfadePool.hide();
+    improvementPool.hide();
+    fogUnitPool.hide();
     if (shown === undefined) return;
     for (const tile of shown.tiles) paintTile(shown, { drawn, live, charted }, tile);
   };
 
   /**
-   * The rivers repainted on the chronicle the map stands on, cut to the runs along the tiles it
-   * draws: charting one draws the water beside it, so this follows every render. Every outline goes
-   * down on one surface under all the water, so two rivers meeting read as one course.
+   * The rivers stroked again on the chronicle the map stands on, cut to the runs along the tiles it
+   * draws, once those change: charting one draws the water beside it. Every outline goes down on one
+   * surface under all the water, so two rivers meeting read as one course.
    */
   const paintRivers = (): void => {
-    wipe(rivers);
     if (shown === undefined) return;
+    const runs = riversAlong(shown.rivers, drawn);
+    const stroked = JSON.stringify(runs);
+    if (stroked === strokedRuns) return;
+    strokedRuns = stroked;
 
-    const along = riversAlong(shown.rivers, drawn).map((run) => run.map(cornerAt));
-    const outlines = scene.add.graphics();
-    rivers.add(outlines);
-    for (const run of along) strokeRiver(outlines, run, LOOK.mapOutline, RIVER_OUTLINE_WIDTH);
-    for (const run of along) {
-      const water = scene.add.graphics().setName('river');
-      rivers.add(water);
-      strokeRiver(water, run, LOOK.river, RIVER_WIDTH);
-    }
+    riverOutlines.clear();
+    waterPool.hide();
+    const along = runs.map((run) => run.map(cornerAt));
+    for (const run of along) strokeRiver(riverOutlines, run, LOOK.mapOutline, RIVER_OUTLINE_WIDTH);
+    for (const run of along) strokeRiver(waterPool.take().clear(), run, LOOK.river, RIVER_WIDTH);
   };
 
   /** The tile the map rings, and nothing while none is selected. */
@@ -1285,44 +1486,53 @@ export function createMapView(
       lit = { unit: standing.id, landings, targets: targets.map((other) => other.tile) };
     }
 
-    wipe(lighted);
-    for (const landing of lit?.landings ?? [])
-      lighted.add(glowTile(scene, landing.tile, LOOK.lit, LOOK.litGlow));
+    litPool.hide();
+    for (const landing of lit?.landings ?? []) {
+      asGlow(litPool.take(), landing.tile, LOOK.lit, LOOK.litGlow);
+    }
     for (const coord of lit?.targets ?? []) {
-      lighted.add(glowTile(scene, coord, FACTION_COLOURS.enemy, LOOK.targetGlow));
+      asGlow(litPool.take(), coord, FACTION_COLOURS.enemy, LOOK.targetGlow);
     }
   };
 
   /**
-   * Both cities' borders repainted on the chronicle the map stands on, each tile ringed off the face
-   * the map draws of it: a claim moves a border, so a render does.
+   * Both cities' borders on the chronicle the map stands on, each tile ringed off the face the map
+   * draws of it: a claim moves a border, so a render does.
    */
   const paintBorder = (): void => {
-    wipe(rings);
     const current = shown;
     if (current === undefined) return;
     for (const tile of current.tiles) {
+      const { ring } = tileObjects[tileKey(tile)];
+      ring.setVisible(false);
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const holder = face.asStands ? holderOf(current, tile) : charted.get(tileKey(tile))?.holder;
       if (holder === undefined) continue;
       const own = cityTileOf(current, holder);
       const weight = own !== undefined && sameTile(tile, own) ? CITY_RING : RING;
-      rings.add(ringMark(scene, tile, CITY_COLOURS[holder], weight));
+      ring.setStrokeStyle(weight, CITY_COLOURS[holder]).setVisible(true);
     }
   };
 
   /** The tile a unit has prepared on wearing its faction's colour, as the target glow wears it. */
   const paintHue = (unit: Unit): Phaser.GameObjects.Polygon => {
-    const hue = glowTile(
-      scene,
+    const hue = asGlow(
+      huePool.take(),
       unit.tile,
       FACTION_COLOURS[unit.faction],
       LOOK.preparedGlow,
     ).setName(`prepared-${tileKey(unit.tile)}`);
-    hues.add(hue);
     hued.set(unit.id, hue);
     return hue;
+  };
+
+  /** Every live marker stopped where it stands and destroyed; the fog unit marks beside them stay. */
+  const wipeMarkers = (): void => {
+    stopMotion(scene, marks.list);
+    for (const object of [...marks.list]) {
+      if (!fogUnitPool.holds(object)) object.destroy();
+    }
   };
 
   const render = (current: Chronicle): void => {
@@ -1330,8 +1540,8 @@ export function createMapView(
     shown = current;
     ({ drawn, live, charted } = drawing(current));
 
-    wipe(marks);
-    wipe(hues);
+    wipeMarkers();
+    huePool.hide();
     hued = new Map();
 
     paintTiles();
@@ -1542,14 +1752,9 @@ export function createMapView(
     );
   };
 
-  /** A mark raised onto a layer from nothing, where it stands on the face a change leaves. */
-  const scaleUp = (
-    on: Phaser.GameObjects.Layer,
-    mark: Phaser.GameObjects.Polygon,
-    x: number,
-    y: number,
-  ): Promise<void> => {
-    on.add(mark.setPosition(x, y).setScale(0));
+  /** A mark raised from nothing, where it stands on the face a change leaves. */
+  const scaleUp = (mark: Phaser.GameObjects.Polygon, x: number, y: number): Promise<void> => {
+    asPainted(mark).setPosition(x, y).setScale(0);
     return ended(scene.tweens.add({ targets: mark, scale: 1, duration: 250, ease: EASE }));
   };
 
@@ -1570,18 +1775,14 @@ export function createMapView(
     to: Tile,
   ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
+    const own = tileObjects[key];
     const { x, y } = positionOf(coord);
     const was = rowOf(from, x);
     const is = rowOf(to, x);
 
     /** A mark the map drew that goes, or that stays and slides to `to`. */
     const drawnMarks: { on: Phaser.GameObjects.Layer; name: string; to: number | undefined }[] = [];
-    const come: {
-      on: Phaser.GameObjects.Layer;
-      make: () => Phaser.GameObjects.Polygon;
-      x: number;
-      y: number;
-    }[] = [];
+    const come: { make: () => Phaser.GameObjects.Polygon; x: number; y: number }[] = [];
     const compare = <Id extends string>(
       on: Phaser.GameObjects.Layer,
       name: (id: Id) => string,
@@ -1594,7 +1795,7 @@ export function createMapView(
         const at = before.ids.indexOf(id);
         const next = after.ids.indexOf(id);
         if (next < 0) drawnMarks.push({ on, name: name(id), to: undefined });
-        else if (at < 0) come.push({ on, make: () => make(id), x: after.xs[next], y: markY });
+        else if (at < 0) come.push({ make: () => make(id), x: after.xs[next], y: markY });
         else if (before.xs[at] !== after.xs[next]) {
           drawnMarks.push({ on, name: name(id), to: after.xs[next] });
         }
@@ -1604,7 +1805,7 @@ export function createMapView(
     compare(
       features,
       () => `feature-${key}`,
-      (id) => featureMark(scene, id),
+      (id) => asFeature(own.feature, id),
       y - ROW_RISE,
       { ids: one(from.feature), xs: [was.feature] },
       { ids: one(to.feature), xs: [is.feature] },
@@ -1612,7 +1813,7 @@ export function createMapView(
     compare(
       improvements,
       (id) => `improvement-${id}-${key}`,
-      (id) => improvementMark(scene, id),
+      (id) => improvementOn(id, key),
       y - ROW_RISE,
       { ids: from.improvements, xs: was.improvements },
       { ids: to.improvements, xs: is.improvements },
@@ -1620,7 +1821,7 @@ export function createMapView(
     compare(
       built,
       () => `building-${key}`,
-      (id) => buildingMark(scene, id),
+      (id) => asBuilding(own.building, id),
       y,
       { ids: one(from.building), xs: [x] },
       { ids: one(to.building), xs: [x] },
@@ -1632,13 +1833,13 @@ export function createMapView(
     return async (token) => {
       let crossing = Promise.resolve();
       if (crossfades) {
-        const face = terrainMark(scene, to.terrain).setPosition(x, y);
-        ground.add(face);
-        crossing = fadeIn([face]);
+        crossing = fadeIn([asTerrain(crossfadePool.take(), to.terrain).setPosition(x, y)]);
       }
       const drawn = drawnMarks.map((mark) => ({
         to: mark.to,
-        object: mark.on.list.find((object) => object.name === mark.name),
+        object: mark.on.list.find(
+          (object) => object.name === mark.name && (object as Mark).visible,
+        ),
       }));
       await Promise.all(
         drawn.flatMap(({ to: slot, object }) =>
@@ -1655,7 +1856,7 @@ export function createMapView(
         );
       }
       if (flight === token) {
-        await Promise.all(come.map((mark) => scaleUp(mark.on, mark.make(), mark.x, mark.y)));
+        await Promise.all(come.map((mark) => scaleUp(mark.make(), mark.x, mark.y)));
       }
       await crossing;
     };
@@ -1917,13 +2118,11 @@ export function createMapView(
       selection = tile === undefined ? undefined : { q: tile.q, r: tile.r };
       threshold =
         cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
-      wipe(selected);
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
+      selectionRing.setVisible(tile !== undefined);
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
-        selected.add(
-          scene.add.polygon(x, y, hexagon(TILE_SIZE - 2), 0, 0).setStrokeStyle(4, LOOK.selected),
-        );
+        selectionRing.setPosition(x, y);
       }
       paintThreshold();
       paintYields();

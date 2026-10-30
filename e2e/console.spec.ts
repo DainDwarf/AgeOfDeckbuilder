@@ -126,7 +126,7 @@ async function enteredScreen(page: Page): Promise<{
   ringed: string | undefined;
   consoleOpen: boolean;
   lines: string[];
-  fogMarks: number;
+  fogMarks: number | undefined;
   endTurn: string;
 }> {
   const { save, ...read } = await page.evaluate((entry) => {
@@ -146,7 +146,7 @@ async function enteredScreen(page: Page): Promise<{
       lines: root.list
         .filter((part) => part.type === 'Text')
         .map((part) => (part as Phaser.GameObjects.Text).text),
-      fogMarks: (named('fog') as Phaser.GameObjects.Container).list.length,
+      fogMarks: window.shownIn?.('fog')?.length,
       endTurn: (named('end-turn-label') as Phaser.GameObjects.Text).text,
     };
   }, SAVE_ENTRY);
