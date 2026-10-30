@@ -6,4 +6,17 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 ## Rungs
 
+The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
+
+- **The retained screen** — the screen's parts kept and updated in place as the chronicle moves, rather than destroyed and rebuilt at every render, measured against the suite first.
+- **Animation speed** — a setting for how fast the staged motions play, and the suite on the fastest.
+- **The style lock** — the art style settled against real packs dressed on the real screen, the font bundled, the render factor strategy, the type-size floor, and the colour discussion: several colours for several meanings, the ledger, shape redundancy for anything gameplay-critical; ends in the look's design page.
+- **The map** — terrain, features, rivers, fog, the Stone ground, the rings and the marks, in the locked style.
+- **The pieces on the map** — units, buildings, sites, the city badge, a health bar on units, a building's reach drawn.
+- **The cards and the windows** — the face, the icons through one glyph renderer, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
+- **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
+- **The meta screens** — the launch screen with its region stills, the tree, the collection, the ending.
+- **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, and the unit legibility readings.
+- **Sound and music** — last, so a version closed early still looks whole.
+
 ## Lines
