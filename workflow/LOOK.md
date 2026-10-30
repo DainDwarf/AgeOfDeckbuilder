@@ -2,10 +2,10 @@
 
 The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits and colour readings the user accepted until this version, and the findings that bear on it. Read at a rung's cut, never cited by anything durable; a rung's cut strikes what it takes, and the file is deleted when the version closes. The rungs themselves are on [`BOARD.md`](BOARD.md).
 
-## The retained screen
+## The retained screen (cut 2026-10-30)
 
-- **Pure UI modules apart from Phaser's**: `src/ui/face.ts` and `src/ui/bar-layout.ts` are pure, tested by Vitest in Node, and sit beside the Phaser modules; whether the UI parts that are internal and the parts that use Phaser get different folders, a naming convention, or nothing.
-- The CI browse flake (the `ci-browse-frame-starvation` memory): the browse and deck-editing specs ran red on CI while panels overflowed, ~8 fps under 5 s polls and Phaser's 120-frame delta cap; green since the padding left. Expected back when a panel overflows again, and bigger assets can bring it back; measured here, not guessed.
+- The pure UI modules stay beside the Phaser ones with their Vitest tests, no folder, no convention: settled at the cut.
+- The CI browse flake (the `ci-browse-frame-starvation` memory): the browse and deck-editing specs ran red on CI while panels overflowed, ~8 fps under 5 s polls and Phaser's 120-frame delta cap; green since the padding left. Expected back when a panel overflows again, and bigger assets can bring it back; read off each line's CI run.
 
 ## Animation speed
 
@@ -16,6 +16,7 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The art-style call is made against what the sites in `docs/ASSET-SOURCES.md` actually hold in depth, under the dogmas: no generative AI in assets, a licence record for every pack. Pitched running: two or three real packs, one tile, one unit and one card dressed in each by a throwaway edit, shot in the real game.
 - **The render factor can change after boot**: regrow the bitmap, re-zoom cameras, re-rasterize text while the game runs. Four consumers: itch.io's fullscreen button, a settings render-scale slider, monitor-hopping, resizing the window after boot. Decided after the art style locks — pixel art would replace this whole strategy with integer scaling.
 - **Bundle the UI font**: `system-ui` resolves to a different typeface on every machine, so CI, the player and the developer lay out different games from the same code — every width in the UI is a measured text width. A font shipped with the build ends that. Until then a fit is measured in both Segoe UI and DejaVu Sans (the `measurements` memory).
+- The bar's values tick through a tween that sets their text every frame, and Phaser's text page says frequently changing numbers want BitmapText, a Text recreating its canvas texture on every change: a fact for the font decision, since a bundled font can be a bitmap font too.
 - **Type-size floor, verified small**: minimum type sizes generous enough that the smallest window we care about stays readable; ui-check verifies at that size. Uniform window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
 - **Colour ledger**: every UI colour resolves through one theme lookup, so an alternate theme — colour-blind-friendly included — becomes content, not surgery. `src/ui/look.ts` already holds one entry per meaning (the `DOGMAS.md` _Code_ line since 2026-10-01); what it lacks is the second theme and the values discussion.
 - **Colour never carries gameplay meaning alone**: resource chips and anything gameplay-critical get shape or glyph redundancy, fixing colour-blindness in every theme at once — including the default.
@@ -60,11 +61,13 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - **A coherent cursor pass**: the cursor state was never designed as a whole — which things show the hand grew one site at a time. A pass settles what the cursor says across every surface, in the design and in the code together.
 - **State cursors and cursor images**: the cursor says what a press would do now — not-allowed on a card the rules refuse, grab and grabbing on a hand card's drag and the map's pan — and the game draws a cursor of its own, a browser cursor image (no lag, no animation, about 32 px) or one drawn in the canvas (animated, a frame behind the mouse).
 - The cursor finding, the only hard evidence on cursors in this game: on 2026-09-21 the user learned, with real surprise, that the pointer swaps to a hand over cards, buttons, piles and window frames, after about thirty Nomadic plays. A cursor that is always there gets blindspotted whatever it is drawn as; a cursor that changes at the moment you act gets noticed, because the change is the signal. A per-age or custom-image cursor is real asset work with a real chance of going unseen; the state changes the game already computes are the cheap wins.
+- A retained object keeps its cursor where a destroyed one resets it wherever the pointer is (`docs/PHASER.md`): once the chronicle screen's parts are retained, the cursor pass inherits less to fix.
 - **Every text measured through `ownBoxOf`**: about sixty layouts in `src/ui/` read a text's padded `width`, `height` or bounds, so `addText`'s padding sits inside their spacing; routed through `ownBoxOf` each moves by 2–4 px and its spacing is looked at again, which a screen redone here does anyway. Each surface rung takes its own.
 - Fits accepted until now: the selected pile's ring reaching ~6 units past its press zone and its top 3–4 units under the "Civilization" word; a wrapped goal's second line 1.5 units off the plate's 18-unit rows ("looks nice"); the collection's count beside the price button overlapping a three-digit price by ~10 px at ten copies (price 512 at base 1), raised only when content reaches it; the cursor staying the hand over stacks and rows while a card is carried on the collection screen.
 
 ## The meta screens
 
+- The launch screen and the collection screen rebuild their content on a mode change (`lay` in `src/ui/launch-screen.ts`, `modeLaid` in `src/ui/collection-screen.ts`); left out of the retained screen's cut as a screen reshaping itself, to be read against the make-once dogma here.
 - A region's picture on the launch screen does not vary through ages: "in v0.0.6 this will probably be a still sprite".
 - The ending ledger's crossed-out challenge row on a defeat keeps its diamond gold under the grey line (a standing verdict).
 

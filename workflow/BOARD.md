@@ -8,7 +8,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **The retained screen** — the screen's parts kept and updated in place as the chronicle moves, rather than destroyed and rebuilt at every render, measured against the suite first.
 - **Animation speed** — a setting for how fast the staged motions play, and the suite on the fastest.
 - **The style lock** — the art style settled against real packs dressed on the real screen, the font bundled, the render factor strategy, the type-size floor, and the colour discussion: several colours for several meanings, the ledger, shape redundancy for anything gameplay-critical; ends in the look's design page.
 - **The map** — terrain, features, rivers, fog, the Stone ground, the rings and the marks, in the locked style.
@@ -20,3 +19,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
+
+- **The map's tiles retained** — every layer keyed by tile made once and changed in place: the ground and the fog of every tile of the disc from the start, hidden until charted, the features, improvements, buildings, rings and city marks shown or hidden as the tile stands, the yield glyphs, lit tiles, prepared hues and city-mode marks pooled; the suite's counts read the visible.
+- **The map's units retained** — one marker per unit id, made at entry and destroyed at death, its prepared hue with it, a unit's motion played on its own marker.
+- **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
+- **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
