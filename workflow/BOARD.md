@@ -20,6 +20,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The map's units retained** — one marker per unit id, made when the unit enters the chronicle the map stands on and destroyed when it leaves it, its dim parts and its prepared hue made and destroyed with it; a render writes every marker in place — position, parts, dim, hue, name — and destroys nothing but the markers of units gone; a unit's motion plays on its own marker, and the enter stage grows the marker the render makes; a unit's mark reads its parts onto an empty container, the fog unit marks' stand-in with it. Doc-impact: none. [board/map-units-retained.md](board/map-units-retained.md)
 - **A card face read in place, and the hand** — a face re-reads another card through its objects' setters without being rebuilt, and the hand keeps a pool of faces, one per slot, hidden past the hand's length.
 - **The piles' tops retained** — the draw pile's back and the discard pile's top card re-read in place through the face.
