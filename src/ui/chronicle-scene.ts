@@ -822,8 +822,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     });
 
     parts.push(
-      // A card added has its face before the hand reads it, and a card banished keeps its face until
-      // the hand has let it go.
+      // A card added has its face before the piles and the hand read it, and a card banished keeps its
+      // face until the hand has let it go.
       { render: faces.cards.fillIn },
       view,
       bar,

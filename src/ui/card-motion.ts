@@ -7,7 +7,7 @@ export const STAGGER = 20;
 /** How long the shuffle takes: the discard pile's top carried to the draw pile. */
 export const SHUFFLE = 300;
 
-/** How long a card takes to turn over where it lands. */
+/** How long a card takes to turn over. */
 export const TURN_OVER = 120;
 
 export const EASE = 'Sine.easeInOut';

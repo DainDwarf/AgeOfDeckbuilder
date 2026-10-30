@@ -103,7 +103,7 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
                   }
                 : undefined,
           });
-          return face.root.setData('card', inspected.face.id);
+          return face.root;
         }
         case 'thing':
           return createThingCard(scene, catalogue, inspected.thing, WIDTH);

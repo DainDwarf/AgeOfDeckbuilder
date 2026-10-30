@@ -154,7 +154,7 @@ export function createHand(
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
   /** The backs the cards drawn ride on. */
-  const backs = poolOf(on.flight.layer, () => createCardBack(scene));
+  const backs = poolOf(on.flight.layer, () => createCardBack(scene).root);
 
   /** Every card the hand has met whose face still stands, by key. */
   const records = new Map<number, CardRecord>();
@@ -479,6 +479,13 @@ export function createHand(
     return record;
   };
 
+  /** The card out of the hand: it answers the pointer no more, and its bubble comes down. */
+  const letLeave = ({ face }: CardRecord): void => {
+    stopMotion(scene, face.root);
+    footBubble.over(face, undefined);
+    face.root.disableInteractive();
+  };
+
   const render = (chronicle: Chronicle): void => {
     renders += 1;
     if (chained) small.down();
@@ -488,11 +495,8 @@ export function createHand(
     letGo = undefined;
     backs.hide();
 
-    for (const [key, record] of records) {
-      if (cardKeyed(chronicle.hand, key) !== undefined) continue;
-      stopMotion(scene, record.face.root);
-      footBubble.over(record.face, undefined);
-      record.face.root.setVisible(false).setName('').disableInteractive();
+    for (const record of laidOut) {
+      if (cardKeyed(chronicle.hand, record.card.key) === undefined) letLeave(record);
     }
 
     const held = chronicle.hand.length;
@@ -546,8 +550,8 @@ export function createHand(
     await Promise.all(
       going.map(async ({ record, lies }, index) => {
         const { face } = record;
-        stopMotion(scene, face.root);
-        fly(face.root, index).disableInteractive();
+        letLeave(record);
+        fly(face.root.setName(''), index);
         if (lies.id !== record.card.id) {
           await turnOver(scene, face.root, () => {
             face.read(cardFace(catalogue, lies, chronicle.citySection.building), NO_REFUSAL);

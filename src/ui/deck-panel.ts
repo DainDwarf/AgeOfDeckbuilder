@@ -378,8 +378,7 @@ function cityCellOf(
     const box = { x, y, width: COLLECTION_CARD_WIDTH, height: heightOf(COLLECTION_CARD_WIDTH) };
     card.root
       .setPosition(x + COLLECTION_CARD_WIDTH / 2, y + box.height)
-      .setName('civilization-city')
-      .setData('card', city.card.id);
+      .setName('civilization-city');
     return {
       parts: [cityEdgeOf(scene, box, radius), card.root],
       held: [{ box, answers: answersOf(card, shown, inspecting) }],

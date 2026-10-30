@@ -179,8 +179,7 @@ function collectionOf(
                       width: COLLECTION_CARD_WIDTH,
                     })
                       .root.setPosition(box.x + box.width / 2, box.y + box.height)
-                      .setName('carried-card')
-                      .setData('card', id),
+                      .setName('carried-card'),
                   lands: moves.lands,
                 },
               };

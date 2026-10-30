@@ -123,7 +123,6 @@ export function createSmallCards(
         inspect,
       },
     });
-    face.root.setData('card', card);
     return face;
   };
 

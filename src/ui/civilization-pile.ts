@@ -52,16 +52,13 @@ export function createPile(
   const foot = top + height;
   const backs = Array.from({ length: PILE_BACKS }, (_, under) => {
     const step = (PILE_BACKS - under) * BACK_STEP;
-    return createCardBack(scene, { width: PILE_WIDTH }).setPosition(x + step, foot + step);
+    return createCardBack(scene, { width: PILE_WIDTH }).root.setPosition(x + step, foot + step);
   });
   const lift = selected ? PILE_LIFT : 0;
   const shown = cardFaceAtStart(catalogue, owned.city.card.id, owned.city.building);
   const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
   card.select(selected);
-  const face = card.root
-    .setPosition(x, foot - lift)
-    .setName(`${name}-card`)
-    .setData('card', shown.id);
+  const face = card.root.setPosition(x, foot - lift).setName(`${name}-card`);
   const counts = addText(
     scene,
     x,

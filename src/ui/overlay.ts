@@ -266,7 +266,7 @@ export function createOverlay({
         };
       }
       const drawn = createCardFace(scene, offered.face, offered.refusal, { width: GRID_WIDTH });
-      drawn.root.setPosition(x, y).setName(card).setData({ at: offered.at, card: offered.face.id });
+      drawn.root.setPosition(x, y).setName(card).setData('at', offered.at);
       return {
         ...offered,
         x,

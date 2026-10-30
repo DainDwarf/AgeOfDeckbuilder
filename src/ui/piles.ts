@@ -1,20 +1,26 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import type { Change, Group, Stage } from '../rules/stages';
-import { type Chronicle, type ChronicleCard, cardsOutOfHand, NO_REFUSAL } from '../rules/state';
+import {
+  type Chronicle,
+  type ChronicleCard,
+  cardKeyed,
+  cardsOutOfHand,
+  NO_REFUSAL,
+} from '../rules/state';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
   CARD_WIDTH,
   type CardFace,
   createCardBack,
-  createCardFace,
   createEmptySlot,
   type FootBubble,
   type FootLabel,
   type Name,
 } from './card-face';
-import { blockLength, EASE, ended, SHUFFLE, stopMotion, travel } from './card-motion';
+import { blockLength, SHUFFLE, stopMotion, TURN_OVER, travel, turnOver } from './card-motion';
+import type { ChronicleFaces } from './chronicle-faces';
 import {
   addText,
   answersPress,
@@ -26,7 +32,8 @@ import {
   UI_FONT,
 } from './design-space';
 import { cardFace } from './face';
-import { css, LOOK, worn } from './look';
+import { css, LOOK, unworn, worn } from './look';
+import { asPainted } from './pool';
 import { raiserOf, type SmallCards } from './small-card';
 import { text } from './text';
 
@@ -80,24 +87,47 @@ export function createPiles(
   scene: Phaser.Scene,
   on: { readonly resting: Stratum; readonly flight: Stratum },
   catalogue: Catalogue,
-  { footBubble, small }: { readonly footBubble: FootBubble; readonly small: SmallCards },
+  {
+    footBubble,
+    small,
+    cards,
+  }: {
+    readonly footBubble: FootBubble;
+    readonly small: SmallCards;
+    readonly cards: ChronicleFaces;
+  },
   presses: PilePresses,
 ): Piles {
   const answers = { small, footBubble, presses };
-  const drawn = createPile(scene, on.resting, 'draw-pile', answers);
-  const discarded = createPile(scene, on.resting, 'discard-pile', answers);
+  const back = createCardBack(scene);
+  const drawn = createPile(scene, on.resting, 'draw-pile', back.root, answers);
+  const discarded = createPile(scene, on.resting, 'discard-pile', createEmptySlot(scene), answers);
   const exhausted = createTab(scene, on.resting, presses);
+
+  /** What the shuffle flies: the face it takes off with comes to stand over this back. */
+  const shuffledBack = createCardBack(scene).root.setVisible(false);
+  const carrier = scene.add.container(0, 0, [shuffledBack]).setVisible(false);
+  on.flight.layer.add(carrier);
 
   /** What the piles have in the air; a render owns both and takes them down. */
   let waiting: { readonly event: Phaser.Time.TimerEvent; readonly done: () => void } | undefined;
-  let carrier: Phaser.GameObjects.Container | undefined;
+  let carried: CardFace | undefined;
 
-  const topOf = (card: ChronicleCard | undefined, city: string): Top => {
-    if (card === undefined) return { card: createEmptySlot(scene) };
-    const face = createCardFace(scene, cardFace(catalogue, card, city), NO_REFUSAL, {
-      tone: worn,
-    });
-    return { card: face.root.setData('card', card.id), face };
+  const putCarrierAway = (): void => {
+    if (carried === undefined) return;
+    stopMotion(scene, carrier);
+    // A Layer's `add` leaves its child in the Container (docs/PHASER.md, Scenes and stacking).
+    carrier.remove(carried.root);
+    on.resting.layer.add(carried.root.setVisible(false));
+    shuffledBack.setVisible(false);
+    carrier.setVisible(false);
+    carried = undefined;
+  };
+
+  const wornFaceOf = (card: ChronicleCard, city: string): CardFace => {
+    const face = cards.of(card.key);
+    face.read(cardFace(catalogue, card, city), NO_REFUSAL, worn);
+    return face;
   };
 
   const render = (chronicle: Chronicle): void => {
@@ -105,77 +135,74 @@ export function createPiles(
     waiting?.event.remove();
     waiting?.done();
     waiting = undefined;
-    if (carrier !== undefined) {
-      stopMotion(scene, carrier);
-      carrier.destroy();
-      carrier = undefined;
-    }
-    drawn.show(
-      { card: createCardBack(scene, { faded: chronicle.drawPile.length === 0 }) },
-      chronicle.drawPile.length,
+    putCarrierAway();
+
+    const { drawPile, discardPile, exhaustPile } = chronicle;
+    const lying = [...drawPile, ...discardPile, ...exhaustPile].map(
+      ({ key }) => cards.of(key).root,
     );
+    stopMotion(scene, lying);
+    for (const root of lying) root.setVisible(false);
+
+    back.wear(drawPile.length === 0 ? worn : unworn);
+    drawn.show(undefined, drawPile.length);
+    const top = discardPile.at(-1);
     discarded.show(
-      topOf(
-        chronicle.discardPile[chronicle.discardPile.length - 1],
-        chronicle.citySection.building,
-      ),
-      chronicle.discardPile.length,
+      top === undefined ? undefined : wornFaceOf(top, chronicle.citySection.building),
+      discardPile.length,
     );
-    exhausted.show(chronicle.exhaustPile.length);
+    exhausted.show(exhaustPile.length);
   };
 
   /** The shuffle: the discard pile's top is carried to the draw pile's place, turning over on the way. */
-  const shuffle = async (chronicle: Chronicle): Promise<void> => {
-    const carried = (discarded.lift() ?? createEmptySlot(scene)).setPosition(0, 0);
-    const back = createCardBack(scene).setVisible(false);
+  const shuffle = async ({ before, chronicle }: Change): Promise<void> => {
+    const face = cards.of(before.discardPile[before.discardPile.length - 1].key);
     const from = PILE_PLACE['discard-pile'];
-    const carrying = scene.add.container(from.x, from.y, [carried, back]);
-    on.flight.layer.add(carrying);
-    carrier = carrying;
-    discarded.show({ card: createEmptySlot(scene) }, 0);
+    carried = face;
+    carrier.add(face.root.setPosition(0, 0));
+    asPainted(carrier).setPosition(from.x, from.y);
+    discarded.show(undefined, 0);
 
     await Promise.all([
-      travel(scene, carrying, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
-      ended(
-        scene.tweens.add({
-          targets: carrying,
-          scaleX: 0,
-          duration: SHUFFLE / 2,
-          ease: EASE,
-          yoyo: true,
-          onYoyo: () => {
-            carried.setVisible(false);
-            back.setVisible(true);
-          },
-        }),
-      ),
+      travel(scene, carrier, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
+      turnOver(scene, carrier, () => {
+        face.root.setVisible(false);
+        shuffledBack.setVisible(true);
+        return carrier;
+      }),
     ]);
 
     // A render while this was in the air took it down and painted the piles it stands on.
-    if (carrier === carrying) render(chronicle);
+    if (carried === face) render(chronicle);
   };
 
   /**
    * The block of cards the hand no longer holds lands on its pile all at once, once the last card is
-   * down.
+   * down, a card turning over on the way into what it lies there as holding the block up that long.
    */
-  const landed = (cards: number, chronicle: Chronicle): Promise<void> =>
-    new Promise((done) => {
-      const event = scene.time.delayedCall(blockLength(cards), () => {
+  const landed = ({ before, chronicle }: Change, pile: PileKind): Promise<void> => {
+    const leaving = cardsOutOfHand(before, chronicle);
+    const lands = pileOf(chronicle, pile);
+    const turning = leaving.some(({ key, id }) => cardKeyed(lands, key)?.id !== id);
+    return new Promise((done) => {
+      const length = blockLength(leaving.length) + (turning ? TURN_OVER : 0);
+      const event = scene.time.delayedCall(length, () => {
         waiting = undefined;
         render(chronicle);
         done();
       });
       waiting = { event, done };
     });
+  };
 
   const changed = (stage: Change): Promise<void> | undefined => {
     switch (stage.name) {
       case 'discarded':
+        return landed(stage, 'discard-pile');
       case 'exhausted':
-        return landed(cardsOutOfHand(stage.before, stage.chronicle).length, stage.chronicle);
+        return landed(stage, 'exhaust-pile');
       case 'shuffled':
-        return shuffle(stage.chronicle);
+        return shuffle(stage);
       case 'enter':
       case 'move':
       case 'damaged':
@@ -248,24 +275,21 @@ export function createPiles(
   };
 }
 
-/** A pile's top: what is drawn there, and its face where it is a card face up. */
-type Top = { readonly card: Phaser.GameObjects.Container; readonly face?: CardFace };
-
 type Pile = {
-  show(top: Top, count: number): void;
-  /** Hands the shown card over: the pile forgets it, and the next `show` leaves it standing. */
-  lift(): Phaser.GameObjects.Container | undefined;
+  /** The face on top, or `blank` where none is, and the count the pile reads. */
+  show(top: CardFace | undefined, count: number): void;
 };
 
 /**
  * One pile: a right click on it raises its browse, a name on its top card excepted, which answers
  * the rest and the right click as a name does anywhere, and the labels of the top card's foot answer
- * the rest.
+ * the rest. `blank` stands at its place under no face.
  */
 function createPile(
   scene: Phaser.Scene,
   on: Stratum,
   pile: PileKind,
+  blank: Phaser.GameObjects.Container,
   {
     small,
     footBubble,
@@ -290,19 +314,19 @@ function createPile(
     .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
     .setName(pile)
     .setInteractive();
-  on.layer.add([pill, count, press]);
+  on.layer.add([blank.setPosition(x, y).setName(`${pile}-top`), pill, count, press]);
 
-  let shown: Top | undefined;
+  let shown: CardFace | undefined;
   /** Whether the small cards standing were raised off a name of this pile's top, and not the hand's. */
   let chained = false;
 
   const nameUnder = (pointer: Phaser.Input.Pointer): Name | undefined => {
     const at = on.at(pointer.x, pointer.y);
-    return shown?.face?.nameAt(at.x, at.y);
+    return shown?.nameAt(at.x, at.y);
   };
   const onFoot = (pointer: Phaser.Input.Pointer): FootLabel | undefined => {
     const at = on.at(pointer.x, pointer.y);
-    return shown?.face?.footAt(at.x, at.y);
+    return shown?.footAt(at.x, at.y);
   };
 
   answersPress(
@@ -310,27 +334,26 @@ function createPile(
     (pointer) => nameUnder(pointer) !== undefined || onFoot(pointer) !== undefined,
   );
   press.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    const face = shown?.face;
-    if (face === undefined) return;
+    if (shown === undefined) return;
     const name = nameUnder(pointer);
     small.over(
       name === undefined
         ? undefined
         : {
-            ...raiserOf(face, name),
+            ...raiserOf(shown, name),
             hold: (on) => {
               chained = on;
             },
           },
     );
-    footBubble.over(face, onFoot(pointer));
+    footBubble.over(shown, onFoot(pointer));
   });
   onHover(
     press,
     () => {},
     () => {
       small.over(undefined);
-      if (shown?.face !== undefined) footBubble.over(shown.face, undefined);
+      if (shown !== undefined) footBubble.over(shown, undefined);
     },
   );
   onClick(
@@ -345,19 +368,26 @@ function createPile(
 
   /** What the top card's names and its foot raised, taken down as the card leaves the top. */
   const letGo = (): void => {
-    if (shown?.face === undefined) return;
+    if (shown === undefined) return;
     if (chained) small.down();
-    footBubble.over(shown.face, undefined);
+    footBubble.over(shown, undefined);
   };
 
   return {
-    show(top: Top, remaining: number): void {
+    show(top: CardFace | undefined, remaining: number): void {
       letGo();
-      shown?.card.destroy();
       shown = top;
-      const { card } = top;
-      card.setPosition(x, y).setName(`${pile}-top`);
-      on.layer.addAt(card, on.layer.getIndex(pill));
+      blank.setVisible(top === undefined);
+      if (top !== undefined) {
+        const root = asPainted(top.root)
+          .setPosition(x, y)
+          .setRotation(0)
+          .setDepth(0)
+          .setName(`${pile}-top`);
+        // A list's `add` and `addAt` leave a child it already holds where it stands.
+        on.layer.add(root);
+        on.layer.moveBelow(root, pill);
+      }
 
       count.setText(String(remaining));
       const width = Math.max(18, count.width) + 14;
@@ -370,12 +400,6 @@ function createPile(
       pill.clear();
       pill.fillStyle(LOOK.pileCount);
       pill.fillRoundedRect(centre.x - width / 2, centre.y - height / 2, width, height, height / 2);
-    },
-    lift(): Phaser.GameObjects.Container | undefined {
-      letGo();
-      const lifted = shown?.card;
-      shown = undefined;
-      return lifted;
     },
   };
 }

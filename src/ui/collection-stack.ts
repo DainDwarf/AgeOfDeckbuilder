@@ -165,10 +165,7 @@ export function stackedCardsOf(
     return surface;
   });
   const card = createCardFace(scene, shown, refusal, { width, tone });
-  card.root
-    .setPosition(left + width / 2, top + height)
-    .setName(name)
-    .setData('card', shown.id);
+  card.root.setPosition(left + width / 2, top + height).setName(name);
   const reach = under * UNDER_STEP;
   return {
     unders,

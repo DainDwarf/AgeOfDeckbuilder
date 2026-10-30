@@ -13,7 +13,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
-import { css, LOOK, type Paper, type Tone, unworn, worn } from './look';
+import { css, LOOK, type Paper, type Tone, unworn } from './look';
 import { poolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
@@ -415,7 +415,7 @@ export function createCardFace(
       width: named.to - named.from,
       height: lineHeight,
     }));
-    root.setData('names', names);
+    root.setData({ card: next.id, names });
     layNameZones?.(names);
     if (footZones !== undefined) {
       footZones.kind.setPosition(0, kindMiddle).setSize(kind.width, kind.height);
@@ -531,25 +531,33 @@ export function createFootBubble(tooltip: Tooltip): FootBubble {
   };
 }
 
-/** The face-down card the draw pile shows, about its own bottom centre; worn when the pile is dry. */
+export type CardBack = {
+  readonly root: Phaser.GameObjects.Container;
+  /** The back drawn again, every colour of it through the tone. */
+  wear(tone: Tone): void;
+};
+
+/** A face-down card, about its own bottom centre. */
 export function createCardBack(
   scene: Phaser.Scene,
-  { faded = false, width = CARD_WIDTH }: { faded?: boolean; width?: number } = {},
-): Phaser.GameObjects.Container {
-  const tone = faded ? worn : unworn;
+  { width = CARD_WIDTH }: { width?: number } = {},
+): CardBack {
   const height = heightOf(width);
   const paper = scene.add.graphics();
-  drawCardSurface(paper, -width / 2, -height, {
-    width,
-    face: tone(LOOK.cardBack),
-    edge: tone(LOOK.cardEdge),
-  });
+  const emblem = scene.add.polygon(0, -height / 2, hexagon(width * 0.28 - 3), 0, 0);
 
-  const emblem = scene.add
-    .polygon(0, -height / 2, hexagon(width * 0.28 - 3), 0, 0)
-    .setStrokeStyle(3, tone(LOOK.civilization));
+  const wear = (tone: Tone): void => {
+    paper.clear();
+    drawCardSurface(paper, -width / 2, -height, {
+      width,
+      face: tone(LOOK.cardBack),
+      edge: tone(LOOK.cardEdge),
+    });
+    emblem.setStrokeStyle(3, tone(LOOK.civilization));
+  };
+  wear(unworn);
 
-  return scene.add.container(0, 0, [paper, emblem]);
+  return { root: scene.add.container(0, 0, [paper, emblem]), wear };
 }
 
 /** Where a pile's top card would be: the card's own rounded outline, dashed. */

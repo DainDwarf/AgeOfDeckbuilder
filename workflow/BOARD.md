@@ -20,5 +20,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The piles' tops retained** — the draw pile's back and the discard pile's empty slot are made once with the piles and worn or plain in place; the discard pile shows the chronicle's own face of its top card, worn, under its name and its card's id; the shuffle carries that face to the draw pile's place through the shared turn-over, as the card leaves; a render of the piles destroys nothing. Doc-impact: `docs/PHASER.md`. [board/the-piles-tops-retained.md](board/the-piles-tops-retained.md)
 - **Cut `src/ui/map.ts`** — the file is past 2,100 lines; cut it into smaller modules.
