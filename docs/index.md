@@ -9,6 +9,7 @@ What the game **is**: the standing design. Not a journal of how it came to be �
 - [`CHRONICLE.md`](CHRONICLE.md) — the rules a chronicle is played by.
 - [`MAP.md`](MAP.md) — what the map is made of and how it is dealt.
 - [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md) — how the chronicle is shown and worked on its screen.
+- [`LOOK.md`](LOOK.md) — the look: the one hand every picture is painted in, how the map, the pieces and the cards wear it, and the packs' terms.
 - [`ages/`](ages/NOMADIC.md) — one content page per age, under the design pages' legend: what the age is made of, with no number on it. [`ages/NOMADIC.md`](ages/NOMADIC.md) is the first, [`ages/STONE.md`](ages/STONE.md) the second.
 - [`GLOSSARY.md`](GLOSSARY.md) — the closed vocabulary of gameplay terms and the synonyms each one forbids.
 - [`PHASER.md`](PHASER.md) — the platform: what Phaser 4.2.1 does that its bundled pages do not say, each fact with its source in the pinned package.

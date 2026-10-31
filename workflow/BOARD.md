@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The art style** — the style settled against real packs dressed on the real screen: three grounds, Kenney's flat tiles, Baumgart's painted tiles and bare geometry, each under the same licensed glyphs, on one tile, one unit and one card, shot in the game; opens the look's design page.
 - **The render factor** — the backing store regrown while the game runs, for the fullscreen button, a render-scale setting, a monitor hop and a resize after boot, under the locked style.
 - **The bundled font** — the UI face shipped with the build and loaded before the first text, so CI, the player and the developer lay out one game, and the bar's ticking numbers settled as bitmap text or not.
 - **The type-size floor** — the smallest size the UI may use, verified readable at the smallest window we care about, and the check run at that size.
