@@ -121,7 +121,7 @@ How this code base is shaped, and what a change never deviates from:
 
 ## Docs
 
-- **Three kinds of documentation and the code, four lifespans**: the root holds the repository's own files and nothing else — the README, `CLAUDE.md`, this page, how the project is built, the changelog; `docs/` is the standing design, what is and what was decided; `workflow/` is ephemeral, the board and its task files, the ideas, the roadmap; code is permanent, how. Anything without a lifespan is noise — delete it.
+- **Three kinds of documentation and the code, four lifespans**: the root holds the repository's own files and nothing else — the README, `CLAUDE.md`, this page, how the project is built, the changelog, the licence; `docs/` is the standing design, what is and what was decided; `workflow/` is ephemeral, the board and its task files, the ideas, the roadmap; code is permanent, how. Anything without a lifespan is noise — delete it.
 - **`docs/` states what is.** No journals, no ADRs, no reasoning journeys, no rejected alternative: the design that is, is broad enough that an alternative seldom comes again, and a page that records what was not taken reads as a menu. A standing decision gets one line of _why_ at most, and only where the rule would read as a quirk without it.
 - **Pivots are edits.** An overturned decision changes `docs/` in the same unit of work; the old version lives in git only.
 - **Each doc owns one altitude.** The board carries a line and a pointer; the task file carries the contract; the `docs/` page carries the settled fact. Nothing is stated twice.
@@ -157,6 +157,7 @@ How this code base is shaped, and what a change never deviates from:
 | Package manager | npm on Node 24; `package-lock.json` is committed |
 | Hosting | GitHub Pages, the `dist/` built from `Latest`, served under `/AgeOfDeckbuilder/`; the itch.io page, restricted to the playtest group, the same bundle built with a relative base and pushed by butler from any tree (`npm run itch`). No server, ever. |
 | Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
+| Licence | MIT, in `LICENSE`, for everything but `public/assets/`, where each pack keeps its own. The build carries the licence and its bundled dependencies' notices |
 
 - **`src/rules/` never imports Phaser, never touches the DOM and never imports `src/content/`; `src/ui/` never mutates state.** Phaser renders a state and emits commands, nothing else. Why: that one rule is what makes a chronicle replay from its seed, a save the state serialised, and a headless simulator `apply` in a loop keeping the last stage's state. The shape of `apply` and what it hands back are the _Architecture_ lines.
 - **A game object is made once and changed in place.** A part of a screen changes its objects through their setters as the state moves; what comes and goes in numbers is pooled, hidden and reused; what has an identity and is few is made when it enters and destroyed when it leaves. Nothing is destroyed to be drawn again. Why: a rebuilt object loses its hover, its cursor and a frame of hit-testing, and a tween can only carry an object that outlives the render.
@@ -165,12 +166,13 @@ How this code base is shaped, and what a change never deviates from:
 - **The map's geometry lives in `src/rules/`**, in axial coordinates. A tile is drawn as an ordinary Phaser object from those coordinates; Phaser's tilemap system is not used, because the map is a rules structure the renderer reads, not a renderer structure the rules ask about.
 - **Every dependency is pinned exactly** in `package.json` — no `^`, no `~`. Why: a build that changed because an upstream patch landed is a failure with no local cause.
 - **A Phaser claim is read from the pinned package before it is asserted.** The bundled pages, `node_modules/phaser/skills/`, say what Phaser 4 is; `docs/PHASER.md` says what they do not, the mechanisms across scenes and the misreadings they invite; the source, `node_modules/phaser/src`, settles the rest, cited by file and line. Why: memory of Phaser is Phaser 3's, and a confident wrong claim about it has reached a review verdict.
-- **Assets carry a licence record.** A pack entering `public/assets/` gets its entry in `public/assets/LICENSES.md` in the same unit of work; no entry, no ship.
+- **Assets carry a licence record.** A pack entering `public/assets/` gets its entry in `public/assets/LICENSES.md` in the same unit of work; no entry, no ship. A pack enters when its licence lets its files sit in a public repository and in a game sold or given away, credit at most as its condition; one that forbids redistributing its files, forbids commercial use or binds the game's code stays out.
 
 The layout, which embodies the first rule above:
 
 ```
 README.md           what the game is, for a visitor; CLAUDE.md the session's entry, DOGMAS.md its rules, CHANGELOG.md the players' notes
+LICENSE             the MIT licence everything but public/assets/ is under
 docs/               the standing design: the design pages, the glossary, one page per age
 workflow/           the ephemeral task context: the board and its task files, the ideas, the roadmap
 index.html          the page Phaser puts its canvas in; no UI of its own

@@ -2,7 +2,7 @@
 
 Where free art, sound, music and fonts come from when the look is built. [The dogmas](../DOGMAS.md) set the constraints. The art-style call is made against what these sites actually hold in depth.
 
-Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in the licence file; **OFL** is the open font licence, fonts embed freely. Anything else is read per pack.
+Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in the licence file; **CC BY-SA** needs the same, and a recolour or a crop of the asset stays BY-SA, the game's code untouched; **OFL** is the open font licence, fonts embed freely. **NC**, **ND**, the **GPL** and a pack whose files may not be redistributed are out. Anything else is read per pack.
 
 ## Art
 

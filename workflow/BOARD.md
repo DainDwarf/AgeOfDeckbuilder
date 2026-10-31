@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The game's licence** — the licence the repository and its build are under, written into the root, and what it admits of a pack's licence.
 - **The art style** — the style settled against real packs dressed on the real screen: three grounds, Kenney's flat tiles, Baumgart's painted tiles and bare geometry, each under the same licensed glyphs, on one tile, one unit and one card, shot in the game; opens the look's design page.
 - **The render factor** — the backing store regrown while the game runs, for the fullscreen button, a render-scale setting, a monitor hop and a resize after boot, under the locked style.
 - **The bundled font** — the UI face shipped with the build and loaded before the first text, so CI, the player and the developer lay out one game, and the bar's ticking numbers settled as bitmap text or not.

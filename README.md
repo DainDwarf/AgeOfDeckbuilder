@@ -27,6 +27,10 @@ npm run dev
 
 `npm run check` typechecks, `npm test` runs the rules tests, `npm run lint` checks code and markdown, `npm run build` builds into `dist/`.
 
+## Licence
+
+MIT, in [`LICENSE`](LICENSE): the code, the design and the texts. Each asset pack keeps its own licence, recorded in [`public/assets/LICENSES.md`](public/assets/LICENSES.md).
+
 ## Read more
 
 - [`docs/`](docs/index.md) — the design: what the game is, and what was decided.
