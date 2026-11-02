@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The bundled font** — Source Sans 3, regular and bold, ships with the build under `public/assets/fonts/` with its licence entry and is loaded before the first text is laid out, a face that cannot be loaded failing the boot; `docs/LOOK.md` says so, the bar's ticking numbers stay Text. Doc-impact: `docs/LOOK.md`, `docs/PHASER.md`, `docs/ASSET-SOURCES.md`, `public/assets/LICENSES.md`. [board/bundled-font.md](board/bundled-font.md)
 - **The type-size floor** — the smallest size the UI may use, verified readable at the smallest window we care about, and the check run at that size.
 - **The palette** — several colours for several meanings, read against the locked ground's own colours, each held reading answered, and the page's rule that colour never carries gameplay meaning alone.
 - **The second theme** — a colour-blind-friendly theme as content through the ledger, every entry given its second value, and the way it is switched.

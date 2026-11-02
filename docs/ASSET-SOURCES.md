@@ -24,3 +24,4 @@ Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in
 ## Fonts
 
 - [Google Fonts](https://fonts.google.com) — OFL faces, including pixel faces such as Press Start 2P and Silkscreen.
+- [Adobe's Source fonts](https://github.com/adobe-fonts) — OFL; the built files, WOFF2 among them, sit on each repository's `release` branch beside the licence.

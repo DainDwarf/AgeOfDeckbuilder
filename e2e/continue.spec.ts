@@ -7,6 +7,7 @@ import {
   chronicleButton,
   chronicleOf,
   click,
+  failedWords,
   fillOf,
   launchedAs,
   launchedFromScreen,
@@ -130,9 +131,7 @@ test('continue on a save holding no chronicle fails the boot', async ({ page }) 
 
   await page.goto('/?continue=1');
 
-  const sentence = page.getByText(text('boot.failed'), { exact: true });
-  await expect(sentence).toBeVisible();
-  const words = sentence.locator('xpath=following-sibling::*[1]');
+  const words = await failedWords(page);
   await expect(words).toHaveText('the save holds no chronicle to continue');
   await expect.poll(() => problems.length).toBeGreaterThan(0);
   expect(problems).toEqual([`page: ${await words.textContent()}`]);

@@ -31,9 +31,14 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its token's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols.
 
+## The type ✅
+
+Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's humanist sans, drawn for interfaces, its figures lining and of one width so a counter ticks in place. The face ships with the build and is loaded before the first text is laid out, so every machine lays out the same screens, and a build whose face cannot be loaded does not start. The debug console's monospace is the machine's own.
+
 ## The packs ✅
 
 - **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, and his painted objects. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
+- **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.
 
 Every pack keeps its licence entry in `public/assets/LICENSES.md` the moment it enters, as the dogmas say, and nothing in the look comes from a generative model.

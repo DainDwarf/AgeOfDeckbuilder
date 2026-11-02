@@ -8,6 +8,7 @@ import {
   chronicleOf,
   click,
   consoleKey,
+  failedWords,
   launchedAs,
   launchedFromScreen,
   loreOf,
@@ -35,6 +36,11 @@ test('the bare address with no save boots the campaign screen, whose menu lists 
   await campaignShown(page);
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   expect(await standing(page, 'launch')).toBe(false);
+  // Not `document.fonts.check`: it answers true for a family the set does not hold.
+  const faces = await page.evaluate(() =>
+    [...document.fonts].map((face) => `${face.family} ${face.weight} ${face.status}`),
+  );
+  expect(faces.sort()).toEqual(['"Source Sans 3" 400 loaded', '"Source Sans 3" 700 loaded']);
 
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await rested(page);
@@ -47,6 +53,20 @@ test('the bare address with no save boots the campaign screen, whose menu lists 
   await expect.poll(() => standing(page, 'menu')).toBe(false);
 
   expect(problems).toEqual([]);
+});
+
+test("a face that cannot be loaded says the game could not start, in the error's own words", async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await page.route('**/SourceSans3-Regular.ttf.woff2', (route) => route.abort());
+
+  await page.goto('/');
+
+  const words = await failedWords(page);
+
+  await expect.poll(() => problems).toContain(`page: ${await words.textContent()}`);
+  await expect(page.locator('canvas')).toHaveCount(0);
 });
 
 test('Enter on the launch screen launches nothing, and the back key under the console closes the console and raises no menu', async ({

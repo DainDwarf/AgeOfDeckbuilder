@@ -13,7 +13,10 @@ export type Box = {
   readonly height: number;
 };
 
-export const UI_FONT = 'system-ui, "Segoe UI", sans-serif';
+// Bare for the FontFace constructor, which keeps quotes as part of the name; quoted for a font string,
+// which takes no bare name holding a digit.
+export const UI_FAMILY = 'Source Sans 3';
+export const UI_FONT = `"${UI_FAMILY}", sans-serif`;
 export const CONSOLE_FONT = 'ui-monospace, Consolas, "Courier New", monospace';
 
 /** How far anything laid against an edge of the screen stands off it. */

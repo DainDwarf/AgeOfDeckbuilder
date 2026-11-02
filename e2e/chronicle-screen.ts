@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import {
@@ -673,6 +673,15 @@ export async function campaignShown(page: Page): Promise<void> {
   await page.waitForFunction(() => window.game?.scene.isActive('campaign') === true);
   await expect.poll(() => standing(page, 'navbar-launch')).toBe(true);
   await rested(page);
+}
+
+/** The failed boot's page standing, and the words under its sentence. */
+export async function failedWords(page: Page): Promise<Locator> {
+  const sentence = page.getByText(text('boot.failed'), { exact: true });
+  await expect(sentence).toBeVisible();
+  const words = sentence.locator('xpath=following-sibling::*[1]');
+  await expect(words).toBeVisible();
+  return words;
 }
 
 /** The collection screen the navbar opens from the campaign screen a boot stands on. */

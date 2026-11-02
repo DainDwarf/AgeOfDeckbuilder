@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 // First, before any import that can throw as it is evaluated: the watch is only as early as it is.
 import './failed-boot';
 import Phaser from 'phaser';
@@ -12,6 +13,7 @@ import {
   followPointer,
   followWindow,
   releaseOnBlur,
+  UI_FAMILY,
 } from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
@@ -48,6 +50,13 @@ function firstScreen(): FirstScreen {
 
 const first = firstScreen();
 
+/** One weight of the face fetched and in the document: a file that cannot be fetched rejects. */
+async function loadFace(file: string, weight: string): Promise<void> {
+  const source = `url(${import.meta.env.BASE_URL}assets/fonts/source-sans-3/${file})`;
+  const face = new FontFace(UI_FAMILY, source, { weight });
+  document.fonts.add(await face.load());
+}
+
 /** The first screen started, over the console and the menu. */
 function startFirst(screen: FirstScreen): void {
   switch (screen.on) {
@@ -62,6 +71,12 @@ function startFirst(screen: FirstScreen): void {
   const unlisted: never = screen;
   throw new Error(`no first screen is ${JSON.stringify(unlisted)}`);
 }
+
+// Before the game: a Text keeps the fallback's measures for a face loaded after it (docs/PHASER.md).
+await Promise.all([
+  loadFace('SourceSans3-Regular.ttf.woff2', '400'),
+  loadFace('SourceSans3-Bold.ttf.woff2', '700'),
+]);
 
 const backing = backingSize();
 const game = new Phaser.Game({
