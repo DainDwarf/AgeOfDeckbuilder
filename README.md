@@ -27,6 +27,8 @@ npm run dev
 
 `npm run check` typechecks, `npm test` runs the rules tests, `npm run lint` checks code and markdown, `npm run build` builds into `dist/`.
 
+The pictures are David Baumgart's bought packs, whose terms let a game ship them but not hand them out on their own, so they live in a private repository mounted as a submodule at `public/assets/store/`. A clone of this repository builds and runs without them.
+
 ## Licence
 
 MIT, in [`LICENSE`](LICENSE): the code, the design and the texts. Each asset pack keeps its own licence, recorded in [`public/assets/LICENSES.md`](public/assets/LICENSES.md).

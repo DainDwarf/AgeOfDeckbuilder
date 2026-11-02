@@ -1,0 +1,3 @@
+[submodule "public/assets/store"]
+	path = public/assets/store
+	url = https://github.com/DainDwarf/AgeOfDeckbuilder-store.git

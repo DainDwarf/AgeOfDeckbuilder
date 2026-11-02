@@ -28,6 +28,9 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/store
+        with:
+          key: ${{ secrets.STORE_DEPLOY_KEY }}
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24
@@ -53,6 +56,9 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v7.0.1
+      - uses: ./.github/actions/store
+        with:
+          key: ${{ secrets.STORE_DEPLOY_KEY }}
       - uses: actions/setup-node@v7.0.0
         with:
           node-version: 24

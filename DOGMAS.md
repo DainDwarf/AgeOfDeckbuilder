@@ -166,7 +166,7 @@ How this code base is shaped, and what a change never deviates from:
 - **The map's geometry lives in `src/rules/`**, in axial coordinates. A tile is drawn as an ordinary Phaser object from those coordinates; Phaser's tilemap system is not used, because the map is a rules structure the renderer reads, not a renderer structure the rules ask about.
 - **Every dependency is pinned exactly** in `package.json` — no `^`, no `~`. Why: a build that changed because an upstream patch landed is a failure with no local cause.
 - **A Phaser claim is read from the pinned package before it is asserted.** The bundled pages, `node_modules/phaser/skills/`, say what Phaser 4 is; `docs/PHASER.md` says what they do not, the mechanisms across scenes and the misreadings they invite; the source, `node_modules/phaser/src`, settles the rest, cited by file and line. Why: memory of Phaser is Phaser 3's, and a confident wrong claim about it has reached a review verdict.
-- **Assets carry a licence record.** A pack entering `public/assets/` gets its entry in `public/assets/LICENSES.md` in the same unit of work; no entry, no ship. A pack enters when its licence lets its files sit in a public repository and in a game sold or given away, credit at most as its condition; one that forbids redistributing its files, forbids commercial use or binds the game's code stays out.
+- **Assets carry a licence record.** A pack entering `public/assets/` gets its entry in `public/assets/LICENSES.md` in the same unit of work; no entry, no ship. A pack whose licence lets its files sit in a public repository and in a game sold or given away, credit at most as its condition, enters the repository itself; one whose terms let a game ship its files but not hand them out on their own enters the **store**, `public/assets/store/`, a private repository mounted as a submodule and read as part of `public/` by the dev server and the builds, by CI through a read-only deploy key held as a secret; one that forbids commercial use or binds the game's code stays out. A pack lands in the store and is pushed there before the pointer moves on `main`. Why the order: CI fetches the commit the pointer names, and a pointer ahead of the store's push is red.
 
 The layout, which embodies the first rule above:
 
@@ -184,5 +184,6 @@ e2e/                Playwright specs
 .github/workflows/  the CI check
 tools/              the standing scripts: the itch push, the save forge, the simulator
 public/assets/      art, sound, music, each pack with its licence entry
+public/assets/store/  the bought packs that may not be handed out on their own: a private repository, a submodule
 dist/               the build; what Pages deploys and the itch push sends
 ```

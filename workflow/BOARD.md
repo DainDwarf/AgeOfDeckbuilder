@@ -19,5 +19,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
-
-- **The asset store** — Baumgart's paid files kept out of the public repository and read by the build, ahead of the map rung.

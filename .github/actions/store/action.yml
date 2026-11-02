@@ -1,0 +1,20 @@
+name: Store
+description: The asset store checked out at the commit the tree names, through its read-only deploy key.
+inputs:
+  key:
+    description: The store's deploy key, the STORE_DEPLOY_KEY secret.
+    required: true
+runs:
+  using: composite
+  steps:
+    - id: pin
+      shell: bash
+      run: echo "sha=$(git rev-parse HEAD:public/assets/store)" >> "$GITHUB_OUTPUT"
+    # A second checkout rather than `submodules: true`: the action fetches an HTTPS submodule address
+    # with the repository's token, never over the deploy key.
+    - uses: actions/checkout@v7.0.1
+      with:
+        repository: DainDwarf/AgeOfDeckbuilder-store
+        ref: ${{ steps.pin.outputs.sha }}
+        ssh-key: ${{ inputs.key }}
+        path: public/assets/store
