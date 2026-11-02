@@ -29,11 +29,11 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 ## The cards 🔧
 
-A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its token's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols.
+A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its token's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols. A card face is one size wherever it stands, and a card shown large is the one other.
 
 ## The type ✅
 
-Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's humanist sans, drawn for interfaces, its figures lining and of one width so a counter ticks in place. The face ships with the build and is loaded before the first text is laid out, so every machine lays out the same screens, and a build whose face cannot be loaded does not start. The debug console's monospace is the machine's own.
+Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's humanist sans, drawn for interfaces, its figures lining and of one width so a counter ticks in place. The face ships with the build and is loaded before the first text is laid out, so every machine lays out the same screens, and a build whose face cannot be loaded does not start. The debug console's monospace is the machine's own. No text is set under 11 units of the design, the smallest that reads as a word on the smallest window the game is read in ([`INTERFACE.md`](INTERFACE.md)); a text on the map is measured at the map's designed zoom, the zoom being the player's own magnifier.
 
 ## The packs ✅
 

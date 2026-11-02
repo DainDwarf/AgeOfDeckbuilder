@@ -3,7 +3,7 @@ import { type Campaign, civilizationIn } from '../rules/campaign';
 import type { Catalogue } from '../rules/catalogue';
 import type { Refusal } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
-import { CARD_WIDTH, createFootBubble, metricsOf } from './card-face';
+import { createFootBubble } from './card-face';
 import { ended, stopMotion } from './card-motion';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, type StackedCards, spanOf, stackedCardsOf } from './collection-stack';
@@ -99,9 +99,9 @@ export type BadgedStack = {
 };
 
 /**
- * A stack of the face's copies from the left and the top handed, its face `width` wide, drawn
- * refused as named and named `name`, and the badge reading its copies named `<name>-copies`: the
- * right click anywhere on it off a name shows its card large.
+ * A stack of the face's copies from the left and the top handed, drawn refused as named and named
+ * `name`, and the badge reading its copies named `<name>-copies`: the right click anywhere on it off
+ * a name shows its card large.
  */
 export function badgedStackOf(
   { scene, inspecting }: { readonly scene: Phaser.Scene; readonly inspecting: Inspecting },
@@ -110,7 +110,6 @@ export function badgedStackOf(
     readonly copies: number;
     readonly left: number;
     readonly top: number;
-    readonly width: number;
     readonly name: string;
     readonly refusal?: Refusal;
   },
@@ -149,10 +148,9 @@ function stackCellOf(
       copies: stack.copies,
       left,
       top,
-      width: CARD_WIDTH,
       name: `${name}-card-${at}`,
     });
-    const edge = stack.edged ? [cityEdgeOf(scene, stacked.face, metricsOf(CARD_WIDTH).radius)] : [];
+    const edge = stack.edged ? [cityEdgeOf(scene, stacked.face)] : [];
     const root = scene.add.container(0, 0, [...edge, ...parts]).setName(`${name}-stack-${at}`);
     return {
       parts: [root],
@@ -321,12 +319,7 @@ export function standBrowser(
           width: DESIGN_WIDTH - 2 * MARGIN,
           height: DESIGN_HEIGHT - MARGIN - top,
         },
-        ...linesOf(cells, {
-          left: (DESIGN_WIDTH - spanOf(ACROSS, CARD_WIDTH)) / 2,
-          top,
-          across: ACROSS,
-          card: CARD_WIDTH,
-        }),
+        ...linesOf(cells, { left: (DESIGN_WIDTH - spanOf(ACROSS)) / 2, top, across: ACROSS }),
       });
     },
     close() {

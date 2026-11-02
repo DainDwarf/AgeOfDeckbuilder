@@ -40,7 +40,7 @@ import {
 const HAND = 'pointer';
 
 /** How many stacks a line holds in the civilization mode. */
-const ACROSS = 7;
+const ACROSS = 6;
 
 /** How far sideways a press held on a stack moves, in design units: past the drag slack, and then some. */
 const SIDEWAYS = 40;
@@ -112,7 +112,7 @@ async function openCivilization(page: Page, campaign: Campaign = PLANTED.campaig
   await civilizationPressed(page);
 }
 
-test('in the deck editing mode « Civilization opens the civilization mode on its civilization: the name over the room, neither the collection nor the rows standing, each section’s count beside its word, the city section’s card at the head of the settle section, each card the deck holds a stack reading its copies held over owned in the collection’s order, seven to a line, and a card it holds no copy of not standing', async ({
+test('in the deck editing mode « Civilization opens the civilization mode on its civilization: the name over the room, neither the collection nor the rows standing, each section’s count beside its word, the city section’s card at the head of the settle section, each card the deck holds a stack reading its copies held over owned in the collection’s order, six to a line, and a card it holds no copy of not standing', async ({
   page,
 }) => {
   const problems = watch(page);

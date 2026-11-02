@@ -5,7 +5,14 @@ import type { Chronicle, DefeatCause, Ending } from '../rules/state';
 import type { Browser } from './browse';
 import { EASE, ended, stopMotion } from './card-motion';
 import { inCollectionOrder } from './collection-layout';
-import { addText, DESIGN_HEIGHT, DESIGN_WIDTH, TITLE_INK, UI_FONT } from './design-space';
+import {
+  addText,
+  DESIGN_HEIGHT,
+  DESIGN_WIDTH,
+  type SizedStyle,
+  TITLE_INK,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK } from './look';
 import { BUTTON_HEIGHT, type CountedLine, createButton, laidLine } from './menu';
 import { chipAt } from './resource-bar';
@@ -106,7 +113,7 @@ export function standEnding(
   };
 }
 
-const style = (bold: boolean): Phaser.Types.GameObjects.Text.TextStyle => ({
+const style = (bold: boolean): SizedStyle => ({
   fontFamily: UI_FONT,
   fontSize: '22px',
   fontStyle: bold ? 'bold' : 'normal',

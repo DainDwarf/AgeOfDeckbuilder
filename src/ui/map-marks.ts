@@ -108,7 +108,7 @@ const THRESHOLD_GAP = 3;
 const BADGE_OFF = 12;
 const BADGE_HEIGHT = 14;
 const BADGE_PAD = 3;
-const BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '10px', fontStyle: 'bold' };
+const BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
 
 /** What the map draws a tile's things as: one polygon, or a unit's mark, a container of them. */
 export type Mark = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;

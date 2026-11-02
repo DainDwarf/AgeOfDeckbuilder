@@ -6,11 +6,10 @@ import {
   unaffordableIn,
 } from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
-import { createCardFace, dashAlong, heightOf } from './card-face';
+import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, createCardFace, dashAlong } from './card-face';
 import { type CollectionStack, copiesIn, type DeckRows, stacksOf } from './collection-layout';
 import {
   type Cell,
-  COLLECTION_CARD_WIDTH,
   linesOf,
   priceButtonOf,
   signButtonOf,
@@ -82,17 +81,17 @@ function rowAnswersOf(face: Face, { large }: Inspecting): Answers {
 }
 
 /**
- * One card as a row in the box, in a card's colours at the roundness handed: its cost, its name, its
- * kind and the copies the section holds, where it counts them.
+ * One card as a row in the box, in a card's colours and roundness: its cost, its name, its kind and
+ * the copies the section holds, where it counts them.
  */
 function rowOf(
   scene: Phaser.Scene,
   face: Face,
   copies: number | undefined,
   { x, y, width }: Box,
-  radius: number,
   name: string,
 ): Phaser.GameObjects.Container {
+  const { radius } = CARD_METRICS;
   const middle = ROW_HEIGHT / 2;
   const surface = scene.add
     .graphics()
@@ -162,12 +161,8 @@ function sectionOf(
   return { label, count, bottom: top + Math.max(label.height, count.height) };
 }
 
-/** The pale edge around the city section's card, standing in the box at the roundness handed. */
-export function cityEdgeOf(
-  scene: Phaser.Scene,
-  box: Box,
-  radius: number,
-): Phaser.GameObjects.Graphics {
+/** The pale edge around the city section's card, standing in the box. */
+export function cityEdgeOf(scene: Phaser.Scene, box: Box): Phaser.GameObjects.Graphics {
   const off = CITY_EDGE_OFF + CITY_EDGE / 2;
   return scene.add
     .graphics()
@@ -177,7 +172,7 @@ export function cityEdgeOf(
       box.y - off,
       box.width + 2 * off,
       box.height + 2 * off,
-      radius + off,
+      CARD_METRICS.radius + off,
     );
 }
 
@@ -226,17 +221,7 @@ export function deckPanelOf(
     readonly remove: (card: CardId) => void;
     readonly lands: Box;
   },
-  {
-    left,
-    right,
-    top,
-    radius,
-  }: {
-    readonly left: number;
-    readonly right: number;
-    readonly top: number;
-    readonly radius: number;
-  },
+  { left, right, top }: { readonly left: number; readonly right: number; readonly top: number },
 ): Filled {
   const parts: Phaser.GameObjects.GameObject[] = [];
   const held: Held[] = [];
@@ -256,12 +241,12 @@ export function deckPanelOf(
     name: string,
     press?: () => void,
   ): void => {
-    parts.push(rowOf(scene, face, copies, box, radius, name));
+    parts.push(rowOf(scene, face, copies, box, name));
     held.push({
       box,
       answers: rowAnswersOf(face, inspecting),
       press,
-      carry: { copy: () => rowOf(scene, face, copies, box, radius, 'carried-card'), lands },
+      carry: { copy: () => rowOf(scene, face, copies, box, 'carried-card'), lands },
     });
   };
 
@@ -289,7 +274,7 @@ export function deckPanelOf(
     width: width - 2 * CITY_MARGIN,
     height: ROW_HEIGHT,
   };
-  parts.push(cityEdgeOf(scene, cityBox, radius));
+  parts.push(cityEdgeOf(scene, cityBox));
   row(cardFaceAtStart(catalogue, city.card.id, city.building), undefined, cityBox, 'deck-city');
   y = cityTop + ROW_HEIGHT + CITY_MARGIN;
   if (deck.settle.length > 0) y = rows(deck.settle, y + ROWS_APART);
@@ -366,21 +351,18 @@ function civilizationStackOf(
   };
 }
 
-/** The city section's card as a face alone in its pale edge, at the roundness handed. */
+/** The city section's card as a face alone in its pale edge. */
 function cityCellOf(
   { scene, catalogue, inspecting }: Laying,
   city: CampaignCivilization['city'],
-  radius: number,
 ): Cell {
   return ({ left: x, top: y }) => {
     const shown = cardFaceAtStart(catalogue, city.card.id, city.building);
-    const card = createCardFace(scene, shown, NO_REFUSAL, { width: COLLECTION_CARD_WIDTH });
-    const box = { x, y, width: COLLECTION_CARD_WIDTH, height: heightOf(COLLECTION_CARD_WIDTH) };
-    card.root
-      .setPosition(x + COLLECTION_CARD_WIDTH / 2, y + box.height)
-      .setName('civilization-city');
+    const card = createCardFace(scene, shown, NO_REFUSAL);
+    const box = { x, y, width: CARD_WIDTH, height: CARD_HEIGHT };
+    card.root.setPosition(x + CARD_WIDTH / 2, y + box.height).setName('civilization-city');
     return {
-      parts: [cityEdgeOf(scene, box, radius), card.root],
+      parts: [cityEdgeOf(scene, box), card.root],
       held: [{ box, answers: answersOf(card, shown, inspecting) }],
       bottom: y + box.height + CITY_EDGE_OFF + CITY_EDGE,
     };
@@ -407,17 +389,7 @@ export function civilizationPanelOf(
     readonly campaign: Campaign;
     readonly moves: CopyMoves;
   },
-  {
-    left,
-    top,
-    across,
-    radius,
-  }: {
-    readonly left: number;
-    readonly top: number;
-    readonly across: number;
-    readonly radius: number;
-  },
+  { left, top, across }: { readonly left: number; readonly top: number; readonly across: number },
 ): Filled {
   const { scene, catalogue } = laying;
   const parts: Phaser.GameObjects.GameObject[] = [];
@@ -449,7 +421,7 @@ export function civilizationPanelOf(
     top + SECTION_TOP,
     'civilization-section-settle',
   );
-  y = lines([cityCellOf(laying, city, radius), ...deck.settle.map(stack)], y);
+  y = lines([cityCellOf(laying, city), ...deck.settle.map(stack)], y);
   y = section('collection.deck', counts.cards, y + DECK_GAP, 'civilization-section-cards');
   if (deck.cards.length > 0) return { parts, held, foot: lines(deck.cards.map(stack), y) };
 

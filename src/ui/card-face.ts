@@ -37,7 +37,10 @@ export function metricsOf(width: number): {
   return { height: heightOf(width), em, pad: 0.55 * em, radius: 0.45 * em };
 }
 
-/** The card as it lies on the chronicle screen: what anything in the card's language measures by. */
+/** The smallest type on a card, as a share of its `em`; `addText` refuses less at `CARD_WIDTH`. */
+export const SMALLEST_TYPE = 0.66;
+
+/** The card wherever it stands but large: what anything in the card's language measures by. */
 export const CARD_METRICS = metricsOf(CARD_WIDTH);
 export const CARD_HEIGHT = CARD_METRICS.height;
 
@@ -236,11 +239,13 @@ export function createCardFace(
     color: css(tone(palette.ink)),
   }).setOrigin(1, 0.5);
 
+  const size = SMALLEST_TYPE * em;
+
   const kind = addText(scene, 0, -1 - pad, kindLabel(face.kind).toUpperCase(), {
     fontFamily: UI_FONT,
-    fontSize: `${0.65 * em}px`,
+    fontSize: `${size}px`,
     color: css(tone(LOOK.faintInk)),
-    letterSpacing: 0.14 * 0.65 * em,
+    letterSpacing: 0.14 * size,
   })
     .setOrigin(0.5, 1)
     .setName('kind-label');
@@ -248,7 +253,7 @@ export function createCardFace(
 
   const influence = addText(scene, right, kindMiddle, String(face.influence), {
     fontFamily: UI_FONT,
-    fontSize: `${0.65 * em}px`,
+    fontSize: `${size}px`,
     fontStyle: 'bold',
     color: css(tone(palette.ink)),
   })
@@ -256,7 +261,6 @@ export function createCardFace(
     .setName('influence-label');
   const diamond = scene.add.rectangle(0, kindMiddle, 0.55 * em, 0.55 * em).setAngle(45);
 
-  const size = 0.62 * em;
   const span = (2 / 3) * size;
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
   let run!: Run;
@@ -538,18 +542,13 @@ export type CardBack = {
 };
 
 /** A face-down card, about its own bottom centre. */
-export function createCardBack(
-  scene: Phaser.Scene,
-  { width = CARD_WIDTH }: { width?: number } = {},
-): CardBack {
-  const height = heightOf(width);
+export function createCardBack(scene: Phaser.Scene): CardBack {
   const paper = scene.add.graphics();
-  const emblem = scene.add.polygon(0, -height / 2, hexagon(width * 0.28 - 3), 0, 0);
+  const emblem = scene.add.polygon(0, -CARD_HEIGHT / 2, hexagon(CARD_WIDTH * 0.28 - 3), 0, 0);
 
   const wear = (tone: Tone): void => {
     paper.clear();
-    drawCardSurface(paper, -width / 2, -height, {
-      width,
+    drawCardSurface(paper, -CARD_WIDTH / 2, -CARD_HEIGHT, {
       face: tone(LOOK.cardBack),
       edge: tone(LOOK.cardEdge),
     });

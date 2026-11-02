@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The type-size floor** — no text is set under 11 design units, refused at the one door every text is made through; every card face but the one shown large is the hand's width; the pages state the floor and the smallest window, and the ui-check agent reads its 1280 by 720 viewport at factor 1 as that window. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`. [board/type-size-floor.md](board/type-size-floor.md)
 - **The palette** — several colours for several meanings, read against the locked ground's own colours, each held reading answered, and the page's rule that colour never carries gameplay meaning alone.
 - **The second theme** — a colour-blind-friendly theme as content through the ledger, every entry given its second value, and the way it is switched.
 - **The asset store** — Baumgart's paid files kept out of the public repository and read by the build, ahead of the glyph rung.

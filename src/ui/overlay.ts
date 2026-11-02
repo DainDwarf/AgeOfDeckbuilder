@@ -14,7 +14,7 @@ import {
 } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
 import { badgedStackOf, standBrowser } from './browse';
-import { type CardFace, createCardFace, heightOf, type Name } from './card-face';
+import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace, type Name } from './card-face';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
@@ -38,7 +38,6 @@ import { createRefusalNote } from './refusal-note';
 import { type Answers, answersOf } from './stack';
 import { buildingName, cardName, eventName, text } from './text';
 
-const GRID_WIDTH = 180;
 const GRID_GAP = 26;
 
 export type Overlay = {
@@ -90,12 +89,8 @@ type Placed = Offered & {
   readonly answers: Answers;
 };
 
-/** A window's cards laid on its panel, and how tall one of them stands. */
-type Laid = {
-  readonly panel: Panel;
-  readonly placed: readonly Placed[];
-  readonly height: number;
-};
+/** A window's cards laid on its panel. */
+type Laid = { readonly panel: Panel; readonly placed: readonly Placed[] };
 
 /** A pile's browse on the scrim, which selects nothing. */
 type Browsing = { readonly stands: 'browse' };
@@ -197,7 +192,7 @@ export function createOverlay({
 
   /** A window's lore, named after the window it stands in, just over the first row its cards laid. */
   const raiseLore = (name: string, lore: string, laid: Laid): void => {
-    const rowTop = laid.placed[0].y - laid.height;
+    const rowTop = laid.placed[0].y - CARD_HEIGHT;
     const line = addText(scene, DESIGN_WIDTH / 2, rowTop - 16, lore, {
       fontFamily: UI_FONT,
       fontSize: '20px',
@@ -221,25 +216,24 @@ export function createOverlay({
     top: number,
     pressed: (card: Placed) => void,
   ): Laid => {
-    const height = heightOf(GRID_WIDTH);
     const frame = {
       x: MARGIN,
       y: top,
       width: DESIGN_WIDTH - 2 * MARGIN,
       height: DESIGN_HEIGHT - MARGIN - top,
     };
-    const columns = Math.max(1, Math.floor((frame.width + GRID_GAP) / (GRID_WIDTH + GRID_GAP)));
+    const columns = Math.max(1, Math.floor((frame.width + GRID_GAP) / (CARD_WIDTH + GRID_GAP)));
     const rows = Math.max(1, Math.ceil(cards.length / columns));
-    const spanY = rows * height + (rows - 1) * GRID_GAP;
+    const spanY = rows * CARD_HEIGHT + (rows - 1) * GRID_GAP;
     const firstY = top + Math.max(0, (frame.height - spanY) / 2);
 
     const placed = cards.map((offered, index): Placed => {
       const row = Math.floor(index / columns);
       const column = index % columns;
       const inRow = Math.min(columns, cards.length - row * columns);
-      const spanX = inRow * GRID_WIDTH + (inRow - 1) * GRID_GAP;
-      const x = (DESIGN_WIDTH - spanX) / 2 + column * (GRID_WIDTH + GRID_GAP) + GRID_WIDTH / 2;
-      const y = firstY + row * (height + GRID_GAP) + height;
+      const spanX = inRow * CARD_WIDTH + (inRow - 1) * GRID_GAP;
+      const x = (DESIGN_WIDTH - spanX) / 2 + column * (CARD_WIDTH + GRID_GAP) + CARD_WIDTH / 2;
+      const y = firstY + row * (CARD_HEIGHT + GRID_GAP) + CARD_HEIGHT;
       const card = `${name}-card-${index}`;
       if (offered.copies > 1) {
         const { stacked, parts, box, answers } = badgedStackOf(
@@ -247,9 +241,8 @@ export function createOverlay({
           {
             shown: offered.face,
             copies: offered.copies,
-            left: x - GRID_WIDTH / 2,
-            top: y - height,
-            width: GRID_WIDTH,
+            left: x - CARD_WIDTH / 2,
+            top: y - CARD_HEIGHT,
             name: card,
             refusal: offered.refusal,
           },
@@ -265,7 +258,7 @@ export function createOverlay({
           answers,
         };
       }
-      const drawn = createCardFace(scene, offered.face, offered.refusal, { width: GRID_WIDTH });
+      const drawn = createCardFace(scene, offered.face, offered.refusal);
       drawn.root.setPosition(x, y).setName(card).setData('at', offered.at);
       return {
         ...offered,
@@ -273,7 +266,7 @@ export function createOverlay({
         y,
         drawn,
         part: drawn.root,
-        box: { x: x - GRID_WIDTH / 2, y: y - height, width: GRID_WIDTH, height },
+        box: { x: x - CARD_WIDTH / 2, y: y - CARD_HEIGHT, width: CARD_WIDTH, height: CARD_HEIGHT },
         answers: answersOf(drawn, offered.face, inspecting),
       };
     });
@@ -294,7 +287,7 @@ export function createOverlay({
       foot: firstY + spanY,
     });
     onWindow = placed;
-    return { panel, placed, height };
+    return { panel, placed };
   };
 
   /** The one entry of the deal ringed, and none ringed at all where nothing is selected. */
@@ -331,7 +324,7 @@ export function createOverlay({
         return;
       }
       if (!playable(card.refusal)) {
-        const over = card.y - laid.panel.offset - laid.height;
+        const over = card.y - laid.panel.offset - CARD_HEIGHT;
         note.overCard(refused(card.costs, card.refusal), card.x, over);
         return;
       }

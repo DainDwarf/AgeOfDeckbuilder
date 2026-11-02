@@ -16,6 +16,7 @@ import {
   onClick,
   onHover,
   ownBoxOf,
+  type SizedStyle,
   type Stratum,
   UI_FONT,
 } from './design-space';
@@ -271,7 +272,7 @@ export function createResourceBar(
  * that grows into the gap before the next reading, its reckoning with it.
  */
 function digitSlot(scene: Phaser.Scene): { slot: number; space: number } {
-  const measured = (shown: string, style: Phaser.Types.GameObjects.Text.TextStyle) => {
+  const measured = (shown: string, style: SizedStyle) => {
     const sample = addText(scene, 0, 0, shown, style);
     const sizes = { width: sample.width, own: ownBoxOf(sample).width };
     sample.destroy();

@@ -22,6 +22,7 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  type SizedStyle,
   UI_FONT,
   whileUp,
 } from './design-space';
@@ -150,7 +151,7 @@ export type LaidLine = {
 export function laidLine(
   scene: Phaser.Scene,
   { reads, copies }: CountedLine,
-  style: Phaser.Types.GameObjects.Text.TextStyle,
+  style: SizedStyle,
   name: string,
 ): LaidLine {
   const gap = 8;
@@ -277,7 +278,7 @@ function pressable(
   scene: Phaser.Scene,
   at: { x: number; y: number; width: number; height: number },
   name: string,
-  style: Phaser.Types.GameObjects.Text.TextStyle,
+  style: SizedStyle,
   pressed: () => void,
 ): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
   const face = scene.add

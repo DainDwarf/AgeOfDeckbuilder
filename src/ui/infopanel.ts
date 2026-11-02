@@ -15,7 +15,7 @@ import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { Chronicle } from '../rules/state';
 import { relationsOf, type Unit, unitAt } from '../rules/units';
 import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
-import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf } from './card-face';
+import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf, SMALLEST_TYPE } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
@@ -217,8 +217,9 @@ const CYCLE_MS = 150;
 
 /** The type a card's face is set in, sized by the `em` of the width it is drawn at. */
 function stylesOf(em: number) {
-  const label = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.faintInk) };
-  const value = { fontFamily: UI_FONT, fontSize: `${0.62 * em}px`, color: css(LOOK.ink) };
+  const fontSize = `${SMALLEST_TYPE * em}px`;
+  const label = { fontFamily: UI_FONT, fontSize, color: css(LOOK.faintInk) };
+  const value = { fontFamily: UI_FONT, fontSize, color: css(LOOK.ink) };
   return {
     title: {
       fontFamily: UI_FONT,
@@ -229,7 +230,6 @@ function stylesOf(em: number) {
     label,
     value,
     chip: { ...value, fontStyle: 'bold' },
-    movement: { ...label, fontSize: `${0.55 * em}px` },
   };
 }
 
@@ -475,7 +475,7 @@ function buildFace(
   const movement = movementOf(card);
   if (movement !== undefined) {
     contents.push(
-      addText(scene, right, middle, movement, style.movement)
+      addText(scene, right, middle, movement, style.label)
         .setOrigin(1, 0.5)
         .setName('panel-movement'),
     );
@@ -509,7 +509,7 @@ function buildFace(
       value.setY(rowTop + label.height / 2);
       contents.push(label, value);
       listen(left, rowTop, label.width, label.height, stat);
-      rowTop += label.height + 0.35 * em;
+      rowTop += label.height + 0.18 * em;
     }
     return { root: scene.add.container(0, 0, contents), hovers };
   }

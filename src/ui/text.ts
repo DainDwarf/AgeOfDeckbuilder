@@ -275,8 +275,7 @@ const TEXT = {
   'answer-rules.lose-the-fields':
     'The flood removes {improvements} improvement near your city, {buildings} building and {city} city',
   'answer.settle-the-floodplain': 'Settle the floodplain',
-  'answer-rules.settle-the-floodplain':
-    'Add [card:floodplain] to the discard pile. Each turn it stays in your hand, it removes one improvement near your city, a building inside your border once none stands, your city last',
+  'answer-rules.settle-the-floodplain': 'Add [card:floodplain] to the discard pile',
   'answer.dig-channels': 'Dig channels',
   'answer-rules.dig-channels': 'Pay {production}[production]',
   'event.bad-air': 'Bad air and angry spirits',

@@ -36,7 +36,7 @@ The **debug console** is a dark panel down the top of the screen, on every scree
 
 ## The window ✅
 
-The screen is one design, 1280 by 720 units, laid out once and drawn at the window's own pixels: the design fills the window as far as its shape allows, the page bare around it, and every line, glyph and letter is painted at the window's pixel density, so the game is as sharp as the screen it stands on at every size. It follows every change of the window while the game runs — a resize, the browser's zoom, fullscreen entered or left, a move to a monitor of another pixel density — and nothing on the screen moves for it but its size and its sharpness.
+The screen is one design, 1280 by 720 units, laid out once and drawn at the window's own pixels: the design fills the window as far as its shape allows, the page bare around it, and every line, glyph and letter is painted at the window's pixel density, so the game is as sharp as the screen it stands on at every size. The game is read on a window of 1280 by 720 of the screen's own pixels at the smallest, the design drawn one to one; a smaller window shrinks it below what its type was sized for ([`LOOK.md`](LOOK.md)). It follows every change of the window while the game runs — a resize, the browser's zoom, fullscreen entered or left, a move to a monitor of another pixel density — and nothing on the screen moves for it but its size and its sharpness.
 
 ## The presses ✅
 

@@ -4,6 +4,7 @@ import { css, LOOK } from './look';
 
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
+const TYPE_FLOOR = 11;
 
 /** A box of the design space: its top-left corner and its size. */
 export type Box = {
@@ -545,13 +546,18 @@ export function ownBoxOf(label: Phaser.GameObjects.Text): Box {
   };
 }
 
+export type SizedStyle = Phaser.Types.GameObjects.Text.TextStyle & { readonly fontSize: string };
+
 export function addText(
   scene: Phaser.Scene,
   x: number,
   y: number,
   content: string,
-  style: Phaser.Types.GameObjects.Text.TextStyle,
+  style: SizedStyle,
 ): Phaser.GameObjects.Text {
+  if (Number.parseFloat(style.fontSize) < TYPE_FLOOR) {
+    throw new Error(`no text is set at ${style.fontSize}, under the floor of ${TYPE_FLOOR}`);
+  }
   // A fractional resolution would truncate the backing canvas to whole pixels, hence the ceiling.
   return scene.add.text(x, y, content, {
     ...style,

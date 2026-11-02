@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { CampaignCivilization } from '../rules/campaign';
 import { NO_REFUSAL } from '../rules/state';
-import { createCardBack, createCardFace, metricsOf } from './card-face';
+import { CARD_HEIGHT, CARD_WIDTH, createCardBack, createCardFace } from './card-face';
 import { countsOf } from './collection-layout';
 import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
@@ -9,14 +9,13 @@ import { css, LOOK } from './look';
 import { type Answers, answersAround, type Laying } from './stack';
 import { text } from './text';
 
-const PILE_WIDTH = 100;
 const PILE_BACKS = 3;
 const BACK_STEP = 5;
 const PILE_LIFT = 10;
 const COUNTS_GAP = 10;
 
 /** How wide a pile stands, the steps of its backs included. */
-export const PILE_SPAN = PILE_WIDTH + PILE_BACKS * BACK_STEP;
+export const PILE_SPAN = CARD_WIDTH + PILE_BACKS * BACK_STEP;
 
 const COUNTS_STYLE = {
   fontFamily: UI_FONT,
@@ -47,16 +46,15 @@ export function createPile(
   name: string,
   browse: () => void,
 ): Pile {
-  const { height } = metricsOf(PILE_WIDTH);
-  const x = left + PILE_WIDTH / 2;
-  const foot = top + height;
+  const x = left + CARD_WIDTH / 2;
+  const foot = top + CARD_HEIGHT;
   const backs = Array.from({ length: PILE_BACKS }, (_, under) => {
     const step = (PILE_BACKS - under) * BACK_STEP;
-    return createCardBack(scene, { width: PILE_WIDTH }).root.setPosition(x + step, foot + step);
+    return createCardBack(scene).root.setPosition(x + step, foot + step);
   });
   const lift = selected ? PILE_LIFT : 0;
   const shown = cardFaceAtStart(catalogue, owned.city.card.id, owned.city.building);
-  const card = createCardFace(scene, shown, NO_REFUSAL, { width: PILE_WIDTH });
+  const card = createCardFace(scene, shown, NO_REFUSAL);
   card.select(selected);
   const face = card.root.setPosition(x, foot - lift).setName(`${name}-card`);
   const counts = addText(
@@ -69,7 +67,12 @@ export function createPile(
     .setOrigin(0.5, 0)
     .setName(`${name}-counts`);
   const bounds = Phaser.Geom.Rectangle.Union(
-    new Phaser.Geom.Rectangle(left, top - lift, PILE_SPAN, height + lift + PILE_BACKS * BACK_STEP),
+    new Phaser.Geom.Rectangle(
+      left,
+      top - lift,
+      PILE_SPAN,
+      CARD_HEIGHT + lift + PILE_BACKS * BACK_STEP,
+    ),
     counts.getBounds(),
   );
   return {

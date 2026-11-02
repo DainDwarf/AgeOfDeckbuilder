@@ -43,7 +43,7 @@ const CAMPAIGN = freshCampaign(CATALOGUE);
 const STACKS = stacksOf(CATALOGUE, CAMPAIGN.collection, cardName);
 
 /** How many stacks a line holds. */
-const ACROSS = 6;
+const ACROSS = 5;
 
 /** The collection mode's two panels, and the frames they are cut at. */
 const COLLECTION_PANEL = 'collection-panel';
@@ -62,7 +62,7 @@ function stoneAgeLearned(): Campaign {
   return learnedWithNeeds(CATALOGUE, CAMPAIGN, technologiesEarnedIn(CATALOGUE, stoneAge));
 }
 
-test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies and its price, six to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
+test('the navbar’s Collection opens the collection screen on a new campaign, Collection sunk: each card owned stands once reading its copies and its price, five to a line in the collection’s order, and each civilization’s pile reads its two counts, the city section’s card among its settle cards', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -125,11 +125,11 @@ test('on a campaign a won chronicle paid into, a press on the price of an afford
 }) => {
   const problems = watch(page);
   const campaign = wonCampaign();
-  const firstLine = stacksOf(CATALOGUE, campaign.collection, cardName).slice(0, ACROSS);
-  const card = firstLine.find(({ id }) => !unaffordableIn(CATALOGUE, campaign, id));
-  const greyed = firstLine.find(({ id }) => unaffordableIn(CATALOGUE, campaign, id));
+  const firstLines = stacksOf(CATALOGUE, campaign.collection, cardName).slice(0, 2 * ACROSS);
+  const card = firstLines.find(({ id }) => !unaffordableIn(CATALOGUE, campaign, id));
+  const greyed = firstLines.find(({ id }) => unaffordableIn(CATALOGUE, campaign, id));
   if (card === undefined || greyed === undefined) {
-    throw new Error('the won campaign’s first line holds no affordable and unaffordable card both');
+    throw new Error('the won campaign’s first lines hold no affordable and unaffordable card both');
   }
   const price = priceOf(CATALOGUE, campaign, card.id);
   const after = bought(CATALOGUE, campaign, card.id);

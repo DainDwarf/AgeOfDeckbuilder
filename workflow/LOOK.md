@@ -12,7 +12,6 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The style lock's leftovers, for the rungs: Baumgart's files cannot sit in the public repository, so an asset-store line goes ahead of the glyph rung; the unit's picture is the pieces rung's sourcing, his painted objects first, then a commission, the glyph token standing meanwhile, and the user may ask him for an ancient peoples icon pack; the far view's palette, tile edges and threshold, and the river's weight at the far view, are the map rung's; the units survey of 2026-10-31 found no Stone Age figures in a non-pixel human hand on sale, only Isle of Lore 2's cartoon figures (10 dollars, commercial, a second hand) and the virtual-tabletop token makers, whose licences exclude software.
 - **Bundle the UI font**: `system-ui` resolves to a different typeface on every machine, so CI, the player and the developer lay out different games from the same code — every width in the UI is a measured text width. A font shipped with the build ends that. Until then a fit is measured in both Segoe UI and DejaVu Sans (the `measurements` memory).
 - The bar's values tick through a tween that sets their text every frame, and Phaser's text page says frequently changing numbers want BitmapText, a Text recreating its canvas texture on every change: a fact for the font decision, since a bundled font can be a bitmap font too.
-- **Type-size floor, verified small**: minimum type sizes generous enough that the smallest window we care about stays readable; ui-check verifies at that size. Uniform window scaling plus card zoom covers the rest — no UI-scale slider unless playtesting demands it.
 - **Colour ledger**: every UI colour resolves through one theme lookup, so an alternate theme — colour-blind-friendly included — becomes content, not surgery. `src/ui/look.ts` already holds one entry per meaning (the `DOGMAS.md` _Code_ line since 2026-10-01); what it lacks is the second theme and the values discussion.
 - **Colour never carries gameplay meaning alone**: resource chips and anything gameplay-critical get shape or glyph redundancy, fixing colour-blindness in every theme at once — including the default.
 - The colour discussion the user planned on 2026-09-20: several colours for several purposes. Until it lands, a new meaning borrows an existing value under its own entry, and no new value is pitched. The cause diagnosed then: pitches spending the one accent on every new affordance.
@@ -50,7 +49,9 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
   - The card face's long right-aligned name running under the left cost chip ("Goods trade" touches its "2", ~2 px gap).
   - The embarked unit's infopanel name "Raft (Warrior)" runs ~4 px and "Raft (Worker)" ~2.4 px into the head's right pad on Segoe UI, inside the card's edge; the head has no fit for a long title.
   - The infopanel building card's "No yield" drops under every site's name, the old cairn's included: the room test counts both texts' 2-unit padding, so "Old cairn" misses by 2.4 units though its letters fit with 2.3 to spare; kept over a fold measuring by ink.
-  - Flood's deal window on a hand-width Floodplain: the influence chip overlaps the last "E" of "CHALLENGE" by ~3 units; the answer title "Settle the floodplain" overhangs its answer face's left edge by ~3 px; the longest Lose the fields reading is unmeasured.
+  - Flood's deal window at the hand's width: the influence chip covers the last "E" of "CHALLENGE" by 1.6 units, as on all seven challenge cards that carry influence; the answer title "Settle the floodplain" passes its card's left padding; the longest Lose the fields reading is unmeasured.
+  - The Mountain's infopanel name and its "Mv —" reading overlap by 1.5 units of ink.
+  - A leader with a state line reaches its card's foot: its last row's box ends at 182.5 of 182, the text's padding counted.
   - A chronicle pile's browse running to the screen's bottom over the dimmed hand and end-turn button, and the discard pile's top-card small card covering the end-turn label and the pile's count.
   - The exhaust pile's tab reads its count in its own word ("Exhaust · 3") while the two card piles wear a gold pill.
 - The deal window never scrolls: an event deals few enough answers for one row (a standing verdict, the `design-and-code-verdicts` memory).
@@ -70,6 +71,7 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The launch screen and the collection screen rebuild their content on a mode change (`lay` in `src/ui/launch-screen.ts`, `modeLaid` in `src/ui/collection-screen.ts`); left out of the retained screen's cut as a screen reshaping itself, to be read against the make-once dogma here.
 - A region's picture on the launch screen does not vary through ages: "in v0.0.6 this will probably be a still sprite".
 - The ending ledger's crossed-out challenge row on a defeat keeps its diamond gold under the grey line (a standing verdict).
+- The launch screen's pile counts end at 717 of 720, past `LAUNCH_BOTTOM`.
 
 ## Motion
 

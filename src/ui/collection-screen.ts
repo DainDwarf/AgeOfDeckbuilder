@@ -11,7 +11,7 @@ import {
 } from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { standBrowse } from './browse';
-import { createCardFace, createFootBubble, metricsOf } from './card-face';
+import { createCardFace, createFootBubble } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
   type CollectionStack,
@@ -24,7 +24,6 @@ import {
 } from './collection-layout';
 import {
   type Cell,
-  COLLECTION_CARD_WIDTH,
   linesOf,
   priceButtonOf,
   type Reading,
@@ -102,11 +101,11 @@ type ModeOf<Shows extends Mode['shows']> = Extract<Mode, { readonly shows: Shows
 function shapeOf(mode: Mode): { readonly right: number; readonly across: number } {
   switch (mode.shows) {
     case 'collection':
-      return { right: 160, across: 6 };
+      return { right: 160, across: 5 };
     case 'deck editing':
       return { right: 400, across: 4 };
     case 'civilization':
-      return { right: ROOM.width, across: 7 };
+      return { right: ROOM.width, across: 6 };
   }
 }
 
@@ -175,9 +174,7 @@ function collectionOf(
                 press: moves.pressOf(stack),
                 carry: {
                   copy: () =>
-                    createCardFace(scene, cardFaceAtStart(catalogue, id, undefined), NO_REFUSAL, {
-                      width: COLLECTION_CARD_WIDTH,
-                    })
+                    createCardFace(scene, cardFaceAtStart(catalogue, id, undefined), NO_REFUSAL)
                       .root.setPosition(box.x + box.width / 2, box.y + box.height)
                       .setName('carried-card'),
                   lands: moves.lands,
@@ -457,7 +454,6 @@ function deckEditingModeOf(
               left: frame.x + MARGIN,
               right: DESIGN_WIDTH - MARGIN,
               top,
-              radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
             },
           ),
         },
@@ -527,7 +523,6 @@ function civilizationModeOf(
               left: (ROOM.x + DESIGN_WIDTH - spanOf(across)) / 2,
               top,
               across,
-              radius: metricsOf(COLLECTION_CARD_WIDTH).radius,
             },
           ),
         },
