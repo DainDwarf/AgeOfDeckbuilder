@@ -24,3 +24,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The type-size floor** — the smallest size the UI may use, verified readable at the smallest window we care about, and the check run at that size.
 - **The palette** — several colours for several meanings, read against the locked ground's own colours, each held reading answered, and the page's rule that colour never carries gameplay meaning alone.
 - **The second theme** — a colour-blind-friendly theme as content through the ledger, every entry given its second value, and the way it is switched.
+- **The asset store** — Baumgart's paid files kept out of the public repository and read by the build, ahead of the glyph rung.
