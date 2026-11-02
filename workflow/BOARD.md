@@ -8,17 +8,16 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **The glyphs** — the resource glyphs and every icon the game reads, drawn through one glyph renderer from licensed glyphs in the locked style, on the cards, the yield overlay, the resource bar, the infopanel and the meta screens alike.
 - **The map** — terrain, features, rivers, fog, the Stone ground, the rings and the marks, in the locked style.
 - **The pieces on the map** — units, buildings, sites, the city badge, a health bar on units, a building's reach drawn.
+- **The glyphs** — the resource glyphs and every icon the game reads, drawn through one glyph renderer from licensed glyphs in the locked style, on the cards, the yield overlay, the resource bar, the infopanel and the meta screens alike.
 - **The cards and the windows** — the face, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
 - **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
 - **The meta screens** — the launch screen with its region stills, the tree, the collection, the ending.
+- **The palette** — the colours of what code still tints, read against every tileset and icon pack bought by then: the clashes measured, then the colour schemes for colour-blindness through the one look file; taken or dropped once the glyphs carry every meaning by shape.
 - **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, a transition into a chronicle and out of it, and the unit legibility readings.
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
 
-- **The palette** — several colours for several meanings, read against the locked ground's own colours, each held reading answered, and the page's rule that colour never carries gameplay meaning alone.
-- **The second theme** — a colour-blind-friendly theme as content through the ledger, every entry given its second value, and the way it is switched.
-- **The asset store** — Baumgart's paid files kept out of the public repository and read by the build, ahead of the glyph rung.
+- **The asset store** — Baumgart's paid files kept out of the public repository and read by the build, ahead of the map rung.

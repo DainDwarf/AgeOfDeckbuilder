@@ -12,15 +12,9 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The style lock's leftovers, for the rungs: Baumgart's files cannot sit in the public repository, so an asset-store line goes ahead of the glyph rung; the unit's picture is the pieces rung's sourcing, his painted objects first, then a commission, the glyph token standing meanwhile, and the user may ask him for an ancient peoples icon pack; the far view's palette, tile edges and threshold, and the river's weight at the far view, are the map rung's; the units survey of 2026-10-31 found no Stone Age figures in a non-pixel human hand on sale, only Isle of Lore 2's cartoon figures (10 dollars, commercial, a second hand) and the virtual-tabletop token makers, whose licences exclude software.
 - **Bundle the UI font**: `system-ui` resolves to a different typeface on every machine, so CI, the player and the developer lay out different games from the same code — every width in the UI is a measured text width. A font shipped with the build ends that. Until then a fit is measured in both Segoe UI and DejaVu Sans (the `measurements` memory).
 - The bar's values tick through a tween that sets their text every frame, and Phaser's text page says frequently changing numbers want BitmapText, a Text recreating its canvas texture on every change: a fact for the font decision, since a bundled font can be a bitmap font too.
-- **Colour ledger**: every UI colour resolves through one theme lookup, so an alternate theme — colour-blind-friendly included — becomes content, not surgery. `src/ui/look.ts` already holds one entry per meaning (the `DOGMAS.md` _Code_ line since 2026-10-01); what it lacks is the second theme and the values discussion.
-- **Colour never carries gameplay meaning alone**: resource chips and anything gameplay-critical get shape or glyph redundancy, fixing colour-blindness in every theme at once — including the default.
-- The colour discussion the user planned on 2026-09-20: several colours for several purposes. Until it lands, a new meaning borrows an existing value under its own entry, and no new value is pitched. The cause diagnosed then: pitches spending the one accent on every new affordance.
-- Colour readings held for it, all measured under SwiftShader:
-  - The settle phase's lime `0x9fbb3a` against the accent `0xd9a441`: 1.03:1 in normal vision, under 1.5 in every colour-vision simulation; the button's word differs and the two are never on screen together. When the palette locks, lime wants to move off the accent's luminance.
-  - The deer's brown mark (`LOOK.feature.deer`, 0x8a5a2b) on the forest fill: 1.02:1 in luminance, 1.00 under tritanopia, held by hue and the dark outline alone; fertile on plain 1.6–1.9.
-  - The accent well against the latch's `wellFill 0xb4b9c0` under achromatopsia: ~1.2 in grayscale (deutan, protan, tritan keep a hue split, 1.07–1.76).
-  - Gold units on sand: ~1.3:1 on the fill, held by the outline.
-  - The buttons not filled in the button colour (Menu, the collection's mode buttons, the price button) "need to be reassessed on 0.0.6"; a chronicle pile's count pill and a deck's grey counts were kept apart "at least for now".
+- **Colour never carries gameplay meaning alone**: resource chips and anything gameplay-critical get shape or glyph redundancy, fixing colour-blindness in every theme at once — including the default. The glyph rung's rule, landing on `docs/LOOK.md` at its cut.
+- Each rung pitches its own colours by meaning, against what stands on screen that day, inside the ledger: the rule that no new value is pitched until the palette lands went with the palette's move to the last of the surface rungs (2026-11-02). The cause diagnosed on 2026-09-20 still holds: pitches spending the one accent on every new affordance.
+- The faction colours are the pieces rung's first reading, a token being a disc in its faction's colour on his terrain: the civilization's gold reads 1.09 on his desert and 1.38 on his plains, the neutral's blue 1.04 on his ocean (the free samples, 2026-11-02).
 - The Stone Age's ground is grey, the user's pick over the recommended warm stone, until this pass. The civilization's colour is one `LOOK` entry until a second civilization lands (v0.0.7), then a table.
 
 ## The map
@@ -38,7 +32,7 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 ## The glyphs
 
 - **One diamond for every resource glyph**: the map draws its three turned squares through one helper; the card face's and the infopanel's cost glyphs and the resource bar's chip each hand-roll their own. The day the glyphs become icons, one renderer of a resource's glyph takes all six, and the WebGL-stroke trap goes with the turned square.
-- Shape redundancy is the palette line's rule and this rung's work: a resource glyph tells its resource by its shape as well as its colour, in every theme at once.
+- Shape redundancy is this rung's rule and its work: a resource glyph tells its resource by its shape as well as its colour, in every theme at once; the sentence lands on `docs/LOOK.md` at the cut. The six resource glyphs read 1.0–1.4 on his plains, hills and mountain today, food's green being the code's plain value exactly, held by the overlay's dim alone (the free samples, 2026-11-02).
 
 ## The cards and the windows
 
@@ -72,6 +66,18 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - A region's picture on the launch screen does not vary through ages: "in v0.0.6 this will probably be a still sprite".
 - The ending ledger's crossed-out challenge row on a defeat keeps its diamond gold under the grey line (a standing verdict).
 - The launch screen's pile counts end at 717 of 720, past `LAUNCH_BOTTOM`.
+
+## The palette
+
+- The rung's two lines, as they stood before its move (2026-11-02): **The palette** — several colours for several meanings, read against the locked ground's own colours, each held reading answered; **The second theme** — a colour-blind-friendly theme as content through the ledger, every entry given its second value, and the way it is switched. Both are an audit of what the rungs before left unreadable, and the rung is dropped where the glyphs carry every meaning by shape.
+- **Colour ledger**: every UI colour resolves through one theme lookup, so an alternate theme becomes content, not surgery. `src/ui/look.ts` holds one entry per meaning (the `DOGMAS.md` _Code_ line since 2026-10-01); what it lacks is the second theme.
+- The one gold `0xd9a441` paints six meanings today: the button, city mode, an act waiting, the civilization, the pile count pill, influence. The framing fork put on 2026-11-02 and left open: whether gold stays the civilization's and the button, influence and the pill move off it, or gold stays the interface's accent and the player moves onto a hue no terrain has.
+- Colour readings held, measured under SwiftShader unless said, the 2026-11-02 ones on the free samples' mean colours (plains `#959731`, forest `#585d22`, hills `#76823d`, mountain `#8e9b9c`, ocean `#245282`, calm ocean `#123767`, desert `#c5b480`) and not on the bought packs:
+  - The settle phase's lime `0x9fbb3a` against the accent `0xd9a441`: 1.03:1 in normal vision, under 1.5 in every colour-vision simulation; the button's word differs and the two are never on screen together. Lime wants to move off the accent's luminance.
+  - The enemy's red against military's: 1.08; against the refusal red: 1.00 (two entries, one value).
+  - The accent well against the latch's `wellFill 0xb4b9c0` under achromatopsia: ~1.2 in grayscale (deutan, protan, tritan keep a hue split, 1.07–1.76).
+  - The buttons not filled in the button colour (Menu, the collection's mode buttons, the price button) "need to be reassessed on 0.0.6"; a chronicle pile's count pill and a deck's grey counts were kept apart "at least for now": the chrome rung's, read here again.
+  - The deer's brown mark on the forest fill, 1.02:1, goes with the feature becoming his painted icon at the map rung.
 
 ## Motion
 
