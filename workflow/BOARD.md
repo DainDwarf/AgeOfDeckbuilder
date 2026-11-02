@@ -19,7 +19,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The render factor** — the backing store regrown while the game runs, for the fullscreen button, a render-scale setting, a monitor hop and a resize after boot, under the locked style.
+- **The render factor** — the game follows a move to a monitor of another pixel density as it follows a resize, the backing store regrown and the screen as sharp as the new screen, and the Graphics window lists a **Fullscreen** row that puts the game over the whole screen from inside and reads what the browser did. Doc-impact: `docs/INTERFACE.md`, `docs/PHASER.md`. [board/render-factor.md](board/render-factor.md)
 - **The bundled font** — the UI face shipped with the build and loaded before the first text, so CI, the player and the developer lay out one game, and the bar's ticking numbers settled as bitmap text or not.
 - **The type-size floor** — the smallest size the UI may use, verified readable at the smallest window we care about, and the check run at that size.
 - **The palette** — several colours for several meanings, read against the locked ground's own colours, each held reading answered, and the page's rule that colour never carries gameplay meaning alone.
