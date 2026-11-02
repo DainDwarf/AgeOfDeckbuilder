@@ -1,4 +1,4 @@
-import type Phaser from 'phaser';
+import Phaser from 'phaser';
 import { animationSpeed, pressAnimationSpeed } from './animation-speed';
 import { menuZone } from './bar-layout';
 import {
@@ -23,6 +23,7 @@ import {
   MARGIN,
   onClick,
   UI_FONT,
+  whileUp,
 } from './design-space';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
@@ -83,7 +84,7 @@ const THROUGH: Record<Warning, TextKey> = {
 /**
  * The windows: the title each one reads, the lines under it, what it lists, in the order it lists
  * them, and the one it closes back to; one that names none closes onto the screen standing. Controls
- * lists the bindings instead of buttons, and Graphics its row over them.
+ * lists the bindings instead of buttons, and Graphics its rows over them.
  */
 const WINDOWS: Record<
   MenuWindow,
@@ -231,8 +232,18 @@ const WHEEL_READS: Record<
   },
 };
 
+/** How far that many rows reach, stacked top down. */
+function rowsHeight(rows: number): number {
+  return rows * SLOT_HEIGHT + (rows - 1) * ROW_GAP;
+}
+
+/** Where the row at that place stands, in rows stacked top down from `top`. */
+function rowAt(top: number, index: number): number {
+  return top + index * (SLOT_HEIGHT + ROW_GAP) + SLOT_HEIGHT / 2;
+}
+
 /** How far the rows reach below the top of the Controls window's body. */
-const ROWS_HEIGHT = ROWS.length * SLOT_HEIGHT + (ROWS.length - 1) * ROW_GAP;
+const ROWS_HEIGHT = rowsHeight(ROWS.length);
 
 /** The panel's own dark ink: a window stands in the panel language, not on the scrim. */
 const INK = css(LOOK.ink);
@@ -298,9 +309,9 @@ export function createButton(
   return { face, label: label.setText(reads) };
 }
 
-/** How far down a window's body its buttons stand: Graphics holds its row over them. */
+/** How far down a window's body its buttons stand: Graphics holds its rows over them. */
 function rowsAbove(which: MenuWindow): number {
-  return which === 'graphics' ? SLOT_HEIGHT + PADDING : 0;
+  return which === 'graphics' ? rowsHeight(GRAPHICS_ROWS.length) + PADDING : 0;
 }
 
 /** How far below the title a window's own content reaches, the padding above it included. */
@@ -419,7 +430,7 @@ function layControls(
   };
 
   ROWS.forEach((row, index) => {
-    root.add(rowOf(row, top + index * (SLOT_HEIGHT + ROW_GAP) + SLOT_HEIGHT / 2));
+    root.add(rowOf(row, rowAt(top, index)));
   });
 
   const width = (WIDTH - 2 * PADDING - BUTTON_GAP) / 2;
@@ -469,12 +480,12 @@ function layControls(
   };
 }
 
-/** The Graphics window's row, reading the animation speed, a press moving it to the next. */
-function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, top: number): void {
+/** The Animation speed row, reading the speed, a press moving it to the next. */
+function speedRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject[] {
   const reads = (): string => text('graphics.speed', { speed: animationSpeed() });
   const { parts, label } = turningRow(
     scene,
-    top + SLOT_HEIGHT / 2,
+    y,
     'graphics-animation-speed',
     text('graphics.animation-speed'),
     () => {
@@ -483,7 +494,41 @@ function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, to
     },
   );
   label.setText(reads());
-  root.add(parts);
+  return parts;
+}
+
+/** The Fullscreen row, a press asking the browser and the row reading what it did. */
+function fullscreenRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject[] {
+  const { parts, label } = turningRow(
+    scene,
+    y,
+    'graphics-fullscreen',
+    text('graphics.fullscreen'),
+    () => {
+      scene.scale.toggleFullscreen();
+    },
+  );
+  const read = (): void => {
+    label.setText(text(scene.scale.isFullscreen ? 'graphics.on' : 'graphics.off'));
+  };
+  read();
+  const unheard = [Phaser.Scale.Events.ENTER_FULLSCREEN, Phaser.Scale.Events.LEAVE_FULLSCREEN].map(
+    (event) => whileUp(scene, scene.scale, event, read),
+  );
+  // The menu's scene never shuts down: the window going is what has to take these off.
+  label.once('destroy', () => {
+    for (const off of unheard) off();
+  });
+  return parts;
+}
+
+/** The Graphics window's rows, top down. */
+const GRAPHICS_ROWS = [speedRow, fullscreenRow];
+
+function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, top: number): void {
+  GRAPHICS_ROWS.forEach((row, index) => {
+    root.add(row(scene, rowAt(top, index)));
+  });
 }
 
 /** A line a window reads, wrapped to the window and named after its entry. */

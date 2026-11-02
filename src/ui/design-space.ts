@@ -121,6 +121,24 @@ export function followWindow(game: Phaser.Game): void {
   });
 }
 
+// The query changes once, on leaving the ratio it was made on, so a hop makes it again on the new
+// one or the next goes unheard (docs/PHASER.md).
+/** A hop to a monitor of another pixel density followed as a resize: it fires none of its own. */
+export function followPixelRatio(game: Phaser.Game): void {
+  const listen = (): void => {
+    const ratio = window.matchMedia(`(resolution: ${window.devicePixelRatio}dppx)`);
+    ratio.addEventListener(
+      'change',
+      () => {
+        game.scale.refresh();
+        listen();
+      },
+      { once: true },
+    );
+  };
+  listen();
+}
+
 /**
  * Whatever the pointer is holding, let go of where it stands: Phaser reads a `mouseup` on the
  * window whose target is not the canvas as a release off the canvas, and that point leaves its hit

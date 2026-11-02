@@ -427,6 +427,9 @@ const TEXT = {
   'wheel.up-scrolls-down': 'Up scrolls down',
   'graphics.animation-speed': 'Animation speed', // glossary exception: speed
   'graphics.speed': '×{speed}', // glossary exception: speed
+  'graphics.fullscreen': 'Fullscreen',
+  'graphics.on': 'On',
+  'graphics.off': 'Off',
   'key.arrow-up': '↑',
   'key.arrow-left': '←',
   'key.arrow-down': '↓',

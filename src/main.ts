@@ -6,7 +6,13 @@ import { CampaignScreen } from './ui/campaign-screen';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
 import { CollectionScreen } from './ui/collection-screen';
 import { DebugConsole } from './ui/debug-console';
-import { backingSize, followPointer, followWindow, releaseOnBlur } from './ui/design-space';
+import {
+  backingSize,
+  followPixelRatio,
+  followPointer,
+  followWindow,
+  releaseOnBlur,
+} from './ui/design-space';
 import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
@@ -64,7 +70,12 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: css(LOOK.page),
   disableContextMenu: true,
-  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH,
+    // Left to itself Phaser sends a bare div of its own, and the browser's black shows around the design.
+    fullscreenTarget: document.body,
+  },
 });
 // At once: a boot failing from here on is destroyed through this handle.
 window.game = game;
@@ -91,6 +102,7 @@ game.events.once(Phaser.Core.Events.READY, () => {
   booted();
 });
 followWindow(game);
+followPixelRatio(game);
 followPointer(game);
 releaseOnBlur(game);
 readMouseKeys(game);

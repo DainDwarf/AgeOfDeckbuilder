@@ -22,6 +22,7 @@ import {
 const OPENED = settledOn(1);
 
 const ROW = 'graphics-animation-speed';
+const FULLSCREEN = 'graphics-fullscreen';
 
 /** What the Animation speed row's button reads at that speed. */
 function speedRead(speed: number): string {
@@ -49,6 +50,29 @@ async function outOfGraphics(page: Page): Promise<void> {
   }
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
+}
+
+/** A press on the Fullscreen row, waited for until it reads that. */
+async function fullscreenPressed(page: Page, reads: 'graphics.on' | 'graphics.off'): Promise<void> {
+  await click(page, FULLSCREEN);
+  await expect.poll(() => textOf(page, `${FULLSCREEN}-label`)).toBe(text(reads));
+}
+
+/** Whether the browser holds anything fullscreen. */
+function inFullscreen(page: Page): Promise<boolean> {
+  return page.evaluate(() => document.fullscreenElement !== null);
+}
+
+/** Whether what the browser holds fullscreen paints the page's own ground around the design. */
+function fullscreenOnThePage(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const held = document.fullscreenElement;
+    return (
+      held !== null &&
+      getComputedStyle(held).backgroundColor ===
+        getComputedStyle(document.documentElement).backgroundColor
+    );
+  });
 }
 
 /** How many times faster than designed each of the chronicle screen's scenes plays its tweens. */
@@ -133,6 +157,33 @@ test('a press over a play-out in the air takes at once, and the play-out finishe
     window.game?.scene.getScene('ui').tweens.resumeAll();
   });
   await playedOut(page);
+
+  expect(problems).toEqual([]);
+});
+
+test('the Fullscreen row turns fullscreen and reads what the browser did', async ({ page }) => {
+  const problems = watch(page);
+
+  await openSaved(page, OPENED);
+  await intoGraphics(page);
+  expect(await textOf(page, `${FULLSCREEN}-label`)).toBe(text('graphics.off'));
+
+  await fullscreenPressed(page, 'graphics.on');
+  expect(await inFullscreen(page)).toBe(true);
+  expect(await fullscreenOnThePage(page)).toBe(true);
+
+  await click(page, 'graphics-back');
+  await expect.poll(() => standing(page, 'settings')).toBe(true);
+  await click(page, 'settings-graphics');
+  await expect.poll(() => standing(page, 'graphics')).toBe(true);
+  expect(await textOf(page, `${FULLSCREEN}-label`)).toBe(text('graphics.on'));
+
+  await fullscreenPressed(page, 'graphics.off');
+  expect(await inFullscreen(page)).toBe(false);
+
+  await fullscreenPressed(page, 'graphics.on');
+  await page.evaluate(() => document.exitFullscreen());
+  await expect.poll(() => textOf(page, `${FULLSCREEN}-label`)).toBe(text('graphics.off'));
 
   expect(problems).toEqual([]);
 });
