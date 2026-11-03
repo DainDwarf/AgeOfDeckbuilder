@@ -28,6 +28,8 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - **A health bar on units**: a unit on the map shows its health, which only the infopanel reads today.
 - **A building's reach drawn on the map**: a building that gives to the tiles beside it shows which tiles it gives to when its tile is selected, and when its card is aimed, the tiles it would give to; today the yield overlay and the tile panel are what show it.
 - A code-drawn placeholder is a flat polygon (`DOGMAS.md`): every mark drawn so far is one, and each is drawn a second time here as an asset.
+- **Units read as not interactive in city mode**: a new player could not tell why a unit would not move in city mode (playtest, 2026-11-03); the units show it, dimmed or transparent.
+- **Population on the city badge**: since the resource bar dropped population, a new player could not tell what population is (playtest, 2026-11-03); the city's badge makes it clearer.
 
 ## The glyphs
 
@@ -57,6 +59,7 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - **State cursors and cursor images**: the cursor says what a press would do now — not-allowed on a card the rules refuse, grab and grabbing on a hand card's drag and the map's pan — and the game draws a cursor of its own, a browser cursor image (no lag, no animation, about 32 px) or one drawn in the canvas (animated, a frame behind the mouse).
 - The cursor finding, the only hard evidence on cursors in this game: on 2026-09-21 the user learned, with real surprise, that the pointer swaps to a hand over cards, buttons, piles and window frames, after about thirty Nomadic plays. A cursor that is always there gets blindspotted whatever it is drawn as; a cursor that changes at the moment you act gets noticed, because the change is the signal. A per-age or custom-image cursor is real asset work with a real chance of going unseen; the state changes the game already computes are the cheap wins.
 - A retained object keeps its cursor where a destroyed one resets it wherever the pointer is (`docs/PHASER.md`): once the chronicle screen's parts are retained, the cursor pass inherits less to fix.
+- **Each chronicle a new colony**: the chrome clarifies and justifies that each new chronicle is a new colony experimenting, so losing one is not that bad (playtest, 2026-11-03).
 - **Every text measured through `ownBoxOf`**: about sixty layouts in `src/ui/` read a text's padded `width`, `height` or bounds, so `addText`'s padding sits inside their spacing; routed through `ownBoxOf` each moves by 2–4 px and its spacing is looked at again, which a screen redone here does anyway. Each surface rung takes its own.
 - Fits accepted until now: the selected pile's ring reaching ~6 units past its press zone and its top 3–4 units under the "Civilization" word; a wrapped goal's second line 1.5 units off the plate's 18-unit rows ("looks nice"); the collection's count beside the price button overlapping a three-digit price by ~10 px at ten copies (price 512 at base 1), raised only when content reaches it; the cursor staying the hand over stacks and rows while a card is carried on the collection screen.
 
@@ -85,6 +88,11 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - **Income flies in from the tiles**: at the income stage each yielding tile sends its resource to the bar.
 - **A unit's movement along its path**: three parts resting on the rules handing out the route, which today know a landing's cost and a move's two ends only. Each its own line when taken: the path shown for a unit of the player's on a hover or a drag, with how many turns the way takes; the move played along that path instead of one jump from source to target, for the player's units and the others alike; a move ordered over several turns, the unit's aim then admitting any tile it can walk to, and how the rest of the way is walked — a phase at the start or the end of the turn, a button beside the walk through every unit, a continue-movement button or key — with every tile admitted, how another tile is selected while a unit is being aimed is that line's question.
 - **Unit legibility**: a unit forgotten at the end of a turn feels like a slip, and the cure is a state shown, never a warning or a gate on End turn. Two readings taken here, each its own line: a count of the units still holding a move, on the bar or by the end-turn button; a key that jumps the camera to the next unit still holding a move. The sleep order stays an idea, taken only if these two do not suffice.
+
+## The Nomadic tutorial
+
+- **City mode explained**: a new player could not tell what city mode is (playtest, 2026-11-03); the tutorial explains it.
+- **Onboarding opens in the chronicle** (from `IDEAS.md`): a new player's game starts in the Nomadic chronicle instead of on the meta screens, with tutorial popups.
 
 ## Sound and music
 
