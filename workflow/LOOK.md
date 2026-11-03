@@ -9,7 +9,7 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 
 ## The style lock's lines (cut 2026-10-31)
 
-- The style lock's leftovers, for the rungs: Baumgart's files cannot sit in the public repository, so an asset-store line goes ahead of the glyph rung; the unit's picture is the pieces rung's sourcing, his painted objects first, then a commission, the glyph token standing meanwhile, and the user may ask him for an ancient peoples icon pack; the far view's palette, tile edges and threshold, and the river's weight at the far view, are the map rung's; the units survey of 2026-10-31 found no Stone Age figures in a non-pixel human hand on sale, only Isle of Lore 2's cartoon figures (10 dollars, commercial, a second hand) and the virtual-tabletop token makers, whose licences exclude software.
+- The style lock's leftovers, for the rungs: Baumgart's files cannot sit in the public repository, so an asset-store line goes ahead of the glyph rung; the unit's picture is the pieces rung's sourcing, his painted objects first, then a commission, the glyph token standing meanwhile, and the user may ask him for an ancient peoples icon pack; the units survey of 2026-10-31 found no Stone Age figures in a non-pixel human hand on sale, only Isle of Lore 2's cartoon figures (10 dollars, commercial, a second hand) and the virtual-tabletop token makers, whose licences exclude software.
 - **Bundle the UI font**: `system-ui` resolves to a different typeface on every machine, so CI, the player and the developer lay out different games from the same code — every width in the UI is a measured text width. A font shipped with the build ends that. Until then a fit is measured in both Segoe UI and DejaVu Sans (the `measurements` memory).
 - The bar's values tick through a tween that sets their text every frame, and Phaser's text page says frequently changing numbers want BitmapText, a Text recreating its canvas texture on every change: a fact for the font decision, since a bundled font can be a bitmap font too.
 - **Colour never carries gameplay meaning alone**: resource chips and anything gameplay-critical get shape or glyph redundancy, fixing colour-blindness in every theme at once — including the default. The glyph rung's rule, landing on `docs/LOOK.md` at its cut.
@@ -17,7 +17,9 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The faction colours are the pieces rung's first reading, a token being a disc in its faction's colour on his terrain: the civilization's gold reads 1.09 on his desert and 1.38 on his plains, the neutral's blue 1.04 on his ocean (the free samples, 2026-11-02).
 - The Stone Age's ground is grey, the user's pick over the recommended warm stone, until this pass. The civilization's colour is one `LOOK` entry until a second civilization lands (v0.0.7), then a table.
 
-## The map
+## The map (cut 2026-11-03)
+
+The three fits below are the rings-and-marks line's reading, the last of the rung's six; improvements went to the pieces rung and the Stone ground to the meta screens rung at the cut.
 
 - The two-digit culture threshold on a tile (−14 on the ring opening) is accepted as it fits; re-read here.
 - The selected city tile's white ring hard to pick out among the lit tiles around it: "All good" on 2026-10-01; material, not a defect.

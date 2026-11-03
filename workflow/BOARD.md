@@ -8,12 +8,11 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **The map** — terrain, features, rivers, fog, the Stone ground, the rings and the marks, in the locked style.
-- **The pieces on the map** — units, buildings, sites, the city badge, a health bar on units, a building's reach drawn.
+- **The pieces on the map** — units, buildings, sites, improvements (his painted icons or a change to the tile's own drawing, mocked up at its intake), the city badge, a health bar on units, a building's reach drawn.
 - **The glyphs** — the resource glyphs and every icon the game reads, drawn through one glyph renderer from licensed glyphs in the locked style, on the cards, the yield overlay, the resource bar, the infopanel and the meta screens alike.
 - **The cards and the windows** — the face, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
 - **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
-- **The meta screens** — the launch screen with its region stills, the tree, the collection, the ending.
+- **The meta screens** — the launch screen with its region stills, the tree with its ages' grounds, the Stone ground among them, the collection, the ending.
 - **The palette** — the colours of what code still tints, read against every tileset and icon pack bought by then: the clashes measured, then the colour schemes for colour-blindness through the one look file; taken or dropped once the glyphs carry every meaning by shape.
 - **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, a transition into a chronicle and out of it, and the unit legibility readings.
 - **The Nomadic tutorial** — a tutorial teaching the Nomadic Age, city mode among what it explains, its first chronicle's goal being to capture a site.
@@ -21,5 +20,11 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **The terrain** — his painted faces on the squashed lattice at the near view, the Hex Basic Terrain Set and the Rivers, Coasts & Seas pack entering the store, every mark, ring, glow and scrim squashed with the lattice.
+- **The river** — his painted river strip laid along the edges a river runs, bending at every corner, in place of the stroked line.
+- **The far view** — the zoom threshold, one flat colour per terrain from his palette, the far tile's edge and the river's weight at the far view.
+- **The features** — his painted icons of the thing, a deer, a cow, a stone, a pond, with no disc or frame of their own, the icon pack entering the store.
+- **The fog and the uncharted** — what the fog's wash and the uncharted's edge become on painted ground, measured on his tiles.
+- **The rings and the marks** — the borders, the selection ring, the lit glow, the city-mode marks, the culture threshold and the badge re-read against his ground, the pool's three map fits among them, each colour pitched by its meaning.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.
 - **Nomadic sites near the city** — in the Nomadic Age the sites spawn near the city, or are forced closer; balancing, taken any time.
