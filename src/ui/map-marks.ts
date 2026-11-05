@@ -155,7 +155,6 @@ export type TileObjects = {
   readonly shore: Phaser.GameObjects.Image;
   readonly feature: Phaser.GameObjects.Image;
   readonly featureDisc: Phaser.GameObjects.Arc;
-  readonly ring: Phaser.GameObjects.Polygon;
   readonly building: Phaser.GameObjects.Polygon;
 };
 

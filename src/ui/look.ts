@@ -56,6 +56,8 @@ export type Look = {
   readonly mapOutline: number;
   /** The tint every painting and mark of a tile in fog is multiplied by. */
   readonly fog: number;
+  /** The strength a city's border band rests at where it meets the line. */
+  readonly borderBand: number;
   readonly lit: number;
   readonly river: number;
   readonly built: number;
@@ -150,6 +152,7 @@ export const LOOK: Look = {
   page: 0x0d1117,
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,
+  borderBand: 0.6,
   lit: 0xf2f6ff,
   river: 0x62a9e0,
   built: 0xcfc6b4,

@@ -8,6 +8,8 @@ import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
   aimed,
+  borderColours,
+  borderStretches,
   budget,
   chronicleOf,
   civilizationOpened,
@@ -84,7 +86,11 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(standingCity.city).toEqual(at);
   expect(tileAt(standingCity.tiles, at)?.building).toBe(civilization.city.building);
   expect(tileAt(standingCity.tiles, at)?.terrain).toBe(tileAt(opened.tiles, at)?.terrain);
-  expect(await marksIn(page, 'border')).toBe(standingCity.held.length);
+  expect(await borderColours(page)).toEqual(
+    borderStretches(
+      standingCity.held.map((tile) => ({ tile, holder: 'player' as const, inFog: false })),
+    ),
+  );
 
   const button = await onScreen(page, 'end-turn');
   await page.mouse.move(button.x, button.y);

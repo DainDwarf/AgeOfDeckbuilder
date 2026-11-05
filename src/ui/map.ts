@@ -35,6 +35,7 @@ import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
+import { createBorder, type HeldAsDrawn } from './map-border';
 import { createMapCamera } from './map-camera';
 import { createMapGrab } from './map-grab';
 import {
@@ -50,10 +51,8 @@ import {
   asUnitDim,
   asVoid,
   asYield,
-  CITY_COLOURS,
   CITY_FACTIONS,
   cityDim,
-  darkened,
   diamond,
   FACTION_COLOURS,
   featureDisc,
@@ -96,10 +95,6 @@ import { VEILS_ON, type Veils } from './veils';
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
 const GLYPH = 6;
 const GLYPH_PITCH = 8;
-
-/** How heavy the ring around either city's own tile is, against the one every other tile takes. */
-const CITY_RING = 4;
-const RING = 2;
 
 /** How far over its tile's row a face crossfading in stands, short of the row in front. */
 const CROSSFADE_RISE = 0.5;
@@ -245,8 +240,8 @@ function facesIn(drawing: Drawing, tiles: readonly Tile[]): TilesBeside {
 
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
- * Every layer of every tile, the border and every unit are written again on each state change; and
- * a card is aimed here — the rules say which tiles light up, never this file.
+ * Every layer of every tile and every unit are written again on each state change, the border where
+ * it moved; and a card is aimed here — the rules say which tiles light up, never this file.
  */
 export function createMapView(
   scene: Phaser.Scene,
@@ -265,7 +260,7 @@ export function createMapView(
   const ground = group(strata.terrain, 'terrain');
   const rivers = group(strata.terrain, 'rivers');
   const features = group(strata.terrain, 'features');
-  const rings = group(strata.terrain, 'border');
+  const border = createBorder(scene, group(strata.terrain, 'border'), chronicle.tiles);
   const lighted = group(strata.lit, 'lit');
   const hues = group(strata.lit, 'prepared');
   const improvements = group(strata.buildings, 'improvements');
@@ -313,7 +308,6 @@ export function createMapView(
             features,
             scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`).setDepth(2),
           ),
-          ring: kept(rings, ringMark(scene, 0, RING)),
           building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
         },
       ];
@@ -342,7 +336,7 @@ export function createMapView(
   const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
   const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
   const claimablePool = poolOf(cityMarks, () =>
-    ringMark(scene, LOOK.reading.culture, RING).setName('claimable'),
+    ringMark(scene, LOOK.reading.culture, 2).setName('claimable'),
   );
 
   /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
@@ -746,24 +740,20 @@ export function createMapView(
   };
 
   /**
-   * Both cities' borders on the chronicle the map stands on, each tile ringed off the face the map
-   * draws of it, darkened in fog: a claim moves a border, so a render does.
+   * Both cities' borders on the chronicle the map stands on, around each one's tiles as the map draws
+   * them, darkened in fog: a claim moves a border, so a render does.
    */
   const paintBorder = (): void => {
     const current = shown;
     if (current === undefined) return;
+    const held: Record<CityFaction, HeldAsDrawn[]> = { player: [], neutral: [] };
     for (const tile of current.tiles) {
-      const { ring } = tileObjects[tileKey(tile)];
-      ring.setVisible(false);
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const holder = face.asStands ? holderOf(current, tile) : charted.get(tileKey(tile))?.holder;
-      if (holder === undefined) continue;
-      const own = cityTileOf(current, holder);
-      const weight = own !== undefined && sameTile(tile, own) ? CITY_RING : RING;
-      const inFog = !live.has(tileKey(tile));
-      ring.setStrokeStyle(weight, darkened(CITY_COLOURS[holder], inFog)).setVisible(true);
+      if (holder !== undefined) held[holder].push({ tile, inFog: !live.has(tileKey(tile)) });
     }
+    border.paint(held);
   };
 
   /** What the map keeps of a unit, made the first time a render or a motion meets it. */

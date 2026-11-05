@@ -75,6 +75,7 @@ import {
   type Chronicle,
   type ChronicleAchievement,
   type ChronicleCard,
+  type CityFaction,
   costsOf,
   type Deal,
   idle,
@@ -98,7 +99,7 @@ import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
-import { type BarReading, LOOK } from '../src/ui/look';
+import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import type { PileKind } from '../src/ui/piles';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -1480,6 +1481,67 @@ export function marksIn(page: Page, name: string): Promise<number> {
     if (marks === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
     return marks.length;
   }, name);
+}
+
+/** A tile the map draws as a city's: that city, and whether the map draws the tile in fog. */
+export type Worn = {
+  readonly tile: TileCoords;
+  readonly holder: CityFaction;
+  readonly inFog: boolean;
+};
+
+/** The colour a city's border is drawn in. */
+function borderColour(holder: CityFaction): number {
+  switch (holder) {
+    case 'player':
+      return LOOK.civilization;
+    case 'neutral':
+      return LOOK.neutral;
+  }
+}
+
+/**
+ * How many stretches of the cities' borders each colour stands for over these tiles, by the colour's
+ * value: two along each edge of a tile whose neighbour is not its city's, off the disc included, in
+ * its city's colour darkened by the fog's tint where the tile is in fog.
+ */
+export function borderStretches(worn: readonly Worn[]): Record<number, number> {
+  const holders = new Map(worn.map(({ tile, holder }) => [tileKey(tile), holder]));
+  const counts: Record<number, number> = {};
+  for (const { tile, holder, inFog } of worn) {
+    const edges = neighbours(tile).filter((beside) => holders.get(tileKey(beside)) !== holder);
+    if (edges.length === 0) continue;
+    const colour = inFog ? multiplied(borderColour(holder), LOOK.fog) : borderColour(holder);
+    counts[colour] = (counts[colour] ?? 0) + 2 * edges.length;
+  }
+  return counts;
+}
+
+/** How many stretches of the map's borders are drawn in each colour, by the colour's value. */
+export function borderColours(page: Page): Promise<Record<number, number>> {
+  return page.evaluate(() => {
+    const border = window.shownIn?.('border');
+    if (border === undefined) throw new Error('there is no border on the chronicle screen');
+    // A Graphics keeps its commands flat in one buffer, each a number followed by its arguments
+    // (`phaser/src/gameobjects/graphics/Commands.js`); a line is drawn with these alone.
+    const ARGUMENTS: Record<number, number> = { 1: 0, 4: 2, 5: 2, 6: 3, 9: 0 };
+    const LINE_STYLE = 6;
+    const counts: Record<number, number> = {};
+    for (const object of border) {
+      if (object.type !== 'Graphics') continue;
+      const commands = (object as Phaser.GameObjects.Graphics).commandBuffer as number[];
+      for (let at = 0; at < commands.length; at += 1 + ARGUMENTS[commands[at]]) {
+        if (!(commands[at] in ARGUMENTS)) {
+          throw new Error(`a border's line holds the command ${commands[at]}`);
+        }
+        if (commands[at] === LINE_STYLE) {
+          const colour = commands[at + 2];
+          counts[colour] = (counts[colour] ?? 0) + 1;
+        }
+      }
+    }
+    return counts;
+  });
 }
 
 /** How many faces the map shows, and how many of them the fog's tint darkens. */

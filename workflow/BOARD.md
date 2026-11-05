@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The borders** — each city's border is one curved line around the tiles it holds with a band of its colour fading inside it, darkened where a tile is in fog, the ring inside every held tile gone, and the neutral spec reads it. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`, `docs/PHASER.md`. [board/borders.md](board/borders.md)
 - **The selection ring** — how a selected tile is shown over his painting, today's heavy white ring one of the ways explored.
 - **The reach** — the tiles a selected unit can step onto and the tiles a card is aimed at, lit over his ground.
 - **The offensive glow** — the enemies a selected unit can attack and the tile an enemy has prepared on, one glow for both over his ground.

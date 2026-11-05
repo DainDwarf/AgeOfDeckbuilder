@@ -16,16 +16,18 @@ import { neutralBuilding } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
-import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
+import { type Chronicle, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
-import { LOOK, multiplied } from '../src/ui/look';
+import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
 import {
   admits,
   aimed,
   aimLine,
+  borderColours,
+  borderStretches,
   budget,
   campaignWith,
   campBeside,
@@ -65,6 +67,7 @@ import {
   tileOnScreen,
   unitEntered,
   WARRIOR,
+  type Worn,
   watch,
 } from './chronicle-screen';
 
@@ -204,45 +207,6 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   expect(problems).toEqual([]);
 });
 
-/** How many rings of the map's border stand stroked in each colour, by the colour's value. */
-function ringsByColour(page: Page): Promise<Record<number, number>> {
-  return page.evaluate(() => {
-    const border = window.shownIn?.('border') as Phaser.GameObjects.Polygon[] | undefined;
-    if (border === undefined) throw new Error('there is no border on the chronicle screen');
-    const counts: Record<number, number> = {};
-    for (const ring of border) {
-      counts[ring.strokeColor] = (counts[ring.strokeColor] ?? 0) + 1;
-    }
-    return counts;
-  });
-}
-
-/** The colour a city's border is drawn in. */
-function borderColour(holder: CityFaction): number {
-  switch (holder) {
-    case 'player':
-      return LOOK.civilization;
-    case 'neutral':
-      return LOOK.neutral;
-  }
-}
-
-/**
- * How many rings each colour stands for over the rings named, each its holder's colour darkened by
- * the fog's tint where its tile is in fog, by the colour's value.
- */
-function colouredBy(
-  rings: readonly { holder: CityFaction | undefined; inFog: boolean }[],
-): Record<number, number> {
-  const counts: Record<number, number> = {};
-  for (const { holder, inFog } of rings) {
-    if (holder === undefined) continue;
-    const colour = inFog ? multiplied(borderColour(holder), LOOK.fog) : borderColour(holder);
-    counts[colour] = (counts[colour] ?? 0) + 1;
-  }
-  return counts;
-}
-
 /** The chronicle the turns from this one leave once the neutral's city has claimed a tile. */
 function neutralClaimed(chronicle: Chronicle): Chronicle {
   let claiming = chronicle;
@@ -258,7 +222,7 @@ function neutralClaimed(chronicle: Chronicle): Chronicle {
   return claiming;
 }
 
-test('the map rings every tile the neutral holds in the neutral’s colour beside the city’s own border, a tile drawn in fog wearing the ring it wore when last seen', async ({
+test('the map draws the neutral’s border in the neutral’s colour beside the city’s own, a tile drawn in fog keeping the stretch of border it wore when last seen', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -270,11 +234,11 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const seen = inSight(CATALOGUE, claimed);
   const kept = new Map(claimed.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
-  const worn = claimed.tiles.map((tile) => {
+  const worn = claimed.tiles.flatMap((tile): Worn[] => {
     const snapshot = kept.get(tileKey(tile));
     const inFog = !seen.has(tileKey(tile));
     const holder = !inFog || snapshot === undefined ? holderOf(claimed, tile) : snapshot.holder;
-    return { holder, inFog };
+    return holder === undefined ? [] : [{ tile, holder, inFog }];
   });
   expect(holderOf(claimed, first)).toBe('neutral');
   expect(seen.has(tileKey(first))).toBe(false);
@@ -286,17 +250,17 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
   await consoleKey(page);
   await rested(page);
 
-  expect(await ringsByColour(page)).toEqual(colouredBy(worn));
+  expect(await borderColours(page)).toEqual(borderStretches(worn));
 
   await consoleKey(page);
   await enter(page, 'fog');
   await consoleKey(page);
   await rested(page);
 
-  expect(await ringsByColour(page)).toEqual(
-    colouredBy([
-      ...claimed.held.map(() => ({ holder: 'player' as const, inFog: false })),
-      ...neutral.held.map(() => ({ holder: 'neutral' as const, inFog: false })),
+  expect(await borderColours(page)).toEqual(
+    borderStretches([
+      ...claimed.held.map((tile) => ({ tile, holder: 'player' as const, inFog: false })),
+      ...neutral.held.map((tile) => ({ tile, holder: 'neutral' as const, inFog: false })),
     ]),
   );
   expect(problems).toEqual([]);
