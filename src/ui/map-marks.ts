@@ -299,8 +299,9 @@ export type Lying = {
 };
 
 /**
- * What a feature lays on its tile's ground: three copies of its animal scattered about the tile's
- * middle by its place on the disc, every other one turned, or his pond its place picks, or nothing.
+ * What a feature lays on its tile's ground: copies of its animal, or his pond, or nothing. The pond's pick
+ * is salted apart from the face's: the desert has as many paintings as there are ponds, and an unsalted
+ * pick pairs each painting with one pond.
  */
 export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
   const key = tileKey(coord);
@@ -331,7 +332,7 @@ export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
           name,
           paint: (image) =>
             image
-              .setTexture(FEATURE_SHEET_KEY, paintingOn(PONDS, coord))
+              .setTexture(FEATURE_SHEET_KEY, PONDS[pickOf(q * 5 + 1, r * 9 + 7, PONDS.length)])
               .setScale(FACE_SCALE)
               .setFlipX(false)
               .setPosition(x, y)
