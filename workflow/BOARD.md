@@ -20,7 +20,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The shoreline** — his coast strips laid over a water tile along each edge a land tile touches, two paintings each, the strips chosen from the tile's neighbours and repainted when one of them is terraformed.
+- **The shoreline** — every water tile the map draws wears his coast painting over its face along each edge where the map draws land, the one of his two paintings picked by the tile's place on the disc, and the beach fades with a tile beside it that changes. Doc-impact: `docs/LOOK.md`. [board/shoreline.md](board/shoreline.md)
 - **The river** — his painted river strip laid along the edges a river runs, bending at every corner, in place of the stroked line.
 - **The far view** — the zoom threshold, one flat colour per terrain from his palette, the far tile's edge and the river's weight at the far view.
 - **The features** — his painted icons of the thing, a deer, a cow, a stone, a pond, with no disc or frame of their own, the icon pack entering the store.
