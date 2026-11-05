@@ -10,6 +10,7 @@ import {
   claimedAt,
   click,
   dragOut,
+  featuresShown,
   HUNT,
   marksIn,
   onFeature,
@@ -85,7 +86,7 @@ for (const feature of FEATURES) {
     const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
     await openSaved(page, paid.chronicle, CAMPAIGN);
-    const featureMarks = await marksIn(page, 'features');
+    const featureMarks = await featuresShown(page);
     const buildingMarks = await marksIn(page, 'buildings');
     await dragOut(page, paid.index);
     await aimed(page);
@@ -93,7 +94,7 @@ for (const feature of FEATURES) {
     await playedOut(page);
 
     await expect.poll(() => chronicleOf(page)).toEqual(hunted);
-    expect(await marksIn(page, 'features')).toBe(featureMarks - 1);
+    expect(await featuresShown(page)).toBe(featureMarks - 1);
     expect(await marksIn(page, 'buildings')).toBe(buildingMarks - 1);
     expect(problems).toEqual([]);
   });

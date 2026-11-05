@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The features** — every feature the map draws is his resource icon on a dark disc in the row above its tile's middle, and its tile is dressed as the look page says: the herd on a deer's or a cattle's tile, his pond under an oasis, the fertile plain's and the flint hill's paintings tinted; the icon pack in the store with its licence entry; the five placeholder polygons and their colours gone, the infopanel's feature rows reading the bare icon. Doc-impact: `docs/LOOK.md`, `public/assets/LICENSES.md`. [board/features.md](board/features.md)
 - **The fog and the uncharted** — what the fog's wash and the uncharted's edge become on painted ground, measured on his tiles: the wash laid on the painting itself, so the art rising above its hexagon is washed with it, the marks standing on a fogged tile dimmed each its own way, and his void tiles for the uncharted.
 - **The rings and the marks** — the borders, the selection ring, the lit glow, the city-mode marks, the culture threshold and the badge re-read against his ground, the pool's three map fits among them, each colour pitched by its meaning.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.

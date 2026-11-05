@@ -40,8 +40,7 @@ import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
   buildingColourOf,
   buildingMarkOf,
-  featureColourOf,
-  featureMarkOf,
+  featureIconOf,
   groundColourOf,
   improvementMarkOf,
   paintingsOf,
@@ -132,11 +131,10 @@ test('every building of the catalogue has a name, a mark and a colour on the scr
   }
 });
 
-test('every feature of the catalogue has a name, a mark and a colour on the screen', () => {
+test('every feature of the catalogue has a name and an icon on the screen', () => {
   for (const id of Object.keys(CATALOGUE.features)) {
     expect(() => featureName(id)).not.toThrow();
-    expect(() => featureMarkOf(id)).not.toThrow();
-    expect(() => featureColourOf(id)).not.toThrow();
+    expect(() => featureIconOf(id)).not.toThrow();
   }
 });
 

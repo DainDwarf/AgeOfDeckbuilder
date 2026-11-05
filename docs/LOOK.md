@@ -6,7 +6,7 @@
 
 Everything drawn is one of two families, and each has one job.
 
-- **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects. Code draws geometry, recolours and composes his pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
+- **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects, his painted resource icons. Code draws geometry, recolours and composes his pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
 - **Symbols** are signs of quantities and kinds: a resource, a yield, a cost, a unit's kind on its token until its picture exists, the icons the screens read. Every symbol is a **flat one-colour glyph from game-icons.net**, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol is never a picture of a thing on the map.
 
 A painted world under flat symbols is the convention of the genre, and the two families do not read as two styles because they never do the same job.
@@ -21,7 +21,7 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 **The river** is his painted river set corner by corner along the edges it runs. His rivers are painted crossing a tile between the middles of its edges; set on a corner instead, their legs run the corner's edges, so every corner a river passes wears the one of his pieces whose arms are the river's edges there, each leg reaching the edge's middle where the next corner's piece meets it as his pieces join: a stub at its source, a bend, his fork where two rivers meet. Where a river reaches the water its last half edge is his straight river pressed to that length, running into his river mouth, which washes from the corner into the water over the beaches. A piece with several paintings is picked by the corner's place on the disc, as a face is. The river is drawn over the ground, the art risen above a tile's hexagon included. 🔧 Its weight at the far view is the map rung's.
 
-**Features** stand on their tile as his painted icons of the thing, a deer, a cow, a stone, a pond, with no disc or frame of their own: a feature is a thing lying on the land.
+**Features** are his resource icons. A feature's tile wears the icon of the thing, 14 units wide on a dark disc with a pale rim, in the row above the tile's middle where the improvements stand beside it: the deer, the cow, his tobacco leaf for a fertile plain, his limestone for flint, his water for an oasis. The disc is what tells a feature from the ground at every zoom; the rest is flavour lying on the land, so the tile itself reads as the feature from across the disc. A deer's or a cattle's tile carries three small copies of its animal, 8 units wide, scattered about the tile's middle by its place on the disc, every other one turned to face the other way, under whatever stands on the tile. An oasis lies on his pond, one of his four picked by the tile's place. A fertile plain's painting is tinted greener and a flint hill's slate: the painting re-painted once at boot in its own shading, a second painting of the face the tile wears. A feature's row on the infopanel's cards reads the same icon, bare.
 
 ## The pieces on the map ✅
 
@@ -39,7 +39,7 @@ Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's
 
 ## The packs ✅
 
-- **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, and his painted objects. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
+- **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, and his painted objects, and his resource icons. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
 - **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.
 

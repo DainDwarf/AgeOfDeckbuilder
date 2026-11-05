@@ -5,6 +5,7 @@ import { stopMotion } from './card-motion';
 type Retained =
   | Phaser.GameObjects.Image
   | Phaser.GameObjects.Polygon
+  | Phaser.GameObjects.Arc
   | Phaser.GameObjects.Container
   | Phaser.GameObjects.Rectangle
   | Phaser.GameObjects.Text;

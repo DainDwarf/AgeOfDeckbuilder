@@ -11,9 +11,9 @@ import {
   chronicleOf,
   click,
   dragOut,
+  featuresShown,
   HUNT,
   idsOf,
-  marksIn,
   openSaved,
   type Paid,
   playedOn,
@@ -41,13 +41,13 @@ test('the hunt card removes the feature of the tile the worker stands on', async
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
   await openSaved(page, paid.chronicle);
-  const before = await marksIn(page, 'features');
+  const before = await featuresShown(page);
   await dragOut(page, paid.index);
   await aimed(page);
   await click(page, `tile-${tileKey(paid.tile)}`);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(hunted);
-  expect(await marksIn(page, 'features')).toBe(before - 1);
+  expect(await featuresShown(page)).toBe(before - 1);
   expect(problems).toEqual([]);
 });

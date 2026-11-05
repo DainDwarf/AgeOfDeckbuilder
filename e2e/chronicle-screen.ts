@@ -1398,6 +1398,15 @@ export function facesShown(page: Page): Promise<number> {
   });
 }
 
+/** How many features the map shows: the icons of its features named for their tile, their discs and what they lay on the ground left out. */
+export function featuresShown(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const marks = window.shownIn?.('features');
+    if (marks === undefined) throw new Error('there are no features on the chronicle screen');
+    return marks.filter((mark) => /^feature-[-\d]+,[-\d]+$/.test(mark.name)).length;
+  });
+}
+
 /** How many yield glyphs of each resource: what the map shows, or what a set of tiles is owed. */
 export type Glyphs = Record<Resource, number>;
 

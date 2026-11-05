@@ -96,6 +96,12 @@ export type Look = {
   readonly affordableCard: Paper;
   readonly unaffordableCard: Paper;
   readonly mapDim: Wash;
+  /** The disc a feature's icon stands on, and the rim around it. */
+  readonly featureDisc: Wash;
+  readonly featureDiscRim: Wash;
+  /** What a fertile plain's painting is re-painted under, and a flint hill's. */
+  readonly fertileTint: Wash;
+  readonly flintTint: Wash;
   readonly scrim: Wash;
   readonly consolePanel: Wash;
   readonly litGlow: Glow;
@@ -103,7 +109,6 @@ export type Look = {
   readonly preparedGlow: Glow;
   readonly reading: Readonly<Record<Resource, number>>;
   readonly terrain: Readonly<Record<string, number>>;
-  readonly feature: Readonly<Record<string, number>>;
   readonly building: Readonly<Record<string, BuildingRole>>;
   /** The ground each age stands on in the technology tree, by the age's id. */
   readonly ground: Readonly<Record<string, number>>;
@@ -175,6 +180,10 @@ export const LOOK: Look = {
   affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
   unaffordableCard: { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 },
   mapDim: { colour: 0x0d1014, strength: 0.6 },
+  featureDisc: { colour: 0x0d1014, strength: 0.72 },
+  featureDiscRim: { colour: 0xece2cc, strength: 0.55 },
+  fertileTint: { colour: 0x3c9a3a, strength: 0.4 },
+  flintTint: { colour: 0x5c6370, strength: 0.65 },
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
   litGlow: { fill: 0.4, stroke: 0.9 },
@@ -196,13 +205,6 @@ export const LOOK: Look = {
     coast: 0x3d6d9e,
     ocean: 0x2b4f7a,
     desert: 0xd6c08a,
-  },
-  feature: {
-    fertile: 0x4a7a2d,
-    deer: 0x8a5a2b,
-    cattle: 0xf2f6ff,
-    flint: 0x4b4f58,
-    oasis: 0x2f8f83,
   },
   building: {
     hearth: 'civilization',

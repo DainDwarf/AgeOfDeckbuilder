@@ -1,5 +1,6 @@
 import type { Corner, TileCoords } from '../rules/map';
-import { LOOK } from './look';
+import { featureKind, type MapContent } from '../rules/map-kinds';
+import { LOOK, type Wash } from './look';
 import type { Sheet } from './sheet';
 
 const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
@@ -50,34 +51,33 @@ const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
   'stone-beast-bones': BONES,
 };
 
-/** Half the width of the fertile plain's hexagon, whose corners stand five from its centre. */
-const HEX_HALF = 2.5 * Math.sqrt(3);
+/** What a feature's tile wears beside its icon: a herd of its animal, his pond, or its painting tinted. */
+export type FeatureDress =
+  | { readonly kind: 'herd' }
+  | { readonly kind: 'pond' }
+  | { readonly kind: 'tint'; readonly wash: Wash; readonly composite: GlobalCompositeOperation };
 
-const FERTILE: number[] = [
-  HEX_HALF,
-  -2.5,
-  HEX_HALF,
-  2.5,
-  0,
-  5,
-  -HEX_HALF,
-  2.5,
-  -HEX_HALF,
-  -2.5,
-  0,
-  -5,
-];
-
-const TRIANGLE: number[] = [-5, 4, 0, -4, 5, 4];
-
-/** Placeholder primitives until the art pass. */
-const FEATURE_MARKS: Readonly<Record<string, number[]>> = {
-  fertile: FERTILE,
-  deer: TRIANGLE,
-  cattle: TRIANGLE,
-  flint: [-2, -5, 4, -1, 2, 5, -4, 1],
-  oasis: [-4, -4, 4, -4, 4, 4, -4, 4],
+/** His resource icon each feature wears, by its file's name in his pack, and what its tile wears beside it. */
+const FEATURE_LOOKS: Readonly<
+  Record<string, { readonly icon: string; readonly dress: FeatureDress }>
+> = {
+  fertile: {
+    icon: 'tobacco',
+    dress: { kind: 'tint', wash: LOOK.fertileTint, composite: 'overlay' },
+  },
+  deer: { icon: 'deer', dress: { kind: 'herd' } },
+  cattle: { icon: 'cow', dress: { kind: 'herd' } },
+  flint: { icon: 'limestone', dress: { kind: 'tint', wash: LOOK.flintTint, composite: 'color' } },
+  oasis: { icon: 'water', dress: { kind: 'pond' } },
 };
+
+/** How many copies of its animal a herd's tile carries. */
+export const HERD_COPIES = 3;
+
+/** What a feature looks like; a feature with no icon is refused. */
+function featureLookOf(feature: string): { readonly icon: string; readonly dress: FeatureDress } {
+  return drawn(FEATURE_LOOKS, feature, 'no icon is drawn for the feature');
+}
 
 /** Placeholder primitives until the art pass. */
 const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
@@ -210,21 +210,68 @@ export const RIVER_SHEET: Sheet = {
   side: 2048,
 };
 
+/** The file of his resource icon a feature wears, under the assets folder; a feature with none is refused. */
+export function featureIconOf(feature: string): string {
+  return `store/icons-strategic-resources-and-goods/Icons/${featureLookOf(feature).icon}.png`;
+}
+
+/** What a feature's tile wears beside its icon; a feature with no icon is refused. */
+export function featureDressOf(feature: string): FeatureDress {
+  return featureLookOf(feature).dress;
+}
+
+/** His four ponds, under the assets folder. */
+export const PONDS: readonly string[] = Array.from(
+  { length: 4 },
+  (_, at) => `store/hex-basic-terrain-set/Decor/decorPond${String(at).padStart(2, '0')}.png`,
+);
+
+/** The frame a painting tinted for a feature stands under in the features sheet. */
+export function tintedName(painting: string, feature: string): string {
+  return `${painting}#${feature}`;
+}
+
+export const FEATURE_SHEET_KEY = 'features';
+
+/**
+ * The sheet every feature's icon and his ponds are drawn into, and the paintings of the terrain each
+ * feature with a tint lies on, tinted for it off the face sheet.
+ */
+export function featureSheet(catalogue: MapContent): Sheet {
+  return {
+    key: FEATURE_SHEET_KEY,
+    files: [...new Set(Object.keys(FEATURE_LOOKS).map(featureIconOf)), ...PONDS],
+    tinted: Object.keys(catalogue.features).flatMap((feature) => {
+      const dress = featureDressOf(feature);
+      if (dress.kind !== 'tint') return [];
+      return paintingsOf(featureKind(catalogue, feature).terrain).map((painting) => ({
+        sheet: FACE_SHEET.key,
+        painting,
+        frame: tintedName(painting, feature),
+        wash: dress.wash,
+        composite: dress.composite,
+      }));
+    }),
+    side: 2048,
+  };
+}
+
 /** The one of the paintings a tile wears, picked by its place on the disc alone. */
 export function paintingOn(paintings: readonly string[], { q, r }: TileCoords): string {
-  return pickedBy(paintings, q, r);
+  return paintings[pickOf(q, r, paintings.length)];
 }
 
 /** The one of the paintings a corner of the lattice wears, picked by its place alone, as a tile's is. */
 export function paintingAtCorner(paintings: readonly string[], { x, y }: Corner): string {
-  return pickedBy(paintings, x, y);
+  return paintings[pickOf(x, y, paintings.length)];
 }
 
-function pickedBy(paintings: readonly string[], one: number, other: number): string {
+/** Which of that many a place picks, by two numbers read off it: the one hash every pick by place goes through. */
+export function pickOf(one: number, other: number, count: number): number {
   let hash = Math.imul(one, 0x27d4eb2d) ^ Math.imul(other, 0x165667b1);
   hash = Math.imul(hash ^ (hash >>> 15), 0x85ebca6b);
   hash ^= hash >>> 13;
-  return paintings[(hash >>> 0) % paintings.length];
+  return (hash >>> 0) % count;
 }
 
 /** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */
@@ -250,16 +297,6 @@ export function buildingMarkOf(building: string): number[] {
 /** The colour a building's mark is painted in; a building with no colour is refused. */
 export function buildingColourOf(building: string): number {
   return LOOK[drawn(LOOK.building, building, 'no colour paints the building')];
-}
-
-/** The corners a feature's mark is drawn from; a feature with no mark is refused. */
-export function featureMarkOf(feature: string): number[] {
-  return drawn(FEATURE_MARKS, feature, 'no mark is drawn for the feature');
-}
-
-/** The colour a feature's mark is painted in; a feature with no colour is refused. */
-export function featureColourOf(feature: string): number {
-  return drawn(LOOK.feature, feature, 'no colour paints the feature');
 }
 
 /** The corners an improvement's mark is drawn from; an improvement with no mark is refused. */

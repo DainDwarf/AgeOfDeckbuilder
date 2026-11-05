@@ -9,6 +9,7 @@ import {
   chronicleOf,
   click,
   dragOut,
+  featuresShown,
   HUNT,
   marksIn,
   openSaved,
@@ -79,7 +80,7 @@ test('the hunt card played on a trapped deer removes the deer and the trapping w
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
   await openSaved(page, paid.chronicle, CAMPAIGN);
-  const features = await marksIn(page, 'features');
+  const features = await featuresShown(page);
   const improvements = await marksIn(page, 'improvements');
   await dragOut(page, paid.index);
   await aimed(page);
@@ -87,7 +88,7 @@ test('the hunt card played on a trapped deer removes the deer and the trapping w
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(hunted);
-  expect(await marksIn(page, 'features')).toBe(features - 1);
+  expect(await featuresShown(page)).toBe(features - 1);
   expect(await marksIn(page, 'improvements')).toBe(improvements - 1);
   expect(problems).toEqual([]);
 });

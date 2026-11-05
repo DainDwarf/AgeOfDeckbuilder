@@ -33,12 +33,17 @@ import {
   buildingColourOf,
   buildingMarkOf,
   FACE_SHEET,
-  featureColourOf,
-  featureMarkOf,
+  FEATURE_SHEET_KEY,
+  featureDressOf,
+  featureIconOf,
+  HERD_COPIES,
   improvementMarkOf,
+  PONDS,
   paintingOn,
   paintingsOf,
+  pickOf,
   shorePaintingsOf,
+  tintedName,
   unitMarkOf,
 } from './marks';
 import { text } from './text';
@@ -58,6 +63,9 @@ export const PAINTING = { width: 256, height: 384, middle: 256 };
 
 /** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
 const FACE_OVERLAP = 1.04;
+
+/** How much smaller than his file a face is drawn, and anything painted at his tile's scale. */
+const FACE_SCALE = (Math.sqrt(3) * TILE_SIZE * FACE_OVERLAP) / PAINTING.width;
 
 export const FACTION_COLOURS: Record<Faction, number> = {
   player: LOOK.civilization,
@@ -99,6 +107,15 @@ export const ROW_RISE = 15;
 /** How far apart the marks of that row stand, centre to centre. */
 const ROW_PITCH = 11;
 
+/** How wide a feature's icon stands, and the disc under it with its rim. */
+const ICON_WIDTH = 14;
+const DISC_RADIUS = 9;
+const DISC_RIM = 1;
+
+/** How wide a copy of a herd's animal is, and how far across and down from the middle each may lie. */
+const HERD_WIDTH = 8;
+const HERD_SPREAD = { x: 16, y: 5 };
+
 /** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
 const ASSIGNED_GLYPH = 12;
 const ASSIGNED_DROP = 16;
@@ -124,17 +141,22 @@ const BADGE_HEIGHT = 14;
 const BADGE_PAD = 3;
 const BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
 
-/** What the map draws a tile's things as: its face, one polygon, or a unit's mark, a container of them. */
+/**
+ * What the map draws a tile's things as: a picture, one polygon, a feature's disc, or a unit's mark,
+ * a container of them.
+ */
 export type Mark =
   | Phaser.GameObjects.Image
   | Phaser.GameObjects.Polygon
+  | Phaser.GameObjects.Arc
   | Phaser.GameObjects.Container;
 
 /** What each tile of the disc keeps from the chronicle's open, shown as the tile stands. */
 export type TileObjects = {
   readonly face: Phaser.GameObjects.Image;
   readonly shore: Phaser.GameObjects.Image;
-  readonly feature: Phaser.GameObjects.Polygon;
+  readonly feature: Phaser.GameObjects.Image;
+  readonly featureDisc: Phaser.GameObjects.Arc;
   readonly ring: Phaser.GameObjects.Polygon;
   readonly building: Phaser.GameObjects.Polygon;
   readonly scrim: Phaser.GameObjects.Polygon;
@@ -178,23 +200,29 @@ export function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Image {
 }
 
 // The scale is set here and `asPainted` resets it to one: a face is painted before it wears anything.
-/** A face made to wear a painting at the width of a tile, whatever it wore before. */
+/** A face made to wear a painting of a sheet at the width of a tile, whatever it wore before. */
 export function wearing(
   face: Phaser.GameObjects.Image,
+  sheet: string,
   painting: string,
 ): Phaser.GameObjects.Image {
-  return face
-    .setFrame(painting)
-    .setScale((Math.sqrt(3) * TILE_SIZE * FACE_OVERLAP) / PAINTING.width);
+  return face.setTexture(sheet, painting).setScale(FACE_SCALE);
 }
 
-/** A face made to wear the painting of the terrain its tile's place on the disc picks. */
+/**
+ * A face made to wear the painting of its terrain its tile's place on the disc picks, tinted where
+ * the feature on it tints it.
+ */
 export function asTerrain(
   face: Phaser.GameObjects.Image,
-  terrain: Terrain,
+  { terrain, feature }: Pick<Tile, 'terrain' | 'feature'>,
   coord: TileCoords,
 ): Phaser.GameObjects.Image {
-  return wearing(face, paintingOn(paintingsOf(terrain), coord));
+  const painting = paintingOn(paintingsOf(terrain), coord);
+  if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
+    return wearing(face, FEATURE_SHEET_KEY, tintedName(painting, feature));
+  }
+  return wearing(face, FACE_SHEET.key, painting);
 }
 
 /**
@@ -220,7 +248,7 @@ export function shoreOn(
 
 /** A terrain off the map: its first painting, held about the middle of the picture. */
 export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Image {
-  return wearing(tileFace(scene), paintingsOf(terrain)[0]).setOrigin(0.5, 0.5);
+  return wearing(tileFace(scene), FACE_SHEET.key, paintingsOf(terrain)[0]).setOrigin(0.5, 0.5);
 }
 
 /** A polygon made to draw a building: its placeholder mark, in the colour it is known by. */
@@ -241,19 +269,79 @@ export function buildingMark(
   return asBuilding(scene.add.polygon(0, 0, UNREAD), building);
 }
 
-/** A polygon made to draw a feature: its placeholder mark, in the colour it is known by. */
+// The scale is set here and `asPainted` resets it to one: an icon is painted before it wears a feature.
+/** An image of the features sheet made to draw a feature on the map: its icon, at the width it stands. */
 export function asFeature(
-  mark: Phaser.GameObjects.Polygon,
+  icon: Phaser.GameObjects.Image,
   feature: FeatureId,
-): Phaser.GameObjects.Polygon {
-  return mark
-    .setTo(corners(featureMarkOf(feature)))
-    .setFillStyle(featureColourOf(feature))
-    .setStrokeStyle(1, LOOK.mapOutline);
+): Phaser.GameObjects.Image {
+  return icon
+    .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
+    .setDisplaySize(ICON_WIDTH, ICON_WIDTH);
 }
 
-export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Polygon {
-  return asFeature(scene.add.polygon(0, 0, UNREAD), feature);
+/** A feature off the map: its icon, bare. */
+export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Image {
+  return scene.add.image(0, 0, FEATURE_SHEET_KEY, featureIconOf(feature));
+}
+
+/** The disc a feature's icon stands on, with its rim. */
+export function featureDisc(scene: Phaser.Scene): Phaser.GameObjects.Arc {
+  return scene.add
+    .circle(0, 0, DISC_RADIUS, LOOK.featureDisc.colour, LOOK.featureDisc.strength)
+    .setStrokeStyle(DISC_RIM, LOOK.featureDiscRim.colour, LOOK.featureDiscRim.strength);
+}
+
+/** One mark a feature lays on its tile's ground: its name, and the way to paint it on an image of the features sheet. */
+export type Lying = {
+  readonly name: string;
+  paint(image: Phaser.GameObjects.Image): Phaser.GameObjects.Image;
+};
+
+/**
+ * What a feature lays on its tile's ground: three copies of its animal scattered about the tile's
+ * middle by its place on the disc, every other one turned, or his pond its place picks, or nothing.
+ */
+export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
+  const key = tileKey(coord);
+  const { q, r } = coord;
+  const { x, y } = positionOf(coord);
+  const dress = featureDressOf(feature);
+  switch (dress.kind) {
+    case 'herd':
+      return Array.from({ length: HERD_COPIES }, (_, copy) => {
+        const name = `herd-${key}-${copy}`;
+        const across = pickOf(q * 7 + copy, r * 13 + 3 * copy, 1000) / 1000;
+        const down = pickOf(r * 11 + 5 * copy, q * 3 + copy, 1000) / 1000;
+        return {
+          name,
+          paint: (image) =>
+            image
+              .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
+              .setDisplaySize(HERD_WIDTH, HERD_WIDTH)
+              .setFlipX(pickOf(q + copy, r - copy, 2) === 1)
+              .setPosition(x + (across * 2 - 1) * HERD_SPREAD.x, y + (down * 2 - 1) * HERD_SPREAD.y)
+              .setName(name),
+        };
+      });
+    case 'pond': {
+      const name = `pond-${key}`;
+      return [
+        {
+          name,
+          paint: (image) =>
+            image
+              .setTexture(FEATURE_SHEET_KEY, paintingOn(PONDS, coord))
+              .setScale(FACE_SCALE)
+              .setFlipX(false)
+              .setPosition(x, y)
+              .setName(name),
+        },
+      ];
+    }
+    case 'tint':
+      return [];
+  }
 }
 
 /** A river drawn off the map: its placeholder mark, in the blue a river runs in. */

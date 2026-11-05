@@ -6,6 +6,7 @@ import { preparedAs } from '../rules/enemies';
 import {
   cornerKey,
   cornersOf,
+  type FeatureId,
   type ImprovementId,
   sameTile,
   type Tile,
@@ -52,8 +53,10 @@ import {
   cityDim,
   diamond,
   FACTION_COLOURS,
+  featureDisc,
   fogScrim,
   glowTile,
+  lyingOf,
   type Mark,
   mapHexagon,
   type PopulationBadge,
@@ -85,7 +88,7 @@ import {
   riverPieces,
 } from './map-rivers';
 import type { MapStrata } from './map-scene';
-import { RIVER_SHEET } from './marks';
+import { FACE_SHEET, FEATURE_SHEET_KEY, RIVER_SHEET } from './marks';
 import { asPainted, poolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';
 
@@ -304,7 +307,15 @@ export function createMapView(
               .setName(`shore-${key}`)
               .setDepth(tile.r + SHORE_RISE),
           ),
-          feature: kept(features, scene.add.polygon(0, 0, UNREAD).setName(`feature-${key}`)),
+          // Over what a feature lays on the ground, which its pool adds to the layer after these.
+          featureDisc: kept(
+            features,
+            featureDisc(scene).setName(`feature-disc-${key}`).setDepth(1),
+          ),
+          feature: kept(
+            features,
+            scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`).setDepth(2),
+          ),
           ring: kept(rings, ringMark(scene, 0, RING)),
           building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
           scrim: kept(fog, fogScrim(scene, tile)),
@@ -313,10 +324,18 @@ export function createMapView(
     }),
   );
   const paintedOnTiles = Object.values(tileObjects).flatMap(
-    ({ face, shore, feature, building, scrim }) => [face, shore, feature, building, scrim],
+    ({ face, shore, featureDisc, feature, building, scrim }) => [
+      face,
+      shore,
+      featureDisc,
+      feature,
+      building,
+      scrim,
+    ],
   );
 
   const crossfadePool = poolOf(ground, () => tileFace(scene));
+  const lyingPool = poolOf(features, () => scene.add.image(0, 0, FEATURE_SHEET_KEY));
   const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
   const fogUnitPool = poolOf(marks, () => scene.add.container(0, 0));
   const riverPool = poolOf(rivers, () => scene.add.image(0, 0, RIVER_SHEET.key));
@@ -564,6 +583,19 @@ export function createMapView(
   const improvementOn = (improvement: ImprovementId, key: string): Phaser.GameObjects.Polygon =>
     asImprovement(improvementPool.take(), improvement).setName(`improvement-${improvement}-${key}`);
 
+  /** The disc and the icon a tile keeps painted for a feature, standing at that point of its row. */
+  const featureOn = (key: string, feature: FeatureId, x: number, y: number): Mark[] => {
+    const own = tileObjects[key];
+    return [
+      asPainted(own.featureDisc).setPosition(x, y),
+      asFeature(asPainted(own.feature), feature).setPosition(x, y),
+    ];
+  };
+
+  /** What a feature lays on a tile's ground, painted from the pool. */
+  const lyingOn = (feature: FeatureId, tile: TileCoords): Mark[] =>
+    lyingOf(feature, tile).map(({ paint }) => paint(lyingPool.take()));
+
   /**
    * Every layer of one tile as the map draws it on a chronicle, the faces drawn there beside it, and
    * every object painted for it, whole, over whatever a motion left. The units of a live tile are
@@ -587,12 +619,15 @@ export function createMapView(
     };
 
     const { x, y } = positionOf(tile);
-    asTerrain(paint(own.face), face.terrain, tile);
+    asTerrain(paint(own.face), face, tile);
     const shore = shoreOn(catalogue, faces, tile);
-    if (shore !== undefined) wearing(paint(own.shore), shore);
+    if (shore !== undefined) wearing(paint(own.shore), FACE_SHEET.key, shore);
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
-      paint(asFeature(own.feature, face.feature).setPosition(row.feature, y - ROW_RISE));
+      painted.push(
+        ...lyingOn(face.feature, tile),
+        ...featureOn(key, face.feature, row.feature, y - ROW_RISE),
+      );
     }
     face.improvements.forEach((improvement, index) => {
       paint(improvementOn(improvement, key).setPosition(row.improvements[index], y - ROW_RISE));
@@ -626,6 +661,7 @@ export function createMapView(
     stopMotion(scene, paintedOnTiles);
     for (const object of paintedOnTiles) object.setVisible(false);
     crossfadePool.hide();
+    lyingPool.hide();
     improvementPool.hide();
     fogUnitPool.hide();
     if (shown === undefined) return;
@@ -816,6 +852,8 @@ export function createMapView(
     },
     paintHue,
     improvementOn,
+    featureOn,
+    lyingOn,
     crossfade: (tile) => crossfadePool.take().setDepth(tile.r + CROSSFADE_RISE),
     shoreOver: (face) => crossfadePool.take().setDepth(face.depth + SHORE_RISE),
     riversAt: (chronicle, tile) => {

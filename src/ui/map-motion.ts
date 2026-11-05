@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { preparedAs } from '../rules/enemies';
 import {
+  type FeatureId,
   type ImprovementId,
   neighbours,
   type Tile,
@@ -14,8 +15,8 @@ import { type Unit, unitAt } from '../rules/units';
 import { EASE, ended } from './card-motion';
 import {
   asBuilding,
-  asFeature,
   asTerrain,
+  lyingOf,
   type Mark,
   positionOf,
   ROW_RISE,
@@ -24,6 +25,7 @@ import {
   type UnitObjects,
   wearing,
 } from './map-marks';
+import { FACE_SHEET } from './marks';
 import { asPainted } from './pool';
 
 /** The paintings a change brings beside its tile, painted, and the ones it takes away. */
@@ -58,6 +60,10 @@ type MapInMotion = {
   paintArrivals(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
   paintHue(unit: Unit): Phaser.GameObjects.Polygon;
   improvementOn(improvement: ImprovementId, key: string): Phaser.GameObjects.Polygon;
+  /** The disc and the icon the tile of that key keeps for a feature, painted at that point of its row. */
+  featureOn(key: string, feature: FeatureId, x: number, y: number): Mark[];
+  /** What a feature lays on a tile's ground, painted. */
+  lyingOn(feature: FeatureId, tile: TileCoords): Mark[];
   /** A face from the pool the terrain crossfades on, standing in that tile's row. */
   crossfade(tile: TileCoords): Phaser.GameObjects.Image;
   /** A face from that pool a beach fades in on, standing over the face it lies on. */
@@ -273,10 +279,11 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     );
   };
 
-  /** A mark raised from nothing, where it stands on the face a change leaves. */
-  const scaleUp = (mark: Phaser.GameObjects.Polygon, x: number, y: number): Promise<void> => {
-    asPainted(mark).setPosition(x, y).setScale(0);
-    return ended(scene.tweens.add({ targets: mark, scale: 1, duration: 250, ease: EASE }));
+  /** A mark painted where it stands on the face a change leaves, raised from nothing to its scale. */
+  const scaleUp = (mark: Mark): Promise<void> => {
+    const { scale } = mark;
+    mark.setScale(0);
+    return ended(scene.tweens.add({ targets: mark, scale, duration: 250, ease: EASE }));
   };
 
   /**
@@ -310,11 +317,12 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
 
     /** A mark the map drew that goes, or that stays and slides to `to`. */
     const drawnMarks: { on: Phaser.GameObjects.Layer; name: string; to: number | undefined }[] = [];
-    const come: { make: () => Phaser.GameObjects.Polygon; x: number; y: number }[] = [];
+    /** The marks to come, each painted where it stands. */
+    const come: (() => readonly Mark[])[] = [];
     const compare = <Id extends string>(
       on: Phaser.GameObjects.Layer,
-      name: (id: Id) => string,
-      make: (id: Id) => Phaser.GameObjects.Polygon,
+      names: (id: Id) => readonly string[],
+      make: (id: Id, slot: number, markY: number) => readonly Mark[],
       markY: number,
       before: { ids: readonly Id[]; xs: readonly number[] },
       after: { ids: readonly Id[]; xs: readonly number[] },
@@ -322,34 +330,43 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       for (const id of new Set([...before.ids, ...after.ids])) {
         const at = before.ids.indexOf(id);
         const next = after.ids.indexOf(id);
-        if (next < 0) drawnMarks.push({ on, name: name(id), to: undefined });
-        else if (at < 0) come.push({ make: () => make(id), x: after.xs[next], y: markY });
+        if (next < 0) {
+          for (const name of names(id)) drawnMarks.push({ on, name, to: undefined });
+        } else if (at < 0) come.push(() => make(id, after.xs[next], markY));
         else if (before.xs[at] !== after.xs[next]) {
-          drawnMarks.push({ on, name: name(id), to: after.xs[next] });
+          for (const name of names(id)) drawnMarks.push({ on, name, to: after.xs[next] });
         }
       }
     };
     const one = <Id extends string>(id: Id | undefined): Id[] => (id === undefined ? [] : [id]);
     compare(
       view.features,
-      () => `feature-${key}`,
-      (id) => asFeature(own.feature, id),
+      () => [`feature-disc-${key}`, `feature-${key}`],
+      (id, slot, markY) => view.featureOn(key, id, slot, markY),
       y - ROW_RISE,
       { ids: one(from.feature), xs: [was.feature] },
       { ids: one(to.feature), xs: [is.feature] },
     );
     compare(
+      view.features,
+      (id) => lyingOf(id, coord).map(({ name }) => name),
+      (id) => view.lyingOn(id, coord),
+      y,
+      { ids: one(from.feature), xs: [x] },
+      { ids: one(to.feature), xs: [x] },
+    );
+    compare(
       view.improvements,
-      (id) => `improvement-${id}-${key}`,
-      (id) => view.improvementOn(id, key),
+      (id) => [`improvement-${id}-${key}`],
+      (id, slot, markY) => [view.improvementOn(id, key).setPosition(slot, markY)],
       y - ROW_RISE,
       { ids: from.improvements, xs: was.improvements },
       { ids: to.improvements, xs: is.improvements },
     );
     compare(
       view.built,
-      () => `building-${key}`,
-      (id) => asBuilding(own.building, id),
+      () => [`building-${key}`],
+      (id, slot, markY) => [asBuilding(asPainted(own.building), id).setPosition(slot, markY)],
       y,
       { ids: one(from.building), xs: [x] },
       { ids: one(to.building), xs: [x] },
@@ -361,11 +378,11 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     return async (token) => {
       let crossing = Promise.resolve();
       if (crossfades) {
-        const face = asTerrain(view.crossfade(coord), to.terrain, coord).setPosition(x, y);
+        const face = asTerrain(view.crossfade(coord), to, coord).setPosition(x, y);
         crossing = fadeIn(
           shore === undefined
             ? [face]
-            : [face, wearing(view.shoreOver(face), shore).setPosition(x, y)],
+            : [face, wearing(view.shoreOver(face), FACE_SHEET.key, shore).setPosition(x, y)],
         );
       }
       const drawn = drawnMarks.map((mark) => ({
@@ -388,9 +405,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
           ),
         );
       }
-      if (flight === token) {
-        await Promise.all(come.map((mark) => scaleUp(mark.make(), mark.x, mark.y)));
-      }
+      if (flight === token) await Promise.all(come.flatMap((make) => make().map(scaleUp)));
       await crossing;
     };
   };
@@ -430,7 +445,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       coming: moved.flatMap(({ beside, face, painting }) => {
         if (painting === undefined) return [];
         const { x, y } = positionOf(beside);
-        return [wearing(view.shoreOver(face), painting).setPosition(x, y)];
+        return [wearing(view.shoreOver(face), FACE_SHEET.key, painting).setPosition(x, y)];
       }),
       going: moved.flatMap(({ kept }) => (kept === undefined ? [] : [kept])),
     }));

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { terraformed } from '../src/rules/cards';
+import { featurePlaced, reaches, terraformed } from '../src/rules/cards';
 import { achievementOf, ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
@@ -15,11 +15,21 @@ import {
   tilesBeside,
   water,
 } from '../src/rules/map';
+import { featureKind } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
-import { walked } from '../src/rules/stages';
+import { followed, unchanged, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { paintingsOf, shorePaintingsOf } from '../src/ui/marks';
+import { unitAt } from '../src/rules/units';
+import {
+  featureDressOf,
+  featureIconOf,
+  HERD_COPIES,
+  PONDS,
+  paintingsOf,
+  shorePaintingsOf,
+  tintedName,
+} from '../src/ui/marks';
 import {
   admits,
   aimed,
@@ -28,12 +38,14 @@ import {
   campKind,
   chronicleOf,
   claimedAt,
+  consoleKey,
   dragBetween,
   dragOut,
   dragTiles,
   drawnFaces,
   eastOf,
   endTurn,
+  enter,
   firstSeed,
   idsOf,
   inside,
@@ -204,6 +216,57 @@ function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoo
   throw new Error('seed 1 crosses no raider entered three tiles out in sight');
 }
 
+/**
+ * The paintings a tile's face may wear: his of its terrain, each tinted for the feature on it where
+ * that feature tints its tile.
+ */
+function facePaintingsOf({ terrain, feature }: Tile): string[] {
+  const paintings = paintingsOf(terrain);
+  if (feature === undefined || featureDressOf(feature).kind !== 'tint') return paintings;
+  return paintings.map((painting) => tintedName(painting, feature));
+}
+
+/**
+ * The chronicle with every feature the catalogue holds placed on a bare tile of its own: one of the
+ * terrain it lies on where the map holds one, else the first a terraform into that terrain reaches,
+ * terraformed first.
+ */
+function everyFeaturePlaced(chronicle: Chronicle): Chronicle {
+  let placing = unchanged(chronicle);
+  for (const feature of Object.keys(CATALOGUE.features)) {
+    const { terrain } = featureKind(CATALOGUE, feature);
+    const { tiles, units } = placing.chronicle;
+    const bare = tiles.filter(
+      (tile) =>
+        tile.feature === undefined &&
+        tile.building === undefined &&
+        unitAt(units, tile) === undefined,
+    );
+    const lying = bare.find((tile) => tile.terrain === terrain);
+    const at = lying ?? bare.find((tile) => reaches(CATALOGUE, placing.chronicle, tile, terrain));
+    if (at === undefined) throw new Error(`no tile of the map is made ${terrain} for ${feature}`);
+    const coord = { q: at.q, r: at.r };
+    if (lying === undefined) {
+      placing = followed(placing, (left) => terraformed(CATALOGUE, left, coord, terrain));
+    }
+    placing = followed(placing, (left) => featurePlaced(CATALOGUE, left, coord, feature));
+  }
+  return placing.chronicle;
+}
+
+/** The names of what a feature lays on its tile's ground. */
+function lyingNames(feature: string, key: string): string[] {
+  const dress = featureDressOf(feature);
+  switch (dress.kind) {
+    case 'herd':
+      return Array.from({ length: HERD_COPIES }, (_, copy) => `herd-${key}-${copy}`);
+    case 'pond':
+      return [`pond-${key}`];
+    case 'tint':
+      return [];
+  }
+}
+
 /** The first water terrain the catalogue holds. */
 const WATER = (() => {
   const terrain = Object.keys(CATALOGUE.terrains).find((id) => water(CATALOGUE, id));
@@ -281,7 +344,7 @@ test("every tile the map draws wears a painting of its terrain, the rows three q
   const names = new Set([...faces, ...lattice].map((tile) => `tile-${tileKey(tile)}`));
   const seen = await readings(page, [...names]);
   for (const face of faces) {
-    expect(paintingsOf(face.terrain)).toContain(seen(`tile-${tileKey(face)}`).frame);
+    expect(facePaintingsOf(face)).toContain(seen(`tile-${tileKey(face)}`).frame);
   }
   const [origin, east, south] = lattice.map((tile) => seen(`tile-${tileKey(tile)}`).onScreen);
   expect((south.y - origin.y) / (east.x - origin.x)).toBeCloseTo(0.75, 2);
@@ -306,6 +369,42 @@ test('a water tile wears the shore along every edge where the map draws land, th
   }
   expect(shorePaintingsOf(landBeside(chronicle.tiles, rim))).not.toContain(seen(shore(rim)).frame);
   expect(seen(shore(land)).standing).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test("every feature stands as his icon on its disc, a herd's tile carries three of its animal, an oasis lies on one of his ponds, and a feature that tints its tile wears its painting tinted", async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const chronicle = everyFeaturePlaced(OPENED);
+
+  await openSaved(page, chronicle);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await consoleKey(page);
+
+  const featured = chronicle.tiles.flatMap(({ q, r, feature }) =>
+    feature === undefined ? [] : [{ key: tileKey({ q, r }), feature }],
+  );
+  const seen = await readings(page, [
+    ...chronicle.tiles.map((tile) => `tile-${tileKey(tile)}`),
+    ...featured.flatMap(({ key, feature }) => [
+      `feature-${key}`,
+      `feature-disc-${key}`,
+      ...lyingNames(feature, key),
+    ]),
+  ]);
+  for (const tile of chronicle.tiles) {
+    expect(facePaintingsOf(tile)).toContain(seen(`tile-${tileKey(tile)}`).frame);
+  }
+  for (const { key, feature } of featured) {
+    expect(seen(`feature-${key}`).standing).toBe(true);
+    expect(seen(`feature-${key}`).frame).toBe(featureIconOf(feature));
+    expect(seen(`feature-disc-${key}`).standing).toBe(true);
+    for (const name of lyingNames(feature, key)) expect(seen(name).count).toBe(1);
+    if (featureDressOf(feature).kind === 'pond') expect(PONDS).toContain(seen(`pond-${key}`).frame);
+  }
 
   expect(problems).toEqual([]);
 });

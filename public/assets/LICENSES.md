@@ -14,6 +14,12 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.0.1 of 16 July 2021, the files as released.
 - **Licence:** his own terms, as his email of 2026-11-02 confirmed them: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
 
+## Icons: Strategic Resources & Goods
+
+- **What:** David Baumgart's painted resource icons, 128 px each, in `store/icons-strategic-resources-and-goods/`, his description beside them.
+- **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.2.1 as the download names it (his description's last entry is 1.1.1, 85 icons), the files as released.
+- **Licence:** his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
+
 ## Source Sans 3
 
 - **What:** the UI typeface, regular and bold, in `fonts/source-sans-3/`.

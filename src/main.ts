@@ -2,6 +2,7 @@
 // First, before any import that can throw as it is evaluated: the watch is only as early as it is.
 import './failed-boot';
 import Phaser from 'phaser';
+import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
 import { CampaignScreen } from './ui/campaign-screen';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
@@ -19,11 +20,11 @@ import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
-import { FACE_SHEET, RIVER_SHEET } from './ui/marks';
+import { FACE_SHEET, featureSheet, RIVER_SHEET } from './ui/marks';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
-import { drawSheet, queueSheet } from './ui/sheet';
+import { drawSheet, queueSheet, type Sheet } from './ui/sheet';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -74,17 +75,19 @@ function startFirst(screen: FirstScreen): void {
   throw new Error(`no first screen is ${JSON.stringify(unlisted)}`);
 }
 
-/** The sheets the boot draws its paintings into. */
-const SHEETS = [FACE_SHEET, RIVER_SHEET];
-
 /** What the boot starts first: the textures loaded and drawn into their sheets, then the first screen. */
 class LoadScene extends Phaser.Scene {
+  /** The sheets the boot draws its paintings into, in the order it draws them. */
+  private sheets: readonly Sheet[] = [];
+
   preload(): void {
-    for (const sheet of SHEETS) queueSheet(this.load, sheet);
+    // The features sheet after the face sheet: its tinted paintings are drawn off the face sheet's.
+    this.sheets = [FACE_SHEET, RIVER_SHEET, featureSheet(CATALOGUE)];
+    for (const sheet of this.sheets) queueSheet(this.load, sheet);
   }
 
   create(): void {
-    for (const sheet of SHEETS) drawSheet(this.textures, sheet);
+    for (const sheet of this.sheets) drawSheet(this.textures, sheet);
     // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
     // after it has no handle yet to be reached by, and the boot throws.
     game.scene.start('console');
