@@ -20,7 +20,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The fog and the uncharted** — what the fog's wash and the uncharted's edge become on painted ground, measured on his tiles: the wash laid on the painting itself, so the art rising above its hexagon is washed with it, the marks standing on a fogged tile dimmed each its own way, and his void tiles for the uncharted.
+- **The fog and the uncharted** — a tile in fog is drawn with every painting and mark of it darkened by the fog's one tint, the art rising above its hexagon included; an uncharted tile wears his void; the disc's rim line is gone; and the fog spec proves it. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`, `docs/PHASER.md`. [board/fog-and-uncharted.md](board/fog-and-uncharted.md)
 - **The rings and the marks** — the borders, the selection ring, the lit glow, the city-mode marks, the culture threshold and the badge re-read against his ground, the pool's three map fits among them, each colour pitched by its meaning.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.
 - **Nomadic sites near the city** — in the Nomadic Age the sites spawn near the city, or are forced closer; balancing, taken any time.
