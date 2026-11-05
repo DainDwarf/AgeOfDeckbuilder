@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The far view** — the zoom threshold, one flat colour per terrain from his palette, the far tile's edge and the river's weight at the far view.
 - **The features** — his painted icons of the thing, a deer, a cow, a stone, a pond, with no disc or frame of their own, the icon pack entering the store.
 - **The fog and the uncharted** — what the fog's wash and the uncharted's edge become on painted ground, measured on his tiles: the wash laid on the painting itself, so the art rising above its hexagon is washed with it, the marks standing on a fogged tile dimmed each its own way, and his void tiles for the uncharted.
 - **The rings and the marks** — the borders, the selection ring, the lit glow, the city-mode marks, the culture threshold and the badge re-read against his ground, the pool's three map fits among them, each colour pitched by its meaning.
