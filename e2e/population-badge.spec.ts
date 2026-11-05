@@ -50,7 +50,7 @@ test('the player’s city wears a badge in the civilization’s colour reading i
   expect(problems).toEqual([]);
 });
 
-test('the neutral’s city tile, uncharted, wears no badge, nor drawn under fog with the uncharted veil off; with the fog veil off too it wears one in the neutral’s colour reading the neutral’s population', async ({
+test('the neutral’s city tile, uncharted, wears no badge, nor drawn in fog with the uncharted veil off; with the fog veil off too it wears one in the neutral’s colour reading the neutral’s population', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -74,9 +74,9 @@ test('the neutral’s city tile, uncharted, wears no badge, nor drawn under fog 
   await consoleKey(page);
   await rested(page);
 
-  const fogged = await readings(page, [`tile-${key}`, `fog-${key}`, theirs.pill]);
+  const fogged = await readings(page, [`tile-${key}`, theirs.pill]);
   expect(fogged(`tile-${key}`).standing).toBe(true);
-  expect(fogged(`fog-${key}`).standing).toBe(true);
+  expect(fogged(`tile-${key}`).tint).toBe(LOOK.fog);
   expect(fogged(theirs.pill).standing).toBe(false);
 
   await consoleKey(page);

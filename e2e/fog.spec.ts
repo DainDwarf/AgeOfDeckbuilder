@@ -1,15 +1,29 @@
 import { expect, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import { built, featurePlaced, improvementPlaced, made, slotFree } from '../src/rules/cards';
 import { ageOf, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
-import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
+import {
+  cornerKey,
+  neighbours,
+  riversAlong,
+  sameTile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+  tilesAtCorner,
+  tilesOfEdge,
+} from '../src/rules/map';
+import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
 import { charted, chartedAt, inSight } from '../src/rules/sight';
-import { walked } from '../src/rules/stages';
+import { followed, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { reachable, type UnitStats } from '../src/rules/units';
+import { reachable, type UnitStats, unitAt } from '../src/rules/units';
+import { LOOK, multiplied } from '../src/ui/look';
+import { buildingColourOf } from '../src/ui/marks';
 import {
   budget,
   campGround,
@@ -20,18 +34,19 @@ import {
   dragUnit,
   drawnFaces,
   enter,
-  facesShown,
+  faceCounts,
   firstSeed,
   freeFor,
   glyphs,
   glyphsOf,
-  marksIn,
   nearestUncharted,
+  onDeer,
   onDesignedSpeed,
   openSaved,
   playerCityTile,
   playersOf,
   readings,
+  readingsAndUnitMarks,
   rested,
   ringedTile,
   riverRuns,
@@ -40,6 +55,7 @@ import {
   shows,
   standing,
   stoppedTurn,
+  TRAPPING,
   tileOnScreen,
   unitEntered,
   watch,
@@ -167,37 +183,188 @@ function attackedUnseen(): { chronicle: Chronicle; alone: TileCoords } {
   });
 }
 
-test('the map draws a tile in sight live, a tile in fog under its scrim, and an uncharted tile not at all', async ({
+/** Whether a river of the chronicle runs along an edge of the tile. */
+function alongRiver(chronicle: Chronicle, tile: TileCoords): boolean {
+  return chronicle.rivers.some((river) =>
+    river.some(
+      (corner, at) =>
+        at > 0 && tilesOfEdge(river[at - 1], corner).some((beside) => sameTile(beside, tile)),
+    ),
+  );
+}
+
+/**
+ * The first seed's turn 1 with Trapping's feature trapped beside the city under a worker, and charted
+ * out of sight the camp with its guard, that feature trapped, and a tile on a river nothing beside sees;
+ * the tiles, and how many corners of its rivers the map draws in sight and wholly in fog, both some.
+ */
+function markedInFog(): {
+  chronicle: Chronicle;
+  lit: TileCoords;
+  camp: TileCoords;
+  trapped: TileCoords;
+  corners: { inFog: number; inSight: number };
+} {
+  return firstSeed('runs a river’s corners both in sight and wholly in fog', (seed) => {
+    const { chronicle: opened, tile: lit } = onDeer(settledOn(seed), [TRAPPING]);
+    const seen = inSight(CATALOGUE, opened);
+    const unseen = opened.tiles.filter(
+      (tile) => !seen.has(tileKey(tile)) && unitAt(opened.units, tile) === undefined,
+    );
+    const kind = campKind(opened);
+    const { building, scripts } = ageOf(CATALOGUE, opened.age).camp;
+    const { terrains } = buildingKind(CATALOGUE, building);
+    const camp = unseen.find(
+      (tile) =>
+        made(CATALOGUE, tile, terrains) === undefined &&
+        slotFree(tile) === undefined &&
+        freeFor(opened, unitKind(CATALOGUE, kind), tile),
+    );
+    const [feature] = improvementKind(CATALOGUE, TRAPPING).features ?? [];
+    if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
+    const { terrain } = featureKind(CATALOGUE, feature);
+    const trapped = unseen.find(
+      (tile) =>
+        tile.terrain === terrain &&
+        slotFree(tile) === undefined &&
+        (camp === undefined || !sameTile(tile, camp)),
+    );
+    const shore = unseen.find(
+      (tile) =>
+        alongRiver(opened, tile) && neighbours(tile).every((beside) => !seen.has(tileKey(beside))),
+    );
+    if (camp === undefined || trapped === undefined || shore === undefined) return undefined;
+
+    let placed = followed(built(CATALOGUE, opened, camp, building), (left) =>
+      featurePlaced(CATALOGUE, left, trapped, feature),
+    );
+    placed = followed(placed, (left) => improvementPlaced(CATALOGUE, left, trapped, TRAPPING));
+    const guarded = unitEntered(placed.chronicle, enemyEntering(kind, scripts.guard, camp));
+    const chronicle = [camp, trapped, shore].reduce(
+      (left, at) => chartedAt(CATALOGUE, left, at),
+      guarded,
+    );
+    const sees = inSight(CATALOGUE, chronicle);
+    if ([camp, trapped, shore].some((at) => sees.has(tileKey(at)))) return undefined;
+
+    const drawn = new Set(chronicle.snapshots.map(tileKey));
+    const run = new Map(
+      riversAlong(chronicle.rivers, drawn)
+        .flat()
+        .map((corner) => [cornerKey(corner), corner]),
+    );
+    const inFog = [...run.values()].filter((corner) =>
+      tilesAtCorner(corner).every((at) => !sees.has(tileKey(at))),
+    ).length;
+    const inSightCount = run.size - inFog;
+    if (inFog === 0 || inSightCount === 0) return undefined;
+    return {
+      chronicle,
+      lit,
+      camp: { q: camp.q, r: camp.r },
+      trapped: { q: trapped.q, r: trapped.r },
+      corners: { inFog, inSight: inSightCount },
+    };
+  });
+}
+
+test('the map draws a tile in sight live, a tile in fog darkened by the fog’s tint, and an uncharted tile as his void', async ({
   page,
 }) => {
   const problems = watch(page);
   const run = roundTrip();
   const city = playerCityTile(run.scouted);
+  const [out, fog, uncharted] = [run.out, run.fog, run.uncharted].map(tileKey);
 
   await openSaved(page, run.scouted);
 
   // Before the scout steps out, the tile it will see from there is uncharted like any other.
-  expect(await standing(page, `tile-${tileKey(run.fog)}`)).toBe(false);
+  const before = await readings(page, [`tile-${fog}`, `void-${fog}`]);
+  expect(before(`tile-${fog}`).standing).toBe(false);
+  expect(before(`void-${fog}`).standing).toBe(true);
 
   await dragUnit(page, city, run.out);
   await dragUnit(page, run.out, city);
   expect(await chronicleOf(page)).toEqual(run.back);
 
-  expect(await standing(page, `tile-${tileKey(run.out)}`)).toBe(true);
-  expect(await standing(page, `fog-${tileKey(run.out)}`)).toBe(false);
-
-  expect(await standing(page, `tile-${tileKey(run.fog)}`)).toBe(true);
-  expect(await standing(page, `fog-${tileKey(run.fog)}`)).toBe(true);
-
-  expect(await standing(page, `tile-${tileKey(run.uncharted)}`)).toBe(false);
-  expect(await standing(page, `fog-${tileKey(run.uncharted)}`)).toBe(false);
-
-  // The map draws a face for every tile it has ever seen, and one scrim for each of them in fog.
-  const seen = inSight(CATALOGUE, run.back);
-  expect(await facesShown(page)).toBe(run.back.snapshots.length);
-  expect(await marksIn(page, 'fog')).toBe(
-    run.back.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
+  const after = await readings(
+    page,
+    [out, fog, uncharted].flatMap((key) => [`tile-${key}`, `void-${key}`]),
   );
+  expect(after(`tile-${out}`).standing).toBe(true);
+  expect(after(`tile-${out}`).tint).toBeUndefined();
+  expect(after(`void-${out}`).standing).toBe(false);
+
+  expect(after(`tile-${fog}`).standing).toBe(true);
+  expect(after(`tile-${fog}`).tint).toBe(LOOK.fog);
+  expect(after(`void-${fog}`).standing).toBe(false);
+
+  expect(after(`tile-${uncharted}`).standing).toBe(false);
+  expect(after(`void-${uncharted}`).standing).toBe(true);
+
+  // The map draws a face for every tile it has ever seen, each of them in fog darkened.
+  const seen = inSight(CATALOGUE, run.back);
+  expect(await faceCounts(page)).toEqual({
+    shown: run.back.snapshots.length,
+    inFog: run.back.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
+  });
+
+  expect(problems).toEqual([]);
+});
+
+test('every painting and mark a tile in fog carries is darkened by the fog’s tint, the river’s pieces where no tile at their corner is in sight, and a tile in sight carries them as they are', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, lit, camp, trapped, corners } = markedInFog();
+  const city = playerCityTile(chronicle);
+  const cityBuilding = tileAt(chronicle.tiles, city)?.building;
+  const campBuilding = tileAt(chronicle.tiles, camp)?.building;
+  if (cityBuilding === undefined || campBuilding === undefined) {
+    throw new Error('the city or the camp stands on no building');
+  }
+  const marksOf = (key: string): string[] => [
+    `feature-${key}`,
+    `herd-${key}-0`,
+    `feature-disc-${key}`,
+    `improvement-${TRAPPING}-${key}`,
+  ];
+  const [litKey, trappedKey, cityKey, campKey] = [lit, trapped, city, camp].map(tileKey);
+  const fogged = (colour: number): number => multiplied(colour, LOOK.fog);
+
+  await openSaved(page, chronicle);
+
+  const { read, unitMarkOn } = await readingsAndUnitMarks(
+    page,
+    [
+      ...marksOf(litKey),
+      ...marksOf(trappedKey),
+      `building-${cityKey}`,
+      `building-${campKey}`,
+      'river',
+    ],
+    [lit, camp],
+  );
+
+  // A tile in fog: its images carry the fog's tint, its shapes their colours multiplied by it.
+  expect(read(`feature-${trappedKey}`).tint).toBe(LOOK.fog);
+  expect(read(`herd-${trappedKey}-0`).tint).toBe(LOOK.fog);
+  expect(read(`feature-disc-${trappedKey}`).fill).toBe(fogged(LOOK.featureDisc.colour));
+  expect(read(`improvement-${TRAPPING}-${trappedKey}`).fill).toBe(fogged(LOOK.built));
+  expect(read(`building-${campKey}`).fill).toBe(fogged(buildingColourOf(campBuilding)));
+  expect(unitMarkOn(camp)).toEqual([fogged(LOOK.enemy)]);
+
+  // A tile in sight: no tint, and every colour as it is.
+  expect(read(`feature-${litKey}`).tint).toBeUndefined();
+  expect(read(`herd-${litKey}-0`).tint).toBeUndefined();
+  expect(read(`feature-disc-${litKey}`).fill).toBe(LOOK.featureDisc.colour);
+  expect(read(`improvement-${TRAPPING}-${litKey}`).fill).toBe(LOOK.built);
+  expect(read(`building-${cityKey}`).fill).toBe(buildingColourOf(cityBuilding));
+  expect(unitMarkOn(lit)).toEqual([LOOK.civilization]);
+
+  const tints = read('river').tints;
+  expect(tints.filter((tint) => tint === LOOK.fog).length).toBe(corners.inFog);
+  expect(tints.filter((tint) => tint === undefined).length).toBe(corners.inSight);
 
   expect(problems).toEqual([]);
 });
@@ -231,7 +398,8 @@ test('the overlay, the inspection and a press read what the map draws, and widen
     expect(card).not.toBe('unit');
   }
 
-  // A press on an uncharted tile lands off the map: it rings nothing and inspects nothing.
+  // A press on an uncharted tile lands off the map, on his void: it rings nothing and inspects nothing.
+  expect(await standing(page, `void-${tileKey(uncharted)}`)).toBe(true);
   const dark = await tileOnScreen(page, uncharted);
   await page.mouse.click(dark.x, dark.y);
   await rested(page);
@@ -243,7 +411,8 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await enter(page, 'uncharted');
   await consoleKey(page);
 
-  // The veil off, the map draws the whole disc: the overlay widens with it, and the press lands.
+  // The veil off, the map draws the whole disc and no void: the overlay widens with it, and the press lands.
+  expect(await standing(page, `void-${tileKey(uncharted)}`)).toBe(false);
   expect(await glyphs(page)).toEqual(glyphsOf(stood, stood.tiles));
   await page.mouse.click(dark.x, dark.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(uncharted));
@@ -276,7 +445,7 @@ test('an attack that kills the unit whose sight alone held its tiles plays befor
   test.setTimeout(budget(1));
   const { chronicle: stood, alone } = attackedUnseen();
   const mark = `unit-${tileKey(alone)}`;
-  const scrim = `fog-${tileKey(alone)}`;
+  const face = `tile-${tileKey(alone)}`;
   expect(playersOf(outcome(apply(CATALOGUE, stood, { type: 'end-turn' })))).toEqual([]);
   onDesignedSpeed(page);
 
@@ -289,9 +458,10 @@ test('an attack that kills the unit whose sight alone held its tiles plays befor
       const marker = window.named?.(names.mark)?.object as Phaser.GameObjects.Container | undefined;
       if (marker === undefined || marker.scale <= 0 || marker.scale >= 1) return undefined;
       window.game?.scene.getScene('map').tweens.pauseAll();
-      return { fogged: window.readName?.(names.scrim).standing };
+      const shown = window.named?.(names.face)?.object as Phaser.GameObjects.Image | undefined;
+      return { fogged: shown?.tint === names.fog };
     },
-    { mark, scrim },
+    { mark, face, fog: LOOK.fog },
   );
   const ended = stoppedTurn(page);
   expect(await (await caught).jsonValue()).toEqual({ fogged: false });
@@ -300,8 +470,8 @@ test('an attack that kills the unit whose sight alone held its tiles plays befor
     window.game?.scene.getScene('map').tweens.resumeAll();
   });
   await ended;
-  const after = await readings(page, [mark, scrim]);
-  expect(after(scrim).standing).toBe(true);
+  const after = await readings(page, [mark, face]);
+  expect(after(face).tint).toBe(LOOK.fog);
   expect(after(mark).standing).toBe(false);
 
   expect(problems).toEqual([]);

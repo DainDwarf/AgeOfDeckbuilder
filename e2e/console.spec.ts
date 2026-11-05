@@ -9,6 +9,7 @@ import { readSave } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import { LOOK } from '../src/ui/look';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
@@ -20,7 +21,7 @@ import {
   consoleKey,
   enemiesOf,
   enter,
-  facesShown,
+  faceCounts,
   freeFor,
   heldSave,
   launchedAs,
@@ -120,7 +121,7 @@ function enteredOn(chronicle: Chronicle, entering: Entering): Chronicle {
 
 /**
  * The chronicle screen once a unit has entered, in one question to the page: the chronicle on it
- * and the one the save holds, the tile ringed, the console, the fog marks and the end-turn label.
+ * and the one the save holds, the tile ringed, the console, the faces in fog and the end-turn label.
  */
 async function enteredScreen(page: Page): Promise<{
   chronicle: Chronicle;
@@ -128,30 +129,33 @@ async function enteredScreen(page: Page): Promise<{
   ringed: string | undefined;
   consoleOpen: boolean;
   lines: string[];
-  fogMarks: number | undefined;
+  facesInFog: number | undefined;
   endTurn: string;
 }> {
-  const { save, ...read } = await page.evaluate((entry) => {
-    const named = (name: string): Phaser.GameObjects.GameObject => {
-      const found = window.named?.(name)?.object;
-      if (found === undefined) throw new Error(`nothing named ${name} stands on the screen`);
-      return found;
-    };
-    const root = named('console') as Phaser.GameObjects.Container;
-    const scene = window.game?.scene.getScene<ChronicleScene>('ui');
-    if (scene === undefined) throw new Error('the ui scene is not running');
-    return {
-      save: window.localStorage.getItem(entry),
-      chronicle: scene.chronicle,
-      ringed: named('selected').getData('tile') as string | undefined,
-      consoleOpen: root.visible,
-      lines: root.list
-        .filter((part) => part.type === 'Text')
-        .map((part) => (part as Phaser.GameObjects.Text).text),
-      fogMarks: window.shownIn?.('fog')?.length,
-      endTurn: (named('end-turn-label') as Phaser.GameObjects.Text).text,
-    };
-  }, SAVE_ENTRY);
+  const { save, ...read } = await page.evaluate(
+    ({ entry, fog }) => {
+      const named = (name: string): Phaser.GameObjects.GameObject => {
+        const found = window.named?.(name)?.object;
+        if (found === undefined) throw new Error(`nothing named ${name} stands on the screen`);
+        return found;
+      };
+      const root = named('console') as Phaser.GameObjects.Container;
+      const scene = window.game?.scene.getScene<ChronicleScene>('ui');
+      if (scene === undefined) throw new Error('the ui scene is not running');
+      return {
+        save: window.localStorage.getItem(entry),
+        chronicle: scene.chronicle,
+        ringed: named('selected').getData('tile') as string | undefined,
+        consoleOpen: root.visible,
+        lines: root.list
+          .filter((part) => part.type === 'Text')
+          .map((part) => (part as Phaser.GameObjects.Text).text),
+        facesInFog: window.faceCounts?.(fog).inFog,
+        endTurn: (named('end-turn-label') as Phaser.GameObjects.Text).text,
+      };
+    },
+    { entry: SAVE_ENTRY, fog: LOOK.fog },
+  );
   if (save === null) throw new Error('the game keeps no save');
   return { ...read, held: readSave(CATALOGUE, save).chronicle?.chronicle };
 }
@@ -224,17 +228,19 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   const fogged = stood.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length;
   expect(await chronicleOf(page)).toEqual(stood);
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
-  expect(await facesShown(page)).toBe(stood.snapshots.length);
+  expect((await faceCounts(page)).shown).toBe(stood.snapshots.length);
 
   await consoleKey(page);
   await enter(page, 'uncharted');
   expect(await consoleLines(page)).toEqual(['', '', '> uncharted', 'uncharted veil: off', '> ']);
   await consoleKey(page);
 
-  // Every tile of the disc is drawn now, and every one of them out of sight stands under a scrim.
+  // Every tile of the disc is drawn now, and every one of them out of sight darkened.
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(true);
-  expect(await facesShown(page)).toBe(stood.tiles.length);
-  expect(await marksIn(page, 'fog')).toBe(stood.tiles.length - seen.size);
+  expect(await faceCounts(page)).toEqual({
+    shown: stood.tiles.length,
+    inFog: stood.tiles.length - seen.size,
+  });
 
   await consoleKey(page);
   await enter(page, 'fog');
@@ -243,7 +249,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   await consoleKey(page);
 
   // Nothing is darkened any more, and every unit on the map stands as it is, the enemies included.
-  expect(await marksIn(page, 'fog')).toBe(0);
+  expect((await faceCounts(page)).inFog).toBe(0);
   expect(await marksIn(page, 'units')).toBe(stood.units.length);
 
   await consoleKey(page);
@@ -260,8 +266,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
 
   // Both veils back: the map draws what it has charted, and no more.
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
-  expect(await facesShown(page)).toBe(stood.snapshots.length);
-  expect(await marksIn(page, 'fog')).toBe(fogged);
+  expect(await faceCounts(page)).toEqual({ shown: stood.snapshots.length, inFog: fogged });
 
   expect(problems).toEqual([]);
 });
@@ -383,7 +388,7 @@ test('unit on the chronicle screen enters the unit on the tile selected as the r
       text('console.entered-enemy', { kind: WARRIOR, script: raider }),
       '> ',
     ],
-    fogMarks: 0,
+    facesInFog: 0,
     endTurn: text('button.turn', { turn: oracle.turn }),
   });
 
@@ -406,7 +411,7 @@ test('unit run while an end of turn plays out stands the screen on the chronicle
     ringed: undefined,
     consoleOpen: true,
     lines: ['', '', `> unit ${WARRIOR}`, text('console.entered', { kind: WARRIOR }), '> '],
-    fogMarks: oracle.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
+    facesInFog: oracle.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
     endTurn: text('button.turn', { turn: oracle.turn }),
   };
   onDesignedSpeed(page);

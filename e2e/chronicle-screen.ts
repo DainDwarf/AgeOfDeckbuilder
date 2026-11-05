@@ -98,7 +98,7 @@ import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
-import type { BarReading } from '../src/ui/look';
+import { type BarReading, LOOK } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import type { PileKind } from '../src/ui/piles';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -121,6 +121,8 @@ type PageReading = {
   reference: { kind: string; id: string } | undefined;
   shows: Answer<boolean>;
   fill: Answer<number | undefined>;
+  tint: Answer<number | undefined>;
+  tints: (number | undefined)[];
   place: Answer<{ x: number; y: number }>;
   ringed: Answer<boolean>;
   rules: Answer<string>;
@@ -148,6 +150,13 @@ declare global {
     readName?: (name: string) => PageReading;
     /** The named Layer's or container's own objects that are shown. */
     shownIn?: (name: string) => Phaser.GameObjects.GameObject[] | undefined;
+    /**
+     * How many faces the map shows, the marks of its terrain named for their tile, the beaches and
+     * the voids left out; and how many of them that tint darkens.
+     */
+    faceCounts?: (fog: number) => { shown: number; inFog: number };
+    /** The colours the unit mark standing on the tile of that key is filled in, and nothing where none stands. */
+    unitMarkOn?: (key: string) => number[] | undefined;
   }
 }
 
@@ -444,6 +453,31 @@ export async function readNames(page: Page): Promise<void> {
       return parent?.list.filter((child) => isShown(child as Parented));
     };
 
+    window.faceCounts = (fog) => {
+      const marks = window.shownIn?.('terrain');
+      if (marks === undefined) throw new Error('there is no terrain on the chronicle screen');
+      const faces = marks.filter((mark) => mark.name.startsWith('tile-'));
+      const inFog = faces.filter((face) => (face as Phaser.GameObjects.Image).tint === fog);
+      return { shown: faces.length, inFog: inFog.length };
+    };
+
+    // A live unit's marker holds its shapes in a container of their own beside its dim, named for its
+    // tile; the mark a tile in fog carries is a nameless container of the shapes, so it is found by
+    // standing where the tile's face does.
+    window.unitMarkOn = (key) => {
+      const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
+      if (face === undefined) return undefined;
+      const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
+      const mark = marks.find((one) => one.x === face.x && one.y === face.y);
+      if (mark === undefined) return undefined;
+      const [first] = mark.list;
+      const shapes =
+        first?.type === 'Container' ? (first as Phaser.GameObjects.Container).list : mark.list;
+      return (shapes as Phaser.GameObjects.Polygon[])
+        .filter((shape) => shape.visible)
+        .map((shape) => shape.fillColor);
+    };
+
     /** Where a point of the camera's world sits on the page, and what one unit of it measures there. */
     const onPage = (camera: Phaser.Cameras.Scene2D.Camera, x: number, y: number): OnScreen => {
       // The camera converts canvas pixels into its own surface; two points walk that backwards.
@@ -533,6 +567,15 @@ export async function readNames(page: Page): Promise<void> {
             (found().object as Partial<Phaser.GameObjects.Shape>).fillColor ??
             (data('fill') as number | undefined),
         ),
+        tint: answer(() => {
+          const tinted = found().object as Partial<Phaser.GameObjects.Components.Tint>;
+          if (tinted.isTinted === undefined) throw new Error(`${name} takes no tint`);
+          return tinted.isTinted ? tinted.tint : undefined;
+        }),
+        tints: shownOf(all).map(({ object }) => {
+          const tinted = object as Partial<Phaser.GameObjects.Components.Tint>;
+          return tinted.isTinted === true ? tinted.tint : undefined;
+        }),
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
@@ -1229,6 +1272,10 @@ export type Reading = {
    * fill answers nothing.
    */
   readonly fill: number | undefined;
+  /** The tint multiplied into an image, nothing where it carries none; an object that takes no tint throws. */
+  readonly tint: number | undefined;
+  /** The tint of every object of the name that stands shown, nothing for one that carries none. */
+  readonly tints: readonly (number | undefined)[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
   readonly ringed: boolean;
@@ -1268,6 +1315,13 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get fill() {
       return owed(name, answered?.fill);
+    },
+    get tint() {
+      return owed(name, answered?.tint);
+    },
+    get tints() {
+      if (answered === undefined) throw new Error('no chronicle was opened on this page');
+      return answered.tints;
     },
     get place() {
       return owed(name, answered?.place);
@@ -1334,11 +1388,50 @@ export async function readings(
     (targets) => targets.map((target) => window.readName?.(target)),
     names,
   );
+  return readerOf(names, answers);
+}
+
+/** The reading of one of the names handed, out of what the page answered of each; a name not handed throws. */
+function readerOf(
+  names: readonly string[],
+  answers: readonly (PageReading | undefined)[],
+): (name: string) => Reading {
   const read = new Map(names.map((name, at) => [name, readingOf(name, answers[at])]));
   return (name) => {
     const reading = read.get(name);
     if (reading === undefined) throw new Error(`${name} was not read`);
     return reading;
+  };
+}
+
+/**
+ * Every name handed read, and the unit mark standing on each tile handed, in one question to the
+ * page: the reading of one of the names, and the colours a tile's mark is filled in, its hull's among
+ * them where it stands embarked; nothing on a tile no mark stands on.
+ */
+export async function readingsAndUnitMarks(
+  page: Page,
+  names: readonly string[],
+  tiles: readonly TileCoords[],
+): Promise<{
+  read: (name: string) => Reading;
+  unitMarkOn: (tile: TileCoords) => number[] | undefined;
+}> {
+  const keys = tiles.map(tileKey);
+  const { answers, marks } = await page.evaluate(
+    ({ targets, on }) => ({
+      answers: targets.map((target) => window.readName?.(target)),
+      marks: on.map((key) => window.unitMarkOn?.(key)),
+    }),
+    { targets: names, on: keys },
+  );
+  return {
+    read: readerOf(names, answers),
+    unitMarkOn: (tile) => {
+      const at = keys.indexOf(tileKey(tile));
+      if (at < 0) throw new Error(`no unit mark was read on ${tileKey(tile)}`);
+      return marks[at] ?? undefined;
+    },
   };
 }
 
@@ -1389,13 +1482,11 @@ export function marksIn(page: Page, name: string): Promise<number> {
   }, name);
 }
 
-/** How many faces the map shows: the marks of its terrain named for their tile, the beaches left out. */
-export function facesShown(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const marks = window.shownIn?.('terrain');
-    if (marks === undefined) throw new Error('there is no terrain on the chronicle screen');
-    return marks.filter((mark) => mark.name.startsWith('tile-')).length;
-  });
+/** How many faces the map shows, and how many of them the fog's tint darkens. */
+export async function faceCounts(page: Page): Promise<{ shown: number; inFog: number }> {
+  const counts = await page.evaluate((fog) => window.faceCounts?.(fog), LOOK.fog);
+  if (counts === undefined) throw new Error('no chronicle was opened on this page');
+  return counts;
 }
 
 /** How many features the map shows: the icons of its features named for their tile, their discs and what they lay on the ground left out. */

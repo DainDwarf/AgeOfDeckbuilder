@@ -12,7 +12,7 @@ import {
   water,
 } from '../rules/map';
 import type { MapContent } from '../rules/map-kinds';
-import { cornerAt, PAINTING, SQUASH, TILE_SIZE } from './map-marks';
+import { asDarkened, cornerAt, PAINTING, SQUASH, TILE_SIZE } from './map-marks';
 import { mouthPaintingsOf, paintingAtCorner, riverPaintingsOf, STRAIGHT_RIVER } from './marks';
 
 /** How much smaller than his file a piece is drawn: his leg, the apothem, half an edge. */
@@ -30,16 +30,23 @@ const EDGE_MIDDLES: readonly { readonly x: number; readonly y: number }[] = [
 
 /**
  * What a corner of a river wears: his piece whose edges are the river's arms there, or, where the
- * river reaches the water, his mouth and his straight river pressed along the arm it arrived by.
+ * river reaches the water, his mouth and his straight river pressed along the arm it arrived by;
+ * in fog where no tile at the corner is in sight.
  */
 export type RiverPiece =
-  | { readonly kind: 'piece'; readonly corner: Corner; readonly painting: string }
+  | {
+      readonly kind: 'piece';
+      readonly corner: Corner;
+      readonly painting: string;
+      readonly inFog: boolean;
+    }
   | {
       readonly kind: 'mouth';
       readonly corner: Corner;
       /** The place in his masks of the arm the river arrived by. */
       readonly arrived: number;
       readonly painting: string;
+      readonly inFog: boolean;
     };
 
 /** The arm from a corner to one an edge away, by its place in the rules' list: the place of his edge in his masks. */
@@ -48,14 +55,15 @@ function armOf(from: Corner, to: Corner): number {
 }
 
 /**
- * The piece every corner of the rivers' runs along the drawn tiles wears, by its key: the one whose
- * arms are the drawn edges leaving it, and the mouth at a river's last corner where the run reaches
- * it and the face drawn straight ahead of the edge it arrived by is water.
+ * The piece every corner of the rivers' runs along the drawn tiles wears, by its key, in fog where no
+ * tile at it is drawn live: his mouth at a river's last corner the run reaches with water drawn
+ * straight ahead of the edge it arrived by, else the one whose arms are the drawn edges leaving it.
  */
 export function riverPieces(
   catalogue: MapContent,
   rivers: readonly River[],
   drawn: ReadonlySet<string>,
+  live: ReadonlySet<string>,
   faces: TilesBeside,
 ): Map<string, RiverPiece> {
   const armed = new Map<string, { corner: Corner; arms: Set<number> }>();
@@ -86,31 +94,29 @@ export function riverPieces(
   }
   return new Map(
     [...armed].map(([key, { corner, arms }]): [string, RiverPiece] => {
+      const inFog = !tilesAtCorner(corner).some((tile) => live.has(tileKey(tile)));
       const arrived = mouths.get(key);
       if (arrived === undefined) {
-        return [
-          key,
-          { kind: 'piece', corner, painting: paintingAtCorner(riverPaintingsOf(arms), corner) },
-        ];
+        const painting = paintingAtCorner(riverPaintingsOf(arms), corner);
+        return [key, { kind: 'piece', corner, painting, inFog }];
       }
       const painting = paintingAtCorner(mouthPaintingsOf(arrived), corner);
-      return [key, { kind: 'mouth', corner, arrived, painting }];
+      return [key, { kind: 'mouth', corner, arrived, painting, inFog }];
     }),
   );
 }
 
 /**
- * An image from the river sheet made to wear a painting on a corner, held at that point of his file,
- * turned a quarter turn onto the corner lattice and squashed across it as the lattice is.
+ * An image from the river sheet made to wear a corner's painting, darkened in fog, held at that point
+ * of his file, turned a quarter turn onto the corner lattice and squashed across it as the lattice is.
  */
 function onCorner(
   image: Phaser.GameObjects.Image,
-  painting: string,
-  corner: Corner,
+  { corner, painting, inFog }: RiverPiece,
   held: { readonly x: number; readonly y: number },
 ): Phaser.GameObjects.Image {
   const { x, y } = cornerAt(corner);
-  return image
+  return asDarkened(image, inFog)
     .setFrame(painting)
     .setOrigin(0.5 + held.x / PAINTING.width, (PAINTING.middle + held.y) / PAINTING.height)
     .setPosition(x, y)
@@ -121,17 +127,17 @@ function onCorner(
 /** An image from the river sheet made to wear a corner's piece, held about his hexagon's middle. */
 export function asRiverPiece(
   image: Phaser.GameObjects.Image,
-  { corner, painting }: RiverPiece,
+  piece: RiverPiece,
 ): Phaser.GameObjects.Image {
-  return onCorner(image, painting, corner, { x: 0, y: 0 }).setName('river');
+  return onCorner(image, piece, { x: 0, y: 0 }).setName('river');
 }
 
 /** An image from the river sheet made to wear a mouth, held at the middle of the edge it arrived by. */
 export function asRiverMouth(
   image: Phaser.GameObjects.Image,
-  { corner, arrived, painting }: Extract<RiverPiece, { kind: 'mouth' }>,
+  mouth: Extract<RiverPiece, { kind: 'mouth' }>,
 ): Phaser.GameObjects.Image {
-  return onCorner(image, painting, corner, EDGE_MIDDLES[arrived]).setName('river-mouth');
+  return onCorner(image, mouth, EDGE_MIDDLES[mouth.arrived]).setName('river-mouth');
 }
 
 // Phaser scales an object before it turns it, and a container's transform over its child's
@@ -139,17 +145,16 @@ export function asRiverMouth(
 // regular lattice and squashed onto the map's by its container.
 /**
  * A container holding one image from the river sheet made to wear his straight river pressed into
- * the half edge a mouth arrived by, its east end on the corner.
+ * the half edge a mouth arrived by, its east end on the corner, darkened where the mouth is in fog.
  */
 export function asPressedStraight(
   container: Phaser.GameObjects.Container,
-  { corner, arrived }: Extract<RiverPiece, { kind: 'mouth' }>,
+  { corner, arrived, inFog }: Extract<RiverPiece, { kind: 'mouth' }>,
 ): Phaser.GameObjects.Container {
   const at = cornerAt(corner);
   const arm = ARMS[arrived];
   const before = cornerAt({ x: corner.x + arm.x, y: corner.y + arm.y });
-  container
-    .getAt<Phaser.GameObjects.Image>(0)
+  asDarkened(container.getAt<Phaser.GameObjects.Image>(0), inFog)
     .setFrame(STRAIGHT_RIVER)
     .setOrigin(1, PAINTING.middle / PAINTING.height)
     .setPosition(0, 0)

@@ -40,6 +40,7 @@ import { createMapGrab } from './map-grab';
 import {
   asBuilding,
   asFeature,
+  asFeatureDisc,
   asGlow,
   asImprovement,
   assignedAt,
@@ -47,14 +48,15 @@ import {
   asTerrain,
   asUnit,
   asUnitDim,
+  asVoid,
   asYield,
   CITY_COLOURS,
   CITY_FACTIONS,
   cityDim,
+  darkened,
   diamond,
   FACTION_COLOURS,
   featureDisc,
-  fogScrim,
   glowTile,
   lyingOf,
   type Mark,
@@ -69,7 +71,6 @@ import {
   shoreOn,
   showBadge,
   showThreshold,
-  strokeRim,
   TILE_SIZE,
   type TileObjects,
   thresholdMark,
@@ -262,8 +263,6 @@ export function createMapView(
   };
 
   const ground = group(strata.terrain, 'terrain');
-  const rim = scene.add.graphics().setName('rim');
-  strata.terrain.layer.add(rim);
   const rivers = group(strata.terrain, 'rivers');
   const features = group(strata.terrain, 'features');
   const rings = group(strata.terrain, 'border');
@@ -273,7 +272,6 @@ export function createMapView(
   const built = group(strata.buildings, 'buildings');
   const marks = group(strata.units, 'units');
   const badges = group(strata.units, 'badges');
-  const fog = group(strata.fog, 'fog');
   const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
@@ -284,9 +282,6 @@ export function createMapView(
   const selected = group(strata.ring, 'selected');
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
-
-  // Nothing a chronicle does moves the disc's rim, so it is stroked here and no render repaints it.
-  strokeRim(rim, chronicle.tiles);
 
   /** What each tile of the disc keeps, by its key. */
   const tileObjects: Record<string, TileObjects> = Object.fromEntries(
@@ -300,6 +295,8 @@ export function createMapView(
       return [
         key,
         {
+          // Added before the face it stands under at the same depth.
+          void: kept(ground, asVoid(tileFace(scene), tile).setName(`void-${key}`).setDepth(tile.r)),
           face: kept(ground, tileFace(scene).setName(`tile-${key}`).setDepth(tile.r)),
           shore: kept(
             ground,
@@ -318,19 +315,17 @@ export function createMapView(
           ),
           ring: kept(rings, ringMark(scene, 0, RING)),
           building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
-          scrim: kept(fog, fogScrim(scene, tile)),
         },
       ];
     }),
   );
   const paintedOnTiles = Object.values(tileObjects).flatMap(
-    ({ face, shore, featureDisc, feature, building, scrim }) => [
+    ({ face, shore, featureDisc, feature, building }) => [
       face,
       shore,
       featureDisc,
       feature,
       building,
-      scrim,
     ],
   );
 
@@ -580,26 +575,38 @@ export function createMapView(
   };
 
   /** A placed improvement from the pool, read for that improvement on the tile of that key. */
-  const improvementOn = (improvement: ImprovementId, key: string): Phaser.GameObjects.Polygon =>
-    asImprovement(improvementPool.take(), improvement).setName(`improvement-${improvement}-${key}`);
+  const improvementOn = (
+    improvement: ImprovementId,
+    key: string,
+    inFog: boolean,
+  ): Phaser.GameObjects.Polygon =>
+    asImprovement(improvementPool.take(), improvement, inFog).setName(
+      `improvement-${improvement}-${key}`,
+    );
 
   /** The disc and the icon a tile keeps painted for a feature, standing at that point of its row. */
-  const featureOn = (key: string, feature: FeatureId, x: number, y: number): Mark[] => {
+  const featureOn = (
+    key: string,
+    feature: FeatureId,
+    x: number,
+    y: number,
+    inFog: boolean,
+  ): Mark[] => {
     const own = tileObjects[key];
     return [
-      asPainted(own.featureDisc).setPosition(x, y),
-      asFeature(asPainted(own.feature), feature).setPosition(x, y),
+      asFeatureDisc(asPainted(own.featureDisc), inFog).setPosition(x, y),
+      asFeature(asPainted(own.feature), feature, inFog).setPosition(x, y),
     ];
   };
 
   /** What a feature lays on a tile's ground, painted from the pool. */
-  const lyingOn = (feature: FeatureId, tile: TileCoords): Mark[] =>
-    lyingOf(feature, tile).map(({ paint }) => paint(lyingPool.take()));
+  const lyingOn = (feature: FeatureId, tile: TileCoords, inFog: boolean): Mark[] =>
+    lyingOf(feature, tile).map(({ paint }) => paint(lyingPool.take(), inFog));
 
   /**
    * Every layer of one tile as the map draws it on a chronicle, the faces drawn there beside it, and
-   * every object painted for it, whole, over whatever a motion left. The units of a live tile are
-   * hung by the render; a tile out of sight carries its unit under its scrim.
+   * every object painted for it, whole, over whatever a motion left, darkened in fog. The units of a
+   * live tile are hung by the render; a tile in fog carries its unit with it.
    */
   const paintTile = (
     chronicle: Chronicle,
@@ -619,23 +626,26 @@ export function createMapView(
     };
 
     const { x, y } = positionOf(tile);
-    asTerrain(paint(own.face), face, tile);
+    const inFog = !seen.live.has(key);
+    asTerrain(paint(own.face), face, tile, inFog);
     const shore = shoreOn(catalogue, faces, tile);
-    if (shore !== undefined) wearing(paint(own.shore), FACE_SHEET.key, shore);
+    if (shore !== undefined) wearing(paint(own.shore), FACE_SHEET.key, shore, inFog);
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
       painted.push(
-        ...lyingOn(face.feature, tile),
-        ...featureOn(key, face.feature, row.feature, y - ROW_RISE),
+        ...lyingOn(face.feature, tile, inFog),
+        ...featureOn(key, face.feature, row.feature, y - ROW_RISE, inFog),
       );
     }
     face.improvements.forEach((improvement, index) => {
-      paint(improvementOn(improvement, key).setPosition(row.improvements[index], y - ROW_RISE));
+      paint(
+        improvementOn(improvement, key, inFog).setPosition(row.improvements[index], y - ROW_RISE),
+      );
     });
-    if (face.building !== undefined) paint(asBuilding(own.building, face.building));
-    if (seen.live.has(key)) return painted;
+    if (face.building !== undefined) paint(asBuilding(own.building, face.building, inFog));
+    if (!inFog) return painted;
     const unitMarked = (type: string, faction: Faction, embarked: boolean): void => {
-      paint(asUnit(fogUnitPool.take(), type, faction, embarked).setPosition(x, y));
+      paint(asUnit(fogUnitPool.take(), type, faction, embarked, true).setPosition(x, y));
     };
     // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
     // walked onto it since.
@@ -648,13 +658,12 @@ export function createMapView(
       const kept = seen.charted.get(key)?.unit;
       if (kept !== undefined) unitMarked(kept.type, kept.faction, kept.embarked);
     }
-    paint(own.scrim);
     return painted;
   };
 
   /**
-   * Every layer of every tile the map draws, on the chronicle it stands on, and nothing of any other
-   * tile. A terraform changes a tile's terrain and takes its feature with it, an improvement is
+   * Every layer of every tile the map draws, on the chronicle it stands on, and his void on every
+   * other tile. A terraform changes a tile's terrain and takes its feature with it, an improvement is
    * placed on it and a building is built on it, so every layer follows every render.
    */
   const paintTiles = (): void => {
@@ -664,6 +673,7 @@ export function createMapView(
     lyingPool.hide();
     improvementPool.hide();
     fogUnitPool.hide();
+    for (const [key, own] of Object.entries(tileObjects)) own.void.setVisible(!drawn.has(key));
     if (shown === undefined) return;
     const seen = { drawn, live, charted };
     const faces = facesIn(seen, shown.tiles);
@@ -672,7 +682,7 @@ export function createMapView(
 
   /** The piece each corner of a river wears on a chronicle, by the corner's key, read off what the map draws of it. */
   const piecesOn = (chronicle: Chronicle, seen: Drawing): Map<string, RiverPiece> =>
-    riverPieces(catalogue, chronicle.rivers, seen.drawn, facesIn(seen, chronicle.tiles));
+    riverPieces(catalogue, chronicle.rivers, seen.drawn, seen.live, facesIn(seen, chronicle.tiles));
 
   /** A corner's piece painted from the pools: a mouth with the straight pressed into it. */
   const paintPiece = (piece: RiverPiece): Mark[] => {
@@ -737,7 +747,7 @@ export function createMapView(
 
   /**
    * Both cities' borders on the chronicle the map stands on, each tile ringed off the face the map
-   * draws of it: a claim moves a border, so a render does.
+   * draws of it, darkened in fog: a claim moves a border, so a render does.
    */
   const paintBorder = (): void => {
     const current = shown;
@@ -751,7 +761,8 @@ export function createMapView(
       if (holder === undefined) continue;
       const own = cityTileOf(current, holder);
       const weight = own !== undefined && sameTile(tile, own) ? CITY_RING : RING;
-      ring.setStrokeStyle(weight, CITY_COLOURS[holder]).setVisible(true);
+      const inFog = !live.has(tileKey(tile));
+      ring.setStrokeStyle(weight, darkened(CITY_COLOURS[holder], inFog)).setVisible(true);
     }
   };
 
@@ -791,7 +802,7 @@ export function createMapView(
     const spent = unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0;
     stopMotion(scene, [marker, hue]);
     asPainted(marker).setPosition(x, y).setName(`unit-${key}`).setVisible(stands);
-    asUnit(parts, type, unit.faction, unit.embarked);
+    asUnit(parts, type, unit.faction, unit.embarked, false);
     asUnitDim(dim, type, unit.embarked).setName(`unit-dim-${key}`).setVisible(spent);
     paintHue(unit).setVisible(stands && preparedAs(chronicle, unit) !== undefined);
     return own;

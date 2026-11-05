@@ -100,13 +100,18 @@ const TERRAIN_FACES: Readonly<
   ocean: { pack: 'hex-rivers-coasts-and-seas', family: 'hexOceanCalm', count: 4 },
 };
 
+/** The files that many of his paintings of one family are, numbered from nought, under the assets folder. */
+function numberedFiles(folder: string, family: string, count: number): string[] {
+  return Array.from(
+    { length: count },
+    (_, at) => `store/${folder}/${family}${String(at).padStart(2, '0')}.png`,
+  );
+}
+
 /** The files a terrain's paintings are, under the assets folder; a terrain with none is refused. */
 export function paintingsOf(terrain: string): string[] {
   const { pack, family, count } = drawn(TERRAIN_FACES, terrain, 'no painting faces the terrain');
-  return Array.from(
-    { length: count },
-    (_, at) => `store/${pack}/Tiles/${family}${String(at).padStart(2, '0')}.png`,
-  );
+  return numberedFiles(`${pack}/Tiles`, family, count);
 }
 
 // His coast files name their edges north-west, north-east, east, south-east, south-west, west, one
@@ -129,7 +134,10 @@ export function shorePaintingsOf(land: readonly boolean[]): string[] {
   return mask.includes('1') ? shoreFiles(mask) : [];
 }
 
-/** The sheet every terrain's paintings and every shore's are drawn into. */
+/** His four voids, under the assets folder. */
+export const VOIDS: readonly string[] = numberedFiles('hex-basic-terrain-set/Tiles', 'hexVoid', 4);
+
+/** The sheet every terrain's paintings, every shore's and his voids are drawn into. */
 export const FACE_SHEET: Sheet = {
   key: 'faces',
   files: [
@@ -137,6 +145,7 @@ export const FACE_SHEET: Sheet = {
     ...Array.from({ length: 2 ** SHORE_EDGES.length - 1 }, (_, at) =>
       shoreFiles((at + 1).toString(2).padStart(SHORE_EDGES.length, '0')),
     ).flat(),
+    ...VOIDS,
   ],
   side: 4096,
 };
@@ -221,9 +230,10 @@ export function featureDressOf(feature: string): FeatureDress {
 }
 
 /** His four ponds, under the assets folder. */
-export const PONDS: readonly string[] = Array.from(
-  { length: 4 },
-  (_, at) => `store/hex-basic-terrain-set/Decor/decorPond${String(at).padStart(2, '0')}.png`,
+export const PONDS: readonly string[] = numberedFiles(
+  'hex-basic-terrain-set/Decor',
+  'decorPond',
+  4,
 );
 
 /** The frame a painting tinted for a feature stands under in the features sheet. */

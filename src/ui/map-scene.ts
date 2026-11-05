@@ -8,7 +8,6 @@ export type MapStrata = {
   readonly lit: Stratum;
   readonly buildings: Stratum;
   readonly units: Stratum;
-  readonly fog: Stratum;
   readonly cityMarks: Stratum;
   /** The yield overlay's dim, and what stays at full strength through it. */
   readonly dim: Stratum;
@@ -41,7 +40,6 @@ export class MapScene extends Phaser.Scene {
       lit: stratum(),
       buildings: stratum(),
       units: stratum(),
-      fog: stratum(),
       cityMarks: stratum(),
       dim: stratum(),
       ring: stratum(),

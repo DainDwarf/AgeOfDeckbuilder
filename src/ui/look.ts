@@ -54,7 +54,8 @@ export type Look = {
   readonly answerInk: number;
   readonly page: number;
   readonly mapOutline: number;
-  readonly mapRim: number;
+  /** The tint every painting and mark of a tile in fog is multiplied by. */
+  readonly fog: number;
   readonly lit: number;
   readonly river: number;
   readonly built: number;
@@ -148,7 +149,7 @@ export const LOOK: Look = {
   // `index.html`'s style reset holds this value too, for the letterbox around the canvas.
   page: 0x0d1117,
   mapOutline: 0x0d1014,
-  mapRim: 0x5c6068,
+  fog: 0x4d4d4d,
   lit: 0xf2f6ff,
   river: 0x62a9e0,
   built: 0xcfc6b4,
@@ -246,6 +247,13 @@ export function overPage(colour: number, strength: number): number {
     const under = (LOOK.page >> shift) & 0xff;
     return Math.round(over * strength + under * (1 - strength));
   };
+  return (channel(16) << 16) | (channel(8) << 8) | channel(0);
+}
+
+/** A colour multiplied by a tint, channel by channel, as a tint is multiplied into a texture. */
+export function multiplied(colour: number, tint: number): number {
+  const channel = (shift: number): number =>
+    Math.round((((colour >> shift) & 0xff) * ((tint >> shift) & 0xff)) / 0xff);
   return (channel(16) << 16) | (channel(8) << 8) | channel(0);
 }
 

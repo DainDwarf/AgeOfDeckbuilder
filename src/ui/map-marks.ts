@@ -3,8 +3,6 @@ import {
   type BuildingTypeId,
   CENTRE,
   type Corner,
-  cornerKey,
-  cornersOf,
   type FeatureId,
   type ImprovementId,
   neighbours,
@@ -28,7 +26,7 @@ import {
   ownBoxOf,
   UI_FONT,
 } from './design-space';
-import { css, type Glow, LOOK } from './look';
+import { css, type Glow, LOOK, multiplied } from './look';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -45,6 +43,7 @@ import {
   shorePaintingsOf,
   tintedName,
   unitMarkOf,
+  VOIDS,
 } from './marks';
 import { text } from './text';
 
@@ -94,9 +93,6 @@ const HULL_DROP = 12;
 
 /** Placeholder primitive until the art pass: a river standing as a mark of its own, a bent band in its own blue. */
 const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
-
-/** Placeholder primitive until the art pass: the disc's rim a plain line around the map. */
-const RIM_WIDTH = 2;
 
 // Phaser reads a polygon's first point at its construction, and one with none throws.
 /** What a polygon holds until a mark is read onto it. */
@@ -153,13 +149,14 @@ export type Mark =
 
 /** What each tile of the disc keeps from the chronicle's open, shown as the tile stands. */
 export type TileObjects = {
+  /** His void, standing while the map does not draw the tile. */
+  readonly void: Phaser.GameObjects.Image;
   readonly face: Phaser.GameObjects.Image;
   readonly shore: Phaser.GameObjects.Image;
   readonly feature: Phaser.GameObjects.Image;
   readonly featureDisc: Phaser.GameObjects.Arc;
   readonly ring: Phaser.GameObjects.Polygon;
   readonly building: Phaser.GameObjects.Polygon;
-  readonly scrim: Phaser.GameObjects.Polygon;
 };
 
 /** What the map keeps of a unit from its entering to its leaving, shown as the unit stands. */
@@ -194,35 +191,62 @@ export function rowOf(face: Tile, x: number): { feature: number; improvements: n
   return { feature: at(0), improvements: face.improvements.map((_, index) => at(first + index)) };
 }
 
+/** A colour of a mark as its tile shows it: darkened by the fog's tint on a tile in fog. */
+export function darkened(colour: number, inFog: boolean): number {
+  return inFog ? multiplied(colour, LOOK.fog) : colour;
+}
+
+// A Shape carries no tint (docs/PHASER.md): a shape is darkened through its colours, by `darkened`.
+/** An image of the map darkened by the fog's tint on a tile in fog, and its tint cleared on any other. */
+export function asDarkened(
+  image: Phaser.GameObjects.Image,
+  inFog: boolean,
+): Phaser.GameObjects.Image {
+  return inFog ? image.setTint(LOOK.fog) : image.clearTint();
+}
+
 /** The face of a tile, held about the middle of his hexagon, with no terrain on it yet. */
 export function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Image {
   return scene.add.image(0, 0, FACE_SHEET.key).setOrigin(0.5, PAINTING.middle / PAINTING.height);
 }
 
 // The scale is set here and `asPainted` resets it to one: a face is painted before it wears anything.
-/** A face made to wear a painting of a sheet at the width of a tile, whatever it wore before. */
+/**
+ * A face made to wear a painting of a sheet at the width of a tile, darkened on a tile in fog,
+ * whatever it wore before.
+ */
 export function wearing(
   face: Phaser.GameObjects.Image,
   sheet: string,
   painting: string,
+  inFog: boolean,
 ): Phaser.GameObjects.Image {
-  return face.setTexture(sheet, painting).setScale(FACE_SCALE);
+  return asDarkened(face.setTexture(sheet, painting).setScale(FACE_SCALE), inFog);
 }
 
 /**
  * A face made to wear the painting of its terrain its tile's place on the disc picks, tinted where
- * the feature on it tints it.
+ * the feature on it tints it, and darkened on a tile in fog.
  */
 export function asTerrain(
   face: Phaser.GameObjects.Image,
   { terrain, feature }: Pick<Tile, 'terrain' | 'feature'>,
   coord: TileCoords,
+  inFog: boolean,
 ): Phaser.GameObjects.Image {
   const painting = paintingOn(paintingsOf(terrain), coord);
   if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
-    return wearing(face, FEATURE_SHEET_KEY, tintedName(painting, feature));
+    return wearing(face, FEATURE_SHEET_KEY, tintedName(painting, feature), inFog);
   }
-  return wearing(face, FACE_SHEET.key, painting);
+  return wearing(face, FACE_SHEET.key, painting, inFog);
+}
+
+/** A face made to wear the one of his voids its tile's place on the disc picks. */
+export function asVoid(
+  face: Phaser.GameObjects.Image,
+  coord: TileCoords,
+): Phaser.GameObjects.Image {
+  return wearing(face, FACE_SHEET.key, paintingOn(VOIDS, coord), false);
 }
 
 /**
@@ -248,36 +272,48 @@ export function shoreOn(
 
 /** A terrain off the map: its first painting, held about the middle of the picture. */
 export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Image {
-  return wearing(tileFace(scene), FACE_SHEET.key, paintingsOf(terrain)[0]).setOrigin(0.5, 0.5);
+  const face = wearing(tileFace(scene), FACE_SHEET.key, paintingsOf(terrain)[0], false);
+  return face.setOrigin(0.5, 0.5);
 }
 
-/** A polygon made to draw a building: its placeholder mark, in the colour it is known by. */
+/**
+ * A polygon made to draw a building: its placeholder mark, in the colour it is known by, darkened on
+ * a tile in fog.
+ */
 export function asBuilding(
   mark: Phaser.GameObjects.Polygon,
   building: BuildingTypeId,
+  inFog: boolean,
 ): Phaser.GameObjects.Polygon {
   return mark
     .setTo(corners(buildingMarkOf(building)))
-    .setFillStyle(buildingColourOf(building))
-    .setStrokeStyle(2, LOOK.mapOutline);
+    .setFillStyle(darkened(buildingColourOf(building), inFog))
+    .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
 }
 
 export function buildingMark(
   scene: Phaser.Scene,
   building: BuildingTypeId,
 ): Phaser.GameObjects.Polygon {
-  return asBuilding(scene.add.polygon(0, 0, UNREAD), building);
+  return asBuilding(scene.add.polygon(0, 0, UNREAD), building, false);
 }
 
 // The scale is set here and `asPainted` resets it to one: an icon is painted before it wears a feature.
-/** An image of the features sheet made to draw a feature on the map: its icon, at the width it stands. */
+/**
+ * An image of the features sheet made to draw a feature on the map: its icon, at the width it
+ * stands, darkened on a tile in fog.
+ */
 export function asFeature(
   icon: Phaser.GameObjects.Image,
   feature: FeatureId,
+  inFog: boolean,
 ): Phaser.GameObjects.Image {
-  return icon
-    .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
-    .setDisplaySize(ICON_WIDTH, ICON_WIDTH);
+  return asDarkened(
+    icon
+      .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
+      .setDisplaySize(ICON_WIDTH, ICON_WIDTH),
+    inFog,
+  );
 }
 
 /** A feature off the map: its icon, bare. */
@@ -285,17 +321,29 @@ export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.Gam
   return scene.add.image(0, 0, FEATURE_SHEET_KEY, featureIconOf(feature));
 }
 
-/** The disc a feature's icon stands on, with its rim. */
+/** The disc a feature's icon stands on, with nothing painted on it yet. */
 export function featureDisc(scene: Phaser.Scene): Phaser.GameObjects.Arc {
-  return scene.add
-    .circle(0, 0, DISC_RADIUS, LOOK.featureDisc.colour, LOOK.featureDisc.strength)
-    .setStrokeStyle(DISC_RIM, LOOK.featureDiscRim.colour, LOOK.featureDiscRim.strength);
+  return scene.add.circle(0, 0, DISC_RADIUS);
 }
 
-/** One mark a feature lays on its tile's ground: its name, and the way to paint it on an image of the features sheet. */
+/** A `featureDisc` made to stand under an icon, with its rim, darkened on a tile in fog. */
+export function asFeatureDisc(
+  disc: Phaser.GameObjects.Arc,
+  inFog: boolean,
+): Phaser.GameObjects.Arc {
+  const { featureDisc: fill, featureDiscRim: rim } = LOOK;
+  return disc
+    .setFillStyle(darkened(fill.colour, inFog), fill.strength)
+    .setStrokeStyle(DISC_RIM, darkened(rim.colour, inFog), rim.strength);
+}
+
+/**
+ * One mark a feature lays on its tile's ground: its name, and the way to paint it on an image of the
+ * features sheet, darkened on a tile in fog.
+ */
 export type Lying = {
   readonly name: string;
-  paint(image: Phaser.GameObjects.Image): Phaser.GameObjects.Image;
+  paint(image: Phaser.GameObjects.Image, inFog: boolean): Phaser.GameObjects.Image;
 };
 
 /**
@@ -316,8 +364,8 @@ export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
         const down = pickOf(r * 11 + 5 * copy, q * 3 + copy, 1000) / 1000;
         return {
           name,
-          paint: (image) =>
-            image
+          paint: (image, inFog) =>
+            asDarkened(image, inFog)
               .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
               .setDisplaySize(HERD_WIDTH, HERD_WIDTH)
               .setFlipX(pickOf(q + copy, r - copy, 2) === 1)
@@ -330,8 +378,8 @@ export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
       return [
         {
           name,
-          paint: (image) =>
-            image
+          paint: (image, inFog) =>
+            asDarkened(image, inFog)
               .setTexture(FEATURE_SHEET_KEY, PONDS[pickOf(q * 5 + 1, r * 9 + 7, PONDS.length)])
               .setScale(FACE_SCALE)
               .setFlipX(false)
@@ -350,22 +398,26 @@ export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
   return scene.add.polygon(0, 0, RIVER_MARK, LOOK.river).setStrokeStyle(1, LOOK.mapOutline);
 }
 
-/** A polygon made to draw an improvement: its placeholder mark, in the stone everything worked is. */
+/**
+ * A polygon made to draw an improvement: its placeholder mark, in the stone everything worked is,
+ * darkened on a tile in fog.
+ */
 export function asImprovement(
   mark: Phaser.GameObjects.Polygon,
   improvement: ImprovementId,
+  inFog: boolean,
 ): Phaser.GameObjects.Polygon {
   return mark
     .setTo(corners(improvementMarkOf(improvement)))
-    .setFillStyle(LOOK.built)
-    .setStrokeStyle(2, LOOK.mapOutline);
+    .setFillStyle(darkened(LOOK.built, inFog))
+    .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
 }
 
 export function improvementMark(
   scene: Phaser.Scene,
   improvement: ImprovementId,
 ): Phaser.GameObjects.Polygon {
-  return asImprovement(scene.add.polygon(0, 0, UNREAD), improvement);
+  return asImprovement(scene.add.polygon(0, 0, UNREAD), improvement, false);
 }
 
 /** The shapes a unit's mark is drawn from, bottom first, each its corners and its drop below the middle. */
@@ -393,15 +445,21 @@ function asShapes(
   return on;
 }
 
-/** A container read as a unit's mark, over a hull while it is embarked, in its faction's colour. */
+/**
+ * A container read as a unit's mark, over a hull while it is embarked, in its faction's colour,
+ * darkened on a tile in fog.
+ */
 export function asUnit(
   mark: Phaser.GameObjects.Container,
   type: string,
   faction: Faction,
   embarked: boolean,
+  inFog: boolean,
 ): Phaser.GameObjects.Container {
   return asShapes(mark, type, embarked, (part) => {
-    part.setFillStyle(FACTION_COLOURS[faction]).setStrokeStyle(2, LOOK.mapOutline);
+    part
+      .setFillStyle(darkened(FACTION_COLOURS[faction], inFog))
+      .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
   });
 }
 
@@ -411,7 +469,7 @@ export function unitMark(
   faction: Faction,
   embarked: boolean,
 ): Phaser.GameObjects.Container {
-  return asUnit(scene.add.container(0, 0), type, faction, embarked);
+  return asUnit(scene.add.container(0, 0), type, faction, embarked, false);
 }
 
 /** A container read as the scrim of a unit's own shape. */
@@ -550,14 +608,6 @@ export function cityDim(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
     .setName('city-dim');
 }
 
-/** The scrim over a tile in fog, as it was last seen. */
-export function fogScrim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
-  const { x, y } = positionOf(coord);
-  return scene.add
-    .polygon(x, y, mapHexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
-    .setName(`fog-${tileKey(coord)}`);
-}
-
 /** Where a corner of the tile lattice stands on the map's own surface. */
 export function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
   const middle = positionOf(CENTRE);
@@ -565,20 +615,6 @@ export function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
     middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
     middle.y + ((y * TILE_SIZE) / 2) * SQUASH,
   );
-}
-
-/** The disc's rim: a line along every edge a tile of the disc shares with no other. */
-export function strokeRim(rim: Phaser.GameObjects.Graphics, tiles: readonly Tile[]): void {
-  const onMap = new Set(tiles.map(tileKey));
-  rim.lineStyle(RIM_WIDTH, LOOK.mapRim);
-  for (const tile of tiles) {
-    const around = new Set(cornersOf(tile).map(cornerKey));
-    for (const coord of neighbours(tile)) {
-      if (onMap.has(tileKey(coord))) continue;
-      const shared = cornersOf(coord).filter((corner) => around.has(cornerKey(corner)));
-      rim.strokePoints(shared.map(cornerAt), false);
-    }
-  }
 }
 
 /** A hexagon just inside a tile's face, with no glow on it yet. */

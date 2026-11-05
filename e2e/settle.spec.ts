@@ -15,7 +15,7 @@ import {
   dragOut,
   endTurnFill,
   endTurnLabel,
-  facesShown,
+  faceCounts,
   idsOf,
   launchedAs,
   marksIn,
@@ -48,7 +48,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await standing(page, `hand-${opened.hand.length - 1}`)).toBe(true);
   expect(await standing(page, `hand-${opened.hand.length}`)).toBe(false);
 
-  expect(await facesShown(page)).toBe(opened.centre.length);
+  expect((await faceCounts(page)).shown).toBe(opened.centre.length);
   for (const coord of opened.centre) {
     expect(await standing(page, `tile-${tileKey(coord)}`)).toBe(true);
   }

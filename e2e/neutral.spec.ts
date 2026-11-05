@@ -19,7 +19,7 @@ import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
-import { LOOK } from '../src/ui/look';
+import { LOOK, multiplied } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
 import {
@@ -227,12 +227,17 @@ function borderColour(holder: CityFaction): number {
   }
 }
 
-/** How many rings each colour stands for over the holders named, by the colour's value. */
-function colouredBy(holders: readonly (CityFaction | undefined)[]): Record<number, number> {
+/**
+ * How many rings each colour stands for over the rings named, each its holder's colour darkened by
+ * the fog's tint where its tile is in fog, by the colour's value.
+ */
+function colouredBy(
+  rings: readonly { holder: CityFaction | undefined; inFog: boolean }[],
+): Record<number, number> {
   const counts: Record<number, number> = {};
-  for (const holder of holders) {
+  for (const { holder, inFog } of rings) {
     if (holder === undefined) continue;
-    const colour = borderColour(holder);
+    const colour = inFog ? multiplied(borderColour(holder), LOOK.fog) : borderColour(holder);
     counts[colour] = (counts[colour] ?? 0) + 1;
   }
   return counts;
@@ -267,9 +272,9 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
   const kept = new Map(claimed.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
   const worn = claimed.tiles.map((tile) => {
     const snapshot = kept.get(tileKey(tile));
-    return seen.has(tileKey(tile)) || snapshot === undefined
-      ? holderOf(claimed, tile)
-      : snapshot.holder;
+    const inFog = !seen.has(tileKey(tile));
+    const holder = !inFog || snapshot === undefined ? holderOf(claimed, tile) : snapshot.holder;
+    return { holder, inFog };
   });
   expect(holderOf(claimed, first)).toBe('neutral');
   expect(seen.has(tileKey(first))).toBe(false);
@@ -290,8 +295,8 @@ test('the map rings every tile the neutral holds in the neutral’s colour besid
 
   expect(await ringsByColour(page)).toEqual(
     colouredBy([
-      ...claimed.held.map((): CityFaction => 'player'),
-      ...neutral.held.map((): CityFaction => 'neutral'),
+      ...claimed.held.map(() => ({ holder: 'player' as const, inFog: false })),
+      ...neutral.held.map(() => ({ holder: 'neutral' as const, inFog: false })),
     ]),
   );
   expect(problems).toEqual([]);

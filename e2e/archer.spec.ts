@@ -8,6 +8,7 @@ import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { type Unit, unitAt } from '../src/rules/units';
+import { LOOK } from '../src/ui/look';
 import {
   budget,
   campKind,
@@ -21,9 +22,9 @@ import {
   openSaved,
   playerCityTile,
   playersOf,
+  reading,
   ringedTile,
   settledOn,
-  standing,
   unitEntered,
   watch,
 } from './chronicle-screen';
@@ -96,7 +97,7 @@ test('an archer dragged onto an enemy two tiles off in sight attacks it, and an 
   await openSaved(page, chronicle);
 
   // The enemy behind the hills stands on a tile in fog, last seen empty: the map draws no mark for it.
-  expect(await standing(page, `fog-${tileKey(hidden.tile)}`)).toBe(true);
+  expect((await reading(page, `tile-${tileKey(hidden.tile)}`)).tint).toBe(LOOK.fog);
   expect(await marksIn(page, 'units')).toBe(drawnUnits);
 
   // The archer selected glows the enemy in sight, and not the one behind the hills.
