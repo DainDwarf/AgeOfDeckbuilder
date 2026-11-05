@@ -34,6 +34,10 @@ export type Look = {
   readonly exhaustTabEdge: number;
   readonly exhaustTabInk: number;
   readonly selected: number;
+  /** The strength the selection's rim rests at on the selected tile's edge. */
+  readonly selectionRim: number;
+  /** The strength the selection's line along the selected tile's edge rests at. */
+  readonly selectionLine: number;
   readonly selectedEdge: number;
   readonly pin: number;
   /** The dark line on each side of a pinned plate's edge. */
@@ -134,6 +138,8 @@ export const LOOK: Look = {
   exhaustTabEdge: 0x6f757d,
   exhaustTabInk: 0x0d1014,
   selected: 0xf2f6ff,
+  selectionRim: 0.8,
+  selectionLine: 0.9,
   selectedEdge: 0x0d1014,
   pin: 0xf2f6ff,
   pinEdge: 0x0d1014,

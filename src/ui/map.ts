@@ -37,6 +37,7 @@ import { onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
 import { createBorder, type HeldAsDrawn } from './map-border';
 import { createMapCamera } from './map-camera';
+import { selectionRim } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
   asBuilding,
@@ -342,11 +343,12 @@ export function createMapView(
   /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
   let riversWorn = new Map<string, { readonly piece: RiverPiece; readonly painted: Mark[] }>();
 
-  const selectionRing = scene.add
-    .polygon(0, 0, mapHexagon(TILE_SIZE - 2), 0, 0)
-    .setStrokeStyle(4, LOOK.selected)
+  const rim = selectionRim(scene);
+  const selectionLine = scene.add
+    .polygon(0, 0, mapHexagon(TILE_SIZE - 0.5), 0, 0)
+    .setStrokeStyle(1, LOOK.selected, LOOK.selectionLine)
     .setVisible(false);
-  selected.add(selectionRing);
+  selected.add([rim, selectionLine]);
 
   const thresholdOnTile = thresholdMark(scene);
   thresholds.add(thresholdOnTile.root);
@@ -935,10 +937,10 @@ export function createMapView(
       threshold =
         cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
-      selectionRing.setVisible(tile !== undefined);
+      for (const shown of [rim, selectionLine]) shown.setVisible(tile !== undefined);
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
-        selectionRing.setPosition(x, y);
+        for (const shown of [rim, selectionLine]) shown.setPosition(x, y);
       }
       paintThreshold();
       paintYields();

@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The selection ring** — the selected tile is lit from its edge inward, a bell-shaped rim of the selection's white under a thin line of it, and the border's band fades the same bell-shaped way, 7 units deep; the flat ring is gone. Doc-impact: `docs/LOOK.md`. [board/selection-ring.md](board/selection-ring.md)
 - **The reach** — the tiles a selected unit can step onto and the tiles a card is aimed at, lit over his ground.
 - **The offensive glow** — the enemies a selected unit can attack and the tile an enemy has prepared on, one glow for both over his ground.
 - **The claim marks** — how city mode shows the tiles the city may claim and the culture threshold on the selected one.

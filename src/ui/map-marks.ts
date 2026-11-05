@@ -3,6 +3,7 @@ import {
   type BuildingTypeId,
   CENTRE,
   type Corner,
+  cornersOf,
   type FeatureId,
   type ImprovementId,
   neighbours,
@@ -17,15 +18,7 @@ import type { MapContent } from '../rules/map-kinds';
 import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
-import {
-  addText,
-  corners,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
-  hexagon,
-  ownBoxOf,
-  UI_FONT,
-} from './design-space';
+import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
 import { css, type Glow, LOOK, multiplied } from './look';
 import {
   buildingColourOf,
@@ -52,9 +45,20 @@ export const TILE_SIZE = 24;
 /** How much the map's lattice is squashed down: rows three quarters of a tile's width apart (docs/LOOK.md). */
 export const SQUASH = 0.75 / (Math.sqrt(3) / 2);
 
-/** A hexagon as the map draws it, squashed with the lattice. */
+/** A tile's hexagon on the map's own surface, at `size` about the tile's middle: its corners at `TILE_SIZE`. */
+export function hexagonOn(tile: TileCoords, size: number): { x: number; y: number }[] {
+  const middle = positionOf(tile);
+  return cornersOf(tile)
+    .map(cornerAt)
+    .map(({ x, y }) => ({
+      x: middle.x + ((x - middle.x) * size) / TILE_SIZE,
+      y: middle.y + ((y - middle.y) * size) / TILE_SIZE,
+    }));
+}
+
+/** A hexagon as the map draws it, squashed with the lattice, as a polygon's points. */
 export function mapHexagon(size: number): number[] {
-  return hexagon(size).map((value, i) => (i % 2 === 1 ? value * SQUASH : value));
+  return corners(hexagonOn(CENTRE, size).flatMap(({ x, y }) => [x, y]));
 }
 
 /** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
