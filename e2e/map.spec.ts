@@ -1,14 +1,25 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { terraformed } from '../src/rules/cards';
 import { achievementOf, ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
-import { CENTRE, type TileCoords, tileKey } from '../src/rules/map';
+import {
+  CENTRE,
+  neighbours,
+  sameTile,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+  tilesBeside,
+  water,
+} from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
-import { inSight } from '../src/rules/sight';
+import { chartedAt, inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { paintingsOf } from '../src/ui/marks';
+import { paintingsOf, shorePaintingsOf } from '../src/ui/marks';
 import {
   admits,
   aimed,
@@ -193,6 +204,54 @@ function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoo
   throw new Error('seed 1 crosses no raider entered three tiles out in sight');
 }
 
+/** The first water terrain the catalogue holds. */
+const WATER = (() => {
+  const terrain = Object.keys(CATALOGUE.terrains).find((id) => water(CATALOGUE, id));
+  if (terrain === undefined) throw new Error('the catalogue holds no water terrain');
+  return terrain;
+})();
+
+/** Whether each tile beside a tile is land among these faces, in the order `neighbours` walks them. */
+function landBeside(faces: readonly Tile[], coord: TileCoords): boolean[] {
+  const beside = tilesBeside(faces);
+  return neighbours(coord).map((tile) => {
+    const face = beside(tile);
+    return face !== undefined && !water(CATALOGUE, face.terrain);
+  });
+}
+
+/** The chronicle with a tile made water through the rules, and charted as it stands. */
+function madeWater(chronicle: Chronicle, at: TileCoords): Chronicle {
+  return chartedAt(CATALOGUE, terraformed(CATALOGUE, chronicle, at, WATER).chronicle, at);
+}
+
+/**
+ * Seed 1's bare turn 1 with the first tile beside the city made water, and the first tile of the
+ * centre part made water that the map draws land beside and has uncharted land beside; and a tile
+ * beside the city the map draws as land.
+ */
+function shored(): { chronicle: Chronicle; beside: TileCoords; rim: TileCoords; land: TileCoords } {
+  const city = playerCityTile(OPENED);
+  const beside = neighbours(city).find(
+    (tile) => tileAt(madeWater(OPENED, tile).tiles, tile)?.terrain === WATER,
+  );
+  if (beside === undefined) throw new Error('seed 1 makes no tile beside the city water');
+  const wet = madeWater(OPENED, beside);
+  for (const { q, r } of OPENED.centre) {
+    const rim = { q, r };
+    if (sameTile(rim, city) || sameTile(rim, beside)) continue;
+    const chronicle = madeWater(wet, rim);
+    if (tileAt(chronicle.tiles, rim)?.terrain !== WATER) continue;
+    const drawn = landBeside(drawnFaces(chronicle), rim);
+    if (!drawn.includes(true) || drawn.join() === landBeside(chronicle.tiles, rim).join()) continue;
+    const landBesideCity = landBeside(drawnFaces(chronicle), city);
+    const land = neighbours(city).find((_, at) => landBesideCity[at]);
+    if (land === undefined) continue;
+    return { chronicle, beside, rim, land };
+  }
+  throw new Error('seed 1 makes no tile of its centre part water beside uncharted land');
+}
+
 test('the map is framed between the resource bar and the band, on the city', async ({ page }) => {
   const problems = watch(page);
   await openSaved(page, OPENED);
@@ -226,6 +285,27 @@ test("every tile the map draws wears a painting of its terrain, the rows three q
   }
   const [origin, east, south] = lattice.map((tile) => seen(`tile-${tileKey(tile)}`).onScreen);
   expect((south.y - origin.y) / (east.x - origin.x)).toBeCloseTo(0.75, 2);
+
+  expect(problems).toEqual([]);
+});
+
+test('a water tile wears the shore along every edge where the map draws land, the uncharted beside it bare, and a land tile wears none', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, beside, rim, land } = shored();
+  const faces = drawnFaces(chronicle);
+
+  await openSaved(page, chronicle);
+
+  const shore = (tile: TileCoords): string => `shore-${tileKey(tile)}`;
+  const seen = await readings(page, [beside, rim, land].map(shore));
+  for (const wet of [beside, rim]) {
+    expect(seen(shore(wet)).standing).toBe(true);
+    expect(shorePaintingsOf(landBeside(faces, wet))).toContain(seen(shore(wet)).frame);
+  }
+  expect(shorePaintingsOf(landBeside(chronicle.tiles, rim))).not.toContain(seen(shore(rim)).frame);
+  expect(seen(shore(land)).standing).toBe(false);
 
   expect(problems).toEqual([]);
 });

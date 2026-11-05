@@ -20,6 +20,7 @@ import {
   consoleKey,
   enemiesOf,
   enter,
+  facesShown,
   freeFor,
   heldSave,
   launchedAs,
@@ -223,7 +224,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
   const fogged = stood.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length;
   expect(await chronicleOf(page)).toEqual(stood);
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
-  expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
+  expect(await facesShown(page)).toBe(stood.snapshots.length);
 
   await consoleKey(page);
   await enter(page, 'uncharted');
@@ -232,7 +233,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
 
   // Every tile of the disc is drawn now, and every one of them out of sight stands under a scrim.
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(true);
-  expect(await marksIn(page, 'terrain')).toBe(stood.tiles.length);
+  expect(await facesShown(page)).toBe(stood.tiles.length);
   expect(await marksIn(page, 'fog')).toBe(stood.tiles.length - seen.size);
 
   await consoleKey(page);
@@ -259,7 +260,7 @@ test('the two switches draw the whole map, and put the fog back where it was', a
 
   // Both veils back: the map draws what it has charted, and no more.
   expect(await standing(page, `tile-${tileKey(enemy)}`)).toBe(false);
-  expect(await marksIn(page, 'terrain')).toBe(stood.snapshots.length);
+  expect(await facesShown(page)).toBe(stood.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(fogged);
 
   expect(problems).toEqual([]);

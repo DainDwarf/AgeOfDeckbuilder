@@ -12,8 +12,11 @@ import {
   type Terrain,
   type Tile,
   type TileCoords,
+  type TilesBeside,
   tileKey,
+  water,
 } from '../rules/map';
+import type { MapContent } from '../rules/map-kinds';
 import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
@@ -36,6 +39,7 @@ import {
   improvementMarkOf,
   paintingOn,
   paintingsOf,
+  shorePaintingsOf,
   unitMarkOf,
 } from './marks';
 import { text } from './text';
@@ -135,6 +139,7 @@ export type Mark =
 /** What each tile of the disc keeps from the chronicle's open, shown as the tile stands. */
 export type TileObjects = {
   readonly face: Phaser.GameObjects.Image;
+  readonly shore: Phaser.GameObjects.Image;
   readonly feature: Phaser.GameObjects.Polygon;
   readonly ring: Phaser.GameObjects.Polygon;
   readonly building: Phaser.GameObjects.Polygon;
@@ -180,7 +185,10 @@ export function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Image {
 
 // The scale is set here and `asPainted` resets it to one: a face is painted before it wears anything.
 /** A face made to wear a painting at the width of a tile, whatever it wore before. */
-function wearing(face: Phaser.GameObjects.Image, painting: string): Phaser.GameObjects.Image {
+export function wearing(
+  face: Phaser.GameObjects.Image,
+  painting: string,
+): Phaser.GameObjects.Image {
   return face
     .setFrame(painting)
     .setScale((Math.sqrt(3) * TILE_SIZE * FACE_OVERLAP) / PAINTING.width);
@@ -192,7 +200,28 @@ export function asTerrain(
   terrain: Terrain,
   coord: TileCoords,
 ): Phaser.GameObjects.Image {
-  return wearing(face, paintingOn(terrain, coord));
+  return wearing(face, paintingOn(paintingsOf(terrain), coord));
+}
+
+/**
+ * The shore a tile wears over its face, read off the faces drawn beside it: his coast along every
+ * edge of a water face where a face of land is drawn, the one of his two its place on the disc picks,
+ * and none where the face is not water or no land is drawn beside it.
+ */
+export function shoreOn(
+  catalogue: MapContent,
+  faces: TilesBeside,
+  coord: TileCoords,
+): string | undefined {
+  const face = faces(coord);
+  if (face === undefined || !water(catalogue, face.terrain)) return undefined;
+  const paintings = shorePaintingsOf(
+    neighbours(coord).map((beside) => {
+      const drawn = faces(beside);
+      return drawn !== undefined && !water(catalogue, drawn.terrain);
+    }),
+  );
+  return paintings.length === 0 ? undefined : paintingOn(paintings, coord);
 }
 
 /** A terrain off the map: its first painting, held about the middle of the picture. */

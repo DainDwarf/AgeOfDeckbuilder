@@ -20,6 +20,7 @@ import {
   dragUnit,
   drawnFaces,
   enter,
+  facesShown,
   firstSeed,
   freeFor,
   glyphs,
@@ -193,7 +194,7 @@ test('the map draws a tile in sight live, a tile in fog under its scrim, and an 
 
   // The map draws a face for every tile it has ever seen, and one scrim for each of them in fog.
   const seen = inSight(CATALOGUE, run.back);
-  expect(await marksIn(page, 'terrain')).toBe(run.back.snapshots.length);
+  expect(await facesShown(page)).toBe(run.back.snapshots.length);
   expect(await marksIn(page, 'fog')).toBe(
     run.back.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
   );

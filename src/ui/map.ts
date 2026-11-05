@@ -9,6 +9,7 @@ import {
   sameTile,
   type Tile,
   type TileCoords,
+  type TilesBeside,
   tileAt,
   tileKey,
   tilesBeside,
@@ -61,6 +62,7 @@ import {
   ringMark,
   rowOf,
   SQUASH,
+  shoreOn,
   showBadge,
   showThreshold,
   strokeRim,
@@ -72,6 +74,7 @@ import {
   UNREAD,
   type UnitObjects,
   unreadGlow,
+  wearing,
 } from './map-marks';
 import { createMapMotion } from './map-motion';
 import type { MapStrata } from './map-scene';
@@ -88,6 +91,9 @@ const RING = 2;
 
 /** How far over its tile's row a face crossfading in stands, short of the row in front. */
 const CROSSFADE_RISE = 0.5;
+
+/** How far over the face it lies on a beach stands: short of a face crossfading in over that one. */
+const SHORE_RISE = 0.25;
 
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
@@ -220,6 +226,11 @@ function faceIn(drawing: Drawing, tile: Tile): Drawn | undefined {
   return { tile: snapshot.tile, asStands: false };
 }
 
+/** The faces the map draws of these tiles, read beside any tile: what a yield and a beach read there. */
+function facesIn(drawing: Drawing, tiles: readonly Tile[]): TilesBeside {
+  return tilesBeside(tiles.flatMap((tile) => faceIn(drawing, tile)?.tile ?? []));
+}
+
 /**
  * The map and everything standing on it, on a surface of its own that pans and zooms under the UI.
  * Every layer of every tile, the border and every unit are written again on each state change; and
@@ -279,6 +290,12 @@ export function createMapView(
         key,
         {
           face: kept(ground, tileFace(scene).setName(`tile-${key}`).setDepth(tile.r)),
+          shore: kept(
+            ground,
+            tileFace(scene)
+              .setName(`shore-${key}`)
+              .setDepth(tile.r + SHORE_RISE),
+          ),
           feature: kept(features, scene.add.polygon(0, 0, UNREAD).setName(`feature-${key}`)),
           ring: kept(rings, ringMark(scene, 0, RING)),
           building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
@@ -288,7 +305,7 @@ export function createMapView(
     }),
   );
   const paintedOnTiles = Object.values(tileObjects).flatMap(
-    ({ face, feature, building, scrim }) => [face, feature, building, scrim],
+    ({ face, shore, feature, building, scrim }) => [face, shore, feature, building, scrim],
   );
 
   const crossfadePool = poolOf(ground, () => tileFace(scene));
@@ -442,7 +459,7 @@ export function createMapView(
     if (shown === undefined) return;
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
-    const faces = tilesBeside(shown.tiles.flatMap((tile) => drawnOf(tile)?.tile ?? []));
+    const faces = facesIn({ drawn, live, charted }, shown.tiles);
     for (const tile of shown.tiles) {
       if (threshold !== undefined && sameTile(tile, threshold.tile)) continue;
       const face = drawnOf(tile);
@@ -540,11 +557,16 @@ export function createMapView(
     asImprovement(improvementPool.take(), improvement).setName(`improvement-${improvement}-${key}`);
 
   /**
-   * Every layer of one tile as the map draws it on a chronicle, and every object painted for it,
-   * whole, over whatever a motion left. The units of a live tile are hung by the render; a tile out
-   * of sight carries its unit under its scrim.
+   * Every layer of one tile as the map draws it on a chronicle, the faces drawn there beside it, and
+   * every object painted for it, whole, over whatever a motion left. The units of a live tile are
+   * hung by the render; a tile out of sight carries its unit under its scrim.
    */
-  const paintTile = (chronicle: Chronicle, seen: Drawing, tile: Tile): Mark[] => {
+  const paintTile = (
+    chronicle: Chronicle,
+    seen: Drawing,
+    faces: TilesBeside,
+    tile: Tile,
+  ): Mark[] => {
     const drawing = faceIn(seen, tile);
     if (drawing === undefined) return [];
     const face = drawing.tile;
@@ -558,6 +580,8 @@ export function createMapView(
 
     const { x, y } = positionOf(tile);
     asTerrain(paint(own.face), face.terrain, tile);
+    const shore = shoreOn(catalogue, faces, tile);
+    if (shore !== undefined) wearing(paint(own.shore), shore);
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
       paint(asFeature(own.feature, face.feature).setPosition(row.feature, y - ROW_RISE));
@@ -597,7 +621,9 @@ export function createMapView(
     improvementPool.hide();
     fogUnitPool.hide();
     if (shown === undefined) return;
-    for (const tile of shown.tiles) paintTile(shown, { drawn, live, charted }, tile);
+    const seen = { drawn, live, charted };
+    const faces = facesIn(seen, shown.tiles);
+    for (const tile of shown.tiles) paintTile(shown, seen, faces, tile);
   };
 
   /**
@@ -755,7 +781,12 @@ export function createMapView(
       const seen = drawing(chronicle);
       const face = faceIn(seen, tile);
       if (face === undefined) return undefined;
-      return { tile: face.tile, paint: () => paintTile(chronicle, seen, tile) };
+      const faces = facesIn(seen, chronicle.tiles);
+      return {
+        tile: face.tile,
+        shoreOn: (coord) => shoreOn(catalogue, faces, coord),
+        paint: () => paintTile(chronicle, seen, faces, tile),
+      };
     },
     tileObjects: (key) => tileObjects[key],
     unitObjects: (id) => unitObjects.get(id),
@@ -766,6 +797,7 @@ export function createMapView(
     paintHue,
     improvementOn,
     crossfade: (tile) => crossfadePool.take().setDepth(tile.r + CROSSFADE_RISE),
+    shoreOver: (face) => crossfadePool.take().setDepth(face.depth + SHORE_RISE),
     render,
     hold: frame.hold,
   });

@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 
 /** How wide and how tall a sheet is: a power of two, or Phaser makes no mipmaps of it (docs/PHASER.md). */
-const SHEET_SIDE = 2048;
+const SHEET_SIDE = 4096;
 
 /** Every file of a sheet queued on a scene's loader under its own name, for `drawSheet` to read. */
 export function queueSheet(load: Phaser.Loader.LoaderPlugin, files: readonly string[]): void {

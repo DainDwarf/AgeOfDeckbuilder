@@ -1388,6 +1388,15 @@ export function marksIn(page: Page, name: string): Promise<number> {
   }, name);
 }
 
+/** How many faces the map shows: the marks of its terrain named for their tile, the beaches left out. */
+export function facesShown(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const marks = window.shownIn?.('terrain');
+    if (marks === undefined) throw new Error('there is no terrain on the chronicle screen');
+    return marks.filter((mark) => mark.name.startsWith('tile-')).length;
+  });
+}
+
 /** How many yield glyphs of each resource: what the map shows, or what a set of tiles is owed. */
 export type Glyphs = Record<Resource, number>;
 

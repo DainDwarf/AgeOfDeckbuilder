@@ -99,7 +99,7 @@ const TERRAIN_FACES: Readonly<
   ocean: { pack: 'hex-rivers-coasts-and-seas', family: 'hexOceanCalm', count: 4 },
 };
 
-/** The sheet every terrain's paintings are drawn into. */
+/** The sheet every terrain's paintings and every shore's are drawn into. */
 export const FACE_SHEET = 'faces';
 
 /** The files a terrain's paintings are, under the assets folder; a terrain with none is refused. */
@@ -111,12 +111,36 @@ export function paintingsOf(terrain: string): string[] {
   );
 }
 
-/** Every painting of every terrain: the files the face sheet is drawn from. */
-export const FACE_FILES: readonly string[] = Object.keys(TERRAIN_FACES).flatMap(paintingsOf);
+// His coast files name their edges north-west, north-east, east, south-east, south-west, west, one
+// character each: the places of those edges in the order `neighbours` walks them.
+const SHORE_EDGES: readonly number[] = [2, 1, 0, 5, 4, 3];
 
-/** The painting a tile of the terrain wears, picked by its place on the disc alone. */
-export function paintingOn(terrain: string, { q, r }: TileCoords): string {
-  const paintings = paintingsOf(terrain);
+/** The two files his coast along the edges a mask names is painted in, under the assets folder. */
+function shoreFiles(mask: string): string[] {
+  return ['00', '01'].map(
+    (painting) => `store/hex-rivers-coasts-and-seas/Coasts/hexCoast${mask}-${painting}.png`,
+  );
+}
+
+/**
+ * The paintings of the shore along the edges of a water tile that meet land, each edge read in the
+ * order `neighbours` walks them; none where no edge does.
+ */
+export function shorePaintingsOf(land: readonly boolean[]): string[] {
+  const mask = SHORE_EDGES.map((edge) => (land[edge] ? '1' : '0')).join('');
+  return mask.includes('1') ? shoreFiles(mask) : [];
+}
+
+/** Every painting of every terrain and of every shore: the files the face sheet is drawn from. */
+export const FACE_FILES: readonly string[] = [
+  ...Object.keys(TERRAIN_FACES).flatMap(paintingsOf),
+  ...Array.from({ length: 2 ** SHORE_EDGES.length - 1 }, (_, at) =>
+    shoreFiles((at + 1).toString(2).padStart(SHORE_EDGES.length, '0')),
+  ).flat(),
+];
+
+/** The one of the paintings a tile wears, picked by its place on the disc alone. */
+export function paintingOn(paintings: readonly string[], { q, r }: TileCoords): string {
   let hash = Math.imul(q, 0x27d4eb2d) ^ Math.imul(r, 0x165667b1);
   hash = Math.imul(hash ^ (hash >>> 15), 0x85ebca6b);
   hash ^= hash >>> 13;

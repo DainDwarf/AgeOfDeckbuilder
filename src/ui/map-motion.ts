@@ -1,6 +1,13 @@
 import type Phaser from 'phaser';
 import { preparedAs } from '../rules/enemies';
-import { type ImprovementId, type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
+import {
+  type ImprovementId,
+  neighbours,
+  type Tile,
+  type TileCoords,
+  tileAt,
+  tileKey,
+} from '../rules/map';
 import { type Change, type Group, type Stage, walked } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import { type Unit, unitAt } from '../rules/units';
@@ -15,6 +22,7 @@ import {
   rowOf,
   type TileObjects,
   type UnitObjects,
+  wearing,
 } from './map-marks';
 import { asPainted } from './pool';
 
@@ -31,8 +39,16 @@ type MapInMotion = {
   liveOn(chronicle: Chronicle): ReadonlySet<string>;
   /** The face the map draws of a tile on the chronicle it stands on. */
   drawnOf(tile: Tile): { readonly tile: Tile } | undefined;
-  /** The face the map draws of a tile on this chronicle, and the way to paint that tile whole. */
-  faceOn(chronicle: Chronicle, tile: Tile): { readonly tile: Tile; paint(): Mark[] } | undefined;
+  /**
+   * The face the map draws of a tile on this chronicle, the painting of the beach it draws on any
+   * tile there, and the way to paint that tile whole.
+   */
+  faceOn(
+    chronicle: Chronicle,
+    tile: Tile,
+  ):
+    | { readonly tile: Tile; shoreOn(coord: TileCoords): string | undefined; paint(): Mark[] }
+    | undefined;
   tileObjects(key: string): TileObjects;
   unitObjects(id: number): UnitObjects | undefined;
   /** These units of this chronicle painted, and their markers. */
@@ -41,6 +57,8 @@ type MapInMotion = {
   improvementOn(improvement: ImprovementId, key: string): Phaser.GameObjects.Polygon;
   /** A face from the pool the terrain crossfades on, standing in that tile's row. */
   crossfade(tile: TileCoords): Phaser.GameObjects.Image;
+  /** A face from that pool a beach fades in on, standing over the face it lies on. */
+  shoreOver(face: Phaser.GameObjects.Image): Phaser.GameObjects.Image;
   render(chronicle: Chronicle): void;
   hold(tiles: readonly TileCoords[]): Promise<void> | undefined;
 };
@@ -253,21 +271,28 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     return ended(scene.tweens.add({ targets: mark, scale: 1, duration: 250, ease: EASE }));
   };
 
-  /** Whatever is painted rising out of nothing: what a tile newly drawn fades in with. */
-  const fadeIn = (painted: readonly Mark[]): Promise<void> => {
-    for (const object of painted) object.setAlpha(0);
-    return ended(scene.tweens.add({ targets: painted, alpha: 1, duration: 400, ease: EASE }));
+  /**
+   * Whatever is painted rising out of nothing, or sinking into it: what a tile newly drawn fades in
+   * with, and a beach beside it changes by.
+   */
+  const fade = (painted: readonly Mark[], to: 0 | 1): Promise<void> => {
+    if (painted.length === 0) return Promise.resolve();
+    for (const object of painted) object.setAlpha(1 - to);
+    return ended(scene.tweens.add({ targets: painted, alpha: to, duration: 400, ease: EASE }));
   };
+
+  const fadeIn = (painted: readonly Mark[]): Promise<void> => fade(painted, 1);
 
   /**
    * The motion between two faces of one tile, and nothing where they are alike. The terrain
-   * crossfades from the start; the marks gone shrink, then the marks staying slide to their slots on
-   * the new face, then the marks come scale up in theirs.
+   * crossfades from the start, with the beach the new face wears; the marks gone shrink, then the
+   * marks staying slide to their slots on the new face, then the marks come scale up in theirs.
    */
   const between = (
     coord: TileCoords,
     from: Tile,
     to: Tile,
+    shore: string | undefined,
   ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
     const own = view.tileObjects(key);
@@ -328,7 +353,12 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     return async (token) => {
       let crossing = Promise.resolve();
       if (crossfades) {
-        crossing = fadeIn([asTerrain(view.crossfade(coord), to.terrain, coord).setPosition(x, y)]);
+        const face = asTerrain(view.crossfade(coord), to.terrain, coord).setPosition(x, y);
+        crossing = fadeIn(
+          shore === undefined
+            ? [face]
+            : [face, wearing(view.shoreOver(face), shore).setPosition(x, y)],
+        );
       }
       const drawn = drawnMarks.map((mark) => ({
         to: mark.to,
@@ -358,9 +388,41 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   };
 
   /**
-   * A change on a tile: the difference between the face the map draws of it on the chronicle it
-   * stands on and the face it draws on the change's, played after the pan that holds the tile. A
-   * tile newly drawn fades in whole; one drawn alike on both, or on neither, plays nothing.
+   * The beaches of the tiles the map draws beside a changed one whose painting the change moves, and
+   * nothing where it moves none: each new painting fading in over its tile's face, and each kept one
+   * fading out, as long as the changed tile's own fade-in takes.
+   */
+  const shoresBeside = (
+    coord: TileCoords,
+    shoreOn: (coord: TileCoords) => string | undefined,
+  ): (() => Promise<void>) | undefined => {
+    const shown = view.shown();
+    const moved = neighbours(coord).flatMap((beside) => {
+      const stood = shown === undefined ? undefined : tileAt(shown.tiles, beside);
+      if (stood === undefined || view.drawnOf(stood) === undefined) return [];
+      const { face, shore } = view.tileObjects(tileKey(beside));
+      const kept = shore.visible ? shore : undefined;
+      const painting = shoreOn(beside);
+      if (painting === kept?.frame.name) return [];
+      return [{ beside, face, kept, painting }];
+    });
+    if (moved.length === 0) return undefined;
+
+    return async () => {
+      const coming = moved.flatMap(({ beside, face, painting }) => {
+        if (painting === undefined) return [];
+        const { x, y } = positionOf(beside);
+        return [wearing(view.shoreOver(face), painting).setPosition(x, y)];
+      });
+      const going = moved.flatMap(({ kept }) => (kept === undefined ? [] : [kept]));
+      await Promise.all([fade(coming, 1), fade(going, 0)]);
+    };
+  };
+
+  /**
+   * A change on a tile: the difference between the faces the map draws of it and beside it on the
+   * chronicle it stands on and on the change's, played after the pan that holds the tile. A tile
+   * newly drawn fades in whole; one drawn alike on both, or on neither, plays nothing.
    */
   const tileChanged = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
     const leaves = tileAt(chronicle.tiles, coord);
@@ -372,11 +434,14 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const from = stood === undefined ? undefined : view.drawnOf(stood);
 
     const motion =
-      from === undefined ? () => fadeIn(to.paint()) : between(coord, from.tile, to.tile);
-    if (motion === undefined) return undefined;
+      from === undefined
+        ? () => fadeIn(to.paint())
+        : between(coord, from.tile, to.tile, to.shoreOn(coord));
+    const shores = shoresBeside(coord, to.shoreOn);
+    if (motion === undefined && shores === undefined) return undefined;
     return heldThen([coord], chronicle, () => {
       const token = takeOff();
-      return motion(token).then(() => settle(token, chronicle));
+      return Promise.all([motion?.(token), shores?.()]).then(() => settle(token, chronicle));
     });
   };
 
