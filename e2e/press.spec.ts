@@ -25,6 +25,7 @@ import {
   dragBetween,
   dragOut,
   dragSlack,
+  drawnFaces,
   eastOf,
   endedTurn,
   firstSeed,
@@ -752,8 +753,10 @@ test('a click on the top of a card of the hand while the end of turn plays out s
   const button = seen('end-turn').onScreen;
   const frame = await mapFrame(page);
   const at = { x: top.x + top.width / 2, y: (top.y + frame.y + frame.height) / 2 };
+  // The frame keeps the map's top part in it, so only a tile far enough down the disc comes this low.
+  const { q, r } = drawnFaces(opened).reduce((far, face) => (face.r > far.r ? face : far));
 
-  await carriedTo(page, playerCityTile(opened), at, `the top of ${card}`);
+  await carriedTo(page, { q, r }, at, `the top of ${card}`);
   await page.mouse.move(button.x, button.y);
   await expect.poll(() => stillAt(page, card, home)).toBe(true);
 
