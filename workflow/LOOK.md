@@ -17,13 +17,13 @@ The pool v0.0.6's rungs draw from, by rung: the ideas each one takes, the fits a
 - The faction colours are the pieces rung's first reading, a token being a disc in its faction's colour on his terrain: the civilization's gold reads 1.09 on his desert and 1.38 on his plains, the neutral's blue 1.04 on his ocean (the free samples, 2026-11-02).
 - The Stone Age's ground is grey, the user's pick over the recommended warm stone, until this pass. The civilization's colour is one `LOOK` entry until a second civilization lands (v0.0.7), then a table.
 
-## The map (cut 2026-11-03)
+## The map (cut 2026-11-03, the marks cut again 2026-11-05)
 
-The three fits below are the rings-and-marks line's reading, the last of the rung's six; improvements went to the pieces rung and the Stone ground to the meta screens rung at the cut.
+The rings-and-marks line was cut into five, one look aspect each, since each takes its own turns of mockups: the borders, the selection ring, the reach, the offensive glow, the claim marks. What leaned on a later rung went to that rung's section below. The mockup the five lines start from, real chronicles on his ground with every mark a control and the ground sampled under each ring: https://claude.ai/artifact/1N9X2ThYMan8sCB1nRKgY3 (the dump behind it is `tools/rings-pitch.test.ts`, untracked). Its readings: your gold border 1.76 against the ground under it at the mean, 1.32 on the worst tile; the culture ring 1.19, 1.02 at the worst; the neutral's blue 2.15; the selection's white 3.03. A held plain under the 60% city dim reads 1.40 against the same plain in fog.
 
-- The two-digit culture threshold on a tile (−14 on the ring opening) is accepted as it fits; re-read here.
-- The selected city tile's white ring hard to pick out among the lit tiles around it: "All good" on 2026-10-01; material, not a defect.
-- In city mode the assigned tile's diamond (`ASSIGNED_DROP` 16) covers the base of an embarked unit's hull (`HULL_DROP` 12) on a worked coast tile, all three marks still readable.
+- The two-digit culture threshold on a tile (−14 on the ring opening) is accepted as it fits; the claim marks line re-reads it.
+- The selected city tile's white ring hard to pick out among the lit tiles around it: "All good" on 2026-10-01; material, not a defect; the selection ring line re-reads it.
+- The dark edge under a coloured ring, as the card's ring wears one, is the lift the mockup pitched for every ring; each line decides it for its own.
 
 ## The pieces on the map
 
@@ -32,10 +32,15 @@ The three fits below are the rings-and-marks line's reading, the last of the run
 - A code-drawn placeholder is a flat polygon (`DOGMAS.md`): every mark drawn so far is one, and each is drawn a second time here as an asset.
 - **Units read as not interactive in city mode**: a new player could not tell why a unit would not move in city mode (playtest, 2026-11-03); the units show it, dimmed or transparent.
 - **Population on the city badge**: since the resource bar dropped population, a new player could not tell what population is (playtest, 2026-11-03); the city's badge makes it clearer.
+- **The city's own look rethought** on his building asset rather than the polygon: the population pill, and progress bars along its bottom for the food growth and perhaps the culture threshold — a lot of information condensed in one look (2026-11-05).
+- **A unit whose turn is done**, today its own shape under a 60% black scrim, decided with the unit's look: many ways to show it open up once the unit is a picture.
+- The tile an enemy has prepared on marks a unit's state, so the offensive glow line reads it against the unit's look.
 
 ## The glyphs
 
 - **One diamond for every resource glyph**: the map draws its three turned squares through one helper; the card face's and the infopanel's cost glyphs and the resource bar's chip each hand-roll their own. The day the glyphs become icons, one renderer of a resource's glyph takes all six, and the WebGL-stroke trap goes with the turned square.
+- **City mode's worked and unworked tiles**: a held tile nobody works wears a 60% black hexagon, a worked one the population's grey-purple diamond below its middle; both decided with the glyphs. In city mode the diamond (`ASSIGNED_DROP` 16) covers the base of an embarked unit's hull (`HULL_DROP` 12) on a worked coast tile, all three marks still readable.
+- **The yield overlay's dim** is reviewed with the glyphs over it, not before. The one look entry `mapDim` paints three meanings today — the overlay's dim, the held tile nobody works, the unit whose turn is done — against the look dogma; the first line that touches one of them splits the entry.
 - Shape redundancy is this rung's rule and its work: a resource glyph tells its resource by its shape as well as its colour, in every theme at once; the sentence lands on `docs/LOOK.md` at the cut. The six resource glyphs read 1.0–1.4 on his plains, hills and mountain today, food's green being the code's plain value exactly, held by the overlay's dim alone (the free samples, 2026-11-02).
 
 ## The cards and the windows
@@ -61,6 +66,7 @@ The three fits below are the rings-and-marks line's reading, the last of the run
 - **State cursors and cursor images**: the cursor says what a press would do now — not-allowed on a card the rules refuse, grab and grabbing on a hand card's drag and the map's pan — and the game draws a cursor of its own, a browser cursor image (no lag, no animation, about 32 px) or one drawn in the canvas (animated, a frame behind the mouse).
 - The cursor finding, the only hard evidence on cursors in this game: on 2026-09-21 the user learned, with real surprise, that the pointer swaps to a hand over cards, buttons, piles and window frames, after about thirty Nomadic plays. A cursor that is always there gets blindspotted whatever it is drawn as; a cursor that changes at the moment you act gets noticed, because the change is the signal. A per-age or custom-image cursor is real asset work with a real chance of going unseen; the state changes the game already computes are the cheap wins.
 - A retained object keeps its cursor where a destroyed one resets it wherever the pointer is (`docs/PHASER.md`): once the chronicle screen's parts are retained, the cursor pass inherits less to fix.
+- **The mode's frame and chip**: the map's frame in city mode's gold and the settle phase's lime, with the chip naming the mode, its own line; the user has UI ideas that would change much more of how city mode is displayed (2026-11-05).
 - **Each chronicle a new colony**: the chrome clarifies and justifies that each new chronicle is a new colony experimenting, so losing one is not that bad (playtest, 2026-11-03).
 - **Every text measured through `ownBoxOf`**: about sixty layouts in `src/ui/` read a text's padded `width`, `height` or bounds, so `addText`'s padding sits inside their spacing; routed through `ownBoxOf` each moves by 2–4 px and its spacing is looked at again, which a screen redone here does anyway. Each surface rung takes its own.
 - Fits accepted until now: the selected pile's ring reaching ~6 units past its press zone and its top 3–4 units under the "Civilization" word; a wrapped goal's second line 1.5 units off the plate's 18-unit rows ("looks nice"); the collection's count beside the price button overlapping a three-digit price by ~10 px at ten copies (price 512 at base 1), raised only when content reaches it; the cursor staying the hand over stacks and rows while a card is carried on the collection screen.

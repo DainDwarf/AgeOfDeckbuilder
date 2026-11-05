@@ -20,6 +20,10 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The rings and the marks** — the borders, the selection ring, the lit glow, the city-mode marks, the culture threshold and the badge re-read against his ground, the pool's three map fits among them, each colour pitched by its meaning.
+- **The borders** — the two cities' borders re-read against his ground: their form, a ring inside every tile held or one line around them, their weight, and what lifts them off the painting.
+- **The selection ring** — how a selected tile is shown over his painting, today's heavy white ring one of the ways explored.
+- **The reach** — the tiles a selected unit can step onto and the tiles a card is aimed at, lit over his ground.
+- **The offensive glow** — the enemies a selected unit can attack and the tile an enemy has prepared on, one glow for both over his ground.
+- **The claim marks** — how city mode shows the tiles the city may claim and the culture threshold on the selected one.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.
 - **Nomadic sites near the city** — in the Nomadic Age the sites spawn near the city, or are forced closer; balancing, taken any time.
