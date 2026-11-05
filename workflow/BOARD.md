@@ -20,7 +20,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The river** — his painted river strip laid along the edges a river runs, bending at every corner, in place of the stroked line.
+- **The river** — every run of river along the tiles the map draws is his painted river: one of his pieces on each corner it passes, turned onto the corner lattice and meeting the next halfway along the edge, his straight river pressed into his river mouth where it reaches the water, the stroked line gone. Doc-impact: `docs/LOOK.md`. [board/river.md](board/river.md)
 - **The far view** — the zoom threshold, one flat colour per terrain from his palette, the far tile's edge and the river's weight at the far view.
 - **The features** — his painted icons of the thing, a deer, a cow, a stone, a pond, with no disc or frame of their own, the icon pack entering the store.
 - **The fog and the uncharted** — what the fog's wash and the uncharted's edge become on painted ground, measured on his tiles: the wash laid on the painting itself, so the art rising above its hexagon is washed with it, the marks standing on a fogged tile dimmed each its own way, and his void tiles for the uncharted.
