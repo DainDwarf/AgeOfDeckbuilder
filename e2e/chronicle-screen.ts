@@ -125,6 +125,7 @@ type PageReading = {
   rules: Answer<string>;
   names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
+  frame: Answer<string>;
   kindLabelOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
   across: Answer<Across>;
@@ -554,8 +555,19 @@ export async function readNames(page: Page): Promise<void> {
           });
         }),
         onScreen: answer(() => {
+          const { object, camera } = found();
+          // A painted face rises above its tile: an Image is read where it stands, not at its picture's middle.
+          if (object.type === 'Image') {
+            const at = matrix();
+            return onPage(camera, at.tx, at.ty);
+          }
           const box = bounds();
-          return onPage(found().camera, box.centerX, box.centerY);
+          return onPage(camera, box.centerX, box.centerY);
+        }),
+        frame: answer(() => {
+          const drawn = (found().object as Partial<Phaser.GameObjects.Image>).frame;
+          if (drawn === undefined) throw new Error(`${name} draws no frame`);
+          return drawn.name;
         }),
         kindLabelOnScreen: answer(() => {
           const label = part(
@@ -1226,6 +1238,8 @@ export type Reading = {
   /** What each name the face's rules entry draws names, in the order it draws them. */
   readonly references: readonly Reference[];
   readonly onScreen: OnScreen;
+  /** The frame of its texture the object draws, by name. */
+  readonly frame: string;
   readonly nameOnScreen: Spot;
   readonly kindLabelOnScreen: Spot;
   /** Where the object's bounds stand on the page. */
@@ -1271,6 +1285,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get onScreen() {
       return owed(name, answered?.onScreen);
+    },
+    get frame() {
+      return owed(name, answered?.frame);
     },
     get nameOnScreen() {
       return nameAt(name, answered, 0);

@@ -8,6 +8,7 @@ import { freshCampaign } from '../src/rules/save';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
+import { paintingsOf } from '../src/ui/marks';
 import {
   admits,
   aimed,
@@ -19,6 +20,7 @@ import {
   dragBetween,
   dragOut,
   dragTiles,
+  drawnFaces,
   eastOf,
   endTurn,
   firstSeed,
@@ -205,6 +207,25 @@ test('the map is framed between the resource bar and the band, on the city', asy
   const at = await onScreen(page, `tile-${tileKey(playerCityTile(OPENED))}`);
   expect(Math.abs(at.x - (frame.x + frame.width / 2))).toBeLessThan(2);
   expect(Math.abs(at.y - (frame.y + frame.height / 2))).toBeLessThan(2);
+
+  expect(problems).toEqual([]);
+});
+
+test("every tile the map draws wears a painting of its terrain, the rows three quarters of a tile's width apart", async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await openSaved(page, OPENED);
+
+  const faces = drawnFaces(OPENED);
+  const lattice = [CENTRE, eastOf(CENTRE), { q: CENTRE.q, r: CENTRE.r + 1 }];
+  const names = new Set([...faces, ...lattice].map((tile) => `tile-${tileKey(tile)}`));
+  const seen = await readings(page, [...names]);
+  for (const face of faces) {
+    expect(paintingsOf(face.terrain)).toContain(seen(`tile-${tileKey(face)}`).frame);
+  }
+  const [origin, east, south] = lattice.map((tile) => seen(`tile-${tileKey(tile)}`).onScreen);
+  expect((south.y - origin.y) / (east.x - origin.x)).toBeCloseTo(0.75, 2);
 
   expect(problems).toEqual([]);
 });

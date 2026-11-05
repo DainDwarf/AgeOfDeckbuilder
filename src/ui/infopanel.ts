@@ -649,7 +649,7 @@ function movementOf(card: Drawing): string | undefined {
   }
 }
 
-function markOf(scene: Phaser.Scene, row: Row): Phaser.GameObjects.Polygon {
+function markOf(scene: Phaser.Scene, row: Row): Mark {
   switch (row.kind) {
     case 'building':
     case 'beside':
@@ -732,14 +732,15 @@ function amountsOf(amounts: Partial<Resources>): { resource: Resource; amount: n
   return named;
 }
 
-/** A mark drawn at the size it has on the map, brought into a box; its outline keeps its weight. */
+/** A mark drawn at the size it has on the map, brought into a box; an outline keeps its weight. */
 function fitMark(mark: Mark, box: number): Mark {
-  const shapes =
-    mark instanceof Phaser.GameObjects.Container
-      ? (mark.list as Phaser.GameObjects.Polygon[])
-      : [mark];
+  const shapes = mark instanceof Phaser.GameObjects.Container ? mark.list : [mark];
   const { width, height } = mark.getBounds();
   const scale = box / Math.max(width, height);
-  for (const shape of shapes) shape.setStrokeStyle(shape.lineWidth / scale, shape.strokeColor);
-  return mark.setScale(scale);
+  for (const shape of shapes) {
+    if (shape instanceof Phaser.GameObjects.Shape) {
+      shape.setStrokeStyle(shape.lineWidth / scale, shape.strokeColor);
+    }
+  }
+  return mark.setScale(mark.scaleX * scale);
 }

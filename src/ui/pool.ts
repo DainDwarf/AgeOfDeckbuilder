@@ -3,6 +3,7 @@ import { stopMotion } from './card-motion';
 
 /** What a paint keeps and hides rather than destroys. */
 type Retained =
+  | Phaser.GameObjects.Image
   | Phaser.GameObjects.Polygon
   | Phaser.GameObjects.Container
   | Phaser.GameObjects.Rectangle

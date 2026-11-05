@@ -13,7 +13,7 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 ## The map ✅
 
-**The terrain** is his painted hexes, drawn on his lattice: his hexes are painted for rows three quarters of a tile's width apart where a regular hexagon's rows are 0.866 of it, so the map draws its rows that much closer and every hexagon it draws squashed by the same amount, the rules' geometry untouched. His art rises above its hex into the row behind, and a tile's face is drawn behind the row in front of it.
+**The terrain** is his painted hexes, drawn on his lattice: his hexes are painted for rows three quarters of a tile's width apart where a regular hexagon's rows are 0.866 of it, so the map draws its rows that much closer and every hexagon it draws squashed by the same amount, the rules' geometry untouched. His art rises above its hex into the row behind, and a tile's face is drawn behind the row in front of it. A terrain with several paintings spreads them over its tiles, each tile's painting picked by its place on the disc, so a face never changes under the player's eye and one seed always deals one picture.
 
 **Near and far.** 🔧 The map has two drawings of its terrain and one of everything standing on it. Past a zoom threshold the terrain is his painted faces. Below it the terrain is one flat colour per terrain, drawn from his own palette, the tiles told apart by their edges, since his painting at the distance of the whole disc is a texture with nothing to read. Buildings, features, rivers, units and marks are drawn once, the same at every zoom. The threshold, the far colours and the far tile's edge are the map rung's to settle.
 

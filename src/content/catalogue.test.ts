@@ -44,6 +44,7 @@ import {
   featureMarkOf,
   groundColourOf,
   improvementMarkOf,
+  paintingsOf,
   terrainColourOf,
   unitMarkOf,
 } from '../ui/marks';
@@ -116,10 +117,10 @@ test('every unit kind of the catalogue has a name and a mark on the screen', () 
   }
 });
 
-test('every terrain of the catalogue has a name and a colour on the screen', () => {
+test('every terrain of the catalogue has a name and a painting on the screen', () => {
   for (const id of Object.keys(CATALOGUE.terrains)) {
     expect(() => terrainName(id)).not.toThrow();
-    expect(() => terrainColourOf(id)).not.toThrow();
+    expect(() => paintingsOf(id)).not.toThrow();
   }
 });
 

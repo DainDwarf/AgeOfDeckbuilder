@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The terrain** — every tile the map draws wears David Baumgart's painted face of its terrain on his lattice, the Hex Basic Terrain Set and the Hex Rivers, Coasts & Seas pack in the store with their licence record, every hexagon the map draws squashed with the lattice. Doc-impact: `docs/LOOK.md`, `docs/PHASER.md`. [board/terrain.md](board/terrain.md)
 - **The shoreline** — his coast strips laid over a water tile along each edge a land tile touches, two paintings each, the strips chosen from the tile's neighbours and repainted when one of them is terraformed.
 - **The river** — his painted river strip laid along the edges a river runs, bending at every corner, in place of the stroked line.
 - **The far view** — the zoom threshold, one flat colour per terrain from his palette, the far tile's edge and the river's weight at the far view.

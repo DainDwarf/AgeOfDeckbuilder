@@ -19,9 +19,11 @@ import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
+import { FACE_FILES, FACE_SHEET } from './ui/marks';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
+import { drawSheet, queueSheet } from './ui/sheet';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -72,6 +74,24 @@ function startFirst(screen: FirstScreen): void {
   throw new Error(`no first screen is ${JSON.stringify(unlisted)}`);
 }
 
+/** What the boot starts first: the textures loaded and drawn into their sheet, then the first screen. */
+class LoadScene extends Phaser.Scene {
+  preload(): void {
+    queueSheet(this.load, FACE_FILES);
+  }
+
+  create(): void {
+    drawSheet(this.textures, FACE_SHEET, FACE_FILES);
+    // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
+    // after it has no handle yet to be reached by, and the boot throws.
+    game.scene.start('console');
+    game.scene.start('menu');
+    startFirst(first);
+    booted();
+    this.scene.stop();
+  }
+}
+
 // Before the game: a Text keeps the fallback's measures for a face loaded after it (docs/PHASER.md).
 await Promise.all([
   loadFace('SourceSans3-Regular.ttf.woff2', '400'),
@@ -85,6 +105,7 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: css(LOOK.page),
   disableContextMenu: true,
+  render: { mipmapFilter: 'LINEAR_MIPMAP_LINEAR' },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -105,16 +126,14 @@ game.scene.add('ui', ChronicleScene);
 game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
-// The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
-// after it has no handle yet to be reached by, and the boot throws.
+// Not the map scene: a scene with files to load creates only once they have, and the chronicle screen's
+// create reaches into the map's (docs/PHASER.md).
+game.scene.add('load', LoadScene);
 game.events.once(Phaser.Core.Events.READY, () => {
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
   (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
-  game.scene.start('console');
-  game.scene.start('menu');
-  startFirst(first);
-  booted();
+  game.scene.start('load');
 });
 followWindow(game);
 followPixelRatio(game);

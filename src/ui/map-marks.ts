@@ -30,15 +30,31 @@ import { css, type Glow, LOOK } from './look';
 import {
   buildingColourOf,
   buildingMarkOf,
+  FACE_SHEET,
   featureColourOf,
   featureMarkOf,
   improvementMarkOf,
-  terrainColourOf,
+  paintingOn,
+  paintingsOf,
   unitMarkOf,
 } from './marks';
 import { text } from './text';
 
 export const TILE_SIZE = 24;
+
+/** How much the map's lattice is squashed down: rows three quarters of a tile's width apart (docs/LOOK.md). */
+export const SQUASH = 0.75 / (Math.sqrt(3) / 2);
+
+/** A hexagon as the map draws it, squashed with the lattice. */
+export function mapHexagon(size: number): number[] {
+  return hexagon(size).map((value, i) => (i % 2 === 1 ? value * SQUASH : value));
+}
+
+/** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
+const PAINTING = { width: 256, height: 384, middle: 256 };
+
+/** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
+const FACE_OVERLAP = 1.04;
 
 export const FACTION_COLOURS: Record<Faction, number> = {
   player: LOOK.civilization,
@@ -110,12 +126,15 @@ const BADGE_HEIGHT = 14;
 const BADGE_PAD = 3;
 const BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
 
-/** What the map draws a tile's things as: one polygon, or a unit's mark, a container of them. */
-export type Mark = Phaser.GameObjects.Polygon | Phaser.GameObjects.Container;
+/** What the map draws a tile's things as: its face, one polygon, or a unit's mark, a container of them. */
+export type Mark =
+  | Phaser.GameObjects.Image
+  | Phaser.GameObjects.Polygon
+  | Phaser.GameObjects.Container;
 
 /** What each tile of the disc keeps from the chronicle's open, shown as the tile stands. */
 export type TileObjects = {
-  readonly face: Phaser.GameObjects.Polygon;
+  readonly face: Phaser.GameObjects.Image;
   readonly feature: Phaser.GameObjects.Polygon;
   readonly ring: Phaser.GameObjects.Polygon;
   readonly building: Phaser.GameObjects.Polygon;
@@ -133,7 +152,7 @@ export type UnitObjects = {
 export function positionOf({ q, r }: TileCoords): { x: number; y: number } {
   return {
     x: DESIGN_WIDTH / 2 + Math.sqrt(3) * TILE_SIZE * (q + r / 2),
-    y: DESIGN_HEIGHT / 2 + 1.5 * TILE_SIZE * r,
+    y: DESIGN_HEIGHT / 2 + 1.5 * TILE_SIZE * SQUASH * r,
   };
 }
 
@@ -154,21 +173,31 @@ export function rowOf(face: Tile, x: number): { feature: number; improvements: n
   return { feature: at(0), improvements: face.improvements.map((_, index) => at(first + index)) };
 }
 
-/** The hexagonal face of a tile, at the size a tile is drawn at, with no terrain on it yet. */
-export function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, hexagon(TILE_SIZE)).setStrokeStyle(1, LOOK.mapOutline);
+/** The face of a tile, held about the middle of his hexagon, with no terrain on it yet. */
+export function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Image {
+  return scene.add.image(0, 0, FACE_SHEET).setOrigin(0.5, PAINTING.middle / PAINTING.height);
 }
 
-/** A face made to draw a terrain, whatever it drew before. */
+// The scale is set here and `asPainted` resets it to one: a face is painted before it wears anything.
+/** A face made to wear a painting at the width of a tile, whatever it wore before. */
+function wearing(face: Phaser.GameObjects.Image, painting: string): Phaser.GameObjects.Image {
+  return face
+    .setFrame(painting)
+    .setScale((Math.sqrt(3) * TILE_SIZE * FACE_OVERLAP) / PAINTING.width);
+}
+
+/** A face made to wear the painting of the terrain its tile's place on the disc picks. */
 export function asTerrain(
-  face: Phaser.GameObjects.Polygon,
+  face: Phaser.GameObjects.Image,
   terrain: Terrain,
-): Phaser.GameObjects.Polygon {
-  return face.setFillStyle(terrainColourOf(terrain));
+  coord: TileCoords,
+): Phaser.GameObjects.Image {
+  return wearing(face, paintingOn(terrain, coord));
 }
 
-export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Polygon {
-  return asTerrain(tileFace(scene), terrain);
+/** A terrain off the map: its first painting, held about the middle of the picture. */
+export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Image {
+  return wearing(tileFace(scene), paintingsOf(terrain)[0]).setOrigin(0.5, 0.5);
 }
 
 /** A polygon made to draw a building: its placeholder mark, in the colour it is known by. */
@@ -313,7 +342,7 @@ export function ringMark(
   colour: number,
   weight: number,
 ): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, hexagon(TILE_SIZE - 4), 0, 0).setStrokeStyle(weight, colour);
+  return scene.add.polygon(0, 0, mapHexagon(TILE_SIZE - 4), 0, 0).setStrokeStyle(weight, colour);
 }
 
 /** The mark of an assigned tile: a diamond in the colour population is known by. */
@@ -405,7 +434,7 @@ export function showBadge(
 /** The scrim over a held tile with nobody on it and all it carries. */
 export function cityDim(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, hexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
+    .polygon(0, 0, mapHexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
     .setName('city-dim');
 }
 
@@ -413,7 +442,7 @@ export function cityDim(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
 export function fogScrim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObjects.Polygon {
   const { x, y } = positionOf(coord);
   return scene.add
-    .polygon(x, y, hexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
+    .polygon(x, y, mapHexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
     .setName(`fog-${tileKey(coord)}`);
 }
 
@@ -422,7 +451,7 @@ function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
   const middle = positionOf(CENTRE);
   return new Phaser.Math.Vector2(
     middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
-    middle.y + (y * TILE_SIZE) / 2,
+    middle.y + ((y * TILE_SIZE) / 2) * SQUASH,
   );
 }
 
@@ -469,7 +498,7 @@ export function strokeRivers(
 
 /** A hexagon just inside a tile's face, with no glow on it yet. */
 export function unreadGlow(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, hexagon(TILE_SIZE - 2));
+  return scene.add.polygon(0, 0, mapHexagon(TILE_SIZE - 2));
 }
 
 /** An `unreadGlow` made to glow on a tile, whatever it glowed on before. */

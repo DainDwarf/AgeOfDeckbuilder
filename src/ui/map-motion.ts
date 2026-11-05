@@ -39,8 +39,8 @@ type MapInMotion = {
   paintArrivals(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
   paintHue(unit: Unit): Phaser.GameObjects.Polygon;
   improvementOn(improvement: ImprovementId, key: string): Phaser.GameObjects.Polygon;
-  /** A face from the pool the terrain crossfades on. */
-  crossfade(): Phaser.GameObjects.Polygon;
+  /** A face from the pool the terrain crossfades on, standing in that tile's row. */
+  crossfade(tile: TileCoords): Phaser.GameObjects.Image;
   render(chronicle: Chronicle): void;
   hold(tiles: readonly TileCoords[]): Promise<void> | undefined;
 };
@@ -328,7 +328,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     return async (token) => {
       let crossing = Promise.resolve();
       if (crossfades) {
-        crossing = fadeIn([asTerrain(view.crossfade(), to.terrain).setPosition(x, y)]);
+        crossing = fadeIn([asTerrain(view.crossfade(coord), to.terrain, coord).setPosition(x, y)]);
       }
       const drawn = drawnMarks.map((mark) => ({
         to: mark.to,

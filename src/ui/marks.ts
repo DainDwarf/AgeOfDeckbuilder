@@ -1,3 +1,4 @@
+import type { TileCoords } from '../rules/map';
 import { LOOK } from './look';
 
 const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
@@ -85,12 +86,49 @@ const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
   'clay-pit': [-6, -4, 6, -4, 3, 4, -3, 4],
 };
 
+/** David Baumgart's paintings of each terrain: his pack's folder, the family's name, how many he painted. */
+const TERRAIN_FACES: Readonly<
+  Record<string, { readonly pack: string; readonly family: string; readonly count: number }>
+> = {
+  plain: { pack: 'hex-basic-terrain-set', family: 'hexPlains', count: 4 },
+  forest: { pack: 'hex-basic-terrain-set', family: 'hexForestBroadleaf', count: 4 },
+  hills: { pack: 'hex-basic-terrain-set', family: 'hexHighlands', count: 4 },
+  mountain: { pack: 'hex-basic-terrain-set', family: 'hexMountain', count: 4 },
+  desert: { pack: 'hex-basic-terrain-set', family: 'hexDesertDunes', count: 4 },
+  coast: { pack: 'hex-rivers-coasts-and-seas', family: 'hexLake', count: 4 },
+  ocean: { pack: 'hex-rivers-coasts-and-seas', family: 'hexOceanCalm', count: 4 },
+};
+
+/** The sheet every terrain's paintings are drawn into. */
+export const FACE_SHEET = 'faces';
+
+/** The files a terrain's paintings are, under the assets folder; a terrain with none is refused. */
+export function paintingsOf(terrain: string): string[] {
+  const { pack, family, count } = drawn(TERRAIN_FACES, terrain, 'no painting faces the terrain');
+  return Array.from(
+    { length: count },
+    (_, at) => `store/${pack}/Tiles/${family}${String(at).padStart(2, '0')}.png`,
+  );
+}
+
+/** Every painting of every terrain: the files the face sheet is drawn from. */
+export const FACE_FILES: readonly string[] = Object.keys(TERRAIN_FACES).flatMap(paintingsOf);
+
+/** The painting a tile of the terrain wears, picked by its place on the disc alone. */
+export function paintingOn(terrain: string, { q, r }: TileCoords): string {
+  const paintings = paintingsOf(terrain);
+  let hash = Math.imul(q, 0x27d4eb2d) ^ Math.imul(r, 0x165667b1);
+  hash = Math.imul(hash ^ (hash >>> 15), 0x85ebca6b);
+  hash ^= hash >>> 13;
+  return paintings[(hash >>> 0) % paintings.length];
+}
+
 /** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */
 export function unitMarkOf(type: string): number[] {
   return drawn(UNIT_MARKS, type, 'no mark is drawn for the unit kind');
 }
 
-/** The colour a terrain's face is painted in; a terrain with no colour is refused. */
+/** The flat colour a terrain is known by; a terrain with no colour is refused. */
 export function terrainColourOf(terrain: string): number {
   return drawn(LOOK.terrain, terrain, 'no colour paints the terrain');
 }

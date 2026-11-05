@@ -30,7 +30,7 @@ import { type Faction, type Landing, type Unit, unitAt } from '../rules/units';
 import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
-import { hexagon, onResize, type Stratum } from './design-space';
+import { onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
 import { createMapCamera } from './map-camera';
 import { createMapGrab } from './map-grab';
@@ -53,12 +53,14 @@ import {
   fogScrim,
   glowTile,
   type Mark,
+  mapHexagon,
   type PopulationBadge,
   populationBadge,
   positionOf,
   ROW_RISE,
   ringMark,
   rowOf,
+  SQUASH,
   showBadge,
   showThreshold,
   strokeRim,
@@ -83,6 +85,9 @@ const GLYPH_PITCH = 8;
 /** How heavy the ring around either city's own tile is, against the one every other tile takes. */
 const CITY_RING = 4;
 const RING = 2;
+
+/** How far over its tile's row a face crossfading in stands, short of the row in front. */
+const CROSSFADE_RISE = 0.5;
 
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
@@ -266,17 +271,14 @@ export function createMapView(
     chronicle.tiles.map((tile) => {
       const key = tileKey(tile);
       const { x, y } = positionOf(tile);
-      const kept = (
-        on: Phaser.GameObjects.Layer,
-        mark: Phaser.GameObjects.Polygon,
-      ): Phaser.GameObjects.Polygon => {
+      const kept = <T extends Mark>(on: Phaser.GameObjects.Layer, mark: T): T => {
         on.add(mark.setPosition(x, y).setVisible(false));
         return mark;
       };
       return [
         key,
         {
-          face: kept(ground, tileFace(scene).setName(`tile-${key}`)),
+          face: kept(ground, tileFace(scene).setName(`tile-${key}`).setDepth(tile.r)),
           feature: kept(features, scene.add.polygon(0, 0, UNREAD).setName(`feature-${key}`)),
           ring: kept(rings, ringMark(scene, 0, RING)),
           building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
@@ -289,7 +291,7 @@ export function createMapView(
     ({ face, feature, building, scrim }) => [face, feature, building, scrim],
   );
 
-  const crossfadePool = poolOf(ground, () => tileFace(scene).setDepth(1));
+  const crossfadePool = poolOf(ground, () => tileFace(scene));
   const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
   const fogUnitPool = poolOf(marks, () => scene.add.container(0, 0));
   const waterPool = poolOf(rivers, () => scene.add.graphics().setName('river'));
@@ -308,7 +310,7 @@ export function createMapView(
   let strokedRuns: string | undefined;
 
   const selectionRing = scene.add
-    .polygon(0, 0, hexagon(TILE_SIZE - 2), 0, 0)
+    .polygon(0, 0, mapHexagon(TILE_SIZE - 2), 0, 0)
     .setStrokeStyle(4, LOOK.selected)
     .setVisible(false);
   selected.add(selectionRing);
@@ -410,7 +412,8 @@ export function createMapView(
 
   /**
    * The tile a press lands on: the one the map draws whose face it landed inside, and nothing where
-   * the map draws none. A hexagon is exactly the ground closer to its own centre than to any other.
+   * the map draws none. A regular hexagon is exactly the ground closer to its own centre than to any
+   * other, so the press is measured with the lattice's squash taken out.
    */
   const tileUnder = (x: number, y: number): TileCoords | undefined => {
     let nearest: TileCoords | undefined;
@@ -418,7 +421,7 @@ export function createMapView(
     for (const tile of shown?.tiles ?? []) {
       if (!drawn.has(tileKey(tile))) continue;
       const at = positionOf(tile);
-      const gap = Math.hypot(at.x - x, at.y - y);
+      const gap = Math.hypot(at.x - x, (at.y - y) / SQUASH);
       if (gap < best) {
         best = gap;
         nearest = { q: tile.q, r: tile.r };
@@ -548,12 +551,13 @@ export function createMapView(
     const key = tileKey(tile);
     const own = tileObjects[key];
     const painted: Mark[] = [];
-    const paint = (object: Mark): void => {
+    const paint = <T extends Mark>(object: T): T => {
       painted.push(asPainted(object));
+      return object;
     };
 
     const { x, y } = positionOf(tile);
-    paint(asTerrain(own.face, face.terrain));
+    asTerrain(paint(own.face), face.terrain, tile);
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
       paint(asFeature(own.feature, face.feature).setPosition(row.feature, y - ROW_RISE));
@@ -761,7 +765,7 @@ export function createMapView(
     },
     paintHue,
     improvementOn,
-    crossfade: () => crossfadePool.take(),
+    crossfade: (tile) => crossfadePool.take().setDepth(tile.r + CROSSFADE_RISE),
     render,
     hold: frame.hold,
   });
