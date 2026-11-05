@@ -1,5 +1,6 @@
-import type { TileCoords } from '../rules/map';
+import type { Corner, TileCoords } from '../rules/map';
 import { LOOK } from './look';
+import type { Sheet } from './sheet';
 
 const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
 
@@ -99,9 +100,6 @@ const TERRAIN_FACES: Readonly<
   ocean: { pack: 'hex-rivers-coasts-and-seas', family: 'hexOceanCalm', count: 4 },
 };
 
-/** The sheet every terrain's paintings and every shore's are drawn into. */
-export const FACE_SHEET = 'faces';
-
 /** The files a terrain's paintings are, under the assets folder; a terrain with none is refused. */
 export function paintingsOf(terrain: string): string[] {
   const { pack, family, count } = drawn(TERRAIN_FACES, terrain, 'no painting faces the terrain');
@@ -131,17 +129,99 @@ export function shorePaintingsOf(land: readonly boolean[]): string[] {
   return mask.includes('1') ? shoreFiles(mask) : [];
 }
 
-/** Every painting of every terrain and of every shore: the files the face sheet is drawn from. */
-export const FACE_FILES: readonly string[] = [
-  ...Object.keys(TERRAIN_FACES).flatMap(paintingsOf),
-  ...Array.from({ length: 2 ** SHORE_EDGES.length - 1 }, (_, at) =>
-    shoreFiles((at + 1).toString(2).padStart(SHORE_EDGES.length, '0')),
-  ).flat(),
-];
+/** The sheet every terrain's paintings and every shore's are drawn into. */
+export const FACE_SHEET: Sheet = {
+  key: 'faces',
+  files: [
+    ...Object.keys(TERRAIN_FACES).flatMap(paintingsOf),
+    ...Array.from({ length: 2 ** SHORE_EDGES.length - 1 }, (_, at) =>
+      shoreFiles((at + 1).toString(2).padStart(SHORE_EDGES.length, '0')),
+    ).flat(),
+  ],
+  side: 4096,
+};
+
+/** How many edges his river pieces and his river mouths name, one character of a mask each. */
+const RIVER_EDGES = 6;
+
+/**
+ * How many paintings he made of each piece a corner of a river wears, by its mask: his edges in the
+ * order his coasts name them, every mask whose edges lie two apart.
+ */
+const RIVER_PIECES: Readonly<Record<string, number>> = {
+  '000001': 1,
+  '000010': 1,
+  '000100': 1,
+  '001000': 1,
+  '010000': 1,
+  '100000': 1,
+  '010100': 2,
+  '101000': 1,
+  '010001': 1,
+  '100010': 1,
+  '000101': 2,
+  '001010': 2,
+  '010101': 1,
+  '101010': 1,
+};
+
+/** How many paintings he made of his river mouth along each edge. */
+const MOUTH_PAINTINGS = 2;
+
+/** The mask naming these of his edges, each by its place in the mask. */
+function riverMask(edges: ReadonlySet<number>): string {
+  return Array.from({ length: RIVER_EDGES }, (_, at) => (edges.has(at) ? '1' : '0')).join('');
+}
+
+/** The files that many paintings of one of his river pieces are, under the assets folder. */
+function riverFiles(folder: string, family: string, mask: string, count: number): string[] {
+  return Array.from(
+    { length: count },
+    (_, at) =>
+      `store/hex-rivers-coasts-and-seas/${folder}/${family}${mask}-${String(at).padStart(2, '0')}.png`,
+  );
+}
+
+/** The paintings of his river piece whose edges are these; edges no piece of his has are refused. */
+export function riverPaintingsOf(edges: ReadonlySet<number>): string[] {
+  const mask = riverMask(edges);
+  const count = drawn(RIVER_PIECES, mask, 'no river piece is painted along the edges');
+  return riverFiles('Rivers', 'hexRiver', mask, count);
+}
+
+/** The paintings of his river mouth along that one of his edges. */
+export function mouthPaintingsOf(edge: number): string[] {
+  return riverFiles('River Mouths', 'hexRiverMouth', riverMask(new Set([edge])), MOUTH_PAINTINGS);
+}
+
+/** His straight river, from his east edge to his west. */
+export const STRAIGHT_RIVER: string = riverFiles('Rivers', 'hexRiver', '001001', 1)[0];
+
+/** The sheet every river piece, his straight river and every river mouth are drawn into. */
+export const RIVER_SHEET: Sheet = {
+  key: 'rivers',
+  files: [
+    ...Object.entries(RIVER_PIECES).flatMap(([mask, count]) =>
+      riverFiles('Rivers', 'hexRiver', mask, count),
+    ),
+    STRAIGHT_RIVER,
+    ...Array.from({ length: RIVER_EDGES }, (_, edge) => mouthPaintingsOf(edge)).flat(),
+  ],
+  side: 2048,
+};
 
 /** The one of the paintings a tile wears, picked by its place on the disc alone. */
 export function paintingOn(paintings: readonly string[], { q, r }: TileCoords): string {
-  let hash = Math.imul(q, 0x27d4eb2d) ^ Math.imul(r, 0x165667b1);
+  return pickedBy(paintings, q, r);
+}
+
+/** The one of the paintings a corner of the lattice wears, picked by its place alone, as a tile's is. */
+export function paintingAtCorner(paintings: readonly string[], { x, y }: Corner): string {
+  return pickedBy(paintings, x, y);
+}
+
+function pickedBy(paintings: readonly string[], one: number, other: number): string {
+  let hash = Math.imul(one, 0x27d4eb2d) ^ Math.imul(other, 0x165667b1);
   hash = Math.imul(hash ^ (hash >>> 15), 0x85ebca6b);
   hash ^= hash >>> 13;
   return paintings[(hash >>> 0) % paintings.length];

@@ -53,6 +53,7 @@ import { arrived, claimable, cultureThreshold, growthThreshold } from '../src/ru
 import { enemyEntering } from '../src/rules/enemies';
 import {
   CENTRE,
+  cornerKey,
   distance,
   neighbours,
   riversAlong,
@@ -1442,9 +1443,10 @@ export async function scrolled(page: Page, panel = 'browse'): Promise<Scrolled> 
   return (await reading(page, panel)).scrolled;
 }
 
-/** How many pieces of river the map draws on a chronicle: one for each run along a tile it charted. */
+/** How many pieces of river the map draws on a chronicle: one on each corner of the runs along the tiles it charted. */
 export function riverRuns(chronicle: Chronicle): number {
-  return riversAlong(chronicle.rivers, new Set(chronicle.snapshots.map(tileKey))).length;
+  const runs = riversAlong(chronicle.rivers, new Set(chronicle.snapshots.map(tileKey)));
+  return new Set(runs.flat().map(cornerKey)).size;
 }
 
 /**

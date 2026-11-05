@@ -4,8 +4,9 @@ import { byHand, type UnitCommand } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
 import {
+  cornerKey,
+  cornersOf,
   type ImprovementId,
-  riversAlong,
   sameTile,
   type Tile,
   type TileCoords,
@@ -66,7 +67,6 @@ import {
   showBadge,
   showThreshold,
   strokeRim,
-  strokeRivers,
   TILE_SIZE,
   type TileObjects,
   thresholdMark,
@@ -77,7 +77,15 @@ import {
   wearing,
 } from './map-marks';
 import { createMapMotion } from './map-motion';
+import {
+  asPressedStraight,
+  asRiverMouth,
+  asRiverPiece,
+  type RiverPiece,
+  riverPieces,
+} from './map-rivers';
 import type { MapStrata } from './map-scene';
+import { RIVER_SHEET } from './marks';
 import { asPainted, poolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';
 
@@ -311,7 +319,10 @@ export function createMapView(
   const crossfadePool = poolOf(ground, () => tileFace(scene));
   const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
   const fogUnitPool = poolOf(marks, () => scene.add.container(0, 0));
-  const waterPool = poolOf(rivers, () => scene.add.graphics().setName('river'));
+  const riverPool = poolOf(rivers, () => scene.add.image(0, 0, RIVER_SHEET.key));
+  const straightPool = poolOf(rivers, () =>
+    scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
+  );
   const glyphPool = poolOf(glyphs, () => diamond(scene, GLYPH, 0));
   const litPool = poolOf(lighted, () => unreadGlow(scene));
   const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
@@ -320,11 +331,8 @@ export function createMapView(
     ringMark(scene, LOOK.reading.culture, RING).setName('claimable'),
   );
 
-  /** Every outline of a river, on one surface under all the water. */
-  const riverOutlines = scene.add.graphics();
-  rivers.add(riverOutlines);
-  /** The runs the rivers stand stroked along. */
-  let strokedRuns: string | undefined;
+  /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
+  let riversWorn = new Map<string, { readonly piece: RiverPiece; readonly painted: Mark[] }>();
 
   const selectionRing = scene.add
     .polygon(0, 0, mapHexagon(TILE_SIZE - 2), 0, 0)
@@ -626,20 +634,32 @@ export function createMapView(
     for (const tile of shown.tiles) paintTile(shown, seen, faces, tile);
   };
 
-  /**
-   * The rivers stroked again on the chronicle the map stands on, cut to the runs along the tiles it
-   * draws, once those change: charting one draws the water beside it.
-   */
-  const paintRivers = (): void => {
-    if (shown === undefined) return;
-    const runs = riversAlong(shown.rivers, drawn);
-    const stroked = JSON.stringify(runs);
-    if (stroked === strokedRuns) return;
-    strokedRuns = stroked;
+  /** The piece each corner of a river wears on a chronicle, by the corner's key, read off what the map draws of it. */
+  const piecesOn = (chronicle: Chronicle, seen: Drawing): Map<string, RiverPiece> =>
+    riverPieces(catalogue, chronicle.rivers, seen.drawn, facesIn(seen, chronicle.tiles));
 
-    riverOutlines.clear();
-    waterPool.hide();
-    strokeRivers(riverOutlines, () => waterPool.take().clear(), runs);
+  /** A corner's piece painted from the pools: a mouth with the straight pressed into it. */
+  const paintPiece = (piece: RiverPiece): Mark[] => {
+    switch (piece.kind) {
+      case 'piece':
+        return [asRiverPiece(riverPool.take(), piece)];
+      case 'mouth':
+        return [
+          asPressedStraight(straightPool.take(), piece),
+          asRiverMouth(riverPool.take(), piece),
+        ];
+    }
+  };
+
+  /** Every corner of every river along the tiles the map draws, wearing its piece on the chronicle it stands on. */
+  const paintRivers = (): void => {
+    riverPool.hide();
+    straightPool.hide();
+    riversWorn = new Map();
+    if (shown === undefined) return;
+    for (const [key, piece] of piecesOn(shown, { drawn, live, charted })) {
+      riversWorn.set(key, { piece, painted: paintPiece(piece) });
+    }
   };
 
   /** The tile the map rings, and nothing while none is selected. */
@@ -798,6 +818,21 @@ export function createMapView(
     improvementOn,
     crossfade: (tile) => crossfadePool.take().setDepth(tile.r + CROSSFADE_RISE),
     shoreOver: (face) => crossfadePool.take().setDepth(face.depth + SHORE_RISE),
+    riversAt: (chronicle, tile) => {
+      const pieces = piecesOn(chronicle, drawing(chronicle));
+      const moved = cornersOf(tile).flatMap((corner) => {
+        const key = cornerKey(corner);
+        const kept = riversWorn.get(key);
+        const piece = pieces.get(key);
+        if (piece?.painting === kept?.piece.painting) return [];
+        return [{ kept, piece }];
+      });
+      if (moved.length === 0) return undefined;
+      return () => ({
+        coming: moved.flatMap(({ piece }) => (piece === undefined ? [] : paintPiece(piece))),
+        going: moved.flatMap(({ kept }) => kept?.painted ?? []),
+      });
+    },
     render,
     hold: frame.hold,
   });

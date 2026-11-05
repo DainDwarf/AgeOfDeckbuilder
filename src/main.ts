@@ -19,7 +19,7 @@ import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
-import { FACE_FILES, FACE_SHEET } from './ui/marks';
+import { FACE_SHEET, RIVER_SHEET } from './ui/marks';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
@@ -74,14 +74,17 @@ function startFirst(screen: FirstScreen): void {
   throw new Error(`no first screen is ${JSON.stringify(unlisted)}`);
 }
 
-/** What the boot starts first: the textures loaded and drawn into their sheet, then the first screen. */
+/** The sheets the boot draws its paintings into. */
+const SHEETS = [FACE_SHEET, RIVER_SHEET];
+
+/** What the boot starts first: the textures loaded and drawn into their sheets, then the first screen. */
 class LoadScene extends Phaser.Scene {
   preload(): void {
-    queueSheet(this.load, FACE_FILES);
+    for (const sheet of SHEETS) queueSheet(this.load, sheet);
   }
 
   create(): void {
-    drawSheet(this.textures, FACE_SHEET, FACE_FILES);
+    for (const sheet of SHEETS) drawSheet(this.textures, sheet);
     // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
     // after it has no handle yet to be reached by, and the boot throws.
     game.scene.start('console');

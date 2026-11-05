@@ -26,6 +26,9 @@ import {
 } from './map-marks';
 import { asPainted } from './pool';
 
+/** The paintings a change brings beside its tile, painted, and the ones it takes away. */
+type Swap = { readonly coming: readonly Mark[]; readonly going: readonly Mark[] };
+
 /** What a stage's motion reads and repaints of the map, which keeps all of it. */
 type MapInMotion = {
   readonly features: Phaser.GameObjects.Layer;
@@ -59,6 +62,11 @@ type MapInMotion = {
   crossfade(tile: TileCoords): Phaser.GameObjects.Image;
   /** A face from that pool a beach fades in on, standing over the face it lies on. */
   shoreOver(face: Phaser.GameObjects.Image): Phaser.GameObjects.Image;
+  /**
+   * The river pieces at the corners of a tile whose piece this chronicle changes, and nothing where
+   * it changes none: the way to paint each new one, and each kept one with it.
+   */
+  riversAt(chronicle: Chronicle, tile: TileCoords): (() => Swap) | undefined;
   render(chronicle: Chronicle): void;
   hold(tiles: readonly TileCoords[]): Promise<void> | undefined;
 };
@@ -388,9 +396,19 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   };
 
   /**
+   * The paintings a change brings beside its tile swapped for the ones it takes away: each new one
+   * fading in and each kept one fading out, as long as the changed tile's own fade-in takes.
+   */
+  const swapped =
+    (paint: () => Swap): (() => Promise<void>) =>
+    async () => {
+      const { coming, going } = paint();
+      await Promise.all([fade(coming, 1), fade(going, 0)]);
+    };
+
+  /**
    * The beaches of the tiles the map draws beside a changed one whose painting the change moves, and
-   * nothing where it moves none: each new painting fading in over its tile's face, and each kept one
-   * fading out, as long as the changed tile's own fade-in takes.
+   * nothing where it moves none, each new painting over its tile's face.
    */
   const shoresBeside = (
     coord: TileCoords,
@@ -408,21 +426,20 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     });
     if (moved.length === 0) return undefined;
 
-    return async () => {
-      const coming = moved.flatMap(({ beside, face, painting }) => {
+    return swapped(() => ({
+      coming: moved.flatMap(({ beside, face, painting }) => {
         if (painting === undefined) return [];
         const { x, y } = positionOf(beside);
         return [wearing(view.shoreOver(face), painting).setPosition(x, y)];
-      });
-      const going = moved.flatMap(({ kept }) => (kept === undefined ? [] : [kept]));
-      await Promise.all([fade(coming, 1), fade(going, 0)]);
-    };
+      }),
+      going: moved.flatMap(({ kept }) => (kept === undefined ? [] : [kept])),
+    }));
   };
 
   /**
-   * A change on a tile: the difference between the faces the map draws of it and beside it on the
-   * chronicle it stands on and on the change's, played after the pan that holds the tile. A tile
-   * newly drawn fades in whole; one drawn alike on both, or on neither, plays nothing.
+   * A change on a tile: what the map draws of it, beside it and at its corners, from the chronicle it
+   * stands on to the change's, played after the pan that holds the tile. A tile newly drawn fades in
+   * whole; one drawn alike on both, or on neither, plays nothing.
    */
   const tileChanged = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
     const leaves = tileAt(chronicle.tiles, coord);
@@ -438,10 +455,14 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         ? () => fadeIn(to.paint())
         : between(coord, from.tile, to.tile, to.shoreOn(coord));
     const shores = shoresBeside(coord, to.shoreOn);
-    if (motion === undefined && shores === undefined) return undefined;
+    const riversAt = view.riversAt(chronicle, coord);
+    const rivers = riversAt === undefined ? undefined : swapped(riversAt);
+    if (motion === undefined && shores === undefined && rivers === undefined) return undefined;
     return heldThen([coord], chronicle, () => {
       const token = takeOff();
-      return Promise.all([motion?.(token), shores?.()]).then(() => settle(token, chronicle));
+      return Promise.all([motion?.(token), shores?.(), rivers?.()]).then(() =>
+        settle(token, chronicle),
+      );
     });
   };
 

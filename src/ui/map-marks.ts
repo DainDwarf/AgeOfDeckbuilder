@@ -8,7 +8,6 @@ import {
   type FeatureId,
   type ImprovementId,
   neighbours,
-  type River,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -55,7 +54,7 @@ export function mapHexagon(size: number): number[] {
 }
 
 /** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
-const PAINTING = { width: 256, height: 384, middle: 256 };
+export const PAINTING = { width: 256, height: 384, middle: 256 };
 
 /** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
 const FACE_OVERLAP = 1.04;
@@ -85,12 +84,7 @@ const CITY_BADGE_INKS: Record<CityFaction, number> = {
 const HULL: number[] = [-16, -4, 16, -4, 10, 4, -10, 4];
 const HULL_DROP = 12;
 
-/**
- * Placeholder primitives until the art pass: a river a line along its corners on the map, and a
- * bent band where it stands as a mark of its own, both in its own blue.
- */
-const RIVER_WIDTH = 5;
-const RIVER_OUTLINE_WIDTH = 7;
+/** Placeholder primitive until the art pass: a river standing as a mark of its own, a bent band in its own blue. */
 const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
 
 /** Placeholder primitive until the art pass: the disc's rim a plain line around the map. */
@@ -180,7 +174,7 @@ export function rowOf(face: Tile, x: number): { feature: number; improvements: n
 
 /** The face of a tile, held about the middle of his hexagon, with no terrain on it yet. */
 export function tileFace(scene: Phaser.Scene): Phaser.GameObjects.Image {
-  return scene.add.image(0, 0, FACE_SHEET).setOrigin(0.5, PAINTING.middle / PAINTING.height);
+  return scene.add.image(0, 0, FACE_SHEET.key).setOrigin(0.5, PAINTING.middle / PAINTING.height);
 }
 
 // The scale is set here and `asPainted` resets it to one: a face is painted before it wears anything.
@@ -476,7 +470,7 @@ export function fogScrim(scene: Phaser.Scene, coord: TileCoords): Phaser.GameObj
 }
 
 /** Where a corner of the tile lattice stands on the map's own surface. */
-function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
+export function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
   const middle = positionOf(CENTRE);
   return new Phaser.Math.Vector2(
     middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
@@ -496,33 +490,6 @@ export function strokeRim(rim: Phaser.GameObjects.Graphics, tiles: readonly Tile
       rim.strokePoints(shared.map(cornerAt), false);
     }
   }
-}
-
-/**
- * A line along a river's corners, in one colour at one width. Phaser bevels the joints of a stroked
- * path and leaves its ends square, so a disc at every corner rounds both.
- */
-function strokeRiver(
-  surface: Phaser.GameObjects.Graphics,
-  along: Phaser.Math.Vector2[],
-  colour: number,
-  width: number,
-): void {
-  surface.lineStyle(width, colour);
-  surface.strokePoints(along, false);
-  surface.fillStyle(colour);
-  for (const at of along) surface.fillCircle(at.x, at.y, width / 2);
-}
-
-/** Every outline on one surface under all the water, so two rivers meeting read as one course. */
-export function strokeRivers(
-  outlines: Phaser.GameObjects.Graphics,
-  water: () => Phaser.GameObjects.Graphics,
-  runs: readonly River[],
-): void {
-  const along = runs.map((run) => run.map(cornerAt));
-  for (const run of along) strokeRiver(outlines, run, LOOK.mapOutline, RIVER_OUTLINE_WIDTH);
-  for (const run of along) strokeRiver(water(), run, LOOK.river, RIVER_WIDTH);
 }
 
 /** A hexagon just inside a tile's face, with no glow on it yet. */

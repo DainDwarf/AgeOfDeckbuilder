@@ -7,7 +7,6 @@ type Retained =
   | Phaser.GameObjects.Polygon
   | Phaser.GameObjects.Container
   | Phaser.GameObjects.Rectangle
-  | Phaser.GameObjects.Graphics
   | Phaser.GameObjects.Text;
 
 /** An object as a paint finds it, whatever a motion left: shown, whole, at full strength. */
