@@ -60,8 +60,8 @@ export function paintFaded(
   strength: number,
   depth: number,
 ): void {
-  const reach = 2.5 * depth;
-  const steps = Math.ceil(reach);
+  const extent = 2.5 * depth;
+  const steps = Math.ceil(extent);
   context.save();
   context.beginPath();
   trace(context);
@@ -72,8 +72,8 @@ export function paintFaded(
   context.strokeStyle = css(colour);
   let before = 0;
   for (let at = 0; at < steps; at++) {
-    const outer = (reach * (steps - at)) / steps;
-    const inner = (reach * (steps - at - 1)) / steps;
+    const outer = (extent * (steps - at)) / steps;
+    const inner = (extent * (steps - at - 1)) / steps;
     const reached = fadedAt(strength, depth, (outer + inner) / 2);
     context.lineWidth = 2 * outer;
     context.globalAlpha = 1 - (1 - reached) / (1 - before);

@@ -39,6 +39,10 @@ export type Look = {
   /** The strength the selection's line along the selected tile's edge rests at. */
   readonly selectionLine: number;
   readonly selectedEdge: number;
+  /** The strength the reach's band rests at where it meets the reach's line. */
+  readonly reachBand: number;
+  /** The strength the reach's line along the region's edges rests at. */
+  readonly reachLine: number;
   readonly pin: number;
   /** The dark line on each side of a pinned plate's edge. */
   readonly pinEdge: number;
@@ -141,6 +145,8 @@ export const LOOK: Look = {
   selectionRim: 0.8,
   selectionLine: 0.9,
   selectedEdge: 0x0d1014,
+  reachBand: 0.6,
+  reachLine: 0.9,
   pin: 0xf2f6ff,
   pinEdge: 0x0d1014,
   pinMark: 0xb4453c,

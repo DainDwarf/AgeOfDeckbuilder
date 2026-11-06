@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CENTRE, type Corner, cornersOf, neighbours, type TileCoords, tileKey } from '../rules/map';
-import { borderLoops, type Point, type Stretch } from './border-loops';
+import { borderLoops, edgeLoops, type Point, type Stretch } from './border-loops';
 
 /** The lattice's own corners, standing where the lattice names them. */
 const onLattice = ({ x, y }: Corner): Point => ({ x, y });
@@ -54,5 +54,24 @@ describe('a city’s border', () => {
     expect(loops.map((loop) => loop.length).sort((a, b) => a - b)).toEqual([12, 36]);
     expect(loops.every(closes)).toBe(true);
     expect(wornBy(loops)).toEqual(Object.fromEntries(ring.map((tile) => [tileKey(tile), 8])));
+  });
+});
+
+describe('a region’s edges', () => {
+  it('run round a ring of tiles straight from corner to corner, the hole inside it a loop of its own', () => {
+    const ring: TileCoords[] = neighbours(CENTRE);
+    const loops = edgeLoops(ring, onLattice);
+    const lattice = new Set(ring.flatMap(cornersOf).map(({ x, y }) => `${x},${y}`));
+
+    expect(loops.map((loop) => loop.length).sort((a, b) => a - b)).toEqual([6, 18]);
+    expect(loops.every(closes)).toBe(true);
+    expect(wornBy(loops)).toEqual(Object.fromEntries(ring.map((tile) => [tileKey(tile), 4])));
+    expect(
+      loops
+        .flat()
+        .every(
+          ({ from, to }) => lattice.has(`${from.x},${from.y}`) && lattice.has(`${to.x},${to.y}`),
+        ),
+    ).toBe(true);
   });
 });

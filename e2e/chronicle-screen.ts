@@ -151,6 +151,8 @@ declare global {
     readName?: (name: string) => PageReading;
     /** The named Layer's or container's own objects that are shown. */
     shownIn?: (name: string) => Phaser.GameObjects.GameObject[] | undefined;
+    /** The keys of the tiles the map lights for a unit, the reach's landings and the units glowed. */
+    litKeys?: () => string[];
     /**
      * How many faces the map shows, the marks of its terrain named for their tile, the beaches and
      * the voids left out; and how many of them that tint darkens.
@@ -452,6 +454,17 @@ export async function readNames(page: Page): Promise<void> {
     window.shownIn = (name) => {
       const parent = window.named?.(name)?.object as Phaser.GameObjects.Container | undefined;
       return parent?.list.filter((child) => isShown(child as Parented));
+    };
+
+    // The reach is one layer carrying its landings' keys; a glow carries its own tile's.
+    window.litKeys = () => {
+      const lit = window.shownIn?.('lit');
+      if (lit === undefined) throw new Error('the map is not on the chronicle screen');
+      return lit.flatMap((mark) => {
+        const keys = (mark.getData('landings') ?? [mark.getData('tile')]) as (string | undefined)[];
+        if (keys.includes(undefined)) throw new Error(`the lit ${mark.type} names no tile`);
+        return keys as string[];
+      });
     };
 
     window.faceCounts = (fog) => {
@@ -2465,7 +2478,7 @@ export function ringedTile(page: Page): Promise<string | undefined> {
 }
 
 /**
- * The tile the map rings, how many marks it lights for a unit, and the infopanel's card with where
+ * The tile the map rings, how many tiles it lights for a unit, and the infopanel's card with where
  * it stands on the map, if up.
  */
 export function marked(page: Page): Promise<{
@@ -2475,7 +2488,7 @@ export function marked(page: Page): Promise<{
 }> {
   return page.evaluate(() => {
     const ring = window.named?.('selected')?.object;
-    const lit = window.shownIn?.('lit');
+    const lit = window.litKeys?.();
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
     if (ring === undefined || lit === undefined || panel === undefined) {
       throw new Error('the map is not on the chronicle screen');
@@ -2493,9 +2506,9 @@ export function marked(page: Page): Promise<{
 /** The tiles the map lights for the unit it is lighting for, by tile key, in key order. */
 export function litTiles(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const lit = window.shownIn?.('lit');
-    if (lit === undefined) throw new Error('the map is not on the chronicle screen');
-    return lit.map((glow) => glow.getData('tile') as string).sort();
+    const lit = window.litKeys?.();
+    if (lit === undefined) throw new Error('no chronicle was opened on this page');
+    return lit.sort();
   });
 }
 

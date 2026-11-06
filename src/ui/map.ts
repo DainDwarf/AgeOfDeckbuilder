@@ -35,7 +35,7 @@ import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
-import { createBorder, type HeldAsDrawn } from './map-border';
+import { createBorder, createReach, type HeldAsDrawn, type Reach } from './map-border';
 import { createMapCamera } from './map-camera';
 import { selectionRim } from './map-fade';
 import { createMapGrab } from './map-grab';
@@ -263,6 +263,7 @@ export function createMapView(
   const features = group(strata.terrain, 'features');
   const border = createBorder(scene, group(strata.terrain, 'border'), chronicle.tiles);
   const lighted = group(strata.lit, 'lit');
+  const reach = createReach(scene, lighted, chronicle.tiles);
   const hues = group(strata.lit, 'prepared');
   const improvements = group(strata.buildings, 'improvements');
   const built = group(strata.buildings, 'buildings');
@@ -716,9 +717,9 @@ export function createMapView(
     | undefined;
 
   /**
-   * What the unit of the player's standing on a tile can do: every tile its move points reach lit,
-   * and every unit it can attack glowed in the enemies' own colour. Nothing is lit while the city
-   * marks stand, and a press commands only a unit lit here.
+   * What the unit of the player's standing on a tile can do: every tile its move points reach drawn
+   * as one region with its own tile, and every unit it can attack glowed in the enemies' own colour.
+   * Nothing is lit while the city marks stand, and a press commands only a unit lit here.
    */
   const lightUnit = (tile: TileCoords | undefined): void => {
     const current = shown;
@@ -727,15 +728,15 @@ export function createMapView(
         ? undefined
         : unitAt(current.units, tile);
     lit = undefined;
+    let reached: Reach | undefined;
     if (current !== undefined && standing?.faction === 'player') {
       const { landings, targets } = byHand(catalogue, current, standing);
       lit = { unit: standing.id, landings, targets: targets.map((other) => other.tile) };
+      reached = { own: standing.tile, landings: landings.map((landing) => landing.tile) };
     }
+    reach.paint(reached);
 
     litPool.hide();
-    for (const landing of lit?.landings ?? []) {
-      asGlow(litPool.take(), landing.tile, LOOK.lit, LOOK.litGlow);
-    }
     for (const coord of lit?.targets ?? []) {
       asGlow(litPool.take(), coord, FACTION_COLOURS.enemy, LOOK.targetGlow);
     }
