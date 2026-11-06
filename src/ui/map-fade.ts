@@ -90,10 +90,11 @@ export function tracedPolygon(context: CanvasRenderingContext2D, points: readonl
 }
 
 /**
- * The selection's rim, hidden: the tile's hexagon faded in from its edge in the selection's white,
- * painted once at four pixels to the unit and shown at a quarter of it.
+ * Paints the selection's rim once, the tile's hexagon faded in from its edge in the selection's
+ * white at four pixels to the unit, and answers the way to make a rim of it on no tile, shown at a
+ * quarter of its painting.
  */
-export function selectionRim(scene: Phaser.Scene): Phaser.GameObjects.Image {
+export function selectionRims(scene: Phaser.Scene): () => Phaser.GameObjects.Image {
   const texture = sceneCanvas(scene, RIM_KEY, RIM_SIDE);
   const context = texture.getContext();
   const middle = positionOf(CENTRE);
@@ -107,8 +108,5 @@ export function selectionRim(scene: Phaser.Scene): Phaser.GameObjects.Image {
     RIM_DEPTH * RIM_PIXELS,
   );
   texture.refresh();
-  return scene.add
-    .image(0, 0, RIM_KEY)
-    .setScale(1 / RIM_PIXELS)
-    .setVisible(false);
+  return () => scene.add.image(0, 0, RIM_KEY).setScale(1 / RIM_PIXELS);
 }

@@ -66,7 +66,6 @@ export type Look = {
   readonly fog: number;
   /** The strength a city's border band rests at where it meets the line. */
   readonly borderBand: number;
-  readonly lit: number;
   readonly river: number;
   readonly built: number;
   readonly population: number;
@@ -115,7 +114,6 @@ export type Look = {
   readonly flintTint: Wash;
   readonly scrim: Wash;
   readonly consolePanel: Wash;
-  readonly litGlow: Glow;
   readonly targetGlow: Glow;
   readonly preparedGlow: Glow;
   readonly reading: Readonly<Record<Resource, number>>;
@@ -165,7 +163,6 @@ export const LOOK: Look = {
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,
   borderBand: 0.6,
-  lit: 0xf2f6ff,
   river: 0x62a9e0,
   built: 0xcfc6b4,
   population: 0x6b6b7d,
@@ -202,7 +199,6 @@ export const LOOK: Look = {
   flintTint: { colour: 0x5c6370, strength: 0.65 },
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
-  litGlow: { fill: 0.4, stroke: 0.9 },
   targetGlow: { fill: 0.4, stroke: 0.9 },
   preparedGlow: { fill: 0.4, stroke: 0.9 },
   reading: {

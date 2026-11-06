@@ -37,7 +37,7 @@ import { onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
 import { createBorder, createReach, type HeldAsDrawn, type Reach } from './map-border';
 import { createMapCamera } from './map-camera';
-import { selectionRim } from './map-fade';
+import { selectionRims } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
   asBuilding,
@@ -57,7 +57,6 @@ import {
   diamond,
   FACTION_COLOURS,
   featureDisc,
-  glowTile,
   lyingOf,
   type Mark,
   mapHexagon,
@@ -344,12 +343,16 @@ export function createMapView(
   /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
   let riversWorn = new Map<string, { readonly piece: RiverPiece; readonly painted: Mark[] }>();
 
-  const rim = selectionRim(scene);
-  const selectionLine = scene.add
-    .polygon(0, 0, mapHexagon(TILE_SIZE - 0.5), 0, 0)
-    .setStrokeStyle(1, LOOK.selected, LOOK.selectionLine)
-    .setVisible(false);
-  selected.add([rim, selectionLine]);
+  const rimOn = selectionRims(scene);
+  /** The selection's rim and line on no tile. */
+  const selectionMarks = (): (Phaser.GameObjects.Image | Phaser.GameObjects.Polygon)[] => [
+    rimOn(),
+    scene.add
+      .polygon(0, 0, mapHexagon(TILE_SIZE - 0.5), 0, 0)
+      .setStrokeStyle(1, LOOK.selected, LOOK.selectionLine),
+  ];
+  const ringing = selectionMarks().map((mark) => mark.setVisible(false));
+  selected.add(ringing);
 
   const thresholdOnTile = thresholdMark(scene);
   thresholds.add(thresholdOnTile.root);
@@ -387,35 +390,31 @@ export function createMapView(
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * What the dim is laid under rather than over, lifted onto the dim's stratum only while it stands:
-   * the tiles lit and the units glowed, and the glow a card is aimed by. The ring and the culture
-   * threshold are not here — their own strata already stand over the dim's.
+   * The tiles lit and the units glowed, under the dim's stratum but lifted onto it while it stands.
+   * What else must stand over the dim lives on a stratum above it, or is added to `lighted`.
    */
-  const overDim = new Set<Phaser.GameObjects.Layer>([lighted]);
-
   const liftOverDim = (): void => {
-    const onto = showing.size > 0 ? strata.dim : strata.lit;
-    for (const lifted of overDim) onto.layer.add(lifted);
+    (showing.size > 0 ? strata.dim : strata.lit).layer.add(lighted);
   };
 
-  /** The ground every aim runs on: its own catcher, a glow to paint, and the tile presses held off. */
+  /**
+   * The ground every aim runs on: its own catcher, a group for its rims on the selection's stratum,
+   * and the tile presses held off.
+   */
   const openAim = (): {
     catcher: Phaser.GameObjects.Zone;
-    glow: Phaser.GameObjects.Layer;
+    rims: Phaser.GameObjects.Layer;
     close: () => void;
   } => {
     presser?.disableInteractive();
     const catcher = frame.catcherZone('aim');
-    const glow = group(strata.lit, 'aim-lit');
-    overDim.add(glow);
-    liftOverDim();
+    const rims = group(strata.ring, 'aim-lit');
     return {
       catcher,
-      glow,
+      rims,
       close: (): void => {
         catcher.destroy();
-        overDim.delete(glow);
-        glow.destroy();
+        rims.destroy();
         presser?.setInteractive();
       },
     };
@@ -938,10 +937,10 @@ export function createMapView(
       threshold =
         cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
-      for (const shown of [rim, selectionLine]) shown.setVisible(tile !== undefined);
+      for (const shown of ringing) shown.setVisible(tile !== undefined);
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
-        for (const shown of [rim, selectionLine]) shown.setPosition(x, y);
+        for (const shown of ringing) shown.setPosition(x, y);
       }
       paintThreshold();
       paintYields();
@@ -983,9 +982,12 @@ export function createMapView(
       refused: (at: PressedTile) => void,
       released: () => void,
     ): () => void {
-      const { catcher, glow, close } = openAim();
+      const { catcher, rims, close } = openAim();
       const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
-      for (const coord of lit) glow.add(glowTile(scene, coord, LOOK.lit, LOOK.litGlow));
+      for (const coord of lit) {
+        const { x, y } = positionOf(coord);
+        rims.add(scene.add.container(x, y, selectionMarks()).setData('tile', tileKey(coord)));
+      }
 
       const click = (tile: TileCoords): void => {
         if (lit.some((coord) => sameTile(coord, tile))) chosen(tile);

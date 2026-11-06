@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The aim** — every tile a card being aimed admits wears the selection's rim, the same image and line as the selected tile's, over every dim and never darkened by the fog; the flat glow per tile is gone, and the lit tiles' ledger entries with it; `e2e/settle.spec.ts` and `e2e/hand-aim.spec.ts` pass. Doc-impact: `docs/LOOK.md`. [board/the-aim.md](board/the-aim.md)
 - **The offensive glow** — the enemies a selected unit can attack and the tile an enemy has prepared on, one glow for both over his ground.
 - **The claim marks** — how city mode shows the tiles the city may claim and the culture threshold on the selected one.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.

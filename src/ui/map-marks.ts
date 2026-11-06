@@ -639,12 +639,3 @@ export function asGlow(
     .setStrokeStyle(2, colour, glow.stroke)
     .setData('tile', tileKey(coord));
 }
-
-export function glowTile(
-  scene: Phaser.Scene,
-  coord: TileCoords,
-  colour: number,
-  glow: Glow,
-): Phaser.GameObjects.Polygon {
-  return asGlow(unreadGlow(scene), coord, colour, glow);
-}
