@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { CENTRE, type Corner, cornersOf, neighbours, type TileCoords, tileKey } from '../rules/map';
-import { borderLoops, edgeLoops, type Point, type Stretch } from './border-loops';
+import {
+  borderLoops,
+  edgeLoops,
+  lineAlong,
+  type Point,
+  type Rounding,
+  type Stretch,
+} from './border-loops';
 
 /** The lattice's own corners, standing where the lattice names them. */
 const onLattice = ({ x, y }: Corner): Point => ({ x, y });
@@ -20,9 +27,15 @@ function closes(loop: readonly Stretch[]): boolean {
   });
 }
 
+/** Each loop's stretches in its order, its corners' halves one after the other. */
+function stretchesOf(loops: readonly (readonly Rounding[])[]): Stretch[][] {
+  return loops.map((loop) => loop.flat());
+}
+
 describe('a city’s border', () => {
   it('runs round a lone tile as one closed line through the middle of its six edges, two stretches of it along each edge', () => {
-    const loops = borderLoops([CENTRE], onLattice);
+    const roundings = borderLoops([CENTRE], onLattice);
+    const loops = stretchesOf(roundings);
     const corners = cornersOf(CENTRE);
     const middles = corners.map((corner, at) => {
       const next = corners[(at + 1) % corners.length];
@@ -32,13 +45,13 @@ describe('a city’s border', () => {
     expect(loops).toHaveLength(1);
     expect(closes(loops[0])).toBe(true);
     expect(wornBy(loops)).toEqual({ [tileKey(CENTRE)]: 12 });
-    const met = loops[0].filter((_, at) => at % 2 === 0).map(({ from }) => `${from.x},${from.y}`);
+    const met = roundings[0].map(([{ from }]) => `${from.x},${from.y}`);
     expect(new Set(met)).toEqual(new Set(middles));
   });
 
   it('runs round a tile and the six beside it as one line, which the tile inside wears nothing of', () => {
     const held = [CENTRE, ...neighbours(CENTRE)];
-    const loops = borderLoops(held, onLattice);
+    const loops = stretchesOf(borderLoops(held, onLattice));
 
     expect(loops).toHaveLength(1);
     expect(closes(loops[0])).toBe(true);
@@ -49,11 +62,29 @@ describe('a city’s border', () => {
 
   it('runs round a hole of ground it does not hold as a line of its own, inside the line round the tiles', () => {
     const ring: TileCoords[] = neighbours(CENTRE);
-    const loops = borderLoops(ring, onLattice);
+    const loops = stretchesOf(borderLoops(ring, onLattice));
 
     expect(loops.map((loop) => loop.length).sort((a, b) => a - b)).toEqual([12, 36]);
     expect(loops.every(closes)).toBe(true);
     expect(wornBy(loops)).toEqual(Object.fromEntries(ring.map((tile) => [tileKey(tile), 8])));
+  });
+});
+
+describe('a line along some of a border’s tiles', () => {
+  it('runs along every edge of theirs on the loops, and on to the middle of the edge of each other tile it turns onto', () => {
+    const [claimed] = neighbours(CENTRE);
+    const loops = borderLoops([CENTRE, claimed], onLattice);
+    const line = lineAlong(loops, (tile) => tileKey(tile) === tileKey(claimed));
+    const middles = cornersOf(CENTRE).map((corner, at, corners) => {
+      const next = corners[(at + 1) % corners.length];
+      return `${(corner.x + next.x) / 2},${(corner.y + next.y) / 2}`;
+    });
+    const ends = line.flatMap(({ from, to }) => [`${from.x},${from.y}`, `${to.x},${to.y}`]);
+    const loose = ends.filter((end) => ends.indexOf(end) === ends.lastIndexOf(end));
+
+    expect(wornBy([line])).toEqual({ [tileKey(claimed)]: 10, [tileKey(CENTRE)]: 2 });
+    expect(loose).toHaveLength(2);
+    expect(loose.every((end) => middles.includes(end))).toBe(true);
   });
 });
 

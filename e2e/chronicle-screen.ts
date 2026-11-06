@@ -2512,6 +2512,22 @@ export function litTiles(page: Page): Promise<string[]> {
   });
 }
 
+/** The tiles the claim marks stand on, by tile key, in key order: none while they stand down. */
+export function claimMarked(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    // The claim marks are one layer carrying their tiles' keys.
+    const marks = window.shownIn?.('claim-marks');
+    if (marks === undefined) throw new Error('the map is not on the chronicle screen');
+    return marks
+      .flatMap((mark) => {
+        const keys = mark.getData('claimable') as string[] | undefined;
+        if (keys === undefined) throw new Error(`the claim marks' ${mark.type} names no tile`);
+        return keys;
+      })
+      .sort();
+  });
+}
+
 export function offsetOf(page: Page, panel = 'browse'): Promise<number> {
   return scrolled(page, panel).then(({ offset }) => offset);
 }

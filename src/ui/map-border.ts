@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { cornersOf, type TileCoords, tileKey } from '../rules/map';
 import type { CityFaction } from '../rules/state';
-import { borderLoops, edgeLoops, type Point, type Stretch } from './border-loops';
+import { borderLoops, edgeLoops, lineAlong, type Point, type Stretch } from './border-loops';
 import { LOOK } from './look';
 import { paintFaded, sceneCanvas, tracedPolygon } from './map-fade';
 import { CITY_COLOURS, CITY_FACTIONS, cornerAt, darkened, hexagonOn, TILE_SIZE } from './map-marks';
@@ -22,6 +22,7 @@ const SEAM = 0.5;
 
 const BAND_KEY = 'border-band';
 const REACH_KEY = 'reach-band';
+const CLAIM_KEY = 'claim-band';
 
 /** A tile the map draws as held, and whether it draws it in fog. */
 export type HeldAsDrawn = { readonly tile: TileCoords; readonly inFog: boolean };
@@ -37,6 +38,17 @@ export type Reach = { readonly own: TileCoords; readonly landings: readonly Tile
 export type ReachView = {
   /** The region of a unit's landings and its own tile, carrying the landings' keys; hidden where it has no landing. */
   paint(reach: Reach | undefined): void;
+};
+
+/** The tiles a city holds and the tiles it may claim. */
+export type Claiming = {
+  readonly held: readonly TileCoords[];
+  readonly claimable: readonly TileCoords[];
+};
+
+export type ClaimMarksView = {
+  /** The claim marks, carrying the claimable tiles' keys; hidden where none may be claimed. */
+  paint(claiming: Claiming | undefined): void;
 };
 
 function traced(context: CanvasRenderingContext2D, stretch: Stretch): void {
@@ -60,30 +72,22 @@ function tracedLoops(context: CanvasRenderingContext2D, loops: readonly Stretch[
   }
 }
 
-/**
- * A holder's band: its loops faded inward in its colour, once over the tiles it holds in sight and
- * once, darkened, over the ones it holds in fog.
- */
+/** Tiles a band is painted over, and the colour it is painted in there. */
+type BandShare = { readonly tiles: readonly TileCoords[]; readonly colour: number };
+
+/** A band: these loops faded inward, over each share's tiles in that share's colour. */
 function paintBand(
   context: CanvasRenderingContext2D,
   loops: readonly Stretch[][],
-  held: readonly HeldAsDrawn[],
-  colour: number,
+  shares: readonly BandShare[],
 ): void {
-  for (const inFog of [false, true]) {
-    const tiles = held.filter((drawn) => drawn.inFog === inFog);
+  for (const { tiles, colour } of shares) {
     if (tiles.length === 0) continue;
     context.save();
     context.beginPath();
-    for (const { tile } of tiles) tracedPolygon(context, hexagonOn(tile, TILE_SIZE + SEAM));
+    for (const tile of tiles) tracedPolygon(context, hexagonOn(tile, TILE_SIZE + SEAM));
     context.clip();
-    paintFaded(
-      context,
-      (on) => tracedLoops(on, loops),
-      darkened(colour, inFog),
-      LOOK.borderBand,
-      BAND_DEPTH,
-    );
+    paintFaded(context, (on) => tracedLoops(on, loops), colour, LOOK.borderBand, BAND_DEPTH);
     context.restore();
   }
 }
@@ -108,21 +112,21 @@ function stroked(line: Phaser.GameObjects.Graphics, stretch: Stretch): void {
   throw new Error(`no stretch runs ${JSON.stringify(unlisted)}`);
 }
 
-/** A line along every stretch of these loops, that wide, each stretch stroked in its own colour at that strength. */
+/** A line along these stretches, that wide, each stretch stroked in its own colour at that strength. */
 function paintLine(
   line: Phaser.GameObjects.Graphics,
-  loops: readonly Stretch[][],
+  stretches: readonly Stretch[],
   width: number,
   colourOf: (stretch: Stretch) => number,
   strength: number,
 ): void {
   line.clear();
-  for (const stretch of loops.flat()) {
+  for (const stretch of stretches) {
     // One `lineStyle` per stretch: `borderColours` in `e2e/chronicle-screen.ts` counts them.
     line.lineStyle(width, colourOf(stretch), strength);
     stroked(line, stretch);
   }
-  line.setVisible(loops.length > 0);
+  line.setVisible(stretches.length > 0);
 }
 
 /**
@@ -200,9 +204,16 @@ export function createBorder(
         const loops = borderLoops(
           held[whose].map(({ tile }) => tile),
           cornerAt,
+        ).map((loop) => loop.flat());
+        paintBand(
+          context,
+          loops,
+          [false, true].map((inFog) => ({
+            tiles: held[whose].filter((drawn) => drawn.inFog === inFog).map(({ tile }) => tile),
+            colour: darkened(CITY_COLOURS[whose], inFog),
+          })),
         );
-        paintBand(context, loops, held[whose], CITY_COLOURS[whose]);
-        paintLine(lines[whose], loops, LINE, colourOf, 1);
+        paintLine(lines[whose], loops.flat(), LINE, colourOf, 1);
         standing ||= loops.length > 0;
       }
       band.setVisible(standing);
@@ -249,7 +260,52 @@ export function createReach(
         REACH_DEPTH,
       );
       canvas.texture.refresh();
-      paintLine(line, loops, REACH_LINE, () => LOOK.selected, LOOK.reachLine);
+      paintLine(line, loops.flat(), REACH_LINE, () => LOOK.selected, LOOK.reachLine);
+    },
+  };
+}
+
+/**
+ * The claim marks on the map's own surface, in a layer of its own on this one: the border's band
+ * painted on one canvas over the disc, at a pixel to the unit, and the border's line over it, both
+ * run round the tiles held and the tiles claimable together and kept to the claimable ones.
+ */
+export function createClaimMarks(
+  scene: Phaser.Scene,
+  on: Phaser.GameObjects.Layer,
+  tiles: readonly TileCoords[],
+): ClaimMarksView {
+  const canvas = discCanvas(scene, CLAIM_KEY, tiles);
+  const line = scene.add.graphics();
+  const layer = scene.add.layer([canvas.image, line]).setVisible(false);
+  on.add(layer);
+
+  /** What the marks were last drawn from: the held tiles' keys and the claimable tiles'. */
+  let drawnFrom: string | undefined;
+
+  return {
+    paint(claiming): void {
+      const claimable = claiming?.claimable ?? [];
+      layer.setData('claimable', claimable.map(tileKey));
+      layer.setVisible(claimable.length > 0);
+      if (claiming === undefined || claimable.length === 0) return;
+      const from = [claiming.held, claimable]
+        .map((group) => group.map(tileKey).join(' '))
+        .join('|');
+      if (from === drawnFrom) return;
+      drawnFrom = from;
+
+      const keys = new Set(claimable.map(tileKey));
+      const roundings = borderLoops([...claiming.held, ...claimable], cornerAt);
+      const colour = LOOK.reading.culture;
+      paintBand(
+        canvas.wipe(),
+        roundings.map((loop) => loop.flat()),
+        [{ tiles: claimable, colour }],
+      );
+      canvas.texture.refresh();
+      const along = lineAlong(roundings, (tile) => keys.has(tileKey(tile)));
+      paintLine(line, along, LINE, () => colour, 1);
     },
   };
 }

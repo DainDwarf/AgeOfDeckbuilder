@@ -35,7 +35,13 @@ import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
-import { createBorder, createReach, type HeldAsDrawn, type Reach } from './map-border';
+import {
+  createBorder,
+  createClaimMarks,
+  createReach,
+  type HeldAsDrawn,
+  type Reach,
+} from './map-border';
 import { createMapCamera } from './map-camera';
 import { selectionRims } from './map-fade';
 import { createMapGrab } from './map-grab';
@@ -64,7 +70,6 @@ import {
   populationBadge,
   positionOf,
   ROW_RISE,
-  ringMark,
   rowOf,
   SQUASH,
   shoreOn,
@@ -190,7 +195,7 @@ export type MapView = {
    */
   showYields(shown: ReadonlySet<Resource>): void;
   /**
-   * Marks the tiles the population stands on, dims the held ones with nobody on them, rings the ones
+   * Marks the tiles the population stands on, dims the held ones with nobody on them, marks the ones
    * the city may claim, and shows what every tile inside the border yields, whatever the overlay is
    * showing: what the map shows while city mode is on.
    */
@@ -260,6 +265,7 @@ export function createMapView(
   const ground = group(strata.terrain, 'terrain');
   const rivers = group(strata.terrain, 'rivers');
   const features = group(strata.terrain, 'features');
+  const claimMarks = createClaimMarks(scene, group(strata.terrain, 'claim-marks'), chronicle.tiles);
   const border = createBorder(scene, group(strata.terrain, 'border'), chronicle.tiles);
   const lighted = group(strata.lit, 'lit');
   const reach = createReach(scene, lighted, chronicle.tiles);
@@ -336,9 +342,6 @@ export function createMapView(
   const litPool = poolOf(lighted, () => unreadGlow(scene));
   const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
   const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
-  const claimablePool = poolOf(cityMarks, () =>
-    ringMark(scene, LOOK.reading.culture, 2).setName('claimable'),
-  );
 
   /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
   let riversWorn = new Map<string, { readonly piece: RiverPiece; readonly painted: Mark[] }>();
@@ -545,15 +548,17 @@ export function createMapView(
 
   /**
    * City mode's tiles: a mark under every tile the population stands on, a scrim over every held
-   * tile with nobody on it, and culture's own ring around every tile the city may claim. An assign
-   * and a claim change them, so a render repaints them.
+   * tile with nobody on it, and the claim marks on every tile the city may claim. An assign and a
+   * claim change them, so a render repaints them.
    */
   const paintCityMarks = (): void => {
     assignedPool.hide();
     cityDimPool.hide();
-    claimablePool.hide();
     assignedMarks = new Map();
-    if (!marking || shown === undefined) return;
+    if (!marking || shown === undefined) {
+      claimMarks.paint(undefined);
+      return;
+    }
 
     for (const coord of shown.held) {
       if (!assignedTo(shown, coord)) {
@@ -564,10 +569,7 @@ export function createMapView(
       const at = assignedAt(coord);
       assignedMarks.set(tileKey(coord), assignedPool.take().setPosition(at.x, at.y));
     }
-    for (const coord of claimable(catalogue, shown, 'player')) {
-      const { x, y } = positionOf(coord);
-      claimablePool.take().setPosition(x, y);
-    }
+    claimMarks.paint({ held: shown.held, claimable: claimable(catalogue, shown, 'player') });
   };
 
   /** A placed improvement from the pool, read for that improvement on the tile of that key. */

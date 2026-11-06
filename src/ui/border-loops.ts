@@ -33,6 +33,9 @@ export type Curved = {
 
 export type Stretch = Straight | Curved;
 
+/** The curve rounding one corner of a loop, as its two halves in the loop's order. */
+export type Rounding = readonly [Curved, Curved];
+
 function halfway(a: Point, b: Point): Point {
   return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
 }
@@ -41,9 +44,9 @@ function halfway(a: Point, b: Point): Point {
  * One loop of edges curved: the line through the middle of each edge, each corner the control point
  * of the curve to the next middle, that curve cut where it comes nearest the corner.
  */
-function curved(edges: readonly Straight[]): Curved[] {
+function curved(edges: readonly Straight[]): Rounding[] {
   const middle = (edge: Straight): Point => halfway(edge.from, edge.to);
-  return edges.flatMap((edge, at) => {
+  return edges.map((edge, at) => {
     const next = edges[(at + 1) % edges.length];
     const from = middle(edge);
     const corner = edge.to;
@@ -101,10 +104,24 @@ export function edgeLoops(
   return loops;
 }
 
-/** A city's border round the tiles it holds: their loops of edges, curved. */
+/** A city's border round the tiles it holds: their loops of edges, curved, corner by corner. */
 export function borderLoops(
   held: readonly TileCoords[],
   place: (corner: Corner) => Point,
-): Curved[][] {
+): Rounding[][] {
   return edgeLoops(held, place).map(curved);
+}
+
+/**
+ * The stretches of curved loops that run along a tile `along` admits, each with the other half of
+ * its corner's curve, so the line runs on to the middle of the edge it turns onto.
+ */
+export function lineAlong(
+  loops: readonly Rounding[][],
+  along: (tile: TileCoords) => boolean,
+): Curved[] {
+  return loops
+    .flat()
+    .filter(([one, other]) => along(one.tile) || along(other.tile))
+    .flat();
 }

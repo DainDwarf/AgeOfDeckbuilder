@@ -14,6 +14,7 @@ import {
   besideTiles,
   budget,
   chronicleOf,
+  claimMarked,
   click,
   consoleKey,
   counted,
@@ -66,6 +67,11 @@ function firstClaim(chronicle: Chronicle): TileCoords {
   if (tile === undefined)
     throw new Error(`turn ${chronicle.turn} holds no tile the city may claim`);
   return tile;
+}
+
+/** The tiles the city may claim, by tile key, in key order. */
+function claimableKeys(chronicle: Chronicle): string[] {
+  return claimable(CATALOGUE, chronicle, 'player').map(tileKey).sort();
 }
 
 /** The chronicle the command leaves; a refusal throws. */
@@ -503,15 +509,15 @@ test('city mode marks every tile the city can claim, and leaving it takes the ma
   const bare = bareTurn();
 
   await openSaved(page, bare);
-  expect(await counted(page, 'claimable')).toBe(0);
+  expect(await claimMarked(page)).toEqual([]);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, bare, 'player').length);
+  expect(await claimMarked(page)).toEqual(claimableKeys(bare));
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
-  expect(await counted(page, 'claimable')).toBe(0);
+  expect(await claimMarked(page)).toEqual([]);
 
   expect(problems).toEqual([]);
 });
@@ -596,7 +602,7 @@ test('a second click the city can pay for claims the tile, which stays selected 
   expect(await counted(page, 'assigned')).toBe(claimed.assigned.length);
   // The tile claimed is a claim no longer, and the marks are the claims the moved border opens.
   expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(nearTile));
-  expect(await counted(page, 'claimable')).toBe(claimable(CATALOGUE, claimed, 'player').length);
+  expect(await claimMarked(page)).toEqual(claimableKeys(claimed));
   // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(nearTile));
   expect(await thresholdShown(page)).toBeUndefined();

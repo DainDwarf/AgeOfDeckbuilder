@@ -19,7 +19,7 @@ import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
-import { css, type Glow, LOOK, multiplied } from './look';
+import { css, type Glow, LOOK, multiplied, type Wash } from './look';
 import {
   buildingColourOf,
   buildingMarkOf,
@@ -120,17 +120,20 @@ const HERD_SPREAD = { x: 16, y: 5 };
 const ASSIGNED_GLYPH = 12;
 const ASSIGNED_DROP = 16;
 
-/** The culture threshold on a tile: how the number reads, and the glyph beside it with its gap. */
+/**
+ * The culture threshold on a tile: how the number reads, the glyph beside it with its gap, and the
+ * plate under the pair, how tall it is and its room on each side of the pair.
+ */
 const THRESHOLD_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '12px',
   fontStyle: 'bold',
   color: css(LOOK.thresholdInk),
-  stroke: css(LOOK.mapOutline),
-  strokeThickness: 2.5,
 };
 const THRESHOLD_GLYPH = 8;
 const THRESHOLD_GAP = 3;
+const THRESHOLD_PLATE_HEIGHT = 16;
+const THRESHOLD_PLATE_PAD = 4;
 
 /**
  * A city's badge: how far right of and below its tile's middle its centre stands, how tall it is,
@@ -509,48 +512,77 @@ export function asYield(
   return mark.setFillStyle(LOOK.reading[resource]).setName(`yield-${resource}`);
 }
 
-/** A hexagon just inside a tile's face, stroked in the colour given. */
-export function ringMark(
-  scene: Phaser.Scene,
-  colour: number,
-  weight: number,
-): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, mapHexagon(TILE_SIZE - 4), 0, 0).setStrokeStyle(weight, colour);
-}
-
 /** The mark of an assigned tile: a diamond in the colour population is known by. */
 export function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
   return diamond(scene, ASSIGNED_GLYPH, LOOK.population).setName('assigned');
 }
 
-/** What a claim asks for: its number and its resource's own diamond, in one container. */
+/** A rim round a pill: how wide it is, and its colour at its strength. */
+type Rim = Wash & { readonly width: number };
+
+/**
+ * A pill about its graphics' own point, `width` wide and as round at the ends as it is tall, filled
+ * and rimmed as given; drawn again only where its width moved.
+ */
+function drawPill(
+  drawn: { readonly pill: Phaser.GameObjects.Graphics; width: number | undefined },
+  width: number,
+  height: number,
+  fill: Wash,
+  rim: Rim,
+): void {
+  if (width === drawn.width) return;
+  drawn.width = width;
+  const box = { x: -width / 2, y: -height / 2 };
+  const radius = height / 2;
+  drawn.pill
+    .clear()
+    .fillStyle(fill.colour, fill.strength)
+    .fillRoundedRect(box.x, box.y, width, height, radius)
+    .lineStyle(rim.width, rim.colour, rim.strength)
+    .strokeRoundedRect(box.x, box.y, width, height, radius);
+}
+
+/**
+ * What a claim asks for: its number and its resource's own diamond on their plate, in one container,
+ * and the width the plate is drawn at, none until it is.
+ */
 type ThresholdMark = {
   readonly root: Phaser.GameObjects.Container;
+  readonly pill: Phaser.GameObjects.Graphics;
   readonly number: Phaser.GameObjects.Text;
   readonly glyph: Phaser.GameObjects.Rectangle;
+  width: number | undefined;
 };
 
 export function thresholdMark(scene: Phaser.Scene): ThresholdMark {
+  const pill = scene.add.graphics();
   const number = addText(scene, 0, 0, '', THRESHOLD_STYLE).setOrigin(0.5, 0.5);
   const glyph = diamond(scene, THRESHOLD_GLYPH, 0);
-  const root = scene.add.container(0, 0, [number, glyph]).setName('threshold').setVisible(false);
-  return { root, number, glyph };
+  const root = scene.add
+    .container(0, 0, [pill, number, glyph])
+    .setName('threshold')
+    .setVisible(false);
+  return { root, pill, number, glyph, width: undefined };
 }
 
 /**
  * What a claim asks for standing on its tile: the threshold as a minus and its number, its
- * resource's own diamond beside it, the pair centred on the tile's middle.
+ * resource's own diamond beside it, the pair centred on the tile's middle on a plate drawn as the
+ * feature disc is, widening about its middle with the number.
  */
-export function showThreshold(
-  { root, number, glyph }: ThresholdMark,
-  coord: TileCoords,
-  cost: Cost,
-): void {
+export function showThreshold(mark: ThresholdMark, coord: TileCoords, cost: Cost): void {
+  const { root, number, glyph } = mark;
   number.setText(text('threshold.culture', { culture: cost.amount }));
   glyph.setFillStyle(LOOK.reading[cost.resource]);
-  const width = number.width + THRESHOLD_GAP + THRESHOLD_GLYPH;
-  number.setX((number.width - width) / 2);
+  const own = ownBoxOf(number).width;
+  const width = own + THRESHOLD_GAP + THRESHOLD_GLYPH;
+  number.setX((own - width) / 2);
   glyph.setX((width - THRESHOLD_GLYPH) / 2);
+  drawPill(mark, width + 2 * THRESHOLD_PLATE_PAD, THRESHOLD_PLATE_HEIGHT, LOOK.featureDisc, {
+    ...LOOK.featureDiscRim,
+    width: DISC_RIM,
+  });
   const { x, y } = positionOf(coord);
   root.setPosition(x, y).setVisible(true);
 }
@@ -591,17 +623,13 @@ export function showBadge(
     .setVisible(true);
   pill.setPosition(at.x, at.y).setName(`population-${key}`).setVisible(true);
 
-  const width = Math.max(BADGE_HEIGHT, ownBoxOf(number).width + 2 * BADGE_PAD);
-  if (width === badge.width) return;
-  badge.width = width;
-  const box = { x: -width / 2, y: -BADGE_HEIGHT / 2, width, height: BADGE_HEIGHT };
-  const radius = BADGE_HEIGHT / 2;
-  pill
-    .clear()
-    .fillStyle(CITY_COLOURS[whose])
-    .fillRoundedRect(box.x, box.y, box.width, box.height, radius)
-    .lineStyle(1.5, LOOK.mapOutline)
-    .strokeRoundedRect(box.x, box.y, box.width, box.height, radius);
+  drawPill(
+    badge,
+    Math.max(BADGE_HEIGHT, ownBoxOf(number).width + 2 * BADGE_PAD),
+    BADGE_HEIGHT,
+    { colour: CITY_COLOURS[whose], strength: 1 },
+    { colour: LOOK.mapOutline, strength: 1, width: 1.5 },
+  );
 }
 
 /** The scrim over a held tile with nobody on it and all it carries. */
