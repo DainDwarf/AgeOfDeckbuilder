@@ -58,7 +58,7 @@ function namingAnswer(dealt: Chronicle): {
   throw new Error(`the ${deal.event} offers no answer naming a card`);
 }
 
-test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card, and one named on a card shown large stands over it', async ({
+test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -113,6 +113,21 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('a card named on a card shown large stands over it at a right click on the name', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const dealt = firstDealtAlone(LEAN_SEASON);
+  const { answer, at, named, name: naming } = namingAnswer(dealt);
+  const answering = `deal-card-${at}`;
+
+  await openSaved(page, dealt);
+  await restedOnDeal(page);
+  expect(await cardOnFace(page, answering)).toBe(answer);
 
   const card = await onScreen(page, answering);
   await page.mouse.click(card.x, card.y, { button: 'right' });
