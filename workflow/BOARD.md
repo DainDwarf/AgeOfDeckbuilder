@@ -20,6 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The claim marks** — how city mode shows the tiles the city may claim and the culture threshold on the selected one.
+- **The claim marks** — in city mode the tiles the player's city may claim wear a ghost of the border, the border's own line and band in culture's colour kept to the claimable tiles and drawn under the border and the pieces, and the culture threshold the selected tile wears stands on the feature disc's plate; the city-mode spec reads the ghost's tiles against the rules' claimable. Doc-impact: `docs/LOOK.md`. [board/claim-marks.md](board/claim-marks.md)
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.
 - **Nomadic sites near the city** — in the Nomadic Age the sites spawn near the city, or are forced closer; balancing, taken any time.
