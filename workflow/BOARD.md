@@ -8,7 +8,7 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **The pieces on the map** — units, buildings, sites, improvements (his painted icons or a change to the tile's own drawing, mocked up at its intake), the city badge, a health bar on units, a building's reach drawn.
+- **The pieces on the map** — units, buildings, sites, improvements (his painted icons or a change to the tile's own drawing, mocked up at its intake), the marks a unit wears — its turn done, prepared, attacked by the selected unit, aimed at by a card — on the token, the city badge, a health bar on units, a building's reach drawn.
 - **The glyphs** — the resource glyphs and every icon the game reads, drawn through one glyph renderer from licensed glyphs in the locked style, on the cards, the yield overlay, the resource bar, the infopanel and the meta screens alike.
 - **The cards and the windows** — the face, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
 - **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
@@ -20,7 +20,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The offensive glow** — the enemies a selected unit can attack and the tile an enemy has prepared on, one glow for both over his ground.
 - **The claim marks** — how city mode shows the tiles the city may claim and the culture threshold on the selected one.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.
 - **Nomadic sites near the city** — in the Nomadic Age the sites spawn near the city, or are forced closer; balancing, taken any time.
