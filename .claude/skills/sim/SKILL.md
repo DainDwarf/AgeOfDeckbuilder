@@ -17,6 +17,8 @@ One job: run `npm run sim` on the cell asked for and hand back what it printed. 
 ## Rules
 
 - Numbers, never a diagnosis: no reading of why, no balance recommendation, no fix. A surprising number is said as the number, and the next measurement is offered.
+- The cell asked for runs alone: a baseline, a second cell or a comparison runs on the user's word and never beside the run they asked for.
+- A difference between two cells is read as the persona's only once what else differs between them is listed — the technologies learned, the deck, the switches, the region — and a count of zero is checked against the column's distinct values before it is said.
 - A stop is an error to investigate, never a result, but for a stop on the cap with the capstone off, which is such a cell's ending, and a stop as stuck on a deal that refuses a fixed answer, which is the reading. A row whose ending is `stopped` is reported first, with its seed and cause, and its trace is the next measurement.
 - Which seed to replay is read off the rows; a run is never repeated in search of one.
 - No script over the rows and none over the rules: a question about the rows is a query, and one the rows cannot answer is a column to add, reported for a board line.
