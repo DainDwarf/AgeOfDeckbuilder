@@ -23,6 +23,7 @@ The rings-and-marks line was cut into five, one look aspect each, since each tak
 
 - The two-digit culture threshold on a tile (−14 on the ring opening) is accepted as it fits; the claim marks line re-reads it.
 - The dark edge under a coloured ring, as the card's ring wears one, is the lift the mockup pitched for every ring; each line decides it for its own, and the selection ring took none: its mockup, seven treatments over his ground with the light sampled before and after, is https://claude.ai/artifact/MQaXg3Mpk4b2cEfztCa4NY, and the reach and the offensive glow lines open on it.
+- The reach line was cut in two on 2026-11-06: the unit's landings this turn are one region, since a multi-turn walk (Motion) would make every walkable tile admitted and leave the light a reading of this turn, and a card's tiles are a scattered handful, so they wear the selection's rim in a colour of their own. A card aimed at a unit went to the pieces rung, a breath on the aimable tiles to Motion.
 
 ## The pieces on the map
 
@@ -34,6 +35,7 @@ The rings-and-marks line was cut into five, one look aspect each, since each tak
 - **The city's own look rethought** on his building asset rather than the polygon: the population pill, and progress bars along its bottom for the food growth and perhaps the culture threshold — a lot of information condensed in one look (2026-11-05).
 - **A unit whose turn is done**, today its own shape under a 60% black scrim, decided with the unit's look: many ways to show it open up once the unit is a picture.
 - The tile an enemy has prepared on marks a unit's state, so the offensive glow line reads it against the unit's look.
+- **A card aimed at a unit marks the unit**: a card aimed at a unit, and one played through a unit beside its tile, light the unit's tile today in the aim's own mark; once the token carries his figure the mark goes onto the token, read against the unit's look (2026-11-06).
 
 ## The glyphs
 
@@ -95,6 +97,8 @@ The rings-and-marks line was cut into five, one look aspect each, since each tak
 - **Income flies in from the tiles**: at the income stage each yielding tile sends its resource to the bar.
 - **A unit's movement along its path**: three parts resting on the rules handing out the route, which today know a landing's cost and a move's two ends only. Each its own line when taken: the path shown for a unit of the player's on a hover or a drag, with how many turns the way takes; the move played along that path instead of one jump from source to target, for the player's units and the others alike; a move ordered over several turns, the unit's aim then admitting any tile it can walk to, and how the rest of the way is walked — a phase at the start or the end of the turn, a button beside the walk through every unit, a continue-movement button or key — with every tile admitted, how another tile is selected while a unit is being aimed is that line's question.
 - **The selection breathes**: the selected tile's rim loops slowly between its resting strength and a lower one, about two seconds a cycle, for as long as the tile stays selected; the user wants it not swayed by the Animation speed setting, so the chronicle screen page's every-motion sentence takes an exception for an idle loop (2026-11-05).
+- **The aimable tiles breathe faster**: the rim the tiles a card is aimed at wear loops as the selection's does, a faster cycle, for as long as the card is being aimed (2026-11-06).
+- The reach's region is what a unit's path is drawn over: the path lines read the reach as shipped, and the reach was designed as a ground a path can run over (2026-11-06).
 - **Unit legibility**: a unit forgotten at the end of a turn feels like a slip, and the cure is a state shown, never a warning or a gate on End turn. Two readings taken here, each its own line: a count of the units still holding a move, on the bar or by the end-turn button; a key that jumps the camera to the next unit still holding a move. The sleep order stays an idea, taken only if these two do not suffice.
 
 ## The Nomadic tutorial

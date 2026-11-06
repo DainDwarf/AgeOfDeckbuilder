@@ -20,7 +20,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The reach** — the tiles a selected unit can step onto and the tiles a card is aimed at, lit over his ground.
+- **The reach** — the tiles a selected unit can step onto this turn, shown as one region over his ground.
+- **The aim** — the tiles a card is aimed at, each wearing the selection's rim in a colour of its own.
 - **The offensive glow** — the enemies a selected unit can attack and the tile an enemy has prepared on, one glow for both over his ground.
 - **The claim marks** — how city mode shows the tiles the city may claim and the culture threshold on the selected one.
 - **A minicard's tooltip closes on the way** — hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not.
