@@ -390,7 +390,7 @@ const REGIONS: Age['regions'] = {
     campFromCentre: 7,
     campsApart: 4,
     sites: ['painted-cave', 'old-cairn', 'beast-bones'],
-    siteFromCentre: 7,
+    siteFromCentre: 4,
     sitesApart: 4,
     rivers: {
       source: 'mountain',

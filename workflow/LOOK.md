@@ -48,6 +48,7 @@ The rings-and-marks line was cut into five, one look aspect each, since each tak
 - **Buildings and improvements shown as cards**: an inspected building or improvement is shown as a card instead of an infopanel's row, with more text and room for an image.
 - **Event answers as text**: the deal window shows each answer as text rather than as a card, a card the answer adds still raising its reference tooltip; an answer with several outcomes shows what it does as a list, so a part that does nothing ("0 city") is left out. An event's name, its answers' names and their texts become lore, not UI text, so the glossary lint stops reading them and the exception list stops growing with every event.
 - **A minimize button on the scrim's windows**: the map holds still under the deal window, a browse and the capstone's, and a button setting the window aside lets the map be read and moved under it.
+- **A minicard's tooltip closes on the way**: hovering a minicard's tooltip, the pointer crossing another reference closes it, and it should not (moved off the board, 2026-11-06).
 - Fits accepted until now:
   - The card face's long right-aligned name running under the left cost chip ("Goods trade" touches its "2", ~2 px gap).
   - The embarked unit's infopanel name "Raft (Warrior)" runs ~4 px and "Raft (Worker)" ~2.4 px into the head's right pad on Segoe UI, inside the card's edge; the head has no fit for a long title.
