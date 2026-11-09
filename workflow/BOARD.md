@@ -19,5 +19,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
-
-- **Robust browse specs on CI** — the game's clock is the wall clock from its first frame, Phaser's delta smoothing turned off in the game config and `docs/PHASER.md` saying so, and the browse spec's pan test is two tests, every assertion kept. Doc-impact: `docs/PHASER.md`. [board/robust-browse-specs-on-ci.md](board/robust-browse-specs-on-ci.md)

@@ -37,6 +37,7 @@ import {
   selected,
   settledOn,
   standing,
+  tappedDown,
   titleOf,
   tooltipText,
   tooltipUp,
@@ -164,7 +165,28 @@ test('a wheel turned with Control held moves a browse nothing, and a wheel over 
   expect(problems).toEqual([]);
 });
 
-test('the two keys that pan the map up and down scroll a browse while they are held, wherever the pointer stands, and stop it on its last line and on its first; a tap moves it less than a hold, the two that pan it left and right move nothing, and a card shown large holds it still under them and under the wheel, over the frame and off it', async ({
+test('the two keys that pan the map up and down scroll a browse while they are held, wherever the pointer stands, and stop it on its last line and on its first; a tap moves it less than a hold', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { down, up } = panKeys();
+
+  await openSaved(page, overflowingPiles());
+  await browse(page, 'draw-pile');
+  const { overflow } = await scrolled(page);
+  const away = await besideTheCards(page);
+  await page.mouse.move(away.x, away.y);
+  await rested(page);
+
+  const tapped = await pannedToEndsThenTapped(page, overflow);
+
+  expect(await heldFor(page, up, 200)).toBe(0);
+  expect(await heldFor(page, down, 200)).toBeGreaterThan(tapped);
+
+  expect(problems).toEqual([]);
+});
+
+test('a card shown large holds a browse still under the two keys that pan the map up and down and under the wheel, over the frame and off it, and the two that pan it left and right move it nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -173,12 +195,11 @@ test('the two keys that pan the map up and down scroll a browse while they are h
   const opened = overflowingPiles();
   await openSaved(page, opened);
   await browse(page, 'draw-pile');
-  const { overflow } = await scrolled(page);
   const away = await besideTheCards(page);
   await page.mouse.move(away.x, away.y);
   await rested(page);
 
-  const tapped = await pannedToEndsThenTapped(page, overflow);
+  const tapped = await tappedDown(page);
 
   const faces = pileStacks(opened.drawPile).map((_, at) => `browse-card-${at}`);
   const seen = await readings(page, ['browse-frame', ...faces]);
@@ -206,9 +227,6 @@ test('the two keys that pan the map up and down scroll a browse while they are h
       expect(await heldFor(page, slot.code, 200)).toBe(tapped);
     }
   }
-
-  expect(await heldFor(page, up, 200)).toBe(0);
-  expect(await heldFor(page, down, 200)).toBeGreaterThan(tapped);
 
   expect(problems).toEqual([]);
 });

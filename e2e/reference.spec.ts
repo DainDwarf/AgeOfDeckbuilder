@@ -35,9 +35,6 @@ const HAND = 'pointer';
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
 
-/** As long as the rest a small card waits for before it rises. */
-const REST = 500;
-
 /**
  * The first answer the deal standing offers whose rules entry names a card: the answer, where the
  * deal window lays it out, the card it names, and where that name stands among the entry's names.
@@ -72,7 +69,6 @@ test('a card named on a card raises it small at a rest and shows it large at a r
 
   const name = await nameOnScreen(page, answering, naming);
   await page.mouse.move(name.x, name.y);
-  await waitGameClock(page, REST);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
 
   const menu = await onScreen(page, 'menu-button');

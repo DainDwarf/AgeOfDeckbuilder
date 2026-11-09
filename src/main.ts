@@ -111,6 +111,8 @@ const game = new Phaser.Game({
   height: backing.height,
   backgroundColor: css(LOOK.page),
   disableContextMenu: true,
+  // With it on, a scene's timers and held keys run slow under 60 frames a second (docs/PHASER.md).
+  fps: { smoothStep: false },
   render: { mipmapFilter: 'LINEAR_MIPMAP_LINEAR' },
   scale: {
     mode: Phaser.Scale.FIT,

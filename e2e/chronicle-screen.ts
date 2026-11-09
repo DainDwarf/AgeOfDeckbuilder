@@ -961,11 +961,7 @@ export async function restedOnDeal(page: Page): Promise<void> {
   await rested(page);
 }
 
-/**
- * Waits out a span of the game's own clock, the one a scene's timers run on. Phaser advances it by
- * at most a sixtieth of a second a frame for its first 120 frames, so on a slow runner a wait on the
- * wall clock ends before a timer of the same span does.
- */
+/** Waits out a span of the clock a scene's timers run on. */
 export function waitGameClock(page: Page, span: number): Promise<void> {
   return page.evaluate(
     (ms) =>
@@ -2619,7 +2615,15 @@ export async function pannedToEndsThenTapped(
   await page.keyboard.up(up);
   await rested(page);
 
-  await page.keyboard.press(down);
+  return tappedDown(page, panel);
+}
+
+/**
+ * The pan-down key tapped, moving the named panel, the browse unless another is named, down: how far
+ * it stands scrolled then.
+ */
+export async function tappedDown(page: Page, panel = 'browse'): Promise<number> {
+  await page.keyboard.press(panKeys().down);
   await rested(page);
   await rested(page);
   const tapped = await offsetOf(page, panel);
