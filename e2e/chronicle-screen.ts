@@ -96,6 +96,7 @@ import {
   serialiseAnimationSpeed,
 } from '../src/ui/animation-speed';
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
+import type { Point } from '../src/ui/border-loops';
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
@@ -1530,31 +1531,70 @@ export function borderStretches(worn: readonly Worn[]): Record<number, number> {
   return counts;
 }
 
-/** How many stretches of the map's borders are drawn in each colour, by the colour's value. */
-export function borderColours(page: Page): Promise<Record<number, number>> {
-  return page.evaluate(() => {
+/** One stroke of a line of the map's borders: its colour, its width, and the points it runs through. */
+export type BorderStroke = {
+  readonly colour: number;
+  readonly width: number;
+  readonly points: readonly Point[];
+};
+
+/**
+ * What the lines of the map's borders were told to draw: how many line styles each colour was set
+ * by, by the colour's value, and every stroke.
+ */
+async function borderDrawn(
+  page: Page,
+): Promise<{ styles: Record<number, number>; strokes: BorderStroke[] }> {
+  const buffers = await page.evaluate(() => {
     const border = window.shownIn?.('border');
     if (border === undefined) throw new Error('there is no border on the chronicle screen');
-    // A Graphics keeps its commands flat in one buffer, each a number followed by its arguments
-    // (`phaser/src/gameobjects/graphics/Commands.js`); a line is drawn with these alone.
-    const ARGUMENTS: Record<number, number> = { 1: 0, 4: 2, 5: 2, 6: 3, 9: 0 };
-    const LINE_STYLE = 6;
-    const counts: Record<number, number> = {};
-    for (const object of border) {
-      if (object.type !== 'Graphics') continue;
-      const commands = (object as Phaser.GameObjects.Graphics).commandBuffer as number[];
-      for (let at = 0; at < commands.length; at += 1 + ARGUMENTS[commands[at]]) {
-        if (!(commands[at] in ARGUMENTS)) {
-          throw new Error(`a border's line holds the command ${commands[at]}`);
-        }
-        if (commands[at] === LINE_STYLE) {
-          const colour = commands[at + 2];
-          counts[colour] = (counts[colour] ?? 0) + 1;
-        }
+    return border
+      .filter((object) => object.type === 'Graphics')
+      .map((object) => (object as Phaser.GameObjects.Graphics).commandBuffer as number[]);
+  });
+  // A Graphics keeps its commands flat in one buffer, each a number followed by its arguments
+  // (`phaser/src/gameobjects/graphics/Commands.js`); a line is drawn with these alone.
+  const [BEGIN_PATH, LINE_TO, MOVE_TO, LINE_STYLE, STROKE_PATH] = [1, 4, 5, 6, 9];
+  const ARGUMENTS: Record<number, number> = {
+    [BEGIN_PATH]: 0,
+    [LINE_TO]: 2,
+    [MOVE_TO]: 2,
+    [LINE_STYLE]: 3,
+    [STROKE_PATH]: 0,
+  };
+  const styles: Record<number, number> = {};
+  const strokes: BorderStroke[] = [];
+  for (const commands of buffers) {
+    let style: { colour: number; width: number } | undefined;
+    let points: Point[] = [];
+    for (let at = 0; at < commands.length; at += 1 + ARGUMENTS[commands[at]]) {
+      const command = commands[at];
+      if (!(command in ARGUMENTS)) throw new Error(`a border's line holds the command ${command}`);
+      if (command === LINE_STYLE) {
+        style = { width: commands[at + 1], colour: commands[at + 2] };
+        styles[style.colour] = (styles[style.colour] ?? 0) + 1;
+      }
+      if (command === BEGIN_PATH) points = [];
+      if (command === MOVE_TO || command === LINE_TO) {
+        points.push({ x: commands[at + 1], y: commands[at + 2] });
+      }
+      if (command === STROKE_PATH) {
+        if (style === undefined) throw new Error("a border's line strokes before any line style");
+        strokes.push({ ...style, points });
       }
     }
-    return counts;
-  });
+  }
+  return { styles, strokes };
+}
+
+/** How many stretches of the map's borders are drawn in each colour, by the colour's value. */
+export async function borderColours(page: Page): Promise<Record<number, number>> {
+  return (await borderDrawn(page)).styles;
+}
+
+/** Every stroke the lines of the map's borders were told to draw. */
+export async function borderStrokes(page: Page): Promise<BorderStroke[]> {
+  return (await borderDrawn(page)).strokes;
 }
 
 /** How many faces the map shows, and how many of them the fog's tint darkens. */

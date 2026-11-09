@@ -20,5 +20,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The borders where the two cities touch** — a city's line stands half its width inside each edge of the ground held, so where the two cities' tiles meet the two lines run side by side a full width apart and neither hides the other, the claim marks' ghost moved with them; the neutral spec reads the two lines no nearer than a width on a chronicle where the borders touch. Doc-impact: `docs/LOOK.md`. [board/borders-touching.md](board/borders-touching.md)
 - **Cut CHRONICLE.md at its seams** — the other factions (Enemies and camps, The neutral, Sites) and the schedule (Events and the capstone) each move to a design page of their own, the page at 8,567 words today.

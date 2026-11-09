@@ -1,10 +1,25 @@
 import Phaser from 'phaser';
 import { cornersOf, type TileCoords, tileKey } from '../rules/map';
 import type { CityFaction } from '../rules/state';
-import { borderLoops, edgeLoops, lineAlong, type Point, type Stretch } from './border-loops';
+import {
+  borderLoops,
+  type Curved,
+  edgeLoops,
+  lineAlong,
+  type Point,
+  type Stretch,
+} from './border-loops';
 import { LOOK } from './look';
 import { paintFaded, sceneCanvas, tracedPolygon } from './map-fade';
-import { CITY_COLOURS, CITY_FACTIONS, cornerAt, darkened, hexagonOn, TILE_SIZE } from './map-marks';
+import {
+  CITY_COLOURS,
+  CITY_FACTIONS,
+  cornerAt,
+  darkened,
+  hexagonOn,
+  positionOf,
+  TILE_SIZE,
+} from './map-marks';
 
 /** How wide a border's line is, and how deep its band fades inside it. */
 const LINE = 1.5;
@@ -14,8 +29,8 @@ const BAND_DEPTH = 7;
 const REACH_LINE = 1;
 const REACH_DEPTH = 5;
 
-/** How many points each curved stretch of a line is drawn through. */
-const STRETCH_POINTS = 8;
+/** How many segments each curved stretch of a line is drawn as. */
+const STRETCH_SEGMENTS = 8;
 
 /** How far past its hexagon a tile's share of the band is kept, so no seam shows where the fog meets the sight. */
 const SEAM = 0.5;
@@ -94,19 +109,29 @@ function paintBand(
 
 const vector = ({ x, y }: Point): Phaser.Math.Vector2 => new Phaser.Math.Vector2(x, y);
 
-function stroked(line: Phaser.GameObjects.Graphics, stretch: Stretch): void {
+/** The points a curved stretch is drawn through: each of the curve's moved `by` along its normal, onto its tile's side. */
+function movedOntoTile({ tile, from, control, to }: Curved, by: number): Phaser.Math.Vector2[] {
+  const curve = new Phaser.Curves.QuadraticBezier(vector(from), vector(control), vector(to));
+  const normalAt = (t: number): Phaser.Math.Vector2 => curve.getTangent(t).normalizeRightHand();
+  // The tile's middle picks the side alone: the lattice is squashed, so the way to it is no normal.
+  const towardTile = vector(positionOf(tile)).subtract(curve.getPoint(0.5));
+  const side = Math.sign(normalAt(0.5).dot(towardTile));
+  return curve.getPoints(STRETCH_SEGMENTS).map((point, at) =>
+    normalAt(at / STRETCH_SEGMENTS)
+      .scale(side * by)
+      .add(point),
+  );
+}
+
+/** A stretch stroked: a straight one on its edge, a curved one half the line's width onto its tile's side. */
+function stroked(line: Phaser.GameObjects.Graphics, stretch: Stretch, width: number): void {
   switch (stretch.kind) {
     case 'straight':
       line.lineBetween(stretch.from.x, stretch.from.y, stretch.to.x, stretch.to.y);
       return;
-    case 'curved': {
-      const { from, control, to } = stretch;
-      new Phaser.Curves.QuadraticBezier(vector(from), vector(control), vector(to)).draw(
-        line,
-        STRETCH_POINTS,
-      );
+    case 'curved':
+      line.strokePoints(movedOntoTile(stretch, width / 2));
       return;
-    }
   }
   const unlisted: never = stretch;
   throw new Error(`no stretch runs ${JSON.stringify(unlisted)}`);
@@ -124,7 +149,7 @@ function paintLine(
   for (const stretch of stretches) {
     // One `lineStyle` per stretch: `borderColours` in `e2e/chronicle-screen.ts` counts them.
     line.lineStyle(width, colourOf(stretch), strength);
-    stroked(line, stretch);
+    stroked(line, stretch, width);
   }
   line.setVisible(stretches.length > 0);
 }

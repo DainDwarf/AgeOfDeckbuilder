@@ -11,6 +11,7 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
+  water,
 } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
@@ -19,6 +20,7 @@ import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
+import type { Point } from '../src/ui/border-loops';
 import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
@@ -26,8 +28,10 @@ import {
   admits,
   aimed,
   aimLine,
+  type BorderStroke,
   borderColours,
   borderStretches,
+  borderStrokes,
   budget,
   campaignWith,
   campBeside,
@@ -222,14 +226,22 @@ function neutralClaimed(chronicle: Chronicle): Chronicle {
   return claiming;
 }
 
+/**
+ * Seed 1's chronicle once the neutral's city has claimed a tile, the first tile it claims charted on
+ * turn 1 and seen no more, and that tile.
+ */
+function claimedUnseen(): { chronicle: Chronicle; first: TileCoords } {
+  const opened = settledOn(1, [], CAMPAIGN);
+  const [, first] = neutralClaimed(opened).neutral?.held ?? [];
+  if (first === undefined) throw new Error('seed 1 opens with no neutral');
+  return { chronicle: neutralClaimed(chartedAt(CATALOGUE, opened, first)), first };
+}
+
 test('the map draws the neutral’s border in the neutral’s colour beside the city’s own, a tile drawn in fog keeping the stretch of border it wore when last seen', async ({
   page,
 }) => {
   const problems = watch(page);
-  const opened = settledOn(1, [], CAMPAIGN);
-  const [, first] = neutralClaimed(opened).neutral?.held ?? [];
-  if (first === undefined) throw new Error('seed 1 opens with no neutral');
-  const claimed = neutralClaimed(chartedAt(CATALOGUE, opened, first));
+  const { chronicle: claimed, first } = claimedUnseen();
   const { neutral } = claimed;
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const seen = inSight(CATALOGUE, claimed);
@@ -263,6 +275,66 @@ test('the map draws the neutral’s border in the neutral’s colour beside the 
       ...neutral.held.map((tile) => ({ tile, holder: 'neutral' as const, inFog: false })),
     ]),
   );
+  expect(problems).toEqual([]);
+});
+
+/** The chronicle with every land tile beside the player's city's that nobody holds taken inside the neutral's border. */
+function bordersMeeting(chronicle: Chronicle): Chronicle {
+  const beside = new Map(
+    chronicle.held.flatMap(neighbours).map((tile) => [tileKey(tile), tile] as const),
+  );
+  return [...beside.values()]
+    .filter((tile) => {
+      const there = tileAt(chronicle.tiles, tile);
+      return (
+        there !== undefined &&
+        !water(CATALOGUE, there.terrain) &&
+        holderOf(chronicle, tile) === undefined
+      );
+    })
+    .reduce((taking, tile) => bordered(taking, 'neutral', tile).chronicle, chronicle);
+}
+
+/** The smallest distance from a point to the segment from `a` to `b`. */
+function toSegment(point: Point, a: Point, b: Point): number {
+  const run = { x: b.x - a.x, y: b.y - a.y };
+  const along = (point.x - a.x) * run.x + (point.y - a.y) * run.y;
+  const share = Math.max(0, Math.min(1, along / (run.x * run.x + run.y * run.y)));
+  return Math.hypot(point.x - (a.x + share * run.x), point.y - (a.y + share * run.y));
+}
+
+/** The smallest distance from any point of these strokes to any segment of those. */
+function nearestBetween(these: readonly BorderStroke[], those: readonly BorderStroke[]): number {
+  const segments = those.flatMap(({ points }) =>
+    points.slice(1).map((to, at) => [points[at], to] as const),
+  );
+  return Math.min(
+    ...these.flatMap(({ points }) =>
+      points.map((point) => Math.min(...segments.map(([a, b]) => toSegment(point, a, b)))),
+    ),
+  );
+}
+
+test('where the neutral’s tiles meet the city’s, the map draws the two borders’ lines side by side a line’s width apart, neither over the other, the veils off', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const meeting = bordersMeeting(claimedUnseen().chronicle);
+
+  await openSaved(page, meeting, CAMPAIGN);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+  await rested(page);
+
+  const strokes = await borderStrokes(page);
+  const ours = strokes.filter(({ colour }) => colour === LOOK.civilization);
+  const theirs = strokes.filter(({ colour }) => colour === LOOK.neutral);
+  const [{ width }] = ours;
+  const apart = nearestBetween(ours, theirs);
+  expect(apart).toBeGreaterThanOrEqual(width - width / 10);
+  expect(apart).toBeLessThanOrEqual(width + width / 10);
   expect(problems).toEqual([]);
 });
 
