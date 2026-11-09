@@ -19,3 +19,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
+
+- **Robust browse specs on CI** — the browse specs keep going red on CI while nothing under them changes, a page question hitting the test timeout or a poll waiting its whole budget for a scroll that has not drawn, the shape of the CI browse frame starvation; the specs are made robust against it.
