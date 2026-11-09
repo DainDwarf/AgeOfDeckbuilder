@@ -511,7 +511,7 @@ export async function readNames(page: Page): Promise<void> {
       }
     };
 
-    // A Container's own `getBounds` counts the children it hides (`Container.js:398-416`).
+    // A Container's own `getBounds` counts the children it hides (`docs/PHASER.md`).
     const shownBounds = (
       object: Phaser.GameObjects.GameObject,
     ): Phaser.Geom.Rectangle | undefined => {

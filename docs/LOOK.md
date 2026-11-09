@@ -47,7 +47,7 @@ Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's
 
 ## The packs ✅
 
-- **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, and his painted objects, and his resource icons. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
+- **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, his painted objects and his resource icons. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
 - **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.
 

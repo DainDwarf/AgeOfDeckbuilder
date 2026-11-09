@@ -20,4 +20,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **The borders where the two cities touch** — the neutral's line hides the player's where their tiles meet, the design silent on which stands over; check whether the overlap still holds, a bug of the borders line if it does.
 - **Cut CHRONICLE.md at its seams** — the other factions (Enemies and camps, The neutral, Sites) and the schedule (Events and the capstone) each move to a design page of their own, the page at 8,567 words today.
