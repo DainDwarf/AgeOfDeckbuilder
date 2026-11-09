@@ -17,7 +17,7 @@ import { neutralBuilding } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
-import { type Chronicle, holderOf } from '../src/rules/state';
+import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, standsOn, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
 import type { Point } from '../src/ui/border-loops';
@@ -278,8 +278,8 @@ test('the map draws the neutral’s border in the neutral’s colour beside the 
   expect(problems).toEqual([]);
 });
 
-/** The chronicle with every land tile beside the player's city's that nobody holds taken inside the neutral's border. */
-function bordersMeeting(chronicle: Chronicle): Chronicle {
+/** The chronicle with every land tile beside the player's city's that nobody holds taken inside the border of `whose`. */
+function takenAround(chronicle: Chronicle, whose: CityFaction): Chronicle {
   const beside = new Map(
     chronicle.held.flatMap(neighbours).map((tile) => [tileKey(tile), tile] as const),
   );
@@ -292,7 +292,7 @@ function bordersMeeting(chronicle: Chronicle): Chronicle {
         holderOf(chronicle, tile) === undefined
       );
     })
-    .reduce((taking, tile) => bordered(taking, 'neutral', tile).chronicle, chronicle);
+    .reduce((taking, tile) => bordered(taking, whose, tile).chronicle, chronicle);
 }
 
 /** The smallest distance from a point to the segment from `a` to `b`. */
@@ -319,7 +319,7 @@ test('where the neutral’s tiles meet the city’s, the map draws the two borde
   page,
 }) => {
   const problems = watch(page);
-  const meeting = bordersMeeting(claimedUnseen().chronicle);
+  const meeting = takenAround(takenAround(claimedUnseen().chronicle, 'player'), 'neutral');
 
   await openSaved(page, meeting, CAMPAIGN);
   await consoleKey(page);
