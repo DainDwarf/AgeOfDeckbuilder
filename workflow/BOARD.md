@@ -20,4 +20,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Robust browse specs on CI** — the browse specs keep going red on CI while nothing under them changes, a page question hitting the test timeout or a poll waiting its whole budget for a scroll that has not drawn, the shape of the CI browse frame starvation; the specs are made robust against it.
+- **Robust browse specs on CI** — the game's clock is the wall clock from its first frame, Phaser's delta smoothing turned off in the game config and `docs/PHASER.md` saying so, and the browse spec's pan test is two tests, every assertion kept. Doc-impact: `docs/PHASER.md`. [board/robust-browse-specs-on-ci.md](board/robust-browse-specs-on-ci.md)
