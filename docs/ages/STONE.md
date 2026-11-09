@@ -1,6 +1,6 @@
 # The Stone Age
 
-> What the Stone Age is made of: its land, its city, its neutral, its technologies, its units, its cards, its events, its capstones, its achievement and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
+> What the Stone Age is made of: its land, its city, its neutral, its technologies, its units, its cards, its events, its capstones, its achievement and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s, its map [`MAP.md`](../MAP.md)'s, its factions [`FACTIONS.md`](../FACTIONS.md)'s and its schedule [`SCHEDULE.md`](../SCHEDULE.md)'s, and this page repeats none of them; no number stands on it. The terrains, the features, the biomes and the sites it shares with the Nomadic Age are [`NOMADIC.md`](NOMADIC.md)'s; what its sites deal here is this page's.
 
 ## The land ✅
 

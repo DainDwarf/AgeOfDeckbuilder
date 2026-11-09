@@ -8,6 +8,8 @@ What the game **is**: the standing design. Not a journal of how it came to be �
 - [`META-SCREENS.md`](META-SCREENS.md) — how the meta is shown and worked on its screens.
 - [`CHRONICLE.md`](CHRONICLE.md) — the rules a chronicle is played by.
 - [`MAP.md`](MAP.md) — what the map is made of and how it is dealt.
+- [`FACTIONS.md`](FACTIONS.md) — the other factions on the map: the enemies and their camps, the neutral, and the sites nobody holds.
+- [`SCHEDULE.md`](SCHEDULE.md) — the schedule a chronicle lives through: its events and its capstone.
 - [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md) — how the chronicle is shown and worked on its screen.
 - [`LOOK.md`](LOOK.md) — the look: the one hand every picture is painted in, how the map, the pieces and the cards wear it, and the packs' terms.
 - [`ages/`](ages/NOMADIC.md) — one content page per age, under the design pages' legend: what the age is made of, with no number on it. [`ages/NOMADIC.md`](ages/NOMADIC.md) is the first, [`ages/STONE.md`](ages/STONE.md) the second.

@@ -2,7 +2,7 @@
 
 > Status legend, for every design page: ✅ decided · 🔧 provisional (a stated default, open to change). An open question is not a status — it is a [`BOARD.md`](../workflow/BOARD.md) line whose done-condition is the decision.
 
-The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); the rules a chronicle is played by are [`CHRONICLE.md`](CHRONICLE.md); the map it is played on is [`MAP.md`](MAP.md); the screen it is played on is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md); the meta around it is [`META.md`](META.md); the screens it is shown on are [`META-SCREENS.md`](META-SCREENS.md); the look every screen wears is [`LOOK.md`](LOOK.md).
+The game in broad strokes: what it is, what it deliberately is not, and how a chronicle and the meta fit together. How any screen is worked is [`INTERFACE.md`](INTERFACE.md); the rules a chronicle is played by are [`CHRONICLE.md`](CHRONICLE.md); the map it is played on is [`MAP.md`](MAP.md); the other factions on it are [`FACTIONS.md`](FACTIONS.md); the schedule it lives through is [`SCHEDULE.md`](SCHEDULE.md); the screen it is played on is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md); the meta around it is [`META.md`](META.md); the screens it is shown on are [`META-SCREENS.md`](META-SCREENS.md); the look every screen wears is [`LOOK.md`](LOOK.md).
 
 This page and the pages it names are **the design pages**, and they are the **spec**.
 

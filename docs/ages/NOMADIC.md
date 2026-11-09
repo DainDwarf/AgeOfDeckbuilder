@@ -1,6 +1,6 @@
 # The Nomadic Age
 
-> What the Nomadic Age is made of: its settle, its land, its sites, its units, its cards, its events, its capstone and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s and its map [`MAP.md`](../MAP.md)'s, and this page repeats none of them; no number stands on it: the page says which resource a thing costs or gives, never how much.
+> What the Nomadic Age is made of: its settle, its land, its sites, its units, its cards, its events, its capstone and its camps. A content page under [`DESIGN.md`](../DESIGN.md)'s legend. The rules it is played by are [`CHRONICLE.md`](../CHRONICLE.md)'s, its map [`MAP.md`](../MAP.md)'s, its factions [`FACTIONS.md`](../FACTIONS.md)'s and its schedule [`SCHEDULE.md`](../SCHEDULE.md)'s, and this page repeats none of them; no number stands on it: the page says which resource a thing costs or gives, never how much.
 
 ## The age ✅
 
