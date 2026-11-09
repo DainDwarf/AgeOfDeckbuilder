@@ -20,4 +20,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Cut CHRONICLE.md at its seams** — the other factions (Enemies and camps, The neutral, Sites) and the schedule (Events and the capstone) each move to a design page of their own, the page at 8,567 words today.
+- **Cut CHRONICLE.md at its seams** — `docs/FACTIONS.md` holds Enemies and camps, The neutral and Sites, `docs/SCHEDULE.md` holds The schedule and The capstone, every sentence moved verbatim, `docs/CHRONICLE.md` holding a pointer section where each stood, and the design page, the index and both age pages name the two. Doc-impact: `docs/CHRONICLE.md`, `docs/FACTIONS.md`, `docs/SCHEDULE.md`, `docs/DESIGN.md`, `docs/index.md`, `docs/MAP.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/cut-chronicle-at-its-seams.md](board/cut-chronicle-at-its-seams.md)
