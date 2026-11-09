@@ -8,7 +8,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **The pieces on the map** — units, buildings, sites, improvements (his painted icons or a change to the tile's own drawing, mocked up at its intake), the marks a unit wears — its turn done, prepared, attacked by the selected unit, aimed at by a card — on the token, the city badge, a health bar on units, a building's reach drawn.
 - **The glyphs** — the resource glyphs and every icon the game reads, drawn through one glyph renderer from licensed glyphs in the locked style, on the cards, the yield overlay, the resource bar, the infopanel and the meta screens alike.
 - **The cards and the windows** — the face, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
 - **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
@@ -19,3 +18,13 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
+
+- **The buildings** — the built buildings, both cities' own and the capstone's stages are drawn as his painted locations, on the map and on the infopanel, and where everything a crowded tile carries stands around them is settled on its mockup.
+- **The sites and the camps** — the sites nobody holds and the enemies' camps are drawn as his painted locations as the buildings are, and what tells a camp as hostile once its red wall is gone.
+- **The improvements** — an improvement is drawn as his painted icon in the feature's row or as a change to the tile's own drawing, mocked up at its intake.
+- **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), his ancient icons entering the store.
+- **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
+- **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
+- **A health bar on units** — a unit on the map shows its health.
+- **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold.
+- **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.

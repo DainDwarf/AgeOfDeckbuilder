@@ -7,7 +7,7 @@
 Everything drawn is one of two families, and each has one job.
 
 - **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects, his painted resource icons. Code draws geometry, recolours and composes his pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
-- **Symbols** are signs of quantities and kinds: a resource, a yield, a cost, a unit's kind on its token until its picture exists, the icons the screens read. Every symbol is a **flat one-colour glyph from game-icons.net**, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol is never a picture of a thing on the map.
+- **Symbols** are signs of quantities and kinds: a resource, a yield, a cost, the icons the screens read. Every symbol is a **flat one-colour glyph from game-icons.net**, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol is never a picture of a thing on the map.
 
 A painted world under flat symbols is the convention of the genre, and the two families do not read as two styles because they never do the same job.
 
@@ -35,11 +35,11 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 **Buildings, sites, camps and the city's own building** are his painted locations, each a sprite standing on its tile over the terrain, the terrain showing around it. The Stone Age's are his huts, tents, standing stones, caves, pens and fields; the later ages' his villages, farms, mills, walls and castles. A building his sets lack is composed from his pieces by code.
 
-**A unit is a token** 🔧: a disc in its faction's colour, carrying a picture of the unit's kind, with the hull it embarks on under it. The picture is painted in the one hand when his hand holds one; until it does, the kind's glyph stands on the disc, a symbol in the token's frame. Which picture each kind carries is the pieces rung's.
+**A unit** 🔧 is a painting of its kind in the one hand: a weapon or a tool the kind carries, or a person holding it, in a frame that tells its faction, over his boat while it is embarked. A unit is never a symbol.
 
 ## The cards 🔧
 
-A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its token's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols. A card face is one size wherever it stands, and a card shown large is the one other.
+A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its unit's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols. A card face is one size wherever it stands, and a card shown large is the one other.
 
 ## The type ✅
 
