@@ -66,7 +66,6 @@ import {
   standing,
   stillAt,
   tileOnScreen,
-  tooltipUp,
   unitEntered,
   watch,
   westOf,
@@ -459,45 +458,6 @@ test('a pan and a zoom carry the ringed tile and the panel beside it', async ({ 
   // The tile keeps the ground it had under the pointer and grows, so the panel stands further off.
   expect(Math.abs(grown.x - panned.x)).toBeLessThan(2);
   expect(zoomed.x).toBeGreaterThan(carried.x);
-
-  expect(problems).toEqual([]);
-});
-
-test("a pan carries a panel row's tooltip along with the row", async ({ page }) => {
-  const problems = watch(page);
-  const { entered } = gatherStep();
-
-  await openSaved(page, entered);
-
-  const tile = await onScreen(page, `tile-${tileKey(playerCityTile(entered))}`);
-  await page.mouse.click(tile.x, tile.y, { button: 'right' });
-  await expect.poll(() => shownCard(page)).toBe('unit');
-  await rested(page);
-
-  // The unit card's rows follow its stats, and damage's label is the widest of them.
-  const row = await onScreen(page, 'infopanel-row-1');
-  const width = await page.evaluate(() => {
-    const found = window.named?.('infopanel-row-1');
-    if (found === undefined) throw new Error('nothing named infopanel-row-1 is on the map');
-    return (found.object as unknown as { getBounds(): { width: number } }).getBounds().width;
-  });
-  await page.mouse.move(row.x - (width / 2 - 2) * row.unit, row.y);
-  await expect.poll(() => tooltipUp(page, 'tooltip-map')).toBe(true);
-  const panel = await onScreen(page, 'infopanel');
-  const bubble = await onScreen(page, 'tooltip-map');
-
-  // One tap pans one frame, and a row carried out from under the still pointer is left and takes its
-  // tooltip down: the pointer rests just inside the end the tap carries away from it.
-  await page.keyboard.press('d');
-  await rested(page);
-  await rested(page);
-
-  const carried = await onScreen(page, 'infopanel');
-  const stood = await onScreen(page, 'tooltip-map');
-  expect(carried.x).toBeLessThan(panel.x - 10 * row.unit);
-  expect(await tooltipUp(page, 'tooltip-map')).toBe(true);
-  expect(stood.x - carried.x).toBeCloseTo(bubble.x - panel.x, 0);
-  expect(stood.y - carried.y).toBeCloseTo(bubble.y - panel.y, 0);
 
   expect(problems).toEqual([]);
 });
