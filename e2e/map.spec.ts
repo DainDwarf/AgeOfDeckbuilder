@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { built, featurePlaced, made, reaches, terraformed } from '../src/rules/cards';
+import { built, featurePlaced, made, reaches, slotFree, terraformed } from '../src/rules/cards';
 import { achievementOf, ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { claimable } from '../src/rules/city';
 import { enemyEntering } from '../src/rules/enemies';
 import {
   CENTRE,
@@ -52,6 +53,7 @@ import {
   idsOf,
   inside,
   mapFrame,
+  neutralCampaign,
   onScreen,
   openSaved,
   pinnedAchievement,
@@ -235,37 +237,97 @@ function facePaintingsOf({ terrain, feature, building }: Tile): string[] {
   return paintings.map((painting) => tintedName(painting, feature));
 }
 
+/** The monument's stages, each built over the one before it. */
+const STAGES = ['foundations', 'great-stones', 'monument'];
+
+/** Every city's own building: each civilization's, and each a technology unlocks. */
+const CITY_BUILDINGS = new Set([
+  ...Object.values(CATALOGUE.civilizations).map(({ city }) => city.building),
+  ...Object.values(CATALOGUE.technologies).flatMap(({ unlocks }) =>
+    unlocks.city === undefined ? [] : [unlocks.city.building],
+  ),
+]);
+
+/** How many claims the border may grow by while it looks for a building's ground. */
+const CLAIMS = 12;
+
 /**
- * The chronicle with every painted building of the catalogue that no tile holds built on a bare tile
- * of its own ground, one he painted a clearing of where its ground holds one, the feature it names
- * placed there first.
+ * The chain built in turn on a free tile of its first building's ground inside the border, a clearing's
+ * terrain first, the feature it asks for placed first where none lies, the border claimed out where no
+ * tile qualifies; nothing where `CLAIMS` claims find none.
  */
-function everyPaintingBuilt(chronicle: Chronicle): Chronicle {
-  let building = unchanged(chronicle);
-  for (const id of Object.keys(CATALOGUE.buildings)) {
-    const { tiles, units } = building.chronicle;
-    if (!painted(id) || tiles.some((tile) => tile.building === id)) continue;
-    const { terrains, features } = buildingKind(CATALOGUE, id);
-    const lyingOn = (tile: Tile): string | undefined =>
-      features?.find((feature) => featureKind(CATALOGUE, feature).terrain === tile.terrain);
-    const ground = tiles.filter(
-      (tile) =>
-        tile.feature === undefined &&
-        tile.building === undefined &&
-        unitAt(units, tile) === undefined &&
-        made(CATALOGUE, tile, terrains) === undefined &&
-        (features === undefined || lyingOn(tile) !== undefined),
-    );
-    const at = ground.find((tile) => clearingsOf(tile.terrain).length > 0) ?? ground[0];
-    if (at === undefined) throw new Error(`no bare tile of the map is ground for ${id}`);
-    const coord = { q: at.q, r: at.r };
-    const feature = lyingOn(at);
-    if (feature !== undefined) {
-      building = followed(building, (left) => featurePlaced(CATALOGUE, left, coord, feature));
+function builtInside(chronicle: Chronicle, chain: readonly string[]): Chronicle | undefined {
+  const { terrains, features } = buildingKind(CATALOGUE, chain[0]);
+  const featureFor = (tile: Tile): string | undefined =>
+    tile.feature === undefined
+      ? features?.find((feature) => featureKind(CATALOGUE, feature).terrain === tile.terrain)
+      : features?.find((feature) => feature === tile.feature);
+  let growing = chronicle;
+  for (let claims = 0; claims <= CLAIMS; claims++) {
+    const held = new Set(growing.held.map(tileKey));
+    const reached = new Set([...held, ...claimable(CATALOGUE, growing, 'player').map(tileKey)]);
+    const ground = growing.tiles
+      .filter(
+        (tile) =>
+          reached.has(tileKey(tile)) &&
+          slotFree(tile) === undefined &&
+          unitAt(growing.units, tile) === undefined &&
+          made(CATALOGUE, tile, terrains) === undefined &&
+          (features === undefined || featureFor(tile) !== undefined),
+      )
+      .sort(
+        (one, other) =>
+          clearingsOf(other.terrain).length - clearingsOf(one.terrain).length ||
+          Number(held.has(tileKey(other))) - Number(held.has(tileKey(one))),
+      );
+    const [at] = ground;
+    if (at !== undefined) {
+      const coord = { q: at.q, r: at.r };
+      const inside = held.has(tileKey(at)) ? growing : claimedAt(growing, coord);
+      if (inside === undefined) return undefined;
+      let building = unchanged(inside);
+      const feature = featureFor(at);
+      if (feature !== undefined && at.feature === undefined) {
+        building = followed(building, (left) => featurePlaced(CATALOGUE, left, coord, feature));
+      }
+      for (const id of chain)
+        building = followed(building, (left) => built(CATALOGUE, left, coord, id));
+      return building.chronicle;
     }
-    building = followed(building, (left) => built(CATALOGUE, left, coord, id));
+    const wider = claimable(CATALOGUE, growing, 'player')
+      .map((tile) => claimedAt(growing, tile))
+      .find((claimed) => claimed !== undefined);
+    if (wider === undefined) return undefined;
+    growing = wider;
   }
-  return building.chronicle;
+  return undefined;
+}
+
+/**
+ * The first seed's Stone Age turn 1, both cities on their villages, with every painted building that
+ * is no city's and no tile holds built by `builtInside`, each stage of the monument on its own tile.
+ */
+function castBuilt(): Chronicle {
+  const campaign = neutralCampaign();
+  return firstSeed(
+    'builds every painted building of the cast inside the Stone Age border',
+    (seed) => {
+      const opened = settledOn(seed, [], campaign);
+      const chains = Object.keys(CATALOGUE.buildings)
+        .filter(
+          (id) =>
+            painted(id) &&
+            !CITY_BUILDINGS.has(id) &&
+            !opened.tiles.some((tile) => tile.building === id),
+        )
+        .map((id) => (STAGES.includes(id) ? STAGES.slice(0, STAGES.indexOf(id) + 1) : [id]));
+      let chronicle: Chronicle | undefined = opened;
+      for (const chain of chains) {
+        if (chronicle !== undefined) chronicle = builtInside(chronicle, chain);
+      }
+      return chronicle;
+    },
+  );
 }
 
 /**
@@ -455,39 +517,49 @@ test('every painted building stands as one of his paintings of it, a forest unde
   page,
 }) => {
   const problems = watch(page);
-  const chronicle = everyPaintingBuilt(OPENED);
+  // The Nomadic city stands on the one painted building no Stone Age chronicle holds.
+  const chronicles = [OPENED, castBuilt()];
+  const unbuilt = Object.keys(CATALOGUE.buildings).filter(
+    (id) =>
+      painted(id) && !chronicles.some(({ tiles }) => tiles.some((tile) => tile.building === id)),
+  );
+  expect(unbuilt).toEqual([]);
+  const cleared = chronicles.flatMap(({ tiles }) =>
+    tiles.filter((tile) => clearingsOf(tile.terrain).length > 0 && painted(tile.building)),
+  );
+  expect(cleared.length).toBeGreaterThan(0);
 
-  await openSaved(page, chronicle);
-  await consoleKey(page);
-  await enter(page, 'uncharted');
-  await consoleKey(page);
+  for (const chronicle of chronicles) {
+    await openSaved(page, chronicle);
+    await consoleKey(page);
+    await enter(page, 'uncharted');
+    await consoleKey(page);
 
-  const paintedOn = chronicle.tiles.flatMap(({ q, r, building }) => {
-    if (building === undefined) return [];
-    const look = buildingLookOf(building);
-    return look.kind === 'painted' ? [{ key: tileKey({ q, r }), look }] : [];
-  });
-  const { building: camp } = ageOf(CATALOGUE, chronicle.age).camp;
-  const marked = [
-    ...chronicle.tiles.filter((tile) => tile.building === camp),
-    ...sitesOf(chronicle),
-  ].map(tileKey);
-  expect(chronicle.tiles.some((tile) => tile.building === camp)).toBe(true);
-  expect(sitesOf(chronicle).length).toBeGreaterThan(0);
-  const forests = chronicle.tiles.filter((tile) => clearingsOf(tile.terrain).length > 0);
-  const seen = await readings(page, [
-    ...paintedOn.map(({ key }) => `building-${key}`),
-    ...marked.map((key) => `building-${key}`),
-    ...forests.map((tile) => `tile-${tileKey(tile)}`),
-  ]);
-  for (const { key, look } of paintedOn) {
-    expect(seen(`building-${key}`).standing).toBe(true);
-    expect(look.pieces.at(-1)?.files).toContain(seen(`building-${key}`).frame);
-  }
-  for (const key of marked) expect(seen(`building-${key}`).standing).toBe(true);
-  expect(forests.filter((tile) => painted(tile.building)).length).toBeGreaterThan(0);
-  for (const tile of forests) {
-    expect(facePaintingsOf(tile)).toContain(seen(`tile-${tileKey(tile)}`).frame);
+    const paintedOn = chronicle.tiles.flatMap(({ q, r, building }) => {
+      if (building === undefined) return [];
+      const look = buildingLookOf(building);
+      return look.kind === 'painted' ? [{ key: tileKey({ q, r }), look }] : [];
+    });
+    const { building: camp } = ageOf(CATALOGUE, chronicle.age).camp;
+    const camps = chronicle.tiles.filter((tile) => tile.building === camp);
+    const sites = sitesOf(chronicle);
+    expect(camps.length).toBeGreaterThan(0);
+    expect(sites.length).toBeGreaterThan(0);
+    const marked = [...camps, ...sites].map(tileKey);
+    const forests = chronicle.tiles.filter((tile) => clearingsOf(tile.terrain).length > 0);
+    const seen = await readings(page, [
+      ...paintedOn.map(({ key }) => `building-${key}`),
+      ...marked.map((key) => `building-${key}`),
+      ...forests.map((tile) => `tile-${tileKey(tile)}`),
+    ]);
+    for (const { key, look } of paintedOn) {
+      expect(seen(`building-${key}`).standing).toBe(true);
+      expect(look.pieces.at(-1)?.files).toContain(seen(`building-${key}`).frame);
+    }
+    for (const key of marked) expect(seen(`building-${key}`).standing).toBe(true);
+    for (const tile of forests) {
+      expect(facePaintingsOf(tile)).toContain(seen(`tile-${tileKey(tile)}`).frame);
+    }
   }
 
   expect(problems).toEqual([]);
