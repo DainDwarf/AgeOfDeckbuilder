@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import type { Catalogue } from '../rules/catalogue';
+import { ageOf, type Catalogue } from '../rules/catalogue';
 import { byHand, type UnitCommand } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
@@ -40,14 +40,13 @@ import {
   createBorder,
   createClaimMarks,
   createReach,
-  type HeldAsDrawn,
   type Reach,
+  type WornAsDrawn,
 } from './map-border';
 import { createMapCamera } from './map-camera';
 import { selectionRims } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
-  asBuilding,
   asFeature,
   asFeatureDisc,
   asGlow,
@@ -99,7 +98,7 @@ import {
 import type { MapStrata } from './map-scene';
 import {
   BUILDING_SHEET,
-  buildingLookOf,
+  buildingPaintingsOf,
   FACE_SHEET,
   FEATURE_SHEET_KEY,
   onPatch,
@@ -327,22 +326,12 @@ export function createMapView(
             features,
             scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`),
           ),
-          building: kept(
-            built,
-            scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`).setDepth(tile.r),
-          ),
         },
       ];
     }),
   );
   const paintedOnTiles = Object.values(tileObjects).flatMap(
-    ({ face, shore, featureDisc, feature, building }) => [
-      face,
-      shore,
-      featureDisc,
-      feature,
-      building,
-    ],
+    ({ face, shore, featureDisc, feature }) => [face, shore, featureDisc, feature],
   );
 
   const crossfadePool = poolOf(ground, () => tileFace(scene));
@@ -600,34 +589,32 @@ export function createMapView(
     );
 
   /**
-   * A building standing on its tile, darkened in fog: the tile's own mark, or its pieces from the
-   * pool, the front one named for the tile and each behind it for its place.
+   * A building standing on its tile, darkened in fog: its pieces from the pool, the front one named
+   * for the tile and each behind it for its place.
    */
-  const buildingOn = (building: BuildingTypeId, coord: TileCoords, inFog: boolean): Mark => {
+  const buildingOn = (
+    building: BuildingTypeId,
+    coord: TileCoords,
+    inFog: boolean,
+  ): Phaser.GameObjects.Container => {
     const key = tileKey(coord);
     const { x, y } = positionOf(coord);
-    const look = buildingLookOf(building);
-    switch (look.kind) {
-      case 'mark':
-        return asBuilding(asPainted(tileObjects[key].building), look, inFog).setPosition(x, y);
-      case 'painted': {
-        const pieces = asPieces(
-          piecesPool.take(),
-          look,
-          false,
-          (files) => paintingOn(files, coord),
-          inFog,
-        );
-        const front = look.pieces.length - 1;
-        look.pieces.forEach((_, at) => {
-          pieces.list[at].setName(at === front ? `building-${key}` : `building-${key}-${at}`);
-        });
-        return pieces
-          .setPosition(x, y)
-          .setDepth(coord.r + PIECES_RISE)
-          .setName(buildingStandsAs(building, key));
-      }
-    }
+    const paintings = buildingPaintingsOf(building);
+    const pieces = asPieces(
+      piecesPool.take(),
+      paintings,
+      false,
+      (files) => paintingOn(files, coord),
+      inFog,
+    );
+    const front = paintings.pieces.length - 1;
+    paintings.pieces.forEach((_, at) => {
+      pieces.list[at].setName(at === front ? `building-${key}` : `building-${key}-${at}`);
+    });
+    return pieces
+      .setPosition(x, y)
+      .setDepth(coord.r + PIECES_RISE)
+      .setName(buildingStandsAs(key));
   };
 
   /** The patch a building's paintings lie on, from the pool, under them on that tile, darkened in fog. */
@@ -804,20 +791,24 @@ export function createMapView(
   };
 
   /**
-   * Both cities' borders on the chronicle the map stands on, around each one's tiles as the map draws
-   * them, darkened in fog: a claim moves a border, so a render does.
+   * Every border on the chronicle the map stands on, darkened in fog: both cities' around each one's
+   * tiles as the map draws them, and the enemies' around every face it draws carrying the age's
+   * camp; painted again on every render.
    */
   const paintBorder = (): void => {
     const current = shown;
     if (current === undefined) return;
-    const held: Record<CityFaction, HeldAsDrawn[]> = { player: [], neutral: [] };
+    const { building: camp } = ageOf(catalogue, current.age).camp;
+    const worn: Record<Faction, WornAsDrawn[]> = { player: [], neutral: [], enemy: [] };
     for (const tile of current.tiles) {
       const face = drawnOf(tile);
       if (face === undefined) continue;
+      const inFog = !live.has(tileKey(tile));
       const holder = face.asStands ? holderOf(current, tile) : charted.get(tileKey(tile))?.holder;
-      if (holder !== undefined) held[holder].push({ tile, inFog: !live.has(tileKey(tile)) });
+      if (holder !== undefined) worn[holder].push({ tile, inFog });
+      if (face.tile.building === camp) worn.enemy.push({ tile, inFog });
     }
-    border.paint(held);
+    border.paint(worn);
   };
 
   /** What the map keeps of a unit, made the first time a render or a motion meets it. */

@@ -16,30 +16,6 @@ const UNIT_MARKS: Readonly<Record<string, number[]>> = {
   leader: [0, -14, 13, -4, 8, 12, -8, 12, -13, -4],
 };
 
-/** The wall a camp is drawn as. */
-const WALL: number[] = [
-  -15, 10, -15, -12, -8, -12, -8, -6, -4, -6, -4, -12, 4, -12, 4, -6, 8, -6, 8, -12, 15, -12, 15,
-  10,
-];
-
-const CAVE: number[] = [-16, 10, -12, -4, 0, -10, 12, -4, 16, 10];
-
-const CAIRN: number[] = [-16, 10, -16, -10, 16, 10];
-
-const BONES: number[] = [-16, -10, 0, -2, 16, -10, 16, 10, 0, 2, -16, 10];
-
-/** Each wide enough to show under the unit standing on its tile. */
-const BUILDING_MARKS: Readonly<Record<string, number[]>> = {
-  camp: WALL,
-  'stone-camp': WALL,
-  'painted-cave': CAVE,
-  'stone-painted-cave': CAVE,
-  'old-cairn': CAIRN,
-  'stone-old-cairn': CAIRN,
-  'beast-bones': BONES,
-  'stone-beast-bones': BONES,
-};
-
 /** What a feature's tile wears beside its icon: a herd of its animal, his pond, or its painting tinted. */
 export type FeatureDress =
   | { readonly kind: 'herd' }
@@ -167,11 +143,6 @@ export type BuildingPaintings = {
   readonly pieces: readonly BuildingPiece[];
 };
 
-/** What a building is drawn as: his paintings, or its placeholder mark in its colour. */
-export type BuildingLook =
-  | ({ readonly kind: 'painted' } & BuildingPaintings)
-  | { readonly kind: 'mark'; readonly corners: readonly number[]; readonly colour: number };
-
 const LOCATIONS = 'store/hex-medieval-fantasy-locations/Decor';
 
 /** One piece of one file. */
@@ -179,8 +150,14 @@ function piece(file: string, size: number | 'tile', x: number, y: number): Build
   return { files: [file], size, x, y };
 }
 
+const ICONS = 'store/icons-strategic-resources-and-goods/Icons';
+
 const YURT = `${LOCATIONS}/houseYurt00.png`;
-const FURS = 'store/icons-strategic-resources-and-goods/Icons/furs.png';
+const FURS = `${ICONS}/furs.png`;
+const IVORY = `${ICONS}/ivory.png`;
+const CAVE_MOUTH = `${LOCATIONS}/undergroundPassage00.png`;
+const TALL_BARROW = `${LOCATIONS}/barrow00.png`;
+const LOW_BARROW = `${LOCATIONS}/barrow01.png`;
 const DOCK = 'store/hex-rivers-coasts-and-seas/Decor/dockE00.png';
 const NET = 'store/ancient-icons/fishing_net.png';
 const ROCKS = numberedFiles('hex-basic-terrain-set/Decor', 'rocks', 4);
@@ -200,7 +177,16 @@ const VILLAGE: BuildingPaintings = {
   ],
 };
 
-/** The buildings drawn as his paintings. */
+const PAINTED_CAVE: BuildingPaintings = { patch: false, pieces: [piece(CAVE_MOUTH, 0.9, 0, -2.3)] };
+
+const OLD_CAIRN: BuildingPaintings = {
+  patch: false,
+  pieces: [piece(TALL_BARROW, 1.5, 6.5, -4.9), piece(LOW_BARROW, 1.7, -4.5, 2.9)],
+};
+
+const BEAST_BONES: BuildingPaintings = { patch: false, pieces: [piece(IVORY, 0.9, 0, -1)] };
+
+/** Every building's paintings. */
 const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
   hearth: {
     patch: false,
@@ -238,6 +224,17 @@ const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
     patch: true,
     pieces: [STANDING_STONES, piece(`${LOCATIONS}/obelisk00.png`, 1.53, 0.3, -14.7)],
   },
+  camp: { patch: false, pieces: [piece(`${LOCATIONS}/banditCamp00.png`, 1.15, 0, -1.9)] },
+  'stone-camp': {
+    patch: false,
+    pieces: [piece(`${LOCATIONS}/strongholdThatched00.png`, 'tile', 0, 0)],
+  },
+  'painted-cave': PAINTED_CAVE,
+  'stone-painted-cave': PAINTED_CAVE,
+  'old-cairn': OLD_CAIRN,
+  'stone-old-cairn': OLD_CAIRN,
+  'beast-bones': BEAST_BONES,
+  'stone-beast-bones': BEAST_BONES,
 };
 
 /** A box in a frame's own pixels, from its top-left corner. */
@@ -268,6 +265,12 @@ const PAINT: Readonly<Record<string, Box>> = {
   [ROCKS[3]]: { x: 2, y: 1, width: 52, height: 41 },
   [`${LOCATIONS}/standingStones.png`]: { x: 8, y: 91, width: 244, height: 262 },
   [`${LOCATIONS}/obelisk00.png`]: { x: 2, y: 0, width: 77, height: 110 },
+  [`${LOCATIONS}/banditCamp00.png`]: { x: 0, y: 0, width: 170, height: 176 },
+  [`${LOCATIONS}/strongholdThatched00.png`]: { x: 10, y: 120, width: 235, height: 233 },
+  [CAVE_MOUTH]: { x: 0, y: 1, width: 226, height: 175 },
+  [TALL_BARROW]: { x: 0, y: 0, width: 78, height: 77 },
+  [LOW_BARROW]: { x: 0, y: 3, width: 94, height: 58 },
+  [IVORY]: { x: 2, y: 1, width: 122, height: 126 },
 };
 
 /** Where his paint lies in a frame drawn off his file, in his pixels; nothing where it fills the frame. */
@@ -396,7 +399,7 @@ export const RIVER_SHEET: Sheet = {
 
 /** The file of his resource icon a feature wears, under the assets folder; a feature with none is refused. */
 export function featureIconOf(feature: string): string {
-  return `store/icons-strategic-resources-and-goods/Icons/${featureLookOf(feature).icon}.png`;
+  return `${ICONS}/${featureLookOf(feature).icon}.png`;
 }
 
 /** What a feature's tile wears beside its icon; a feature with no icon is refused. */
@@ -474,33 +477,14 @@ export function groundColourOf(age: string): number {
   return drawn(LOOK.ground, age, 'no colour paints the ground of the age');
 }
 
-/** The colour a building's mark is painted in; a building with no colour is refused. */
-export function buildingColourOf(building: string): number {
-  return LOOK[drawn(LOOK.building, building, 'no colour paints the building')];
-}
-
-/**
- * What a building is drawn as: his paintings, or its mark in its colour; a building with neither is
- * refused, and so is a painted one that a mark or a colour is drawn for too.
- */
-export function buildingLookOf(building: string): BuildingLook {
-  if (!Object.hasOwn(BUILDING_PAINTINGS, building)) {
-    return {
-      kind: 'mark',
-      corners: drawn(BUILDING_MARKS, building, 'no mark is drawn for the building'),
-      colour: buildingColourOf(building),
-    };
-  }
-  if (Object.hasOwn(BUILDING_MARKS, building) || Object.hasOwn(LOOK.building, building)) {
-    throw new Error(`a mark is drawn for the painted building ${building}`);
-  }
-  return { kind: 'painted', ...BUILDING_PAINTINGS[building] };
+/** His paintings a building is drawn as; a building with none is refused. */
+export function buildingPaintingsOf(building: string): BuildingPaintings {
+  return drawn(BUILDING_PAINTINGS, building, 'no painting is drawn for the building');
 }
 
 /** Whether a building's paintings lie on the patch. */
 export function onPatch(building: string): boolean {
-  const look = buildingLookOf(building);
-  return look.kind === 'painted' && look.patch;
+  return buildingPaintingsOf(building).patch;
 }
 
 /** The corners an improvement's mark is drawn from; an improvement with no mark is refused. */

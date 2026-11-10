@@ -17,9 +17,6 @@ export type Paper = {
   readonly ink: number;
 };
 
-/** Which role paints a building's mark. */
-export type BuildingRole = 'enemy' | 'site';
-
 /** Every colour of the screen, by the role it paints. */
 export type Look = {
   readonly button: number;
@@ -28,7 +25,6 @@ export type Look = {
   readonly civilization: number;
   readonly enemy: number;
   readonly neutral: number;
-  readonly site: number;
   readonly pileCount: number;
   readonly exhaustTab: number;
   readonly exhaustTabEdge: number;
@@ -120,7 +116,6 @@ export type Look = {
   readonly preparedGlow: Glow;
   readonly reading: Readonly<Record<Resource, number>>;
   readonly terrain: Readonly<Record<string, number>>;
-  readonly building: Readonly<Record<string, BuildingRole>>;
   /** The ground each age stands on in the technology tree, by the age's id. */
   readonly ground: Readonly<Record<string, number>>;
   /** The ground of the age after the last the technology tree holds, which the tree ends on. */
@@ -136,7 +131,6 @@ export const LOOK: Look = {
   civilization: 0xd9a441,
   enemy: 0xb4453c,
   neutral: 0x2b4f7a,
-  site: 0x4a5058,
   pileCount: 0xd9a441,
   exhaustTab: 0xd4d7db,
   exhaustTabEdge: 0x6f757d,
@@ -220,16 +214,6 @@ export const LOOK: Look = {
     coast: 0x3d6d9e,
     ocean: 0x2b4f7a,
     desert: 0xd6c08a,
-  },
-  building: {
-    camp: 'enemy',
-    'stone-camp': 'enemy',
-    'painted-cave': 'site',
-    'stone-painted-cave': 'site',
-    'old-cairn': 'site',
-    'stone-old-cairn': 'site',
-    'beast-bones': 'site',
-    'stone-beast-bones': 'site',
   },
   ground: {
     nomadic: 0x2a5a41,

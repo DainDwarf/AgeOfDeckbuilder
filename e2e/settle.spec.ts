@@ -4,6 +4,7 @@ import { aimOf } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileAt, tileKey } from '../src/rules/map';
+import { inSight } from '../src/rules/sight';
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
@@ -11,10 +12,12 @@ import {
   borderColours,
   borderStretches,
   budget,
+  campsWorn,
   chronicleOf,
   civilizationOpened,
   click,
   dragOut,
+  drawnFaces,
   endTurnFill,
   endTurnLabel,
   faceCounts,
@@ -86,10 +89,12 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(standingCity.city).toEqual(at);
   expect(tileAt(standingCity.tiles, at)?.building).toBe(civilization.city.building);
   expect(tileAt(standingCity.tiles, at)?.terrain).toBe(tileAt(opened.tiles, at)?.terrain);
+  const sees = inSight(CATALOGUE, standingCity);
   expect(await borderColours(page)).toEqual(
-    borderStretches(
-      standingCity.held.map((tile) => ({ tile, holder: 'player' as const, inFog: false })),
-    ),
+    borderStretches([
+      ...standingCity.held.map((tile) => ({ tile, whose: 'player' as const, inFog: false })),
+      ...campsWorn(standingCity, drawnFaces(standingCity), (tile) => !sees.has(tileKey(tile))),
+    ]),
   );
 
   const button = await onScreen(page, 'end-turn');

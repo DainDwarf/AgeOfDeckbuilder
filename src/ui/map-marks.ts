@@ -22,10 +22,9 @@ import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from
 import { css, type Glow, LOOK, multiplied, type Wash } from './look';
 import {
   BUILDING_SHEET,
-  type BuildingLook,
   type BuildingPaintings,
   type BuildingPiece,
-  buildingLookOf,
+  buildingPaintingsOf,
   clearingsOf,
   FACE_SHEET,
   FEATURE_SHEET_KEY,
@@ -111,7 +110,7 @@ const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 
 /** What a polygon holds until a mark is read onto it. */
 export const UNREAD: number[] = [0, 0, 1, 0, 0, 1];
 
-/** How far above a tile's middle the row of its feature and its improvements stands, clear of a building mark. */
+/** How far above a tile's middle the row of its feature and its improvements stands. */
 export const ROW_RISE = 15;
 /** How far apart the marks of that row stand, centre to centre. */
 const ROW_PITCH = 11;
@@ -171,7 +170,6 @@ export type TileObjects = {
   readonly shore: Phaser.GameObjects.Image;
   readonly feature: Phaser.GameObjects.Image;
   readonly featureDisc: Phaser.GameObjects.Arc;
-  readonly building: Phaser.GameObjects.Polygon;
 };
 
 /** What the map keeps of a unit from its entering to its leaving, shown as the unit stands. */
@@ -244,17 +242,14 @@ export type FacePainting = { readonly sheet: string; readonly painting: string }
 
 /**
  * The painting a tile's face wears, picked by its place on the disc: his clearing of its terrain
- * under a painted building, where he painted any, else his painting of it; tinted where the feature on
- * it tints it.
+ * under a building, where he painted any, else his painting of it; tinted where the feature on it
+ * tints it.
  */
 export function facePaintingOn(
   { terrain, feature, building }: Pick<Tile, 'terrain' | 'feature' | 'building'>,
   coord: TileCoords,
 ): FacePainting {
-  const cleared =
-    building !== undefined && buildingLookOf(building).kind === 'painted'
-      ? clearingsOf(terrain)
-      : [];
+  const cleared = building !== undefined ? clearingsOf(terrain) : [];
   const painting = paintingOn(cleared.length > 0 ? cleared : paintingsOf(terrain), coord);
   if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
     return { sheet: FEATURE_SHEET_KEY, painting: tintedName(painting, feature) };
@@ -306,21 +301,6 @@ export function shoreOn(
 export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameObjects.Image {
   const face = wearing(tileFace(scene), FACE_SHEET.key, paintingsOf(terrain)[0], false);
   return face.setOrigin(0.5, 0.5);
-}
-
-/**
- * A polygon made to draw a building: its placeholder mark, in the colour it is known by, darkened on
- * a tile in fog.
- */
-export function asBuilding(
-  mark: Phaser.GameObjects.Polygon,
-  { corners: around, colour }: BuildingLook & { readonly kind: 'mark' },
-  inFog: boolean,
-): Phaser.GameObjects.Polygon {
-  return mark
-    .setTo(corners([...around]))
-    .setFillStyle(darkened(colour, inFog))
-    .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
 }
 
 // The scale is set here and `asPainted` resets it to one: a patch is painted before it is placed.
@@ -408,41 +388,32 @@ export function paintedBounds(mark: Phaser.GameObjects.GameObject): Phaser.Geom.
   );
 }
 
-/** The name of what a building stands as on the tile of that key: its mark, or the container of its pieces. */
-export function buildingStandsAs(building: BuildingTypeId, key: string): string {
-  const look = buildingLookOf(building);
-  switch (look.kind) {
-    case 'mark':
-      return `building-${key}`;
-    case 'painted':
-      return `building-pieces-${key}`;
-  }
+/** The name of the container a building's pieces stand in on the tile of that key. */
+export function buildingStandsAs(key: string): string {
+  return `building-pieces-${key}`;
 }
 
 /**
- * A building off the map: its mark, or its pieces in their arrangement, a village as the first of
- * his four, the patch among them, their paint centred on the container's point.
+ * A building off the map: its pieces in their arrangement, a village as the first of his four, the
+ * patch among them, their paint centred on the container's point.
  */
-export function buildingMark(scene: Phaser.Scene, building: BuildingTypeId): Mark {
-  const look = buildingLookOf(building);
-  switch (look.kind) {
-    case 'mark':
-      return asBuilding(scene.add.polygon(0, 0, UNREAD), look, false);
-    case 'painted': {
-      const pieces = asPieces(
-        scene.add.container(0, 0),
-        look,
-        look.patch,
-        ([first]) => first,
-        false,
-      );
-      const { centerX, centerY } = paintedBounds(pieces);
-      for (const image of pieces.list as Phaser.GameObjects.Image[]) {
-        image.setPosition(image.x - centerX, image.y - centerY);
-      }
-      return pieces;
-    }
+export function buildingMark(
+  scene: Phaser.Scene,
+  building: BuildingTypeId,
+): Phaser.GameObjects.Container {
+  const paintings = buildingPaintingsOf(building);
+  const pieces = asPieces(
+    scene.add.container(0, 0),
+    paintings,
+    paintings.patch,
+    ([first]) => first,
+    false,
+  );
+  const { centerX, centerY } = paintedBounds(pieces);
+  for (const image of pieces.list as Phaser.GameObjects.Image[]) {
+    image.setPosition(image.x - centerX, image.y - centerY);
   }
+  return pieces;
 }
 
 // The scale is set here and `asPainted` resets it to one: an icon is painted before it wears a feature.

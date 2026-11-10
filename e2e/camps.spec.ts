@@ -2,13 +2,13 @@ import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
-import type { Chronicle } from '../src/rules/state';
+import { tileAt, tileKey } from '../src/rules/map';
 import { captureLore } from '../src/ui/lore';
 import { buildingName } from '../src/ui/text';
 import {
   budget,
   campBeside,
+  campsOf,
   chronicleOf,
   consoleKey,
   enter,
@@ -24,12 +24,6 @@ import {
   WARRIOR,
   watch,
 } from './chronicle-screen';
-
-/** The tiles the camp's building stands on, in the order the map lists them. */
-function campsOf(chronicle: Chronicle): TileCoords[] {
-  const { building } = ageOf(CATALOGUE, chronicle.age).camp;
-  return chronicle.tiles.filter((tile) => tile.building === building).map(({ q, r }) => ({ q, r }));
-}
 
 test('the map draws the camps it was dealt once the uncharted veil is off', async ({ page }) => {
   const problems = watch(page);

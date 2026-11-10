@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The sites and the camps** — both ages' camps and the three sites of both ages are drawn as the paintings of the cast on the map and on the infopanel, a forest tile under one wearing his clearing; every tile the map draws carrying the age's camp wears the enemies' border, a city's line and band run straight along the tile's six edges in the enemies' colour, over a city's border; the last building marks, their colours and the tile's polygon gone. Doc-impact: `docs/LOOK.md`. [board/sites-and-camps.md](board/sites-and-camps.md)
 - **The improvements** — an improvement is drawn as his painted icon in the feature's row or as a change to the tile's own drawing, mocked up at its intake.
 - **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), and how much of a building under it shows.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.

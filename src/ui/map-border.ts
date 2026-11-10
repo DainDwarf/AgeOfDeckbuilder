@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { cornersOf, type TileCoords, tileKey } from '../rules/map';
-import type { CityFaction } from '../rules/state';
+import type { Faction } from '../rules/units';
 import {
   borderLoops,
   type Curved,
@@ -11,15 +11,7 @@ import {
 } from './border-loops';
 import { LOOK } from './look';
 import { paintFaded, sceneCanvas, tracedPolygon } from './map-fade';
-import {
-  CITY_COLOURS,
-  CITY_FACTIONS,
-  cornerAt,
-  darkened,
-  hexagonOn,
-  positionOf,
-  TILE_SIZE,
-} from './map-marks';
+import { cornerAt, darkened, FACTION_COLOURS, hexagonOn, positionOf, TILE_SIZE } from './map-marks';
 
 /** How wide a border's line is, and how deep its band fades inside it. */
 const LINE = 1.5;
@@ -39,12 +31,15 @@ const BAND_KEY = 'border-band';
 const REACH_KEY = 'reach-band';
 const CLAIM_KEY = 'claim-band';
 
-/** A tile the map draws as held, and whether it draws it in fog. */
-export type HeldAsDrawn = { readonly tile: TileCoords; readonly inFog: boolean };
+/** A tile the map draws wearing a border, and whether it draws it in fog. */
+export type WornAsDrawn = { readonly tile: TileCoords; readonly inFog: boolean };
 
 export type BorderView = {
-  /** Both cities' borders around the tiles the map draws as each one's, drawn again only where those changed. */
-  paint(held: Readonly<Record<CityFaction, readonly HeldAsDrawn[]>>): void;
+  /**
+   * Each faction's border around the tiles the map draws wearing it: each city's round the tiles it
+   * holds, the enemies' round their camps; drawn again only where those changed.
+   */
+  paint(worn: Readonly<Record<Faction, readonly WornAsDrawn[]>>): void;
 };
 
 /** A unit's landings and the tile it stands on. */
@@ -191,9 +186,26 @@ function discCanvas(
   };
 }
 
+/** How high each faction's border is painted: the enemies' over both cities'. */
+const RISE: Record<Faction, number> = { player: 0, neutral: 0, enemy: 1 };
+
+/** Every faction, in the order its border is painted. */
+const WEARERS = (Object.keys(RISE) as Faction[]).sort((one, other) => RISE[one] - RISE[other]);
+
+/** The loops a faction's border runs round its tiles: a city's rounding every corner, the enemies' straight. */
+function loopsOf(whose: Faction, tiles: readonly TileCoords[]): Stretch[][] {
+  switch (whose) {
+    case 'player':
+    case 'neutral':
+      return borderLoops(tiles, cornerAt).map((loop) => loop.flat());
+    case 'enemy':
+      return edgeLoops(tiles, cornerAt);
+  }
+}
+
 /**
- * Both cities' borders on the map's own surface, on this layer: the band painted on one canvas over
- * the disc, at a pixel to the unit, and each holder's line over it.
+ * Every faction's border on the map's own surface, on this layer: the bands painted on one canvas
+ * over the disc, at a pixel to the unit, and each faction's line over them.
  */
 export function createBorder(
   scene: Phaser.Scene,
@@ -203,39 +215,39 @@ export function createBorder(
   const canvas = discCanvas(scene, BAND_KEY, tiles);
   const band = canvas.image.setVisible(false);
   const lines = Object.fromEntries(
-    CITY_FACTIONS.map((whose) => [whose, scene.add.graphics().setVisible(false)]),
-  ) as Record<CityFaction, Phaser.GameObjects.Graphics>;
-  on.add([band, ...CITY_FACTIONS.map((whose) => lines[whose])]);
+    WEARERS.map((whose) => [whose, scene.add.graphics().setVisible(false)]),
+  ) as Record<Faction, Phaser.GameObjects.Graphics>;
+  on.add([band, ...WEARERS.map((whose) => lines[whose])]);
 
-  /** What the border was last drawn from: each holder's tiles as the map drew them. */
+  /** What the border was last drawn from: each faction's tiles as the map drew them. */
   let drawnFrom: string | undefined;
 
   return {
-    paint(held): void {
-      const from = CITY_FACTIONS.map((whose) =>
-        held[whose].map(({ tile, inFog }) => `${tileKey(tile)}${inFog ? '~' : ''}`).join(' '),
+    paint(worn): void {
+      const from = WEARERS.map((whose) =>
+        worn[whose].map(({ tile, inFog }) => `${tileKey(tile)}${inFog ? '~' : ''}`).join(' '),
       ).join('|');
       if (from === drawnFrom) return;
       drawnFrom = from;
 
       const context = canvas.wipe();
       let standing = false;
-      for (const whose of CITY_FACTIONS) {
+      for (const whose of WEARERS) {
         const fogged = new Set(
-          held[whose].filter(({ inFog }) => inFog).map(({ tile }) => tileKey(tile)),
+          worn[whose].filter(({ inFog }) => inFog).map(({ tile }) => tileKey(tile)),
         );
         const colourOf = (stretch: Stretch): number =>
-          darkened(CITY_COLOURS[whose], fogged.has(tileKey(stretch.tile)));
-        const loops = borderLoops(
-          held[whose].map(({ tile }) => tile),
-          cornerAt,
-        ).map((loop) => loop.flat());
+          darkened(FACTION_COLOURS[whose], fogged.has(tileKey(stretch.tile)));
+        const loops = loopsOf(
+          whose,
+          worn[whose].map(({ tile }) => tile),
+        );
         paintBand(
           context,
           loops,
           [false, true].map((inFog) => ({
-            tiles: held[whose].filter((drawn) => drawn.inFog === inFog).map(({ tile }) => tile),
-            colour: darkened(CITY_COLOURS[whose], inFog),
+            tiles: worn[whose].filter((drawn) => drawn.inFog === inFog).map(({ tile }) => tile),
+            colour: darkened(FACTION_COLOURS[whose], inFog),
           })),
         );
         paintLine(lines[whose], loops.flat(), LINE, colourOf, 1);

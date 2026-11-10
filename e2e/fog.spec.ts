@@ -11,7 +11,6 @@ import {
   riversAlong,
   sameTile,
   type TileCoords,
-  tileAt,
   tileKey,
   tilesAtCorner,
   tilesOfEdge,
@@ -23,7 +22,6 @@ import { followed, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { reachable, type UnitStats, unitAt } from '../src/rules/units';
 import { LOOK, multiplied } from '../src/ui/look';
-import { buildingColourOf } from '../src/ui/marks';
 import {
   budget,
   campGround,
@@ -318,8 +316,6 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   const problems = watch(page);
   const { chronicle, lit, camp, trapped, corners } = markedInFog();
   const city = playerCityTile(chronicle);
-  const campBuilding = tileAt(chronicle.tiles, camp)?.building;
-  if (campBuilding === undefined) throw new Error('the camp stands on no building');
   const marksOf = (key: string): string[] => [
     `feature-${key}`,
     `herd-${key}-0`,
@@ -348,7 +344,7 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   expect(read(`herd-${trappedKey}-0`).tint).toBe(LOOK.fog);
   expect(read(`feature-disc-${trappedKey}`).fill).toBe(fogged(LOOK.featureDisc.colour));
   expect(read(`improvement-${TRAPPING}-${trappedKey}`).fill).toBe(fogged(LOOK.built));
-  expect(read(`building-${campKey}`).fill).toBe(fogged(buildingColourOf(campBuilding)));
+  expect(read(`building-${campKey}`).tint).toBe(LOOK.fog);
   expect(unitMarkOn(camp)).toEqual([fogged(LOOK.enemy)]);
 
   // A tile in sight: no tint, and every colour as it is.

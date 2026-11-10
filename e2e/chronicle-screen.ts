@@ -75,7 +75,6 @@ import {
   type Chronicle,
   type ChronicleAchievement,
   type ChronicleCard,
-  type CityFaction,
   costsOf,
   type Deal,
   idle,
@@ -83,6 +82,7 @@ import {
 } from '../src/rules/state';
 import {
   actsAsEnemy,
+  type Faction,
   relationsOf,
   standsOn,
   type Unit,
@@ -1493,38 +1493,67 @@ export function marksIn(page: Page, name: string): Promise<number> {
   }, name);
 }
 
-/** A tile the map draws as a city's: that city, and whether the map draws the tile in fog. */
+/**
+ * A tile the map draws wearing a border: whose, a city's for a tile it holds and the enemies' for a
+ * camp's, and whether the map draws the tile in fog.
+ */
 export type Worn = {
   readonly tile: TileCoords;
-  readonly holder: CityFaction;
+  readonly whose: Faction;
   readonly inFog: boolean;
 };
 
-/** The colour a city's border is drawn in. */
-function borderColour(holder: CityFaction): number {
-  switch (holder) {
+/** The colour a border is drawn in, and how many stretches its line runs along each edge. */
+function borderOf(whose: Faction): { colour: number; perEdge: number } {
+  switch (whose) {
     case 'player':
-      return LOOK.civilization;
+      return { colour: LOOK.civilization, perEdge: 2 };
     case 'neutral':
-      return LOOK.neutral;
+      return { colour: LOOK.neutral, perEdge: 2 };
+    case 'enemy':
+      return { colour: LOOK.enemy, perEdge: 1 };
   }
 }
 
 /**
- * How many stretches of the cities' borders each colour stands for over these tiles, by the colour's
- * value: two along each edge of a tile whose neighbour is not its city's, off the disc included, in
- * its city's colour darkened by the fog's tint where the tile is in fog.
+ * How many stretches of the map's borders each colour stands for over these tiles, by the colour's
+ * value: the border's own along each edge whose neighbour wears none of it, off the disc included,
+ * in its colour darkened by the fog's tint where the tile is in fog.
  */
 export function borderStretches(worn: readonly Worn[]): Record<number, number> {
-  const holders = new Map(worn.map(({ tile, holder }) => [tileKey(tile), holder]));
+  const wearers = (whose: Faction): Set<string> =>
+    new Set(worn.filter((one) => one.whose === whose).map(({ tile }) => tileKey(tile)));
   const counts: Record<number, number> = {};
-  for (const { tile, holder, inFog } of worn) {
-    const edges = neighbours(tile).filter((beside) => holders.get(tileKey(beside)) !== holder);
+  for (const { tile, whose, inFog } of worn) {
+    const alike = wearers(whose);
+    const edges = neighbours(tile).filter((beside) => !alike.has(tileKey(beside)));
     if (edges.length === 0) continue;
-    const colour = inFog ? multiplied(borderColour(holder), LOOK.fog) : borderColour(holder);
-    counts[colour] = (counts[colour] ?? 0) + 2 * edges.length;
+    const { colour: own, perEdge } = borderOf(whose);
+    const colour = inFog ? multiplied(own, LOOK.fog) : own;
+    counts[colour] = (counts[colour] ?? 0) + perEdge * edges.length;
   }
   return counts;
+}
+
+/** The tiles among these faces, the chronicle's own unless named, that carry its age's camp. */
+export function campsOf(
+  chronicle: Chronicle,
+  faces: readonly Tile[] = chronicle.tiles,
+): TileCoords[] {
+  const { building } = ageOf(CATALOGUE, chronicle.age).camp;
+  return faces.filter((face) => face.building === building).map(({ q, r }) => ({ q, r }));
+}
+
+/**
+ * The tiles among these faces that carry the chronicle's age's camp, each wearing the enemies'
+ * border, in fog where `inFog` says, nowhere unless it is named.
+ */
+export function campsWorn(
+  chronicle: Chronicle,
+  faces: readonly Tile[],
+  inFog: (tile: TileCoords) => boolean = () => false,
+): Worn[] {
+  return campsOf(chronicle, faces).map((tile) => ({ tile, whose: 'enemy', inFog: inFog(tile) }));
 }
 
 /** One stroke of a line of the map's borders: its colour, its width, and the points it runs through. */

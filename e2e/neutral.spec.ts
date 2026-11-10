@@ -35,6 +35,8 @@ import {
   budget,
   campaignWith,
   campBeside,
+  campsOf,
+  campsWorn,
   chronicleOf,
   click,
   consoleKey,
@@ -119,8 +121,7 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   const problems = watch(page);
   const { chronicle: opened, city } = seedOneFreed();
   const building = neutralBuilding(CATALOGUE, ageOf(CATALOGUE, AGE), `the age ${AGE}`);
-  const camp = ageOf(CATALOGUE, opened.age).camp.building;
-  const camps = opened.tiles.filter((tile) => tile.building === camp);
+  const camps = campsOf(opened);
   const mark = `building-${tileKey(city)}`;
   expect(opened.age).toBe(AGE);
 
@@ -246,12 +247,17 @@ test('the map draws the neutral’s border in the neutral’s colour beside the 
   if (neutral === undefined) throw new Error('seed 1 opens with no neutral');
   const seen = inSight(CATALOGUE, claimed);
   const kept = new Map(claimed.snapshots.map((snapshot) => [tileKey(snapshot), snapshot]));
-  const worn = claimed.tiles.flatMap((tile): Worn[] => {
+  const inFog = (tile: TileCoords): boolean => !seen.has(tileKey(tile));
+  const drawn = claimed.tiles.map((tile) => {
     const snapshot = kept.get(tileKey(tile));
-    const inFog = !seen.has(tileKey(tile));
-    const holder = !inFog || snapshot === undefined ? holderOf(claimed, tile) : snapshot.holder;
-    return holder === undefined ? [] : [{ tile, holder, inFog }];
+    return !inFog(tile) || snapshot === undefined
+      ? { tile, face: tile, holder: holderOf(claimed, tile) }
+      : { tile, face: snapshot.tile, holder: snapshot.holder };
   });
+  const held = drawn.flatMap(({ tile, holder }): Worn[] =>
+    holder === undefined ? [] : [{ tile, whose: holder, inFog: inFog(tile) }],
+  );
+  const faces = drawn.map(({ face }) => face);
   expect(holderOf(claimed, first)).toBe('neutral');
   expect(seen.has(tileKey(first))).toBe(false);
   expect(kept.get(tileKey(first))?.holder).toBeUndefined();
@@ -262,7 +268,9 @@ test('the map draws the neutral’s border in the neutral’s colour beside the 
   await consoleKey(page);
   await rested(page);
 
-  expect(await borderColours(page)).toEqual(borderStretches(worn));
+  expect(await borderColours(page)).toEqual(
+    borderStretches([...held, ...campsWorn(claimed, faces, inFog)]),
+  );
 
   await consoleKey(page);
   await enter(page, 'fog');
@@ -271,8 +279,9 @@ test('the map draws the neutral’s border in the neutral’s colour beside the 
 
   expect(await borderColours(page)).toEqual(
     borderStretches([
-      ...claimed.held.map((tile) => ({ tile, holder: 'player' as const, inFog: false })),
-      ...neutral.held.map((tile) => ({ tile, holder: 'neutral' as const, inFog: false })),
+      ...claimed.held.map((tile) => ({ tile, whose: 'player' as const, inFog: false })),
+      ...neutral.held.map((tile) => ({ tile, whose: 'neutral' as const, inFog: false })),
+      ...campsWorn(claimed, claimed.tiles),
     ]),
   );
   expect(problems).toEqual([]);

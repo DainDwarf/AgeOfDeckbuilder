@@ -385,7 +385,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     );
     compare(
       view.built,
-      (id) => [buildingStandsAs(id, key)],
+      () => [buildingStandsAs(key)],
       (id) => [view.buildingOn(id, coord, inFog)],
       y,
       { ids: one(from.building), xs: [x] },

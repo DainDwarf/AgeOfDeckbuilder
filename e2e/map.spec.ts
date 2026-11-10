@@ -7,6 +7,8 @@ import { claimable } from '../src/rules/city';
 import { enemyEntering } from '../src/rules/enemies';
 import {
   CENTRE,
+  type Corner,
+  cornersOf,
   neighbours,
   sameTile,
   type Tile,
@@ -14,6 +16,7 @@ import {
   tileAt,
   tileKey,
   tilesBeside,
+  tilesOfEdge,
   water,
 } from '../src/rules/map';
 import { buildingKind, featureKind } from '../src/rules/map-kinds';
@@ -22,8 +25,9 @@ import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, unchanged, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import { LOOK } from '../src/ui/look';
 import {
-  buildingLookOf,
+  buildingPaintingsOf,
   clearingsOf,
   featureDressOf,
   featureIconOf,
@@ -36,9 +40,12 @@ import {
 import {
   admits,
   aimed,
+  type BorderStroke,
+  borderStrokes,
   budget,
   campGround,
   campKind,
+  campsOf,
   chronicleOf,
   claimedAt,
   consoleKey,
@@ -67,7 +74,6 @@ import {
   settledOn,
   shownCard,
   shows,
-  sitesOf,
   standing,
   stillAt,
   tileOnScreen,
@@ -220,18 +226,13 @@ function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoo
   throw new Error('seed 1 crosses no raider entered three tiles out in sight');
 }
 
-/** Whether a building is drawn as his paintings. */
-function painted(building: string | undefined): boolean {
-  return building !== undefined && buildingLookOf(building).kind === 'painted';
-}
-
 /**
- * The paintings a tile's face may wear: his clearings of its terrain under a painted building where
- * he painted any, else his paintings of its terrain, each tinted for the feature on it where that
+ * The paintings a tile's face may wear: his clearings of its terrain under a building where he
+ * painted any, else his paintings of its terrain, each tinted for the feature on it where that
  * feature tints its tile.
  */
 function facePaintingsOf({ terrain, feature, building }: Tile): string[] {
-  const cleared = painted(building) ? clearingsOf(terrain) : [];
+  const cleared = building !== undefined ? clearingsOf(terrain) : [];
   const paintings = cleared.length > 0 ? [...cleared] : paintingsOf(terrain);
   if (feature === undefined || featureDressOf(feature).kind !== 'tint') return paintings;
   return paintings.map((painting) => tintedName(painting, feature));
@@ -247,6 +248,14 @@ const CITY_BUILDINGS = new Set([
     unlocks.city === undefined ? [] : [unlocks.city.building],
   ),
 ]);
+
+/** Every building an age deals onto its map: its camp's and its sites'. */
+const DEALT = new Set(
+  Object.keys(CATALOGUE.ages).flatMap((age) => {
+    const { camp, sites } = ageOf(CATALOGUE, age);
+    return [camp.building, ...Object.values(sites).map(({ building }) => building)];
+  }),
+);
 
 /** How many claims the border may grow by while it looks for a building's ground. */
 const CLAIMS = 12;
@@ -304,30 +313,28 @@ function builtInside(chronicle: Chronicle, chain: readonly string[]): Chronicle 
 }
 
 /**
- * The first seed's Stone Age turn 1, both cities on their villages, with every painted building that
- * is no city's and no tile holds built by `builtInside`, each stage of the monument on its own tile.
+ * The first seed's Stone Age turn 1, both cities on their villages, with every building that no age
+ * deals, is no city's and no tile holds built by `builtInside`, each stage of the monument on its own
+ * tile.
  */
 function castBuilt(): Chronicle {
   const campaign = neutralCampaign();
-  return firstSeed(
-    'builds every painted building of the cast inside the Stone Age border',
-    (seed) => {
-      const opened = settledOn(seed, [], campaign);
-      const chains = Object.keys(CATALOGUE.buildings)
-        .filter(
-          (id) =>
-            painted(id) &&
-            !CITY_BUILDINGS.has(id) &&
-            !opened.tiles.some((tile) => tile.building === id),
-        )
-        .map((id) => (STAGES.includes(id) ? STAGES.slice(0, STAGES.indexOf(id) + 1) : [id]));
-      let chronicle: Chronicle | undefined = opened;
-      for (const chain of chains) {
-        if (chronicle !== undefined) chronicle = builtInside(chronicle, chain);
-      }
-      return chronicle;
-    },
-  );
+  return firstSeed('builds every building of the cast inside the Stone Age border', (seed) => {
+    const opened = settledOn(seed, [], campaign);
+    const chains = Object.keys(CATALOGUE.buildings)
+      .filter(
+        (id) =>
+          !DEALT.has(id) &&
+          !CITY_BUILDINGS.has(id) &&
+          !opened.tiles.some((tile) => tile.building === id),
+      )
+      .map((id) => (STAGES.includes(id) ? STAGES.slice(0, STAGES.indexOf(id) + 1) : [id]));
+    let chronicle: Chronicle | undefined = opened;
+    for (const chain of chains) {
+      if (chronicle !== undefined) chronicle = builtInside(chronicle, chain);
+    }
+    return chronicle;
+  });
 }
 
 /**
@@ -444,13 +451,12 @@ test("every tile the map draws wears a painting of its terrain, the rows three q
   await openSaved(page, OPENED);
 
   const faces = drawnFaces(OPENED);
-  const lattice = [CENTRE, eastOf(CENTRE), { q: CENTRE.q, r: CENTRE.r + 1 }];
-  const names = new Set([...faces, ...lattice].map((tile) => `tile-${tileKey(tile)}`));
+  const names = new Set([...faces, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`));
   const seen = await readings(page, [...names]);
   for (const face of faces) {
     expect(facePaintingsOf(face)).toContain(seen(`tile-${tileKey(face)}`).frame);
   }
-  const [origin, east, south] = lattice.map((tile) => seen(`tile-${tileKey(tile)}`).onScreen);
+  const [origin, east, south] = LATTICE.map((tile) => seen(`tile-${tileKey(tile)}`).onScreen);
   expect((south.y - origin.y) / (east.x - origin.x)).toBeCloseTo(0.75, 2);
 
   expect(problems).toEqual([]);
@@ -513,19 +519,78 @@ test("every feature stands as his icon on its disc, a herd's tile carries three 
   expect(problems).toEqual([]);
 });
 
-test('every painted building stands as one of his paintings of it, a forest under one wears his clearing and every other forest its own, and the camps and the sites stand as their marks', async ({
+/** The centre, the tile east of it and the tile south of it: three tiles no row or column holds together. */
+const LATTICE: readonly TileCoords[] = [CENTRE, eastOf(CENTRE), { q: CENTRE.q, r: CENTRE.r + 1 }];
+
+/** A tile's middle in the lattice of corners: the mean of its six corners. */
+function middleOf(tile: TileCoords): Point {
+  const corners = cornersOf(tile);
+  return {
+    x: corners.reduce((sum, { x }) => sum + x, 0) / corners.length,
+    y: corners.reduce((sum, { y }) => sum + y, 0) / corners.length,
+  };
+}
+
+/**
+ * Where a corner of the lattice stands on the map's own surface, the places of the `LATTICE` tiles'
+ * faces read in their order: the one mapping that takes each of their middles to its place.
+ */
+function placedBy([origin, first, second]: readonly Point[]): (corner: Corner) => Point {
+  const [at, one, other] = LATTICE.map(middleOf);
+  const u = { x: one.x - at.x, y: one.y - at.y };
+  const v = { x: other.x - at.x, y: other.y - at.y };
+  const across = u.x * v.y - u.y * v.x;
+  return ({ x, y }) => {
+    const off = { x: x - at.x, y: y - at.y };
+    const a = (off.x * v.y - off.y * v.x) / across;
+    const b = (u.x * off.y - u.y * off.x) / across;
+    return {
+      x: origin.x + a * (first.x - origin.x) + b * (second.x - origin.x),
+      y: origin.y + a * (first.y - origin.y) + b * (second.y - origin.y),
+    };
+  };
+}
+
+/** The edges of these tiles whose tile beyond is none of them, each its two corners where `placeOf` puts them. */
+function edgesAround(
+  tiles: readonly TileCoords[],
+  placeOf: (corner: Corner) => Point,
+): [Point, Point][] {
+  const keys = new Set(tiles.map(tileKey));
+  return tiles.flatMap((tile) => {
+    const corners = cornersOf(tile);
+    return corners.flatMap((from, at): [Point, Point][] => {
+      const to = corners[(at + 1) % corners.length];
+      const beyond = tilesOfEdge(from, to).find((one) => !sameTile(one, tile));
+      return beyond !== undefined && keys.has(tileKey(beyond))
+        ? []
+        : [[placeOf(from), placeOf(to)]];
+    });
+  });
+}
+
+// A place read off the page comes through a world matrix, which Phaser keeps in single precision.
+/** Whether a stroke runs straight between the two ends of an edge, either way, to a thousandth of a unit. */
+function strokedAlong({ points }: BorderStroke, [one, other]: [Point, Point]): boolean {
+  const at = (a: Point, b: Point): boolean => Math.hypot(a.x - b.x, a.y - b.y) < 1e-3;
+  const [from, to] = points;
+  return (
+    points.length === 2 && ((at(from, one) && at(to, other)) || (at(from, other) && at(to, one)))
+  );
+}
+
+test('every building stands as one of his paintings of it, a forest under one wears his clearing and every other forest its own, and the enemies’ border runs straight along the edges of every camp’s tile and nowhere else, the veils off', async ({
   page,
 }) => {
   const problems = watch(page);
-  // The Nomadic city stands on the one painted building no Stone Age chronicle holds.
+  // The Nomadic chronicle holds its city's building, its camp and its sites, which no Stone Age one does.
   const chronicles = [OPENED, castBuilt()];
   const unbuilt = Object.keys(CATALOGUE.buildings).filter(
-    (id) =>
-      painted(id) && !chronicles.some(({ tiles }) => tiles.some((tile) => tile.building === id)),
+    (id) => !chronicles.some(({ tiles }) => tiles.some((tile) => tile.building === id)),
   );
   expect(unbuilt).toEqual([]);
   const cleared = chronicles.flatMap(({ tiles }) =>
-    tiles.filter((tile) => clearingsOf(tile.terrain).length > 0 && painted(tile.building)),
+    tiles.filter((tile) => clearingsOf(tile.terrain).length > 0 && tile.building !== undefined),
   );
   expect(cleared.length).toBeGreaterThan(0);
 
@@ -533,32 +598,36 @@ test('every painted building stands as one of his paintings of it, a forest unde
     await openSaved(page, chronicle);
     await consoleKey(page);
     await enter(page, 'uncharted');
+    await enter(page, 'fog');
     await consoleKey(page);
 
-    const paintedOn = chronicle.tiles.flatMap(({ q, r, building }) => {
-      if (building === undefined) return [];
-      const look = buildingLookOf(building);
-      return look.kind === 'painted' ? [{ key: tileKey({ q, r }), look }] : [];
-    });
-    const { building: camp } = ageOf(CATALOGUE, chronicle.age).camp;
-    const camps = chronicle.tiles.filter((tile) => tile.building === camp);
-    const sites = sitesOf(chronicle);
+    const builtOn = chronicle.tiles.flatMap(({ q, r, building }) =>
+      building === undefined ? [] : [{ key: tileKey({ q, r }), building }],
+    );
+    const camps = campsOf(chronicle);
     expect(camps.length).toBeGreaterThan(0);
-    expect(sites.length).toBeGreaterThan(0);
-    const marked = [...camps, ...sites].map(tileKey);
     const forests = chronicle.tiles.filter((tile) => clearingsOf(tile.terrain).length > 0);
-    const seen = await readings(page, [
-      ...paintedOn.map(({ key }) => `building-${key}`),
-      ...marked.map((key) => `building-${key}`),
-      ...forests.map((tile) => `tile-${tileKey(tile)}`),
+    const names = new Set([
+      ...builtOn.map(({ key }) => `building-${key}`),
+      ...[...forests, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`),
     ]);
-    for (const { key, look } of paintedOn) {
+    const seen = await readings(page, [...names]);
+    for (const { key, building } of builtOn) {
       expect(seen(`building-${key}`).standing).toBe(true);
-      expect(look.pieces.at(-1)?.files).toContain(seen(`building-${key}`).frame);
+      expect(buildingPaintingsOf(building).pieces.at(-1)?.files).toContain(
+        seen(`building-${key}`).frame,
+      );
     }
-    for (const key of marked) expect(seen(`building-${key}`).standing).toBe(true);
     for (const tile of forests) {
       expect(facePaintingsOf(tile)).toContain(seen(`tile-${tileKey(tile)}`).frame);
+    }
+
+    const placeOf = placedBy(LATTICE.map((tile) => seen(`tile-${tileKey(tile)}`).place));
+    const edges = edgesAround(camps, placeOf);
+    const enemies = (await borderStrokes(page)).filter(({ colour }) => colour === LOOK.enemy);
+    expect(enemies.length).toBe(edges.length);
+    for (const edge of edges) {
+      expect(enemies.filter((stroke) => strokedAlong(stroke, edge)).length).toBe(1);
     }
   }
 
