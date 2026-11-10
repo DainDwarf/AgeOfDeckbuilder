@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { featurePlaced, reaches, terraformed } from '../src/rules/cards';
+import { built, featurePlaced, made, reaches, terraformed } from '../src/rules/cards';
 import { achievementOf, ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
@@ -15,13 +15,15 @@ import {
   tilesBeside,
   water,
 } from '../src/rules/map';
-import { featureKind } from '../src/rules/map-kinds';
+import { buildingKind, featureKind } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, unchanged, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import {
+  buildingLookOf,
+  clearingsOf,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
@@ -63,6 +65,7 @@ import {
   settledOn,
   shownCard,
   shows,
+  sitesOf,
   standing,
   stillAt,
   tileOnScreen,
@@ -215,14 +218,54 @@ function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoo
   throw new Error('seed 1 crosses no raider entered three tiles out in sight');
 }
 
+/** Whether a building is drawn as his paintings. */
+function painted(building: string | undefined): boolean {
+  return building !== undefined && buildingLookOf(building).kind === 'painted';
+}
+
 /**
- * The paintings a tile's face may wear: his of its terrain, each tinted for the feature on it where
- * that feature tints its tile.
+ * The paintings a tile's face may wear: his clearings of its terrain under a painted building where
+ * he painted any, else his paintings of its terrain, each tinted for the feature on it where that
+ * feature tints its tile.
  */
-function facePaintingsOf({ terrain, feature }: Tile): string[] {
-  const paintings = paintingsOf(terrain);
+function facePaintingsOf({ terrain, feature, building }: Tile): string[] {
+  const cleared = painted(building) ? clearingsOf(terrain) : [];
+  const paintings = cleared.length > 0 ? [...cleared] : paintingsOf(terrain);
   if (feature === undefined || featureDressOf(feature).kind !== 'tint') return paintings;
   return paintings.map((painting) => tintedName(painting, feature));
+}
+
+/**
+ * The chronicle with every painted building of the catalogue that no tile holds built on a bare tile
+ * of its own ground, one he painted a clearing of where its ground holds one, the feature it names
+ * placed there first.
+ */
+function everyPaintingBuilt(chronicle: Chronicle): Chronicle {
+  let building = unchanged(chronicle);
+  for (const id of Object.keys(CATALOGUE.buildings)) {
+    const { tiles, units } = building.chronicle;
+    if (!painted(id) || tiles.some((tile) => tile.building === id)) continue;
+    const { terrains, features } = buildingKind(CATALOGUE, id);
+    const lyingOn = (tile: Tile): string | undefined =>
+      features?.find((feature) => featureKind(CATALOGUE, feature).terrain === tile.terrain);
+    const ground = tiles.filter(
+      (tile) =>
+        tile.feature === undefined &&
+        tile.building === undefined &&
+        unitAt(units, tile) === undefined &&
+        made(CATALOGUE, tile, terrains) === undefined &&
+        (features === undefined || lyingOn(tile) !== undefined),
+    );
+    const at = ground.find((tile) => clearingsOf(tile.terrain).length > 0) ?? ground[0];
+    if (at === undefined) throw new Error(`no bare tile of the map is ground for ${id}`);
+    const coord = { q: at.q, r: at.r };
+    const feature = lyingOn(at);
+    if (feature !== undefined) {
+      building = followed(building, (left) => featurePlaced(CATALOGUE, left, coord, feature));
+    }
+    building = followed(building, (left) => built(CATALOGUE, left, coord, id));
+  }
+  return building.chronicle;
 }
 
 /**
@@ -403,6 +446,48 @@ test("every feature stands as his icon on its disc, a herd's tile carries three 
     expect(seen(`feature-disc-${key}`).standing).toBe(true);
     for (const name of lyingNames(feature, key)) expect(seen(name).count).toBe(1);
     if (featureDressOf(feature).kind === 'pond') expect(PONDS).toContain(seen(`pond-${key}`).frame);
+  }
+
+  expect(problems).toEqual([]);
+});
+
+test('every painted building stands as one of his paintings of it, a forest under one wears his clearing and every other forest its own, and the camps and the sites stand as their marks', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const chronicle = everyPaintingBuilt(OPENED);
+
+  await openSaved(page, chronicle);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await consoleKey(page);
+
+  const paintedOn = chronicle.tiles.flatMap(({ q, r, building }) => {
+    if (building === undefined) return [];
+    const look = buildingLookOf(building);
+    return look.kind === 'painted' ? [{ key: tileKey({ q, r }), look }] : [];
+  });
+  const { building: camp } = ageOf(CATALOGUE, chronicle.age).camp;
+  const marked = [
+    ...chronicle.tiles.filter((tile) => tile.building === camp),
+    ...sitesOf(chronicle),
+  ].map(tileKey);
+  expect(chronicle.tiles.some((tile) => tile.building === camp)).toBe(true);
+  expect(sitesOf(chronicle).length).toBeGreaterThan(0);
+  const forests = chronicle.tiles.filter((tile) => clearingsOf(tile.terrain).length > 0);
+  const seen = await readings(page, [
+    ...paintedOn.map(({ key }) => `building-${key}`),
+    ...marked.map((key) => `building-${key}`),
+    ...forests.map((tile) => `tile-${tileKey(tile)}`),
+  ]);
+  for (const { key, look } of paintedOn) {
+    expect(seen(`building-${key}`).standing).toBe(true);
+    expect(look.pieces.at(-1)?.files).toContain(seen(`building-${key}`).frame);
+  }
+  for (const key of marked) expect(seen(`building-${key}`).standing).toBe(true);
+  expect(forests.filter((tile) => painted(tile.building)).length).toBeGreaterThan(0);
+  for (const tile of forests) {
+    expect(facePaintingsOf(tile)).toContain(seen(`tile-${tileKey(tile)}`).frame);
   }
 
   expect(problems).toEqual([]);

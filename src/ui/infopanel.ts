@@ -25,6 +25,7 @@ import {
   featureMark,
   improvementMark,
   type Mark,
+  paintedBounds,
   riverMark,
   terrainMark,
   unitMark,
@@ -732,10 +733,10 @@ function amountsOf(amounts: Partial<Resources>): { resource: Resource; amount: n
   return named;
 }
 
-/** A mark drawn at the size it has on the map, brought into a box; an outline keeps its weight. */
+/** A mark drawn at the size it has on the map, brought into a box by its paint; an outline keeps its weight. */
 function fitMark(mark: Mark, box: number): Mark {
   const shapes = mark instanceof Phaser.GameObjects.Container ? mark.list : [mark];
-  const { width, height } = mark.getBounds();
+  const { width, height } = paintedBounds(mark);
   const scale = box / Math.max(width, height);
   for (const shape of shapes) {
     if (shape instanceof Phaser.GameObjects.Shape) {

@@ -4,6 +4,7 @@ import { byHand, type UnitCommand } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
 import {
+  type BuildingTypeId,
   cornerKey,
   cornersOf,
   type FeatureId,
@@ -51,6 +52,8 @@ import {
   asFeatureDisc,
   asGlow,
   asImprovement,
+  asPatch,
+  asPieces,
   assignedAt,
   assignedMark,
   asTerrain,
@@ -58,6 +61,7 @@ import {
   asUnitDim,
   asVoid,
   asYield,
+  buildingStandsAs,
   CITY_FACTIONS,
   cityDim,
   diamond,
@@ -93,7 +97,15 @@ import {
   riverPieces,
 } from './map-rivers';
 import type { MapStrata } from './map-scene';
-import { FACE_SHEET, FEATURE_SHEET_KEY, RIVER_SHEET } from './marks';
+import {
+  BUILDING_SHEET,
+  buildingLookOf,
+  FACE_SHEET,
+  FEATURE_SHEET_KEY,
+  onPatch,
+  paintingOn,
+  RIVER_SHEET,
+} from './marks';
 import { asPainted, poolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';
 
@@ -106,6 +118,9 @@ const CROSSFADE_RISE = 0.5;
 
 /** How far over the face it lies on a beach stands: short of a face crossfading in over that one. */
 const SHORE_RISE = 0.25;
+
+/** How far over its tile's row a building's pieces stand: over its patch, short of the row in front. */
+const PIECES_RISE = 0.5;
 
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
@@ -264,14 +279,15 @@ export function createMapView(
 
   const ground = group(strata.terrain, 'terrain');
   const rivers = group(strata.terrain, 'rivers');
-  const features = group(strata.terrain, 'features');
+  const lying = group(strata.terrain, 'lying');
   const claimMarks = createClaimMarks(scene, group(strata.terrain, 'claim-marks'), chronicle.tiles);
   const border = createBorder(scene, group(strata.terrain, 'border'), chronicle.tiles);
   const lighted = group(strata.lit, 'lit');
   const reach = createReach(scene, lighted, chronicle.tiles);
   const hues = group(strata.lit, 'prepared');
-  const improvements = group(strata.buildings, 'improvements');
   const built = group(strata.buildings, 'buildings');
+  const features = group(strata.buildings, 'features');
+  const improvements = group(strata.buildings, 'improvements');
   const marks = group(strata.units, 'units');
   const badges = group(strata.units, 'badges');
   const cityMarks = group(strata.cityMarks, 'city-marks');
@@ -306,16 +322,15 @@ export function createMapView(
               .setName(`shore-${key}`)
               .setDepth(tile.r + SHORE_RISE),
           ),
-          // Over what a feature lays on the ground, which its pool adds to the layer after these.
-          featureDisc: kept(
-            features,
-            featureDisc(scene).setName(`feature-disc-${key}`).setDepth(1),
-          ),
+          featureDisc: kept(features, featureDisc(scene).setName(`feature-disc-${key}`)),
           feature: kept(
             features,
-            scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`).setDepth(2),
+            scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`),
           ),
-          building: kept(built, scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`)),
+          building: kept(
+            built,
+            scene.add.polygon(0, 0, UNREAD).setName(`building-${key}`).setDepth(tile.r),
+          ),
         },
       ];
     }),
@@ -331,7 +346,9 @@ export function createMapView(
   );
 
   const crossfadePool = poolOf(ground, () => tileFace(scene));
-  const lyingPool = poolOf(features, () => scene.add.image(0, 0, FEATURE_SHEET_KEY));
+  const lyingPool = poolOf(lying, () => scene.add.image(0, 0, FEATURE_SHEET_KEY));
+  const patchPool = poolOf(built, () => scene.add.image(0, 0, BUILDING_SHEET.key));
+  const piecesPool = poolOf(built, () => scene.add.container(0, 0));
   const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
   const fogUnitPool = poolOf(marks, () => scene.add.container(0, 0));
   const riverPool = poolOf(rivers, () => scene.add.image(0, 0, RIVER_SHEET.key));
@@ -582,6 +599,46 @@ export function createMapView(
       `improvement-${improvement}-${key}`,
     );
 
+  /**
+   * A building standing on its tile, darkened in fog: the tile's own mark, or its pieces from the
+   * pool, the front one named for the tile and each behind it for its place.
+   */
+  const buildingOn = (building: BuildingTypeId, coord: TileCoords, inFog: boolean): Mark => {
+    const key = tileKey(coord);
+    const { x, y } = positionOf(coord);
+    const look = buildingLookOf(building);
+    switch (look.kind) {
+      case 'mark':
+        return asBuilding(asPainted(tileObjects[key].building), look, inFog).setPosition(x, y);
+      case 'painted': {
+        const pieces = asPieces(
+          piecesPool.take(),
+          look,
+          false,
+          (files) => paintingOn(files, coord),
+          inFog,
+        );
+        const front = look.pieces.length - 1;
+        look.pieces.forEach((_, at) => {
+          pieces.list[at].setName(at === front ? `building-${key}` : `building-${key}-${at}`);
+        });
+        return pieces
+          .setPosition(x, y)
+          .setDepth(coord.r + PIECES_RISE)
+          .setName(buildingStandsAs(building, key));
+      }
+    }
+  };
+
+  /** The patch a building's paintings lie on, from the pool, under them on that tile, darkened in fog. */
+  const patchOn = (coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image => {
+    const { x, y } = positionOf(coord);
+    return asPatch(patchPool.take(), inFog)
+      .setPosition(x, y)
+      .setDepth(coord.r)
+      .setName(`building-patch-${tileKey(coord)}`);
+  };
+
   /** The disc and the icon a tile keeps painted for a feature, standing at that point of its row. */
   const featureOn = (
     key: string,
@@ -618,16 +675,14 @@ export function createMapView(
     const key = tileKey(tile);
     const own = tileObjects[key];
     const painted: Mark[] = [];
-    const paint = <T extends Mark>(object: T): T => {
-      painted.push(asPainted(object));
-      return object;
-    };
 
     const { x, y } = positionOf(tile);
     const inFog = !seen.live.has(key);
-    asTerrain(paint(own.face), face, tile, inFog);
+    painted.push(asTerrain(asPainted(own.face), face, tile, inFog));
     const shore = shoreOn(catalogue, faces, tile);
-    if (shore !== undefined) wearing(paint(own.shore), FACE_SHEET.key, shore, inFog);
+    if (shore !== undefined) {
+      painted.push(wearing(asPainted(own.shore), FACE_SHEET.key, shore, inFog));
+    }
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
       painted.push(
@@ -636,14 +691,17 @@ export function createMapView(
       );
     }
     face.improvements.forEach((improvement, index) => {
-      paint(
+      painted.push(
         improvementOn(improvement, key, inFog).setPosition(row.improvements[index], y - ROW_RISE),
       );
     });
-    if (face.building !== undefined) paint(asBuilding(own.building, face.building, inFog));
+    if (face.building !== undefined) {
+      if (onPatch(face.building)) painted.push(patchOn(tile, inFog));
+      painted.push(buildingOn(face.building, tile, inFog));
+    }
     if (!inFog) return painted;
     const unitMarked = (type: string, faction: Faction, embarked: boolean): void => {
-      paint(asUnit(fogUnitPool.take(), type, faction, embarked, true).setPosition(x, y));
+      painted.push(asUnit(fogUnitPool.take(), type, faction, embarked, true).setPosition(x, y));
     };
     // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
     // walked onto it since.
@@ -669,6 +727,8 @@ export function createMapView(
     for (const object of paintedOnTiles) object.setVisible(false);
     crossfadePool.hide();
     lyingPool.hide();
+    patchPool.hide();
+    piecesPool.hide();
     improvementPool.hide();
     fogUnitPool.hide();
     for (const [key, own] of Object.entries(tileObjects)) own.void.setVisible(!drawn.has(key));
@@ -831,6 +891,7 @@ export function createMapView(
   };
 
   const motion = createMapMotion(scene, {
+    lying,
     features,
     improvements,
     built,
@@ -857,6 +918,8 @@ export function createMapView(
     },
     paintHue,
     improvementOn,
+    buildingOn,
+    patchOn,
     featureOn,
     lyingOn,
     crossfade: (tile) => crossfadePool.take().setDepth(tile.r + CROSSFADE_RISE),

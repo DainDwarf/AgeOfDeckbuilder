@@ -20,6 +20,18 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.2.1 as the download names it (his description's last entry is 1.1.1, 85 icons), the files as released.
 - **Licence:** his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
 
+## Hex Medieval-Fantasy Locations
+
+- **What:** David Baumgart's set, in `store/hex-medieval-fantasy-locations/`, his readme beside it.
+- **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.3.4 of February 2024, the files as released.
+- **Licence:** his own terms, as his email of 2026-11-02 confirmed them: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
+
+## Ancient Icons
+
+- **What:** David Baumgart's painted ancient objects, nine icons of 128 px, and his wild plants, eleven decor sprites, in `store/ancient-icons/`.
+- **From:** David Baumgart, by email on 2026-11-03; not on sale, the files as he sent them.
+- **Licence:** he named none for these files, and they are taken under his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
+
 ## Source Sans 3
 
 - **What:** the UI typeface, regular and bold, in `fonts/source-sans-3/`.

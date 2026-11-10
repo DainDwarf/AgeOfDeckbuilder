@@ -318,11 +318,8 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   const problems = watch(page);
   const { chronicle, lit, camp, trapped, corners } = markedInFog();
   const city = playerCityTile(chronicle);
-  const cityBuilding = tileAt(chronicle.tiles, city)?.building;
   const campBuilding = tileAt(chronicle.tiles, camp)?.building;
-  if (cityBuilding === undefined || campBuilding === undefined) {
-    throw new Error('the city or the camp stands on no building');
-  }
+  if (campBuilding === undefined) throw new Error('the camp stands on no building');
   const marksOf = (key: string): string[] => [
     `feature-${key}`,
     `herd-${key}-0`,
@@ -359,7 +356,7 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   expect(read(`herd-${litKey}-0`).tint).toBeUndefined();
   expect(read(`feature-disc-${litKey}`).fill).toBe(LOOK.featureDisc.colour);
   expect(read(`improvement-${TRAPPING}-${litKey}`).fill).toBe(LOOK.built);
-  expect(read(`building-${cityKey}`).fill).toBe(buildingColourOf(cityBuilding));
+  expect(read(`building-${cityKey}`).tint).toBeUndefined();
   expect(unitMarkOn(lit)).toEqual([LOOK.civilization]);
 
   const tints = read('river').tints;

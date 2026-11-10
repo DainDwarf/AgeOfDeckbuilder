@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { preparedAs } from '../rules/enemies';
 import {
+  type BuildingTypeId,
   type FeatureId,
   type ImprovementId,
   neighbours,
@@ -14,8 +15,9 @@ import type { Chronicle } from '../rules/state';
 import { type Unit, unitAt } from '../rules/units';
 import { EASE, ended } from './card-motion';
 import {
-  asBuilding,
   asTerrain,
+  buildingStandsAs,
+  facePaintingOn,
   lyingOf,
   type Mark,
   positionOf,
@@ -25,14 +27,14 @@ import {
   type UnitObjects,
   wearing,
 } from './map-marks';
-import { FACE_SHEET } from './marks';
-import { asPainted } from './pool';
+import { FACE_SHEET, onPatch } from './marks';
 
 /** The paintings a change brings beside its tile, painted, and the ones it takes away. */
 type Swap = { readonly coming: readonly Mark[]; readonly going: readonly Mark[] };
 
 /** What a stage's motion reads and repaints of the map, which keeps all of it. */
 type MapInMotion = {
+  readonly lying: Phaser.GameObjects.Layer;
   readonly features: Phaser.GameObjects.Layer;
   readonly improvements: Phaser.GameObjects.Layer;
   readonly built: Phaser.GameObjects.Layer;
@@ -64,6 +66,10 @@ type MapInMotion = {
     key: string,
     inFog: boolean,
   ): Phaser.GameObjects.Polygon;
+  /** A building painted standing on its tile, its patch left out. */
+  buildingOn(building: BuildingTypeId, coord: TileCoords, inFog: boolean): Mark;
+  /** The patch a building's paintings lie on, painted on that tile. */
+  patchOn(coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image;
   /** The disc and the icon the tile of that key keeps for a feature, painted at that point of its row. */
   featureOn(key: string, feature: FeatureId, x: number, y: number, inFog: boolean): Mark[];
   /** What a feature lays on a tile's ground, painted. */
@@ -304,7 +310,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
 
   /**
    * The motion between two faces of one tile, and nothing where they are alike, in the fog the map
-   * stands on. The terrain crossfades from the start, with the beach the new face wears; the marks
+   * stands on. The painting crossfades from the start, with the beach the new face wears; the marks
    * gone shrink, then those staying slide to their slots on the new face, then those come scale up.
    */
   const between = (
@@ -314,7 +320,6 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     shore: string | undefined,
   ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
-    const own = view.tileObjects(key);
     const inFog = !view.live().has(key);
     const { x, y } = positionOf(coord);
     const was = rowOf(from, x);
@@ -353,7 +358,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       { ids: one(to.feature), xs: [is.feature] },
     );
     compare(
-      view.features,
+      view.lying,
       (id) => lyingOf(id, coord).map(({ name }) => name),
       (id) => view.lyingOn(id, coord, inFog),
       y,
@@ -368,18 +373,26 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       { ids: from.improvements, xs: was.improvements },
       { ids: to.improvements, xs: is.improvements },
     );
+    const patched = (building: BuildingTypeId | undefined): 'patch'[] =>
+      building !== undefined && onPatch(building) ? ['patch'] : [];
     compare(
       view.built,
-      () => [`building-${key}`],
-      (id, slot, markY) => [
-        asBuilding(asPainted(own.building), id, inFog).setPosition(slot, markY),
-      ],
+      () => [`building-patch-${key}`],
+      () => [view.patchOn(coord, inFog)],
+      y,
+      { ids: patched(from.building), xs: [x] },
+      { ids: patched(to.building), xs: [x] },
+    );
+    compare(
+      view.built,
+      (id) => [buildingStandsAs(id, key)],
+      (id) => [view.buildingOn(id, coord, inFog)],
       y,
       { ids: one(from.building), xs: [x] },
       { ids: one(to.building), xs: [x] },
     );
 
-    const crossfades = from.terrain !== to.terrain;
+    const crossfades = facePaintingOn(from, coord).painting !== facePaintingOn(to, coord).painting;
     if (!crossfades && drawnMarks.length === 0 && come.length === 0) return undefined;
 
     return async (token) => {

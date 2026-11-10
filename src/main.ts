@@ -20,7 +20,7 @@ import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
-import { FACE_SHEET, featureSheet, RIVER_SHEET } from './ui/marks';
+import { BUILDING_SHEET, FACE_SHEET, featureSheet, RIVER_SHEET } from './ui/marks';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
@@ -82,7 +82,7 @@ class LoadScene extends Phaser.Scene {
 
   preload(): void {
     // The features sheet after the face sheet: its tinted paintings are drawn off the face sheet's.
-    this.sheets = [FACE_SHEET, RIVER_SHEET, featureSheet(CATALOGUE)];
+    this.sheets = [FACE_SHEET, RIVER_SHEET, featureSheet(CATALOGUE), BUILDING_SHEET];
     for (const sheet of this.sheets) queueSheet(this.load, sheet);
   }
 

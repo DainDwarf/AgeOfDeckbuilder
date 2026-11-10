@@ -11,11 +11,20 @@ export type Tinted = {
   readonly composite: GlobalCompositeOperation;
 };
 
+/** A frame of a sheet drawn by code alone: its name, its size, and the way to paint it from its top-left corner. */
+export type Made = {
+  readonly frame: string;
+  readonly width: number;
+  readonly height: number;
+  paint(context: CanvasRenderingContext2D): void;
+};
+
 /** One sheet of paintings: the key its texture stands under, the files drawn into it, and its side. */
 export type Sheet = {
   readonly key: string;
   readonly files: readonly string[];
   readonly tinted?: readonly Tinted[];
+  readonly made?: readonly Made[];
   /** How wide and how tall it is: a power of two, or Phaser makes no mipmaps of it (docs/PHASER.md). */
   readonly side: number;
 };
@@ -26,13 +35,13 @@ export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files }: Sheet): 
 }
 
 /**
- * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, each
- * a frame named by its file, their own textures let go, then each tinted painting cut to its own
- * pixels; a file that did not load, and a painting its sheet does not hold, are refused.
+ * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, their
+ * own textures let go, then each tinted painting, then each frame made by code; a file that did not
+ * load, and a painting its sheet does not hold, are refused.
  */
 export function drawSheet(
   textures: Phaser.Textures.TextureManager,
-  { key, files, tinted = [], side }: Sheet,
+  { key, files, tinted = [], made = [], side }: Sheet,
 ): void {
   const sheet = textures.createCanvas(key, side, side);
   if (sheet === null) throw new Error(`a texture stands under ${key} already`);
@@ -86,6 +95,14 @@ export function drawSheet(
     paint();
     const at = room(frame, width, height);
     sheet.context.drawImage(scratch, at.x, at.y);
+  }
+
+  for (const { frame, width, height, paint } of made) {
+    const at = room(frame, width, height);
+    sheet.context.save();
+    sheet.context.translate(at.x, at.y);
+    paint(sheet.context);
+    sheet.context.restore();
   }
   sheet.refresh();
 }

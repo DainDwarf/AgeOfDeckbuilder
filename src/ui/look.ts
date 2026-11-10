@@ -18,7 +18,7 @@ export type Paper = {
 };
 
 /** Which role paints a building's mark. */
-export type BuildingRole = 'built' | 'civilization' | 'enemy' | 'neutral' | 'site';
+export type BuildingRole = 'enemy' | 'site';
 
 /** Every colour of the screen, by the role it paints. */
 export type Look = {
@@ -112,6 +112,8 @@ export type Look = {
   /** What a fertile plain's painting is re-painted under, and a flint hill's. */
   readonly fertileTint: Wash;
   readonly flintTint: Wash;
+  /** The dark earth the monument's stages lie on, at its strength over its middle. */
+  readonly monumentPatch: Wash;
   readonly scrim: Wash;
   readonly consolePanel: Wash;
   readonly targetGlow: Glow;
@@ -197,6 +199,7 @@ export const LOOK: Look = {
   featureDiscRim: { colour: 0xece2cc, strength: 0.55 },
   fertileTint: { colour: 0x3c9a3a, strength: 0.4 },
   flintTint: { colour: 0x5c6370, strength: 0.65 },
+  monumentPatch: { colour: 0x302418, strength: 0.9 },
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
   targetGlow: { fill: 0.4, stroke: 0.9 },
@@ -219,19 +222,8 @@ export const LOOK: Look = {
     desert: 0xd6c08a,
   },
   building: {
-    hearth: 'civilization',
-    village: 'civilization',
     camp: 'enemy',
     'stone-camp': 'enemy',
-    'neutral-village': 'neutral',
-    shelter: 'built',
-    farm: 'built',
-    tannery: 'built',
-    fishery: 'built',
-    megalith: 'built',
-    foundations: 'built',
-    'great-stones': 'built',
-    monument: 'built',
     'painted-cave': 'site',
     'stone-painted-cave': 'site',
     'old-cairn': 'site',

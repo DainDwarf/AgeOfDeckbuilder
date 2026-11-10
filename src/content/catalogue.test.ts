@@ -38,8 +38,7 @@ import { answerFace, answerFaceOfCase } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
-  buildingColourOf,
-  buildingMarkOf,
+  buildingLookOf,
   featureIconOf,
   groundColourOf,
   improvementMarkOf,
@@ -123,11 +122,10 @@ test('every terrain of the catalogue has a name and a painting on the screen', (
   }
 });
 
-test('every building of the catalogue has a name, a mark and a colour on the screen', () => {
+test('every building of the catalogue has a name on the screen, and either paintings or a mark with its colour, never both', () => {
   for (const id of Object.keys(CATALOGUE.buildings)) {
     expect(() => buildingName(id)).not.toThrow();
-    expect(() => buildingMarkOf(id)).not.toThrow();
-    expect(() => buildingColourOf(id)).not.toThrow();
+    expect(() => buildingLookOf(id)).not.toThrow();
   }
 });
 

@@ -21,15 +21,21 @@ import type { Faction } from '../rules/units';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
 import { css, type Glow, LOOK, multiplied, type Wash } from './look';
 import {
-  buildingColourOf,
-  buildingMarkOf,
+  BUILDING_SHEET,
+  type BuildingLook,
+  type BuildingPaintings,
+  type BuildingPiece,
+  buildingLookOf,
+  clearingsOf,
   FACE_SHEET,
   FEATURE_SHEET_KEY,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
   improvementMarkOf,
+  PATCH,
   PONDS,
+  paintIn,
   paintingOn,
   paintingsOf,
   pickOf,
@@ -67,8 +73,11 @@ export const PAINTING = { width: 256, height: 384, middle: 256 };
 /** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
 const FACE_OVERLAP = 1.04;
 
+/** How much smaller than his file anything painted beside his tile is drawn: a tile's width to his. */
+const PAINTED_SCALE = (Math.sqrt(3) * TILE_SIZE) / PAINTING.width;
+
 /** How much smaller than his file a face is drawn, and anything painted at his tile's scale. */
-const FACE_SCALE = (Math.sqrt(3) * TILE_SIZE * FACE_OVERLAP) / PAINTING.width;
+const FACE_SCALE = PAINTED_SCALE * FACE_OVERLAP;
 
 export const FACTION_COLOURS: Record<Faction, number> = {
   player: LOOK.civilization,
@@ -230,21 +239,38 @@ export function wearing(
   return asDarkened(face.setTexture(sheet, painting).setScale(FACE_SCALE), inFog);
 }
 
+/** The painting a tile's face wears, and the sheet that holds it. */
+export type FacePainting = { readonly sheet: string; readonly painting: string };
+
 /**
- * A face made to wear the painting of its terrain its tile's place on the disc picks, tinted where
- * the feature on it tints it, and darkened on a tile in fog.
+ * The painting a tile's face wears, picked by its place on the disc: his clearing of its terrain
+ * under a painted building, where he painted any, else his painting of it; tinted where the feature on
+ * it tints it.
  */
+export function facePaintingOn(
+  { terrain, feature, building }: Pick<Tile, 'terrain' | 'feature' | 'building'>,
+  coord: TileCoords,
+): FacePainting {
+  const cleared =
+    building !== undefined && buildingLookOf(building).kind === 'painted'
+      ? clearingsOf(terrain)
+      : [];
+  const painting = paintingOn(cleared.length > 0 ? cleared : paintingsOf(terrain), coord);
+  if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
+    return { sheet: FEATURE_SHEET_KEY, painting: tintedName(painting, feature) };
+  }
+  return { sheet: FACE_SHEET.key, painting };
+}
+
+/** A face made to wear the painting its tile wears, darkened on a tile in fog. */
 export function asTerrain(
   face: Phaser.GameObjects.Image,
-  { terrain, feature }: Pick<Tile, 'terrain' | 'feature'>,
+  tile: Pick<Tile, 'terrain' | 'feature' | 'building'>,
   coord: TileCoords,
   inFog: boolean,
 ): Phaser.GameObjects.Image {
-  const painting = paintingOn(paintingsOf(terrain), coord);
-  if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
-    return wearing(face, FEATURE_SHEET_KEY, tintedName(painting, feature), inFog);
-  }
-  return wearing(face, FACE_SHEET.key, painting, inFog);
+  const { sheet, painting } = facePaintingOn(tile, coord);
+  return wearing(face, sheet, painting, inFog);
 }
 
 /** A face made to wear the one of his voids its tile's place on the disc picks. */
@@ -288,20 +314,135 @@ export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameO
  */
 export function asBuilding(
   mark: Phaser.GameObjects.Polygon,
-  building: BuildingTypeId,
+  { corners: around, colour }: BuildingLook & { readonly kind: 'mark' },
   inFog: boolean,
 ): Phaser.GameObjects.Polygon {
   return mark
-    .setTo(corners(buildingMarkOf(building)))
-    .setFillStyle(darkened(buildingColourOf(building), inFog))
+    .setTo(corners([...around]))
+    .setFillStyle(darkened(colour, inFog))
     .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
 }
 
-export function buildingMark(
-  scene: Phaser.Scene,
-  building: BuildingTypeId,
-): Phaser.GameObjects.Polygon {
-  return asBuilding(scene.add.polygon(0, 0, UNREAD), building, false);
+// The scale is set here and `asPainted` resets it to one: a patch is painted before it is placed.
+/** An image of the buildings sheet made to draw the patch about its own middle, darkened on a tile in fog. */
+export function asPatch(image: Phaser.GameObjects.Image, inFog: boolean): Phaser.GameObjects.Image {
+  return asDarkened(
+    image
+      .setTexture(BUILDING_SHEET.key, PATCH.frame)
+      .setOrigin(0.5, 0.5)
+      .setScale(PATCH.scale)
+      .setFlipX(false),
+    inFog,
+  );
+}
+
+/**
+ * An image of the buildings sheet made to draw one piece of a building, the file `pick` picks among
+ * its files, at its place about its parent's point: a painting of his whole tile at a face's scale,
+ * his hexagon's middle on that point, and any other at its size about its own middle.
+ */
+function asPiece(
+  image: Phaser.GameObjects.Image,
+  { files, size, x, y }: BuildingPiece,
+  pick: (files: readonly string[]) => string,
+  inFog: boolean,
+): Phaser.GameObjects.Image {
+  const whole = size === 'tile';
+  return asDarkened(
+    image
+      .setTexture(BUILDING_SHEET.key, pick(files))
+      .setOrigin(0.5, whole ? PAINTING.middle / PAINTING.height : 0.5)
+      .setScale(whole ? FACE_SCALE : size * PAINTED_SCALE)
+      .setFlipX(false)
+      .setPosition(x, y)
+      .setAlpha(1)
+      .setVisible(true),
+    inFog,
+  );
+}
+
+/**
+ * A container read as a building's pieces, back first, each the file `pick` picks among its own, and
+ * the patch under them where `patch` asks for it, darkened on a tile in fog: an image is added where
+ * it holds too few, and the ones left over are hidden.
+ */
+export function asPieces(
+  on: Phaser.GameObjects.Container,
+  { pieces }: BuildingPaintings,
+  patch: boolean,
+  pick: (files: readonly string[]) => string,
+  inFog: boolean,
+): Phaser.GameObjects.Container {
+  const under = patch ? 1 : 0;
+  const count = under + pieces.length;
+  while (on.length < count) on.add(on.scene.add.image(0, 0, BUILDING_SHEET.key));
+  (on.list as Phaser.GameObjects.Image[]).forEach((image, at) => {
+    if (at >= count) image.setVisible(false);
+    else if (at < under) asPatch(image, inFog).setPosition(0, 0).setAlpha(1).setVisible(true);
+    else asPiece(image, pieces[at - under], pick, inFog);
+  });
+  return on;
+}
+
+/**
+ * The box a mark's paint fills, where it stands: an image's by the pixels he painted and not by its
+ * file, and a container's by what it shows.
+ */
+export function paintedBounds(mark: Phaser.GameObjects.GameObject): Phaser.Geom.Rectangle {
+  if (mark instanceof Phaser.GameObjects.Container) {
+    // A Container's own bounds count the children it hides (docs/PHASER.md).
+    const shown = mark.list.filter((child) => (child as Mark).visible).map(paintedBounds);
+    return shown.reduce((union, box) => Phaser.Geom.Rectangle.Union(union, box, union));
+  }
+  const box = (mark as Mark).getBounds();
+  if (!(mark instanceof Phaser.GameObjects.Image)) return box;
+  const paint = paintIn(mark.frame.name);
+  if (paint === undefined) return box;
+  const across = box.width / mark.frame.width;
+  const down = box.height / mark.frame.height;
+  return new Phaser.Geom.Rectangle(
+    box.x + paint.x * across,
+    box.y + paint.y * down,
+    paint.width * across,
+    paint.height * down,
+  );
+}
+
+/** The name of what a building stands as on the tile of that key: its mark, or the container of its pieces. */
+export function buildingStandsAs(building: BuildingTypeId, key: string): string {
+  const look = buildingLookOf(building);
+  switch (look.kind) {
+    case 'mark':
+      return `building-${key}`;
+    case 'painted':
+      return `building-pieces-${key}`;
+  }
+}
+
+/**
+ * A building off the map: its mark, or its pieces in their arrangement, a village as the first of
+ * his four, the patch among them, their paint centred on the container's point.
+ */
+export function buildingMark(scene: Phaser.Scene, building: BuildingTypeId): Mark {
+  const look = buildingLookOf(building);
+  switch (look.kind) {
+    case 'mark':
+      return asBuilding(scene.add.polygon(0, 0, UNREAD), look, false);
+    case 'painted': {
+      const pieces = asPieces(
+        scene.add.container(0, 0),
+        look,
+        look.patch,
+        ([first]) => first,
+        false,
+      );
+      const { centerX, centerY } = paintedBounds(pieces);
+      for (const image of pieces.list as Phaser.GameObjects.Image[]) {
+        image.setPosition(image.x - centerX, image.y - centerY);
+      }
+      return pieces;
+    }
+  }
 }
 
 // The scale is set here and `asPainted` resets it to one: an icon is painted before it wears a feature.
