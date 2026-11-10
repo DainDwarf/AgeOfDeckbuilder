@@ -19,10 +19,10 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The buildings** — the built buildings, both cities' own and the capstone's stages are drawn as his painted locations, on the map and on the infopanel, and where everything a crowded tile carries stands around them is settled on its mockup.
-- **The sites and the camps** — the sites nobody holds and the enemies' camps are drawn as his painted locations as the buildings are, and what tells a camp as hostile once its red wall is gone.
+- **The buildings** — every building the cast holds, both cities' own and the monument's three stages, is drawn as its paintings on the map and on the infopanel, a forest tile carrying one wearing his clearing, the feature's disc and the improvements drawn over it; his locations pack and his ancient icons in the store with their licence entries; those eleven buildings' polygons and colours gone, the camps' and the sites' standing; `e2e/map.spec.ts`'s test of the cast green. Doc-impact: `docs/LOOK.md`, `public/assets/LICENSES.md`. [board/buildings.md](board/buildings.md)
+- **The sites and the camps** — the sites nobody holds and the enemies' camps are drawn as his painted locations as the buildings are, whether a forest tile under one wears his clearing as a building's does, and what tells a camp as hostile once its red wall is gone.
 - **The improvements** — an improvement is drawn as his painted icon in the feature's row or as a change to the tile's own drawing, mocked up at its intake.
-- **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), his ancient icons entering the store.
+- **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), and how much of a building under it shows.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
 - **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
 - **A health bar on units** — a unit on the map shows its health.
