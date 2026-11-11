@@ -66,6 +66,7 @@ import {
   diamond,
   FACTION_COLOURS,
   FEATURE_DISC,
+  featureMarksOn,
   IMPROVEMENT_DISC,
   improvementLyingOf,
   improvementMarksOn,
@@ -315,6 +316,7 @@ export function createMapView(
         on.add(mark.setPosition(x, y).setVisible(false));
         return mark;
       };
+      const featureNames = featureMarksOn(key);
       return [
         key,
         {
@@ -327,10 +329,10 @@ export function createMapView(
               .setName(`shore-${key}`)
               .setDepth(tile.r + SHORE_RISE),
           ),
-          featureDisc: kept(features, rowDisc(scene).setName(`feature-disc-${key}`)),
+          featureDisc: kept(features, rowDisc(scene).setName(featureNames.disc)),
           feature: kept(
             features,
-            scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`),
+            scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(featureNames.icon),
           ),
         },
       ];

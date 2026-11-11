@@ -18,6 +18,7 @@ import {
   asTerrain,
   buildingStandsAs,
   facePaintingOn,
+  featureMarksOn,
   improvementLyingOf,
   improvementMarksOn,
   type Lying,
@@ -357,7 +358,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const one = <Id extends string>(id: Id | undefined): Id[] => (id === undefined ? [] : [id]);
     compare(
       view.features,
-      () => [`feature-disc-${key}`, `feature-${key}`],
+      () => Object.values(featureMarksOn(key)),
       (id, slot, markY) => view.featureOn(key, id, slot, markY, inFog),
       y - ROW_RISE,
       { ids: one(from.feature), xs: [was.feature] },

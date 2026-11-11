@@ -533,6 +533,11 @@ export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
   }
 }
 
+/** The names a feature's disc and icon stand under in the row of the tile of that key. */
+export function featureMarksOn(key: string): { readonly disc: string; readonly icon: string } {
+  return { disc: `feature-disc-${key}`, icon: `feature-${key}` };
+}
+
 /**
  * What an improvement stands as in its tile's row on the tile of that key, each mark by the name it
  * stands under: its icon on its disc, or its shape.
