@@ -19,7 +19,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The irrigation** — an irrigation stands in the feature's row as his icon on a disc like a feature's, and its art on the tile is settled at its intake against the buildings and the paintings a plain or a desert by a river can wear, a pasture's among them.
+- **The irrigation** — an irrigation stands in its tile's row on a pale disc of its own wearing a round cut of his straight river, rim to rim; one ditch of his river's source piece runs from the middle of every edge of its tile a river runs along to about the tile's middle, turned by the tile's place, over the river and under everything else on the ground and under every building; the infopanel's Irrigation row reads that river on its pale disc and its River row the same river bare; the irrigation's and the river's old polygons gone. Doc-impact: `docs/LOOK.md`. [board/irrigation.md](board/irrigation.md)
 - **The trapping** — a tile with a trapping shows its deer on an improved disc in place of the feature's, no disc added beside it, and its art on the tile is settled at its intake against the buildings and the paintings its forest can wear.
 - **A toggle for the discs** — a button that shows or hides the discs on the map, the features' and the improvements'.
 - **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), and how much of a building under it shows.
