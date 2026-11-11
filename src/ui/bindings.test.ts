@@ -63,6 +63,11 @@ describe('binding a key', () => {
     expect(DEFAULTS.inspect[1]).toBeUndefined();
   });
 
+  it('opens the icons key on F, with a slot free beside it', () => {
+    expect(reads(DEFAULTS, 'icons', 0)).toBe('F');
+    expect(DEFAULTS.icons[1]).toBeUndefined();
+  });
+
   it('fills a zoom that stands on one key alone', () => {
     const after = bound(DEFAULTS, 'zoom-in', 1, press('KeyE', 'e'));
     expect(reads(after, 'zoom-in', 0)).toBe('=');
@@ -153,6 +158,13 @@ describe('the bindings kept in the browser', () => {
     );
     expect(parsed['zoom-in']).toEqual([undefined, { code: 'KeyE' }]);
     expect(parsed['pan-up']).toEqual([{ code: 'KeyW' }, undefined]);
+  });
+
+  it('leave a slot empty where its default key is one the kept bindings hold elsewhere', () => {
+    const parsed = parseBindings('{"city":[{"code":"KeyF","printed":"F"},null]}');
+    expect(parsed.city).toEqual([{ code: 'KeyF', printed: 'F' }, undefined]);
+    expect(parsed.icons).toEqual([undefined, undefined]);
+    expect(parseBindings('{"city":[{"code":"KeyC"},null]}').icons).toEqual(DEFAULTS.icons);
   });
 
   it('stand at their default for every control the kept bindings do not cover', () => {

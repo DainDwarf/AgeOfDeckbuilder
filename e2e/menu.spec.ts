@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { openingChoices } from '../src/rules/campaign';
 import { tileKey } from '../src/rules/map';
@@ -10,8 +10,7 @@ import {
   beforeTheFall,
   browse,
   budget,
-  campaignShown,
-  chronicleButton,
+  campaignThenChronicle,
   chronicleOf,
   civilizationOpened,
   click,
@@ -36,17 +35,6 @@ import {
 /** Every card the chronicle holds, wherever it stands: the cards of the civilization it was begun on. */
 function cardsHeld(chronicle: Chronicle): string[] {
   return idsOf(cardsInPiles(chronicle)).sort();
-}
-
-/**
- * Campaign pressed on the menu standing, the campaign screen it opens waited for, and Chronicle
- * pressed there, the launch screen it opens waited for.
- */
-async function campaignThenChronicle(page: Page): Promise<void> {
-  await rested(page);
-  await click(page, 'menu-campaign');
-  await campaignShown(page);
-  await chronicleButton(page);
 }
 
 test('the menu walks in to Controls and closes back one step at a time', async ({ page }) => {

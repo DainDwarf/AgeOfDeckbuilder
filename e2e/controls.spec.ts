@@ -40,6 +40,7 @@ const AS_FOUND = [
   ['-', '—'],
   ['C', '—'],
   ['Tab', '—'],
+  ['F', '—'],
   ['I', '—'],
   ['Escape', '—'],
 ];
@@ -53,6 +54,7 @@ const LISTED = [
   'zoom-out',
   'city',
   'yields',
+  'icons',
   'inspect',
   'back',
 ];

@@ -47,6 +47,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { createHand } from './hand';
+import { createIconsButton } from './icons-button';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
@@ -663,6 +664,24 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       showYields();
     };
 
+    /** Whether the discs of every tile's row stand on the map. */
+    let discsShown = true;
+
+    const iconsButton = createIconsButton(this, ui.pinned, () => {
+      switchDiscs();
+    });
+
+    const showDiscs = (): void => {
+      view.showDiscs(discsShown);
+      iconsButton.sink(discsShown);
+    };
+
+    const switchDiscs = (): void => {
+      discsShown = !discsShown;
+      showDiscs();
+    };
+    showDiscs();
+
     // Read outside Phaser's dispatch: a hit test inside it refills the list being walked
     // (docs/PHASER.md).
     const placeUnder = (): { readonly place: Place; readonly onMap: boolean } => {
@@ -756,7 +775,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       view.zoom(-notches);
     });
 
-    // The one place the city key, the yield key, the inspection key and the back key are answered.
     // A window on the overlay takes every key ahead of this scene, so nothing here is gated on what
     // stands over the screen; the map's own reader answers the pan and zoom keys.
     onKeyDown(this, (press) => {
@@ -766,6 +784,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       }
       if (boundTo(press, 'yields')) {
         clearOrShowAllYields();
+        return;
+      }
+      if (boundTo(press, 'icons')) {
+        switchDiscs();
         return;
       }
       if (boundTo(press, 'inspect')) {

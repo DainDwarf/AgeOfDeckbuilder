@@ -802,6 +802,24 @@ export async function chronicleButton(page: Page): Promise<void> {
   await rested(page);
 }
 
+/**
+ * Campaign pressed on the menu standing, the campaign screen it opens waited for, and Chronicle
+ * pressed there, the launch screen it opens waited for.
+ */
+export async function campaignThenChronicle(page: Page): Promise<void> {
+  await rested(page);
+  await click(page, 'menu-campaign');
+  await campaignShown(page);
+  await chronicleButton(page);
+}
+
+/** Continue pressed on the launch screen standing, and the chronicle screen it opens waited for. */
+export async function pressContinue(page: Page): Promise<void> {
+  await rested(page);
+  await click(page, 'launch-continue');
+  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
+}
+
 /** Launch pressed on the launch screen standing, and the chronicle screen it raises waited for. */
 export async function launchedFromScreen(page: Page): Promise<void> {
   await rested(page);

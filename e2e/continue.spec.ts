@@ -12,6 +12,7 @@ import {
   launchedAs,
   launchedFromScreen,
   launchScreenOver,
+  pressContinue,
   readNames,
   rested,
   settledOn,
@@ -30,13 +31,6 @@ async function continueReads(page: Page): Promise<string[]> {
     if (line === undefined) return lines;
     lines.push(line);
   }
-}
-
-/** Continue pressed, and the chronicle screen it opens waited for. */
-async function pressContinue(page: Page): Promise<void> {
-  await rested(page);
-  await click(page, 'launch-continue');
-  await page.waitForFunction(() => window.game?.scene.isActive('ui') === true);
 }
 
 test('on a save holding a chronicle the bare address lands on the campaign screen, Continue on the launch screen reads its turn, and the press opens it where it stood', async ({

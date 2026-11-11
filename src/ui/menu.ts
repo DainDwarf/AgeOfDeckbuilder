@@ -207,7 +207,7 @@ const SLOT_GAP = 10;
 
 /** Where a row's buttons end, on the right of the window. */
 const ROW_RIGHT = DESIGN_WIDTH / 2 + WIDTH / 2 - PADDING;
-const ROW_GAP = 8;
+const ROW_GAP = 5;
 
 /** A row of the Controls window: a control's two slots, or one of the wheel's two buttons. */
 type Row =
@@ -703,14 +703,41 @@ export function createRefusedSaveWindow(
   return scene.add.container(0, 0, [box, title, line, face, label]).setName('refused-save');
 }
 
-/** How tall the Menu button stands in the bar's strip, and how far it reaches around its label. */
-const MENU_HEIGHT = 32;
-const MENU_PADDING = 12;
+/** How tall a button drawn as the Menu button is stands, and how far it reaches around its word. */
+const PAPER_BUTTON_HEIGHT = 32;
+const PAPER_BUTTON_PADDING = 12;
 
-const MENU_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: INK };
+const PAPER_BUTTON_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: INK };
 
-function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
-  return addText(scene, 0, 0, text('menu.menu'), MENU_STYLE).setOrigin(0.5, 0.5);
+function paperButtonWord(scene: Phaser.Scene, reads: string): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, reads, PAPER_BUTTON_STYLE).setOrigin(0.5, 0.5);
+}
+
+/** How wide a button drawn as the Menu button is stands, reading that word. */
+function paperButtonWidth(scene: Phaser.Scene, reads: string): number {
+  const word = paperButtonWord(scene, reads);
+  const width = word.width + 2 * PAPER_BUTTON_PADDING;
+  word.destroy();
+  return width;
+}
+
+/**
+ * A button drawn as the Menu button is, reading `reads`, its face named `name` and sized to its word;
+ * the caller places both, centred on one point.
+ */
+export function createPaperButton(
+  scene: Phaser.Scene,
+  name: string,
+  reads: string,
+): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
+  const face = scene.add
+    .rectangle(0, 0, 1, PAPER_BUTTON_HEIGHT, LOOK.panelFill)
+    .setStrokeStyle(1, LOOK.panelEdge)
+    .setName(name);
+  // Added after the face: the display list paints in add order, so a label added first would be hidden.
+  const label = paperButtonWord(scene, reads);
+  face.setSize(label.width + 2 * PAPER_BUTTON_PADDING, PAPER_BUTTON_HEIGHT);
+  return { face, label };
 }
 
 /**
@@ -718,24 +745,17 @@ function menuLabel(scene: Phaser.Scene): Phaser.GameObjects.Text {
  * menu scene and the flow of whichever bar stands there ends before it, so both measure it here.
  */
 export function menuRoom(scene: Phaser.Scene): number {
-  const label = menuLabel(scene);
-  const room = label.width + 2 * MENU_PADDING;
-  label.destroy();
-  return room;
+  return paperButtonWidth(scene, text('menu.menu'));
 }
 
 /** The Menu button where the bar leaves it room, on whatever screen stands under it. */
 export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void {
-  const zone = menuZone(menuRoom(scene), DESIGN_WIDTH, MARGIN);
+  const { face, label } = createPaperButton(scene, 'menu-button', text('menu.menu'));
+  const zone = menuZone(face.width, DESIGN_WIDTH, MARGIN);
   const x = zone.x + zone.width / 2;
   const y = BAR_HEIGHT / 2;
-  const button = scene.add
-    .rectangle(x, y, zone.width, MENU_HEIGHT, LOOK.panelFill)
-    .setStrokeStyle(1, LOOK.panelEdge)
-    .setName('menu-button')
-    .setInteractive();
-  answersPress(button);
-  // Added after the fill: the display list paints in add order, so a label added first would be hidden.
-  menuLabel(scene).setPosition(x, y);
-  onClick(button, pressed);
+  face.setPosition(x, y);
+  label.setPosition(x, y);
+  answersPress(face.setInteractive());
+  onClick(face, pressed);
 }

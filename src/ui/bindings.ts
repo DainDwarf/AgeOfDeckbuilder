@@ -16,6 +16,7 @@ export const CONTROLS = [
   'zoom-out',
   'city',
   'yields',
+  'icons',
   'inspect',
   'back',
 ] as const;
@@ -42,6 +43,7 @@ export const DEFAULTS: Bindings = {
   'zoom-out': [{ code: 'Minus' }, undefined],
   city: [{ code: 'KeyC' }, undefined],
   yields: [{ code: 'Tab' }, undefined],
+  icons: [{ code: 'KeyF' }, undefined],
   inspect: [{ code: 'KeyI' }, undefined],
   back: [{ code: 'Escape' }, undefined],
 };
@@ -211,11 +213,23 @@ function keptOf(stored: string | null): Record<string, unknown> {
   }
 }
 
-/** What was kept, control by control: whatever it does not cover stands at its default. */
+/**
+ * What was kept, control by control: whatever it does not cover stands at its default, a slot whose
+ * default key the kept controls hold standing empty.
+ */
 export function parseBindings(stored: string | null): Bindings {
   const kept = keptOf(stored);
+  const read = CONTROLS.map((control) => ({ control, slots: slotsOf(kept[control]) }));
+  const held = new Set(
+    read.flatMap(({ slots }) => (slots ?? []).flatMap((bind) => bind?.code ?? [])),
+  );
+  const free = (bind: Bind | undefined): Bind | undefined =>
+    bind !== undefined && held.has(bind.code) ? undefined : bind;
   const parsed = {} as Record<Control, Slots>;
-  for (const control of CONTROLS) parsed[control] = slotsOf(kept[control]) ?? DEFAULTS[control];
+  for (const { control, slots } of read) {
+    const [first, second] = DEFAULTS[control];
+    parsed[control] = slots ?? [free(first), free(second)];
+  }
   return parsed;
 }
 

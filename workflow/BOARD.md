@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A toggle for the discs** — an Icons button in the map's bottom-left corner and the icons key, `F` until it is rebound and listed in Controls, show or hide every feature's and every improvement's disc on the map, shown again at every chronicle screen's open; `e2e/icons.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`. [board/a-toggle-for-the-discs.md](board/a-toggle-for-the-discs.md)
 - **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), and how much of a building under it shows.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
 - **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.

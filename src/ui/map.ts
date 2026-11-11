@@ -224,6 +224,8 @@ export type MapView = {
   showCityMarks(on: boolean): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
   showVeils(veils: Veils): void;
+  /** Shows or hides the discs of every tile's row, the features' and the improvements', with what they wear. */
+  showDiscs(shown: boolean): void;
   /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
   live(on: boolean): void;
   /** Notches of zoom, in above zero, about the pointer. */
@@ -1080,6 +1082,12 @@ export function createMapView(
     showVeils(next: Veils): void {
       veils = next;
       if (shown !== undefined) render(shown);
+    },
+
+    // On the two layers and never on their marks: every render and every motion writes the marks' own.
+    showDiscs(on: boolean): void {
+      features.setVisible(on);
+      improvements.setVisible(on);
     },
 
     aimTile(
