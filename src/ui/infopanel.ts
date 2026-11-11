@@ -452,7 +452,7 @@ function buildFace(
   const paper = scene.add.graphics();
   drawCardSurface(paper, 0, 0, { width });
 
-  const head = headOf(scene, card);
+  const head = headOf(scene, catalogue, card);
   const mark = fitMark(head.mark, markBox).setPosition(left + markBox / 2, middle);
   const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title)
     .setOrigin(0, 0.5)
@@ -573,7 +573,10 @@ function buildFace(
     const line = rowName.height;
     rowName.setY(rowTop + line / 2);
     contents.push(
-      fitMark(markOf(scene, row), 0.75 * em).setPosition(left + 0.375 * em, rowTop + line / 2),
+      fitMark(markOf(scene, catalogue, row), 0.75 * em).setPosition(
+        left + 0.375 * em,
+        rowTop + line / 2,
+      ),
     );
     contents.push(rowName);
 
@@ -607,12 +610,16 @@ function buildFace(
 }
 
 /** What the card is headed by: the unit it stands for, or the first row it holds. */
-function headOf(scene: Phaser.Scene, card: Drawing): { mark: Mark; name: string } {
+function headOf(
+  scene: Phaser.Scene,
+  catalogue: Catalogue,
+  card: Drawing,
+): { mark: Mark; name: string } {
   if (card.kind === 'unit') {
     const { stats, faction, embarked } = card.unit;
     return { mark: unitMark(scene, stats.type, faction, embarked), name: unitName(stats.type) };
   }
-  return { mark: markOf(scene, card.rows[0]), name: nameOf(card.rows[0]) };
+  return { mark: markOf(scene, catalogue, card.rows[0]), name: nameOf(card.rows[0]) };
 }
 
 /** What the line under a unit card's name reads: the unit's states joined, and nothing for none. */
@@ -650,13 +657,13 @@ function movementOf(card: Drawing): string | undefined {
   }
 }
 
-function markOf(scene: Phaser.Scene, row: Row): Mark {
+function markOf(scene: Phaser.Scene, catalogue: Catalogue, row: Row): Mark {
   switch (row.kind) {
     case 'building':
     case 'beside':
       return buildingMark(scene, row.building);
     case 'improvement':
-      return improvementMark(scene, row.improvement);
+      return improvementMark(scene, catalogue, row.improvement);
     case 'feature':
       return featureMark(scene, row.feature);
     case 'terrain':
@@ -740,7 +747,7 @@ function fitMark(mark: Mark, box: number): Mark {
   const scale = box / Math.max(width, height);
   for (const shape of shapes) {
     if (shape instanceof Phaser.GameObjects.Shape) {
-      shape.setStrokeStyle(shape.lineWidth / scale, shape.strokeColor);
+      shape.setStrokeStyle(shape.lineWidth / scale, shape.strokeColor, shape.strokeAlpha);
     }
   }
   return mark.setScale(mark.scaleX * scale);

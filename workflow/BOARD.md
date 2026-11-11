@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The pasture** — a pasture adds no mark to its tile's row: its cattle's disc stands pale as the clay pit's under the cow, the herd gone, and his round corral with his cows lies on the plain, large alone and small beside a megalith, a shelter, a tannery or a farm, absent under any other building; every improvement's row on the infopanel reads its icon on its pale disc; the megalith's, the shelter's, the tannery's and the farm's pieces stand at their new places; the pasture's stone shape gone. Doc-impact: `docs/LOOK.md`. [board/pasture.md](board/pasture.md)
 - **The irrigation** — an irrigation stands in the feature's row as his icon on a disc like a feature's, and its art on the tile is settled at its intake against the buildings and the paintings a plain or a desert by a river can wear, a pasture's among them.
 - **The trapping** — a tile with a trapping shows its deer on an improved disc in place of the feature's, no disc added beside it, and its art on the tile is settled at its intake against the buildings and the paintings its forest can wear.
 - **A toggle for the discs** — a button that shows or hides the discs on the map, the features' and the improvements'.

@@ -67,6 +67,7 @@ import {
   FACTION_COLOURS,
   FEATURE_DISC,
   featureMarksOn,
+  featureToldOn,
   IMPROVEMENT_DISC,
   improvementLyingOf,
   improvementMarksOn,
@@ -593,16 +594,17 @@ export function createMapView(
 
   /**
    * A placed improvement's marks from the pools, read for that improvement on the tile of that key
-   * and standing at that point of its row: its disc and its icon, or its shape.
+   * carrying that feature and standing at that point of its row: its disc and its icon, or its shape.
    */
   const improvementOn = (
     improvement: ImprovementId,
+    feature: FeatureId | undefined,
     key: string,
     x: number,
     y: number,
     inFog: boolean,
   ): Mark[] => {
-    const marks = improvementMarksOn(improvement, key);
+    const marks = improvementMarksOn(improvement, feature, key);
     switch (marks.kind) {
       case 'icon':
         return [
@@ -705,16 +707,24 @@ export function createMapView(
       painted.push(wearing(asPainted(own.shore), FACE_SHEET.key, shore, inFog));
     }
     const row = rowOf(face, x);
-    if (face.feature !== undefined) {
+    const told = featureToldOn(face);
+    if (told !== undefined) {
       painted.push(
-        ...lyingOn(lyingOf(face.feature, tile), inFog),
-        ...featureOn(key, face.feature, row.feature, y - ROW_RISE, inFog),
+        ...lyingOn(lyingOf(told, tile), inFog),
+        ...featureOn(key, told, row.feature, y - ROW_RISE, inFog),
       );
     }
     painted.push(...lyingOn(improvementLyingOf(face, tile), inFog));
     face.improvements.forEach((improvement, index) => {
       painted.push(
-        ...improvementOn(improvement, key, row.improvements[index], y - ROW_RISE, inFog),
+        ...improvementOn(
+          improvement,
+          face.feature,
+          key,
+          row.improvements[index],
+          y - ROW_RISE,
+          inFog,
+        ),
       );
     });
     if (face.building !== undefined) {

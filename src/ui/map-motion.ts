@@ -19,6 +19,7 @@ import {
   buildingStandsAs,
   facePaintingOn,
   featureMarksOn,
+  featureToldOn,
   improvementLyingOf,
   improvementMarksOn,
   type Lying,
@@ -65,9 +66,10 @@ type MapInMotion = {
   /** These units of this chronicle painted, and their markers. */
   paintArrivals(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
   paintHue(unit: Unit): Phaser.GameObjects.Polygon;
-  /** The marks of an improvement on the tile of that key, painted at that point of its row. */
+  /** The marks of an improvement on the tile of that key carrying that feature, painted at that point of its row. */
   improvementOn(
     improvement: ImprovementId,
+    feature: FeatureId | undefined,
     key: string,
     x: number,
     y: number,
@@ -361,16 +363,16 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       () => Object.values(featureMarksOn(key)),
       (id, slot, markY) => view.featureOn(key, id, slot, markY, inFog),
       y - ROW_RISE,
-      { ids: one(from.feature), xs: [was.feature] },
-      { ids: one(to.feature), xs: [is.feature] },
+      { ids: one(featureToldOn(from)), xs: [was.feature] },
+      { ids: one(featureToldOn(to)), xs: [is.feature] },
     );
     compare(
       view.lying,
       (id) => lyingOf(id, coord).map(({ name }) => name),
       (id) => view.lyingOn(lyingOf(id, coord), inFog),
       y,
-      { ids: one(from.feature), xs: [x] },
-      { ids: one(to.feature), xs: [x] },
+      { ids: one(featureToldOn(from)), xs: [x] },
+      { ids: one(featureToldOn(to)), xs: [x] },
     );
     const laidBefore = improvementLyingOf(from, coord);
     const laidAfter = improvementLyingOf(to, coord);
@@ -388,8 +390,8 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     );
     compare(
       view.improvements,
-      (id) => Object.values(improvementMarksOn(id, key).names),
-      (id, slot, markY) => view.improvementOn(id, key, slot, markY, inFog),
+      (id) => Object.values(improvementMarksOn(id, from.feature, key).names),
+      (id, slot, markY) => view.improvementOn(id, to.feature, key, slot, markY, inFog),
       y - ROW_RISE,
       { ids: from.improvements, xs: was.improvements },
       { ids: to.improvements, xs: is.improvements },

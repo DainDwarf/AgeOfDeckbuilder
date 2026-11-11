@@ -39,6 +39,7 @@ import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
   buildingPaintingsOf,
+  discFeatureOf,
   featureIconOf,
   groundColourOf,
   improvementLookOf,
@@ -136,10 +137,12 @@ test('every feature of the catalogue has a name and an icon on the screen', () =
   }
 });
 
-test('every improvement of the catalogue has a name and either an icon with its painting or a stone shape on the screen, never both', () => {
+test('every improvement of the catalogue has a name and, on the screen, its icon on a disc of its own with its painting, its feature’s disc turned pale with its painting, or a stone shape, and one told on its feature’s disc names its one feature', () => {
   for (const id of Object.keys(CATALOGUE.improvements)) {
     expect(() => improvementName(id)).not.toThrow();
-    expect(() => improvementLookOf(id)).not.toThrow();
+    if (improvementLookOf(id).kind === 'feature') {
+      expect(() => featureIconOf(discFeatureOf(CATALOGUE, id))).not.toThrow();
+    }
   }
 });
 

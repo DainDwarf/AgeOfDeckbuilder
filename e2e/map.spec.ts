@@ -39,6 +39,7 @@ import {
   buildingPaintingsOf,
   clearingsOf,
   DISC_PITCH,
+  discFeatureOf,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
@@ -81,6 +82,7 @@ import {
   playedOn,
   playedOut,
   playerCityTile,
+  type Reading,
   readings,
   rested,
   ringedTile,
@@ -601,10 +603,8 @@ test('a clay pit stands as his clay on a pale disc, a unit from a feature’s di
   await consoleKey(page);
 
   const tiles = Object.values(pits);
-  const pitNames = (tile: TileCoords): { alone: string; beside: string } => ({
-    alone: `improvement-painting-${CLAY_PIT}-alone-${tileKey(tile)}`,
-    beside: `improvement-painting-${CLAY_PIT}-beside-${tileKey(tile)}`,
-  });
+  const pitNames = (tile: TileCoords): { alone: string; beside: string } =>
+    paintingNames(CLAY_PIT, tile);
   const seen = await readings(page, [
     ...[...tiles, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`),
     ...tiles.flatMap((tile) => [
@@ -630,17 +630,8 @@ test('a clay pit stands as his clay on a pale disc, a unit from a feature’s di
   expect(improvement - feature).toBeCloseTo(DISC_PITCH, 3);
   expect((feature + improvement) / 2).toBeCloseTo(middle, 3);
 
-  const [origin, east] = LATTICE.map((tile) => seen(`tile-${tileKey(tile)}`).place);
-  const tileWidth = east.x - origin.x;
-  const liesAt = (tile: TileCoords, name: string, { size, x, y }: LyingAt): void => {
-    const pit = seen(name);
-    const at = seen(`tile-${tileKey(tile)}`).place;
-    expect(pit.standing).toBe(true);
-    expect(pit.frame).toBe(look.painting);
-    expect(pit.scale).toBeCloseTo((size * tileWidth) / PAINTING.width, 4);
-    expect(pit.place.x).toBeCloseTo(at.x + x, 3);
-    expect(pit.place.y).toBeCloseTo(at.y + y, 3);
-  };
+  const liesAt = (tile: TileCoords, name: string, at: LyingAt): void =>
+    expectLying(seen, tile, name, look.painting, at);
   for (const tile of [pits.bare, pits.featured]) {
     liesAt(tile, pitNames(tile).alone, look.alone);
     expect(seen(pitNames(tile).beside).standing).toBe(false);
@@ -648,6 +639,154 @@ test('a clay pit stands as his clay on a pale disc, a unit from a feature’s di
   liesAt(pits.beside, pitNames(pits.beside).beside, look.beside);
   expect(seen(pitNames(pits.beside).alone).standing).toBe(false);
   const city = pitNames(pits.city);
+  expect([seen(city.alone).standing, seen(city.beside).standing]).toEqual([false, false]);
+
+  expect(problems).toEqual([]);
+});
+
+/** The names his painting of an improvement lies under on a tile, alone on it and beside a building. */
+function paintingNames(improvement: string, tile: TileCoords): { alone: string; beside: string } {
+  return {
+    alone: `improvement-painting-${improvement}-alone-${tileKey(tile)}`,
+    beside: `improvement-painting-${improvement}-beside-${tileKey(tile)}`,
+  };
+}
+
+/**
+ * That his painting stands under the name on the tile, at its size against his tile's and its place
+ * about the tile's middle, the `LATTICE` tiles' faces read with it giving a tile's width.
+ */
+function expectLying(
+  seen: (name: string) => Reading,
+  tile: TileCoords,
+  name: string,
+  painting: string,
+  { size, x, y }: LyingAt,
+): void {
+  const [origin, east] = LATTICE.map((one) => seen(`tile-${tileKey(one)}`).place);
+  const tileWidth = east.x - origin.x;
+  const lying = seen(name);
+  const at = seen(`tile-${tileKey(tile)}`).place;
+  expect(lying.standing).toBe(true);
+  expect(lying.frame).toBe(painting);
+  expect(lying.scale).toBeCloseTo((size * tileWidth) / PAINTING.width, 4);
+  expect(lying.place.x).toBeCloseTo(at.x + x, 3);
+  expect(lying.place.y).toBeCloseTo(at.y + y, 3);
+}
+
+/** The improvement the spec places on its feature, and the building it builds beside one with the megalith. */
+const PASTURE = 'pasture';
+const TANNERY = 'tannery';
+
+/** The tiles carrying the pasture's feature, by what else each carries. */
+type Pastures = {
+  readonly bare: TileCoords;
+  readonly tannery: TileCoords;
+  readonly megalith: TileCoords;
+  readonly city: TileCoords;
+};
+
+/**
+ * The first seed's Stone Age turn 1 with the pasture's feature placed on four bare tiles and the
+ * city's, all made its terrain, and the pasture on each tile of `Pastures`, the fourth bare one left alone.
+ */
+function pasturesPlaced(campaign: Campaign): {
+  chronicle: Chronicle;
+  feature: string;
+  pastures: Pastures;
+  alone: TileCoords;
+} {
+  const opened = settledOn(1, [], campaign);
+  const feature = discFeatureOf(CATALOGUE, PASTURE);
+  const { terrain } = featureKind(CATALOGUE, feature);
+  const [bare, tannery, megalith, alone] = opened.tiles
+    .filter(
+      (tile) =>
+        tile.feature === undefined &&
+        tile.building === undefined &&
+        tile.improvements.length === 0 &&
+        unitAt(opened.units, tile) === undefined,
+    )
+    .map(({ q, r }) => ({ q, r }));
+  const pastures = { bare, tannery, megalith, city: playerCityTile(opened) };
+  let placing = unchanged(opened);
+  for (const at of [...Object.values(pastures), alone]) {
+    placing = followed(placing, (left) => terraformed(CATALOGUE, left, at, terrain));
+    placing = followed(placing, (left) => featurePlaced(CATALOGUE, left, at, feature));
+  }
+  placing = followed(placing, (left) => built(CATALOGUE, left, tannery, TANNERY));
+  placing = followed(placing, (left) => built(CATALOGUE, left, megalith, MEGALITH));
+  for (const at of Object.values(pastures)) {
+    placing = followed(placing, (left) => improvementPlaced(CATALOGUE, left, at, PASTURE));
+  }
+  const { chronicle } = placing;
+  const city = tileAt(chronicle.tiles, pastures.city);
+  if (city?.terrain !== terrain || city.feature !== feature) {
+    throw new Error(`the city's tile of seed 1 does not carry ${feature} on ${terrain}`);
+  }
+  return { chronicle, feature, pastures, alone };
+}
+
+test('a pasture turns its feature’s disc pale under the feature’s icon, its herd gone, and his corral lies on its tile, large with no building, small beside a building that leaves room, and not at all under any other, the veils off', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = neutralCampaign();
+  const { chronicle, feature, pastures, alone } = pasturesPlaced(campaign);
+  const look = improvementLookOf(PASTURE);
+  if (look.kind !== 'feature') throw new Error(`${PASTURE} is told on no feature’s disc`);
+
+  await openSaved(page, chronicle, campaign);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+
+  const tiles = Object.values(pastures);
+  const marks = (tile: TileCoords): { disc: string; icon: string } => ({
+    disc: `improvement-disc-${PASTURE}-${tileKey(tile)}`,
+    icon: `improvement-${PASTURE}-${tileKey(tile)}`,
+  });
+  const own = (tile: TileCoords): string[] => [
+    `feature-disc-${tileKey(tile)}`,
+    `feature-${tileKey(tile)}`,
+    ...lyingNames(feature, tileKey(tile)),
+  ];
+  const seen = await readings(page, [
+    ...[...tiles, alone, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`),
+    ...tiles.flatMap((tile) => [
+      ...Object.values(marks(tile)),
+      ...Object.values(paintingNames(PASTURE, tile)),
+    ]),
+    ...[...tiles, alone].flatMap(own),
+  ]);
+
+  for (const tile of tiles) {
+    const middle = seen(`tile-${tileKey(tile)}`).place.x;
+    const disc = seen(marks(tile).disc);
+    const icon = seen(marks(tile).icon);
+    expect([disc.count, icon.count]).toEqual([1, 1]);
+    expect(disc.fill).toBe(LOOK.built);
+    expect(icon.frame).toBe(featureIconOf(feature));
+    expect(icon.across.right - icon.across.left).toBeCloseTo(ICON_WIDTH, 3);
+    expect(disc.place.x).toBeCloseTo(middle, 3);
+    expect(icon.place.x).toBeCloseTo(middle, 3);
+    for (const name of own(tile)) expect(seen(name).standing).toBe(false);
+  }
+
+  expect(seen(`feature-disc-${tileKey(alone)}`).fill).toBe(LOOK.featureDisc.colour);
+  expect(seen(`feature-${tileKey(alone)}`).frame).toBe(featureIconOf(feature));
+  for (const name of lyingNames(feature, tileKey(alone))) expect(seen(name).count).toBe(1);
+
+  const corral = (tile: TileCoords): { alone: string; beside: string } =>
+    paintingNames(PASTURE, tile);
+  expectLying(seen, pastures.bare, corral(pastures.bare).alone, look.painting, look.alone);
+  expect(seen(corral(pastures.bare).beside).standing).toBe(false);
+  for (const tile of [pastures.tannery, pastures.megalith]) {
+    expectLying(seen, tile, corral(tile).beside, look.painting, look.beside);
+    expect(seen(corral(tile).alone).standing).toBe(false);
+  }
+  const city = corral(pastures.city);
   expect([seen(city.alone).standing, seen(city.beside).standing]).toEqual([false, false]);
 
   expect(problems).toEqual([]);

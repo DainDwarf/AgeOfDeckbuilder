@@ -1,5 +1,5 @@
 import type { Corner, TileCoords } from '../rules/map';
-import { featureKind, type MapContent } from '../rules/map-kinds';
+import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
 import { LOOK, type Wash } from './look';
 import type { Sheet } from './sheet';
 
@@ -209,23 +209,25 @@ const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
   'neutral-village': VILLAGE,
   shelter: {
     patch: false,
-    pieces: [piece(`${LOCATIONS}/houseLonghouse00.png`, 1.45, 0, -1.3)],
+    pieces: [piece(`${LOCATIONS}/houseLonghouse00.png`, 1.45, 0, -2.5)],
     leavesRoom: true,
   },
   farm: {
     patch: false,
     pieces: [
       piece(`${LOCATIONS}/granaryThatched00.png`, 2, 3, -9.5),
-      piece(`${LOCATIONS}/field00.png`, 1.2, -3, 4.5),
+      piece(`${LOCATIONS}/field00.png`, 1.2, -5.5, 4.5),
     ],
+    leavesRoom: true,
   },
   tannery: {
     patch: false,
-    pieces: [piece(`${LOCATIONS}/foresterShed00.png`, 1.4, -3.6, -6), piece(FURS, 0.65, 5, 4.2)],
+    pieces: [piece(`${LOCATIONS}/foresterShed00.png`, 1.4, 0, -6), piece(FURS, 0.65, -6.4, 6)],
+    leavesRoom: true,
   },
   megalith: {
     patch: false,
-    pieces: [piece(`${LOCATIONS}/barrow03.png`, 2.2, 0, -0.8)],
+    pieces: [piece(`${LOCATIONS}/barrow03.png`, 2.2, 0, -3)],
     leavesRoom: true,
   },
   fishery: {
@@ -439,9 +441,9 @@ export const PONDS: readonly string[] = numberedFiles(
 export type LyingAt = { readonly size: number; readonly x: number; readonly y: number };
 
 /**
- * What an improvement is told by: his icon on its disc, and his painting lying on its tile, alone on
- * it and beside a building that leaves it room; or its placeholder shape until the art pass, its
- * corners about its own centre, raw.
+ * What an improvement is told by: his icon on a disc of its own, or its feature's disc turned pale,
+ * each with his painting lying on its tile, alone on it and beside a building that leaves it room; or
+ * its placeholder shape until the art pass, its corners about its own centre, raw.
  */
 export type ImprovementLook =
   | {
@@ -451,12 +453,23 @@ export type ImprovementLook =
       readonly alone: LyingAt;
       readonly beside: LyingAt;
     }
+  | {
+      readonly kind: 'feature';
+      readonly painting: string;
+      readonly alone: LyingAt;
+      readonly beside: LyingAt;
+    }
   | { readonly kind: 'shape'; readonly corners: number[] };
 
 const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
   trapping: { kind: 'shape', corners: [-5, -4, 5, -4, 0, 5] },
   irrigation: { kind: 'shape', corners: [-6, -2, 6, -2, 6, 2, -6, 2] },
-  pasture: { kind: 'shape', corners: [-4, -5, 5, 0, -4, 5] },
+  pasture: {
+    kind: 'feature',
+    painting: `${LOCATIONS}/corral00_cows.png`,
+    alone: { size: 1.5, x: 0, y: 3 },
+    beside: { size: 0.85, x: 10, y: 8 },
+  },
   'clay-pit': {
     kind: 'icon',
     icon: `${ICONS}/clay.png`,
@@ -466,11 +479,13 @@ const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
   },
 };
 
-/** The files an improvement's look draws from the features sheet: its icon and its painting, or none. */
+/** The files an improvement's look draws from the features sheet: its icon and its painting, its painting, or none. */
 function improvementFiles(look: ImprovementLook): string[] {
   switch (look.kind) {
     case 'icon':
       return [look.icon, look.painting];
+    case 'feature':
+      return [look.painting];
     case 'shape':
       return [];
   }
@@ -561,6 +576,17 @@ export function leavesRoom(building: string): boolean {
 /** What an improvement is told by; an improvement with no look is refused. */
 export function improvementLookOf(improvement: string): ImprovementLook {
   return drawn(IMPROVEMENT_LOOKS, improvement, 'no mark is drawn for the improvement');
+}
+
+/**
+ * The feature whose disc an improvement told on it is drawn on where no tile says one: the one its
+ * kind names; a kind naming none or several is refused.
+ */
+export function discFeatureOf(catalogue: MapContent, improvement: string): string {
+  const features = improvementKind(catalogue, improvement).features ?? [];
+  if (features.length !== 1)
+    throw new Error(`no one feature is named for the improvement ${improvement}`);
+  return features[0];
 }
 
 /** The entry of one table a key names; a key the table does not hold is refused with the complaint. */
