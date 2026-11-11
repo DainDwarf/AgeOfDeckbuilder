@@ -39,13 +39,16 @@ import { LOOK } from '../src/ui/look';
 import {
   buildingPaintingsOf,
   clearingsOf,
+  clearsItsTile,
   DISC_PITCH,
+  type DiscPicture,
   discFeatureOf,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
   ICON_WIDTH,
   improvementLookOf,
+  type LaidPainting,
   type LyingAt,
   PAINTING,
   PONDS,
@@ -93,6 +96,7 @@ import {
   shows,
   standing,
   stillAt,
+  TRAPPING,
   tileOnScreen,
   unitEntered,
   watch,
@@ -244,12 +248,13 @@ function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoo
 }
 
 /**
- * The paintings a tile's face may wear: his clearings of its terrain under a building where he
- * painted any, else his paintings of its terrain, each tinted for the feature on it where that
- * feature tints its tile.
+ * The paintings a tile's face may wear: his clearings of its terrain under a building or an
+ * improvement that clears it where he painted any, else his paintings of its terrain, each tinted
+ * for the feature on it where that feature tints its tile.
  */
-function facePaintingsOf({ terrain, feature, building }: Tile): string[] {
-  const cleared = building !== undefined ? clearingsOf(terrain) : [];
+function facePaintingsOf({ terrain, feature, building, improvements }: Tile): string[] {
+  const cleared =
+    building !== undefined || improvements.some(clearsItsTile) ? clearingsOf(terrain) : [];
   const paintings = cleared.length > 0 ? [...cleared] : paintingsOf(terrain);
   if (feature === undefined || featureDressOf(feature).kind !== 'tint') return paintings;
   return paintings.map((painting) => tintedName(painting, feature));
@@ -681,28 +686,27 @@ function expectLying(
 const PASTURE = 'pasture';
 const TANNERY = 'tannery';
 
-/** The tiles carrying the pasture's feature, by what else each carries. */
-type Pastures = {
+/** The tiles carrying an improvement told on its feature's disc: a bare one, one under each building named, and the city's. */
+type OnFeature = {
   readonly bare: TileCoords;
-  readonly tannery: TileCoords;
-  readonly megalith: TileCoords;
+  readonly built: readonly TileCoords[];
   readonly city: TileCoords;
 };
 
 /**
- * The first seed's Stone Age turn 1 with the pasture's feature placed on four bare tiles and the
- * city's, all made its terrain, and the pasture on each tile of `Pastures`, the fourth bare one left alone.
+ * The first seed's Stone Age turn 1 with the improvement's one feature placed on bare tiles and the
+ * city's, all made its terrain, each building built on a tile of its own, and the improvement placed
+ * on each tile of `OnFeature`, one bare tile more left with its feature alone.
  */
-function pasturesPlaced(campaign: Campaign): {
-  chronicle: Chronicle;
-  feature: string;
-  pastures: Pastures;
-  alone: TileCoords;
-} {
+function placedOnFeature(
+  campaign: Campaign,
+  improvement: string,
+  buildings: readonly string[],
+): { chronicle: Chronicle; feature: string; placed: OnFeature; alone: TileCoords } {
   const opened = settledOn(1, [], campaign);
-  const feature = discFeatureOf(CATALOGUE, PASTURE);
+  const feature = discFeatureOf(CATALOGUE, improvement);
   const { terrain } = featureKind(CATALOGUE, feature);
-  const [bare, tannery, megalith, alone] = opened.tiles
+  const [bare, ...rest] = opened.tiles
     .filter(
       (tile) =>
         tile.feature === undefined &&
@@ -711,23 +715,28 @@ function pasturesPlaced(campaign: Campaign): {
         unitAt(opened.units, tile) === undefined,
     )
     .map(({ q, r }) => ({ q, r }));
-  const pastures = { bare, tannery, megalith, city: playerCityTile(opened) };
+  const placed = { bare, built: rest.slice(0, buildings.length), city: playerCityTile(opened) };
+  const alone = rest[buildings.length];
+  const onIt = [placed.bare, ...placed.built, placed.city];
   let placing = unchanged(opened);
-  for (const at of [...Object.values(pastures), alone]) {
+  for (const at of [...onIt, alone]) {
     placing = followed(placing, (left) => terraformed(CATALOGUE, left, at, terrain));
     placing = followed(placing, (left) => featurePlaced(CATALOGUE, left, at, feature));
   }
-  placing = followed(placing, (left) => built(CATALOGUE, left, tannery, TANNERY));
-  placing = followed(placing, (left) => built(CATALOGUE, left, megalith, MEGALITH));
-  for (const at of Object.values(pastures)) {
-    placing = followed(placing, (left) => improvementPlaced(CATALOGUE, left, at, PASTURE));
+  buildings.forEach((building, at) => {
+    placing = followed(placing, (left) => built(CATALOGUE, left, placed.built[at], building));
+  });
+  for (const at of onIt) {
+    placing = followed(placing, (left) => improvementPlaced(CATALOGUE, left, at, improvement));
   }
   const { chronicle } = placing;
-  const city = tileAt(chronicle.tiles, pastures.city);
-  if (city?.terrain !== terrain || city.feature !== feature) {
-    throw new Error(`the city's tile of seed 1 does not carry ${feature} on ${terrain}`);
+  for (const at of [...onIt, alone]) {
+    const tile = tileAt(chronicle.tiles, at);
+    if (tile?.terrain !== terrain || tile.feature !== feature) {
+      throw new Error(`the tile ${tileKey(at)} of seed 1 does not carry ${feature} on ${terrain}`);
+    }
   }
-  return { chronicle, feature, pastures, alone };
+  return { chronicle, feature, placed, alone };
 }
 
 test('a pasture turns its feature’s disc pale under the feature’s icon, its herd gone, and his corral lies on its tile, large with no building, small beside a building that leaves room, and not at all under any other, the veils off', async ({
@@ -735,7 +744,10 @@ test('a pasture turns its feature’s disc pale under the feature’s icon, its 
 }) => {
   const problems = watch(page);
   const campaign = neutralCampaign();
-  const { chronicle, feature, pastures, alone } = pasturesPlaced(campaign);
+  const { chronicle, feature, placed, alone } = placedOnFeature(campaign, PASTURE, [
+    TANNERY,
+    MEGALITH,
+  ]);
   const look = improvementLookOf(PASTURE);
   if (look.kind !== 'feature') throw new Error(`${PASTURE} is told on no feature’s disc`);
 
@@ -745,10 +757,67 @@ test('a pasture turns its feature’s disc pale under the feature’s icon, its 
   await enter(page, 'fog');
   await consoleKey(page);
 
-  const tiles = Object.values(pastures);
+  await expectToldOnFeature(
+    page,
+    PASTURE,
+    feature,
+    { placed, alone },
+    { icon: featureIconOf(feature), width: ICON_WIDTH },
+    look.lies,
+  );
+
+  expect(problems).toEqual([]);
+});
+
+test('a trapping turns its feature’s disc pale under his deer behind his net, its herd gone, and the picture lies on its tile, large with no building, small beside a building that leaves room, and not at all under any other, the tile with no building on his clearing, the veils off', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = neutralCampaign();
+  const { chronicle, feature, placed, alone } = placedOnFeature(campaign, TRAPPING, [TANNERY]);
+  const look = improvementLookOf(TRAPPING);
+  if (look.kind !== 'feature' || look.picture === undefined) {
+    throw new Error(`${TRAPPING} is told by no picture of its own on its feature’s disc`);
+  }
+  const { terrain } = featureKind(CATALOGUE, feature);
+
+  await openSaved(page, chronicle, campaign);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+
+  const seen = await expectToldOnFeature(
+    page,
+    TRAPPING,
+    feature,
+    { placed, alone },
+    look.picture,
+    look.lies,
+  );
+  expect(clearingsOf(terrain)).toContain(seen(`tile-${tileKey(placed.bare)}`).frame);
+  expect(paintingsOf(terrain)).toContain(seen(`tile-${tileKey(alone)}`).frame);
+
+  expect(problems).toEqual([]);
+});
+
+/**
+ * That each tile carrying the improvement wears its feature's disc pale under what it wears, alone in
+ * its row, and its painting alone on the bare tile, beside each building and not on the city's; that
+ * the tile left alone wears its feature's dark disc, icon and herd: read in one question, handed back.
+ */
+async function expectToldOnFeature(
+  page: Page,
+  improvement: string,
+  feature: string,
+  { placed, alone }: { placed: OnFeature; alone: TileCoords },
+  worn: DiscPicture,
+  lies: LaidPainting,
+): Promise<(name: string) => Reading> {
+  const tiles = [placed.bare, ...placed.built, placed.city];
   const marks = (tile: TileCoords): { disc: string; icon: string } => ({
-    disc: `improvement-disc-${PASTURE}-${tileKey(tile)}`,
-    icon: `improvement-${PASTURE}-${tileKey(tile)}`,
+    disc: `improvement-disc-${improvement}-${tileKey(tile)}`,
+    icon: `improvement-${improvement}-${tileKey(tile)}`,
   });
   const own = (tile: TileCoords): string[] => [
     `feature-disc-${tileKey(tile)}`,
@@ -759,7 +828,7 @@ test('a pasture turns its feature’s disc pale under the feature’s icon, its 
     ...[...tiles, alone, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`),
     ...tiles.flatMap((tile) => [
       ...Object.values(marks(tile)),
-      ...Object.values(paintingNames(PASTURE, tile)),
+      ...Object.values(paintingNames(improvement, tile)),
     ]),
     ...[...tiles, alone].flatMap(own),
   ]);
@@ -770,8 +839,8 @@ test('a pasture turns its feature’s disc pale under the feature’s icon, its 
     const icon = seen(marks(tile).icon);
     expect([disc.count, icon.count]).toEqual([1, 1]);
     expect(disc.fill).toBe(LOOK.built);
-    expect(icon.frame).toBe(featureIconOf(feature));
-    expect(icon.across.right - icon.across.left).toBeCloseTo(ICON_WIDTH, 3);
+    expect(icon.frame).toBe(worn.icon);
+    expect(icon.across.right - icon.across.left).toBeCloseTo(worn.width, 3);
     expect(disc.place.x).toBeCloseTo(middle, 3);
     expect(icon.place.x).toBeCloseTo(middle, 3);
     for (const name of own(tile)) expect(seen(name).standing).toBe(false);
@@ -781,20 +850,18 @@ test('a pasture turns its feature’s disc pale under the feature’s icon, its 
   expect(seen(`feature-${tileKey(alone)}`).frame).toBe(featureIconOf(feature));
   for (const name of lyingNames(feature, tileKey(alone))) expect(seen(name).count).toBe(1);
 
-  const corral = (tile: TileCoords): { alone: string; beside: string } =>
-    paintingNames(PASTURE, tile);
-  const { lies } = look;
-  expectLying(seen, pastures.bare, corral(pastures.bare).alone, lies.painting, lies.alone);
-  expect(seen(corral(pastures.bare).beside).standing).toBe(false);
-  for (const tile of [pastures.tannery, pastures.megalith]) {
-    expectLying(seen, tile, corral(tile).beside, lies.painting, lies.beside);
-    expect(seen(corral(tile).alone).standing).toBe(false);
+  const laid = (tile: TileCoords): { alone: string; beside: string } =>
+    paintingNames(improvement, tile);
+  expectLying(seen, placed.bare, laid(placed.bare).alone, lies.painting, lies.alone);
+  expect(seen(laid(placed.bare).beside).standing).toBe(false);
+  for (const tile of placed.built) {
+    expectLying(seen, tile, laid(tile).beside, lies.painting, lies.beside);
+    expect(seen(laid(tile).alone).standing).toBe(false);
   }
-  const city = corral(pastures.city);
+  const city = laid(placed.city);
   expect([seen(city.alone).standing, seen(city.beside).standing]).toEqual([false, false]);
-
-  expect(problems).toEqual([]);
-});
+  return seen;
+}
 
 /** The improvement the spec places along a river. */
 const IRRIGATION = 'irrigation';

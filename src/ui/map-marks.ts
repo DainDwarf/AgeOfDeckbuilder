@@ -28,9 +28,11 @@ import {
   type BuildingPiece,
   buildingPaintingsOf,
   clearingsOf,
+  clearsItsTile,
   DISC_PITCH,
   DISC_RADIUS,
   DISC_RIM,
+  type DiscPicture,
   discFeatureOf,
   FACE_SHEET,
   FEATURE_SHEET_KEY,
@@ -50,7 +52,6 @@ import {
   pickOf,
   RIVER_CUT,
   RIVER_SHEET,
-  ROW_PITCH,
   shorePaintingsOf,
   tintedName,
   unitMarkOf,
@@ -115,7 +116,7 @@ const HULL_DROP = 12;
 
 // Phaser reads a polygon's first point at its construction, and one with none throws.
 /** What a polygon holds until a mark is read onto it. */
-export const UNREAD: number[] = [0, 0, 1, 0, 0, 1];
+const UNREAD: number[] = [0, 0, 1, 0, 0, 1];
 
 /** How far above a tile's middle the row of its feature and its improvements stands. */
 export const ROW_RISE = 15;
@@ -193,51 +194,36 @@ export function assignedAt(tile: TileCoords): { x: number; y: number } {
   return { x, y: y + ASSIGNED_DROP };
 }
 
-/**
- * What an improvement stands as in its tile's row: an icon on a disc of its own, a shape, or nothing
- * of its own, its feature's disc telling it.
- */
-function slotOf(improvement: ImprovementId): 'disc' | 'shape' | undefined {
+/** Whether an improvement stands on a disc of its own in its tile's row, or its feature's disc tells it. */
+function ownDisc(improvement: ImprovementId): boolean {
   switch (improvementLookOf(improvement).kind) {
     case 'icon':
-      return 'disc';
-    case 'shape':
-      return 'shape';
+      return true;
     case 'feature':
-      return undefined;
+      return false;
   }
 }
 
 /**
- * Where the marks of a face's row stand across its tile, its feature first and its improvements
+ * Where the discs of a face's row stand across its tile, its feature first and its improvements
  * after, in the order the face holds them, the row centred on the tile's middle `x`; an improvement
  * told on its feature's disc stands where the feature does.
  */
 export function rowOf(face: Tile, x: number): { feature: number; improvements: number[] } {
   const first = face.feature === undefined ? 0 : 1;
-  const slots = face.improvements.map(slotOf);
-  const discs = [
-    ...(first === 1 ? [true] : []),
-    ...slots.flatMap((slot) => (slot === undefined ? [] : [slot === 'disc'])),
-  ];
-  let reached = 0;
-  const offsets = discs.map((disc, slot) => {
-    if (slot > 0) reached += disc && discs[slot - 1] ? DISC_PITCH : ROW_PITCH;
-    return reached;
-  });
-  const at = (slot: number): number => x + offsets[slot] - reached / 2;
+  const owned = face.improvements.map(ownDisc);
+  const discs = first + owned.filter((own) => own).length;
+  const at = (slot: number): number => x + (slot - (discs - 1) / 2) * DISC_PITCH;
   let taken = first;
   return {
     feature: at(0),
-    improvements: slots.map((slot) => (slot === undefined ? at(0) : at(taken++))),
+    improvements: owned.map((own) => (own ? at(taken++) : at(0))),
   };
 }
 
 /** None on a face carrying a feature whose disc an improvement placed on it tells. */
 export function featureToldOn(face: Pick<Tile, 'feature' | 'improvements'>): FeatureId | undefined {
-  return face.improvements.some((improvement) => slotOf(improvement) === undefined)
-    ? undefined
-    : face.feature;
+  return face.improvements.every(ownDisc) ? face.feature : undefined;
 }
 
 /** A colour of a mark as its tile shows it: darkened by the fog's tint on a tile in fog. */
@@ -278,14 +264,20 @@ export type FacePainting = { readonly sheet: string; readonly painting: string }
 
 /**
  * The painting a tile's face wears, picked by its place on the disc: his clearing of its terrain
- * under a building, where he painted any, else his painting of it; tinted where the feature on it
- * tints it.
+ * under a building or an improvement that clears it, where he painted any, else his painting of it;
+ * tinted where the feature on it tints it.
  */
 export function facePaintingOn(
-  { terrain, feature, building }: Pick<Tile, 'terrain' | 'feature' | 'building'>,
+  {
+    terrain,
+    feature,
+    building,
+    improvements,
+  }: Pick<Tile, 'terrain' | 'feature' | 'building' | 'improvements'>,
   coord: TileCoords,
 ): FacePainting {
-  const cleared = building !== undefined ? clearingsOf(terrain) : [];
+  const cleared =
+    building !== undefined || improvements.some(clearsItsTile) ? clearingsOf(terrain) : [];
   const painting = paintingOn(cleared.length > 0 ? cleared : paintingsOf(terrain), coord);
   if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
     return { sheet: FEATURE_SHEET_KEY, painting: tintedName(painting, feature) };
@@ -296,7 +288,7 @@ export function facePaintingOn(
 /** A face made to wear the painting its tile wears, darkened on a tile in fog. */
 export function asTerrain(
   face: Phaser.GameObjects.Image,
-  tile: Pick<Tile, 'terrain' | 'feature' | 'building'>,
+  tile: Pick<Tile, 'terrain' | 'feature' | 'building' | 'improvements'>,
   coord: TileCoords,
   inFog: boolean,
 ): Phaser.GameObjects.Image {
@@ -561,44 +553,48 @@ export function featureMarksOn(key: string): { readonly disc: string; readonly i
 }
 
 /**
- * What an improvement stands as in its tile's row on the tile of that key, each mark by the name it
- * stands under: an icon on its pale disc, or its shape.
+ * What an improvement's pale disc wears: its own icon, or for one told on its feature's disc its own
+ * picture where it has one, else the icon of the feature `feature` answers.
  */
-export type ImprovementMarks =
-  | {
-      readonly kind: 'icon';
-      readonly icon: string;
-      readonly width: number;
-      readonly names: { readonly disc: string; readonly icon: string };
-    }
-  | {
-      readonly kind: 'shape';
-      readonly corners: number[];
-      readonly names: { readonly shape: string };
-    };
+function discWorn(improvement: ImprovementId, feature: () => FeatureId): DiscPicture {
+  const look = improvementLookOf(improvement);
+  switch (look.kind) {
+    case 'icon':
+      return { icon: look.icon, width: look.width };
+    case 'feature':
+      return look.picture ?? { icon: featureIconOf(feature()), width: ICON_WIDTH };
+  }
+}
 
-/** `feature` is the one its tile carries, whose icon an improvement told on its disc wears. */
+/**
+ * What an improvement stands as in its tile's row on the tile of that key: what its pale disc wears,
+ * and the names the disc and what it wears stand under.
+ */
+export type ImprovementMarks = DiscPicture & {
+  readonly names: { readonly disc: string; readonly icon: string };
+};
+
+/** `feature` is the one its tile carries, whose icon an improvement told on its disc may wear. */
 export function improvementMarksOn(
   improvement: ImprovementId,
   feature: FeatureId | undefined,
   key: string,
 ): ImprovementMarks {
-  const look = improvementLookOf(improvement);
-  const mark = `improvement-${improvement}-${key}`;
-  const names = { disc: `improvement-disc-${improvement}-${key}`, icon: mark };
-  switch (look.kind) {
-    case 'icon':
-      return { kind: 'icon', icon: look.icon, width: look.width, names };
-    case 'feature':
-      if (feature === undefined) {
-        throw new Error(
-          `the improvement ${improvement} is told on a feature its tile does not carry`,
-        );
-      }
-      return { kind: 'icon', icon: featureIconOf(feature), width: ICON_WIDTH, names };
-    case 'shape':
-      return { kind: 'shape', corners: look.corners, names: { shape: mark } };
-  }
+  const worn = discWorn(improvement, () => {
+    if (feature === undefined) {
+      throw new Error(
+        `the improvement ${improvement} is told on a feature its tile does not carry`,
+      );
+    }
+    return feature;
+  });
+  return {
+    ...worn,
+    names: {
+      disc: `improvement-disc-${improvement}-${key}`,
+      icon: `improvement-${improvement}-${key}`,
+    },
+  };
 }
 
 /**
@@ -615,7 +611,7 @@ export function improvementLyingOf(
   if (place === undefined) return [];
   return face.improvements.flatMap((improvement) => {
     const lies = liesOf(improvement);
-    if (lies?.kind !== 'painting') return [];
+    if (lies.kind !== 'painting') return [];
     const name = `improvement-painting-${improvement}-${place}-${tileKey(coord)}`;
     const { x, y } = positionOf(coord);
     const at = lies[place];
@@ -646,7 +642,7 @@ export function ditchesOf(
   const { q, r } = coord;
   return face.improvements.flatMap((improvement) => {
     const lies = liesOf(improvement);
-    if (lies?.kind !== 'ditches') return [];
+    if (lies.kind !== 'ditches') return [];
     const middle = positionOf(coord);
     const corners = cornersOf(coord).map(cornerAt);
     return edgesAlong(rivers, coord).map((edge) => {
@@ -688,52 +684,17 @@ export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Image {
   return scene.add.image(0, 0, FEATURE_SHEET_KEY, RIVER_CUT.frame);
 }
 
-/**
- * A polygon made to draw an improvement's placeholder shape from its corners, in the stone
- * everything worked is, darkened on a tile in fog.
- */
-export function asImprovementShape(
-  mark: Phaser.GameObjects.Polygon,
-  shape: number[],
-  inFog: boolean,
-): Phaser.GameObjects.Polygon {
-  return mark
-    .setTo(corners(shape))
-    .setFillStyle(darkened(LOOK.built, inFog))
-    .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
-}
-
-/** An icon that wide on the pale disc an improvement's icon stands on, off the map. */
-function onImprovementDisc(
-  scene: Phaser.Scene,
-  icon: string,
-  width: number,
-): Phaser.GameObjects.Container {
-  return scene.add.container(0, 0, [
-    asRowDisc(rowDisc(scene), IMPROVEMENT_DISC, false),
-    asIcon(scene.add.image(0, 0, FEATURE_SHEET_KEY), icon, width, false),
-  ]);
-}
-
-/** An improvement off the map: its icon on its pale disc, its one feature's for one told on it, or its shape. */
+/** An improvement off the map: what its pale disc wears on it, its one feature's icon where that is what it wears. */
 export function improvementMark(
   scene: Phaser.Scene,
   catalogue: MapContent,
   improvement: ImprovementId,
-): Phaser.GameObjects.Container | Phaser.GameObjects.Polygon {
-  const look = improvementLookOf(improvement);
-  switch (look.kind) {
-    case 'icon':
-      return onImprovementDisc(scene, look.icon, look.width);
-    case 'feature':
-      return onImprovementDisc(
-        scene,
-        featureIconOf(discFeatureOf(catalogue, improvement)),
-        ICON_WIDTH,
-      );
-    case 'shape':
-      return asImprovementShape(scene.add.polygon(0, 0, UNREAD), look.corners, false);
-  }
+): Phaser.GameObjects.Container {
+  const { icon, width } = discWorn(improvement, () => discFeatureOf(catalogue, improvement));
+  return scene.add.container(0, 0, [
+    asRowDisc(rowDisc(scene), IMPROVEMENT_DISC, false),
+    asIcon(scene.add.image(0, 0, FEATURE_SHEET_KEY), icon, width, false),
+  ]);
 }
 
 /** The shapes a unit's mark is drawn from, bottom first, each its corners and its drop below the middle. */

@@ -1,6 +1,6 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { tileKey } from '../src/rules/map';
+import { type TileCoords, tileKey } from '../src/rules/map';
 import { improvementKind } from '../src/rules/map-kinds';
 import { improvementName } from '../src/ui/text';
 import {
@@ -9,14 +9,13 @@ import {
   chronicleOf,
   click,
   dragOut,
-  featuresShown,
   HUNT,
-  marksIn,
   openSaved,
   paidOnDeer,
   panelRows,
   playedOn,
   playedOut,
+  readings,
   ringedTile,
   shownCard,
   TRAPPING,
@@ -25,20 +24,36 @@ import {
 
 const CAMPAIGN = campaignWith([TRAPPING]);
 
+/**
+ * Whether trapping's pale disc and the picture on it stand on the tile, and whether its feature's
+ * own disc and icon do, read in one question.
+ */
+async function standingOn(
+  page: Page,
+  tile: TileCoords,
+): Promise<{ trapping: boolean[]; feature: boolean[] }> {
+  const key = tileKey(tile);
+  const trapping = [`improvement-disc-${TRAPPING}-${key}`, `improvement-${TRAPPING}-${key}`];
+  const feature = [`feature-disc-${key}`, `feature-${key}`];
+  const seen = await readings(page, [...trapping, ...feature]);
+  const stand = (names: string[]): boolean[] => names.map((name) => seen(name).standing);
+  return { trapping: stand(trapping), feature: stand(feature) };
+}
+
 test('the trapping card places trapping on the deer the worker stands on', async ({ page }) => {
   const problems = watch(page);
   const paid = paidOnDeer(TRAPPING, [], CAMPAIGN);
   const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
   await openSaved(page, paid.chronicle, CAMPAIGN);
-  const before = await marksIn(page, 'improvements');
+  expect((await standingOn(page, paid.tile)).trapping).toEqual([false, false]);
   await dragOut(page, paid.index);
   await aimed(page);
   await click(page, `tile-${tileKey(paid.tile)}`);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(placed);
-  expect(await marksIn(page, 'improvements')).toBe(before + 1);
+  expect((await standingOn(page, paid.tile)).trapping).toEqual([true, true]);
   expect(problems).toEqual([]);
 });
 
@@ -80,15 +95,16 @@ test('the hunt card played on a trapped deer removes the deer and the trapping w
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);
 
   await openSaved(page, paid.chronicle, CAMPAIGN);
-  const features = await featuresShown(page);
-  const improvements = await marksIn(page, 'improvements');
+  expect((await standingOn(page, paid.tile)).trapping).toEqual([true, true]);
   await dragOut(page, paid.index);
   await aimed(page);
   await click(page, `tile-${tileKey(paid.tile)}`);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(hunted);
-  expect(await featuresShown(page)).toBe(features - 1);
-  expect(await marksIn(page, 'improvements')).toBe(improvements - 1);
+  expect(await standingOn(page, paid.tile)).toEqual({
+    trapping: [false, false],
+    feature: [false, false],
+  });
   expect(problems).toEqual([]);
 });

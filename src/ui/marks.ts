@@ -46,12 +46,8 @@ export const ICON_WIDTH = 14;
 export const DISC_RADIUS = 9;
 export const DISC_RIM = 1;
 
-/**
- * How far apart two discs of a tile's row stand, centre to centre, a unit between them, and any
- * other two marks of it, in the map's units.
- */
+/** How far apart two discs of a tile's row stand, centre to centre, a unit between them, in the map's units. */
 export const DISC_PITCH = 2 * DISC_RADIUS + 1;
-export const ROW_PITCH = 11;
 
 /** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
 export const PAINTING = { width: 256, height: 384, middle: 256 };
@@ -116,7 +112,7 @@ const CLEARINGS: Readonly<Record<string, readonly string[]>> = {
   forest: numberedFiles('hex-medieval-fantasy-locations/Tiles', 'hexForestBroadleafClearing', 2),
 };
 
-/** His clearings of a terrain, worn under a painted building; none where he painted none. */
+/** His clearings of a terrain; none where he painted none. */
 export function clearingsOf(terrain: string): readonly string[] {
   return Object.hasOwn(CLEARINGS, terrain) ? CLEARINGS[terrain] : [];
 }
@@ -493,22 +489,77 @@ export type Ditches = {
 };
 
 /**
- * What an improvement is told by: his icon on a disc of its own, as wide as it says, with his painting
- * or ditches from the river lying on its tile; its feature's disc turned pale, with his painting; or
- * its placeholder shape until the art pass, its corners about its own centre, raw.
+ * His deer behind his net, in his deer's pixels: the deer's side and the room about it on each side of
+ * the frame; the net's side, and how far its middle lies right of and below the deer's, as shares of
+ * the deer's side.
  */
-export type ImprovementLook =
+const DEER_IN_NET_OF = { deer: 128, room: 9, net: 0.8, x: -0.04, y: 0.17 };
+
+const DEER_IN_NET_SIDE = DEER_IN_NET_OF.deer + 2 * DEER_IN_NET_OF.room;
+
+/** His deer behind his net, the head showing over it, the deer's middle the frame's: the picture a trapping is told by. */
+export const DEER_IN_NET: Made = {
+  frame: 'deer-in-net',
+  width: DEER_IN_NET_SIDE,
+  height: DEER_IN_NET_SIDE,
+  paint: (context, paintingIn) => {
+    const { deer, net, x, y } = DEER_IN_NET_OF;
+    const middle = DEER_IN_NET_SIDE / 2;
+    const drawnAt = (
+      sheet: string,
+      painting: string,
+      at: number,
+      down: number,
+      side: number,
+    ): void => {
+      const from = paintingIn(sheet, painting);
+      context.drawImage(
+        from.canvas,
+        from.x,
+        from.y,
+        from.width,
+        from.height,
+        at - side / 2,
+        down - side / 2,
+        side,
+        side,
+      );
+    };
+    drawnAt(FEATURE_SHEET_KEY, featureIconOf('deer'), middle, middle, deer);
+    drawnAt(BUILDING_SHEET.key, NET, middle + x * deer, middle + y * deer, net * deer);
+  },
+};
+
+/** What an improvement's disc wears, by its frame in the features sheet, and how wide it stands, in the map's units. */
+export type DiscPicture = { readonly icon: string; readonly width: number };
+
+/**
+ * What an improvement is told by: his icon on a disc of its own, as wide as it says, with his painting
+ * or ditches from the river lying on its tile; or its feature's disc turned pale under the feature's
+ * icon or a picture of its own, with his painting; and whether its tile wears its terrain's clearing.
+ */
+export type ImprovementLook = (
   | {
       readonly kind: 'icon';
       readonly icon: string;
       readonly width: number;
       readonly lies: LaidPainting | Ditches;
     }
-  | { readonly kind: 'feature'; readonly lies: LaidPainting }
-  | { readonly kind: 'shape'; readonly corners: number[] };
+  | { readonly kind: 'feature'; readonly picture?: DiscPicture; readonly lies: LaidPainting }
+) & { readonly clears?: true };
 
 const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
-  trapping: { kind: 'shape', corners: [-5, -4, 5, -4, 0, 5] },
+  trapping: {
+    kind: 'feature',
+    picture: { icon: DEER_IN_NET.frame, width: 16 },
+    lies: {
+      kind: 'painting',
+      painting: DEER_IN_NET.frame,
+      alone: { size: 0.75, x: 0, y: 3 },
+      beside: { size: 0.5, x: 10, y: 8 },
+    },
+    clears: true,
+  },
   irrigation: {
     kind: 'icon',
     icon: RIVER_CUT.frame,
@@ -545,15 +596,16 @@ const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
   },
 };
 
-/** The frames an improvement's look draws from the features sheet: its icon, and its painting where it lies on one. */
+/** The frames an improvement's look draws from the features sheet: its icon or its picture, and its painting where it lies on one. */
 function improvementFrames(look: ImprovementLook): string[] {
   switch (look.kind) {
     case 'icon':
       return [look.icon, ...paintingsLaid(look.lies)];
     case 'feature':
-      return paintingsLaid(look.lies);
-    case 'shape':
-      return [];
+      return [
+        ...(look.picture === undefined ? [] : [look.picture.icon]),
+        ...paintingsLaid(look.lies),
+      ];
   }
 }
 
@@ -567,16 +619,14 @@ function paintingsLaid(lies: LaidPainting | Ditches): string[] {
   }
 }
 
-/** What an improvement lays on its tile's ground, and nothing for one told by its shape. */
-export function liesOf(improvement: string): LaidPainting | Ditches | undefined {
-  const look = improvementLookOf(improvement);
-  switch (look.kind) {
-    case 'icon':
-    case 'feature':
-      return look.lies;
-    case 'shape':
-      return undefined;
-  }
+/** What an improvement lays on its tile's ground. */
+export function liesOf(improvement: string): LaidPainting | Ditches {
+  return improvementLookOf(improvement).lies;
+}
+
+/** Whether an improvement's tile wears his clearing of its terrain. */
+export function clearsItsTile(improvement: string): boolean {
+  return improvementLookOf(improvement).clears === true;
 }
 
 /** The frame a painting tinted for a feature stands under in the features sheet. */
@@ -587,12 +637,11 @@ export function tintedName(painting: string, feature: string): string {
 export const FEATURE_SHEET_KEY = 'features';
 
 /**
- * The sheet every feature's icon and his ponds are drawn into, every improvement's icon and painting,
- * the river's cut off the river sheet, and the paintings of the terrain each feature with a tint lies
- * on, tinted for it off the face sheet.
+ * The sheet every feature's icon and his ponds are drawn into, every improvement's icon, picture and
+ * painting, and the paintings of the terrain each feature with a tint lies on, tinted for it.
  */
 export function featureSheet(catalogue: MapContent): Sheet {
-  const made = [RIVER_CUT];
+  const made = [RIVER_CUT, DEER_IN_NET];
   const frames = new Set([
     ...Object.keys(FEATURE_LOOKS).map(featureIconOf),
     ...PONDS,

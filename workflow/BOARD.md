@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The trapping** — a trapping adds no mark to its tile's row: its deer's disc stands pale under his deer behind his net, one picture composed of his two, the herd gone; that picture lies on the forest, large alone and small beside a tannery or a shelter, absent under any other building; a trapping's forest wears his clearing; the infopanel's Trapping row reads the picture on its pale disc; the trapping's stone shape gone, and the stone shape's way of telling an improvement with it. Doc-impact: `docs/LOOK.md`. [board/trapping.md](board/trapping.md)
 - **A toggle for the discs** — a button that shows or hides the discs on the map, the features' and the improvements'.
 - **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), and how much of a building under it shows.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.

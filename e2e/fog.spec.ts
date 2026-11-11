@@ -10,6 +10,7 @@ import {
   neighbours,
   riversAlong,
   sameTile,
+  type Tile,
   type TileCoords,
   tileKey,
   tilesAtCorner,
@@ -192,23 +193,24 @@ function alongRiver(chronicle: Chronicle, tile: TileCoords): boolean {
 }
 
 /**
- * The first seed's turn 1 with Trapping's feature trapped beside the city under a worker, and charted
- * out of sight the camp with its guard, that feature trapped, and a tile on a river nothing beside sees;
- * the tiles, and how many corners of its rivers the map draws in sight and wholly in fog, both some.
+ * The first seed's turn 1 with Trapping's feature in sight trapped under a worker and bare, and charted
+ * out of sight the camp with its guard, that feature trapped and bare, and a tile on a river nothing
+ * beside sees; the tiles, and how many river corners the map draws in sight and wholly in fog, both some.
  */
 function markedInFog(): {
   chronicle: Chronicle;
   lit: TileCoords;
+  wild: TileCoords;
   camp: TileCoords;
   trapped: TileCoords;
+  wildInFog: TileCoords;
   corners: { inFog: number; inSight: number };
 } {
   return firstSeed('runs a river’s corners both in sight and wholly in fog', (seed) => {
     const { chronicle: opened, tile: lit } = onDeer(settledOn(seed), [TRAPPING]);
     const seen = inSight(CATALOGUE, opened);
-    const unseen = opened.tiles.filter(
-      (tile) => !seen.has(tileKey(tile)) && unitAt(opened.units, tile) === undefined,
-    );
+    const empty = opened.tiles.filter((tile) => unitAt(opened.units, tile) === undefined);
+    const unseen = empty.filter((tile) => !seen.has(tileKey(tile)));
     const kind = campKind(opened);
     const { building, scripts } = ageOf(CATALOGUE, opened.age).camp;
     const { terrains } = buildingKind(CATALOGUE, building);
@@ -221,29 +223,42 @@ function markedInFog(): {
     const [feature] = improvementKind(CATALOGUE, TRAPPING).features ?? [];
     if (feature === undefined) throw new Error(`${TRAPPING} names no feature`);
     const { terrain } = featureKind(CATALOGUE, feature);
-    const trapped = unseen.find(
-      (tile) =>
-        tile.terrain === terrain &&
-        slotFree(tile) === undefined &&
-        (camp === undefined || !sameTile(tile, camp)),
-    );
+    const forFeature = (tile: Tile): boolean =>
+      tile.terrain === terrain &&
+      slotFree(tile) === undefined &&
+      (camp === undefined || !sameTile(tile, camp));
+    const [trapped, wildInFog] = unseen.filter(forFeature);
+    const wild = empty.find((tile) => seen.has(tileKey(tile)) && forFeature(tile));
     const shore = unseen.find(
       (tile) =>
-        alongRiver(opened, tile) && neighbours(tile).every((beside) => !seen.has(tileKey(beside))),
+        alongRiver(opened, tile) &&
+        neighbours(tile).every((beside) => !seen.has(tileKey(beside))) &&
+        [trapped, wildInFog].every((one) => one === undefined || !sameTile(tile, one)),
     );
-    if (camp === undefined || trapped === undefined || shore === undefined) return undefined;
+    if (
+      camp === undefined ||
+      trapped === undefined ||
+      wildInFog === undefined ||
+      wild === undefined ||
+      shore === undefined
+    ) {
+      return undefined;
+    }
 
     let placed = followed(built(CATALOGUE, opened, camp, building), (left) =>
       featurePlaced(CATALOGUE, left, trapped, feature),
     );
     placed = followed(placed, (left) => improvementPlaced(CATALOGUE, left, trapped, TRAPPING));
+    for (const bare of [wild, wildInFog]) {
+      placed = followed(placed, (left) => featurePlaced(CATALOGUE, left, bare, feature));
+    }
     const guarded = unitEntered(placed.chronicle, enemyEntering(kind, scripts.guard, camp));
-    const chronicle = [camp, trapped, shore].reduce(
+    const chronicle = [camp, trapped, wildInFog, shore].reduce(
       (left, at) => chartedAt(CATALOGUE, left, at),
       guarded,
     );
     const sees = inSight(CATALOGUE, chronicle);
-    if ([camp, trapped, shore].some((at) => sees.has(tileKey(at)))) return undefined;
+    if ([camp, trapped, wildInFog, shore].some((at) => sees.has(tileKey(at)))) return undefined;
 
     const drawn = new Set(chronicle.snapshots.map(tileKey));
     const run = new Map(
@@ -259,8 +274,10 @@ function markedInFog(): {
     return {
       chronicle,
       lit,
+      wild: { q: wild.q, r: wild.r },
       camp: { q: camp.q, r: camp.r },
       trapped: { q: trapped.q, r: trapped.r },
+      wildInFog: { q: wildInFog.q, r: wildInFog.r },
       corners: { inFog, inSight: inSightCount },
     };
   });
@@ -314,15 +331,26 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, lit, camp, trapped, corners } = markedInFog();
+  const { chronicle, lit, wild, camp, trapped, wildInFog, corners } = markedInFog();
   const city = playerCityTile(chronicle);
-  const marksOf = (key: string): string[] => [
+  const featureMarks = (key: string): string[] => [
     `feature-${key}`,
     `herd-${key}-0`,
     `feature-disc-${key}`,
-    `improvement-${TRAPPING}-${key}`,
   ];
-  const [litKey, trappedKey, cityKey, campKey] = [lit, trapped, city, camp].map(tileKey);
+  const trappingMarks = (key: string): string[] => [
+    `improvement-disc-${TRAPPING}-${key}`,
+    `improvement-${TRAPPING}-${key}`,
+    `improvement-painting-${TRAPPING}-alone-${key}`,
+  ];
+  const [litKey, wildKey, trappedKey, wildInFogKey, cityKey, campKey] = [
+    lit,
+    wild,
+    trapped,
+    wildInFog,
+    city,
+    camp,
+  ].map(tileKey);
   const fogged = (colour: number): number => multiplied(colour, LOOK.fog);
 
   await openSaved(page, chronicle);
@@ -330,8 +358,10 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   const { read, unitMarkOn } = await readingsAndUnitMarks(
     page,
     [
-      ...marksOf(litKey),
-      ...marksOf(trappedKey),
+      ...featureMarks(wildKey),
+      ...featureMarks(wildInFogKey),
+      ...trappingMarks(litKey),
+      ...trappingMarks(trappedKey),
       `building-${cityKey}`,
       `building-${campKey}`,
       'river',
@@ -340,18 +370,22 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   );
 
   // A tile in fog: its images carry the fog's tint, its shapes their colours multiplied by it.
-  expect(read(`feature-${trappedKey}`).tint).toBe(LOOK.fog);
-  expect(read(`herd-${trappedKey}-0`).tint).toBe(LOOK.fog);
-  expect(read(`feature-disc-${trappedKey}`).fill).toBe(fogged(LOOK.featureDisc.colour));
-  expect(read(`improvement-${TRAPPING}-${trappedKey}`).fill).toBe(fogged(LOOK.built));
+  expect(read(`feature-${wildInFogKey}`).tint).toBe(LOOK.fog);
+  expect(read(`herd-${wildInFogKey}-0`).tint).toBe(LOOK.fog);
+  expect(read(`feature-disc-${wildInFogKey}`).fill).toBe(fogged(LOOK.featureDisc.colour));
+  expect(read(`improvement-disc-${TRAPPING}-${trappedKey}`).fill).toBe(fogged(LOOK.built));
+  expect(read(`improvement-${TRAPPING}-${trappedKey}`).tint).toBe(LOOK.fog);
+  expect(read(`improvement-painting-${TRAPPING}-alone-${trappedKey}`).tint).toBe(LOOK.fog);
   expect(read(`building-${campKey}`).tint).toBe(LOOK.fog);
   expect(unitMarkOn(camp)).toEqual([fogged(LOOK.enemy)]);
 
   // A tile in sight: no tint, and every colour as it is.
-  expect(read(`feature-${litKey}`).tint).toBeUndefined();
-  expect(read(`herd-${litKey}-0`).tint).toBeUndefined();
-  expect(read(`feature-disc-${litKey}`).fill).toBe(LOOK.featureDisc.colour);
-  expect(read(`improvement-${TRAPPING}-${litKey}`).fill).toBe(LOOK.built);
+  expect(read(`feature-${wildKey}`).tint).toBeUndefined();
+  expect(read(`herd-${wildKey}-0`).tint).toBeUndefined();
+  expect(read(`feature-disc-${wildKey}`).fill).toBe(LOOK.featureDisc.colour);
+  expect(read(`improvement-disc-${TRAPPING}-${litKey}`).fill).toBe(LOOK.built);
+  expect(read(`improvement-${TRAPPING}-${litKey}`).tint).toBeUndefined();
+  expect(read(`improvement-painting-${TRAPPING}-alone-${litKey}`).tint).toBeUndefined();
   expect(read(`building-${cityKey}`).tint).toBeUndefined();
   expect(unitMarkOn(lit)).toEqual([LOOK.civilization]);
 

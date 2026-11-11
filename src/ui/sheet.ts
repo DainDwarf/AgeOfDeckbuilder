@@ -22,7 +22,7 @@ export type InSheet = {
 
 /**
  * A frame of a sheet drawn by code: its name, its size, and the way to paint it from its top-left
- * corner, a painting of a sheet drawn before this one found by `paintingIn`.
+ * corner, a painting of its own sheet or of one drawn before it found by `paintingIn`.
  */
 export type Made = {
   readonly frame: string;

@@ -49,7 +49,6 @@ import { createMapGrab } from './map-grab';
 import {
   asGlow,
   asIcon,
-  asImprovementShape,
   asPatch,
   asPieces,
   asRowDisc,
@@ -90,7 +89,6 @@ import {
   type TileObjects,
   thresholdMark,
   tileFace,
-  UNREAD,
   type UnitObjects,
   unreadGlow,
   wearing,
@@ -353,7 +351,6 @@ export function createMapView(
   );
   const patchPool = poolOf(built, () => scene.add.image(0, 0, BUILDING_SHEET.key));
   const piecesPool = poolOf(built, () => scene.add.container(0, 0));
-  const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
   const improvementDiscPool = poolOf(improvements, () => rowDisc(scene));
   // The depth alone keeps an icon over its disc: both pools add to one layer in no order of pairs.
   const improvementIconPool = poolOf(improvements, () =>
@@ -600,7 +597,7 @@ export function createMapView(
 
   /**
    * A placed improvement's marks from the pools, read for that improvement on the tile of that key
-   * carrying that feature and standing at that point of its row: its disc and its icon, or its shape.
+   * carrying that feature and standing at that point of its row: its pale disc and what it wears.
    */
   const improvementOn = (
     improvement: ImprovementId,
@@ -611,23 +608,14 @@ export function createMapView(
     inFog: boolean,
   ): Mark[] => {
     const marks = improvementMarksOn(improvement, feature, key);
-    switch (marks.kind) {
-      case 'icon':
-        return [
-          asRowDisc(improvementDiscPool.take(), IMPROVEMENT_DISC, inFog)
-            .setPosition(x, y)
-            .setName(marks.names.disc),
-          asIcon(improvementIconPool.take(), marks.icon, marks.width, inFog)
-            .setPosition(x, y)
-            .setName(marks.names.icon),
-        ];
-      case 'shape':
-        return [
-          asImprovementShape(improvementPool.take(), marks.corners, inFog)
-            .setPosition(x, y)
-            .setName(marks.names.shape),
-        ];
-    }
+    return [
+      asRowDisc(improvementDiscPool.take(), IMPROVEMENT_DISC, inFog)
+        .setPosition(x, y)
+        .setName(marks.names.disc),
+      asIcon(improvementIconPool.take(), marks.icon, marks.width, inFog)
+        .setPosition(x, y)
+        .setName(marks.names.icon),
+    ];
   };
 
   /**
@@ -775,7 +763,6 @@ export function createMapView(
     ditchPool.hide();
     patchPool.hide();
     piecesPool.hide();
-    improvementPool.hide();
     improvementDiscPool.hide();
     improvementIconPool.hide();
     fogUnitPool.hide();
