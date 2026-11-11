@@ -23,6 +23,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The pasture** — a tile with a pasture shows its cattle on an improved disc in place of the feature's, no disc added beside it, and its art on the tile is settled at its intake against the buildings and the paintings its plain can wear.
 - **The irrigation** — an irrigation stands in the feature's row as his icon on a disc like a feature's, and its art on the tile is settled at its intake against the buildings and the paintings a plain or a desert by a river can wear, a pasture's among them.
 - **The trapping** — a tile with a trapping shows its deer on an improved disc in place of the feature's, no disc added beside it, and its art on the tile is settled at its intake against the buildings and the paintings its forest can wear.
+- **A toggle for the discs** — a button that shows or hides the discs on the map, the features' and the improvements'.
 - **The units** — each unit kind is drawn as his painting, a weapon or a tool of the kind or a person holding it, over his boat while embarked, in a frame that tells its faction (a disc, a halo, standing alone), and how much of a building under it shows.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
 - **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
