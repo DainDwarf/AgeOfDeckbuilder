@@ -45,7 +45,6 @@ import {
   ICON_WIDTH,
   improvementLookOf,
   type LyingAt,
-  leavesRoom,
   PAINTING,
   PONDS,
   paintingsOf,
@@ -537,6 +536,9 @@ test("every feature stands as his icon on its disc, a herd's tile carries three 
 /** The improvement the spec places on the hills. */
 const CLAY_PIT = 'clay-pit';
 
+/** The building the spec builds beside a clay pit. */
+const MEGALITH = 'megalith';
+
 /** The tiles carrying the clay pit, by what else each carries. */
 type ClayPits = {
   readonly bare: TileCoords;
@@ -547,8 +549,8 @@ type ClayPits = {
 
 /**
  * The first seed's Stone Age turn 1 with the clay pit placed on three bare tiles made its terrain,
- * the second carrying the feature lying on that terrain and the third the first building that leaves
- * room and stands there, and on the city's tile made that terrain.
+ * the second carrying the feature lying on that terrain and the third the megalith, and on the
+ * city's tile made that terrain.
  */
 function clayPitsPlaced(campaign: Campaign): { chronicle: Chronicle; pits: ClayPits } {
   const opened = settledOn(1, [], campaign);
@@ -556,12 +558,7 @@ function clayPitsPlaced(campaign: Campaign): { chronicle: Chronicle; pits: ClayP
   const feature = Object.keys(CATALOGUE.features).find(
     (id) => featureKind(CATALOGUE, id).terrain === terrain,
   );
-  const building = Object.keys(CATALOGUE.buildings).find(
-    (id) => leavesRoom(id) && buildingKind(CATALOGUE, id).terrains.includes(terrain),
-  );
-  if (feature === undefined || building === undefined) {
-    throw new Error(`no feature lies on ${terrain}, or no building leaving room stands there`);
-  }
+  if (feature === undefined) throw new Error(`no feature lies on ${terrain}`);
   const [bare, featured, beside] = opened.tiles
     .filter(
       (tile) =>
@@ -577,7 +574,7 @@ function clayPitsPlaced(campaign: Campaign): { chronicle: Chronicle; pits: ClayP
     placing = followed(placing, (left) => terraformed(CATALOGUE, left, at, terrain));
   }
   placing = followed(placing, (left) => featurePlaced(CATALOGUE, left, featured, feature));
-  placing = followed(placing, (left) => built(CATALOGUE, left, beside, building));
+  placing = followed(placing, (left) => built(CATALOGUE, left, beside, MEGALITH));
   for (const at of Object.values(pits)) {
     placing = followed(placing, (left) => improvementPlaced(CATALOGUE, left, at, CLAY_PIT));
   }
