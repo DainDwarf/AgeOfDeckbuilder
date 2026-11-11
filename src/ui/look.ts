@@ -62,7 +62,6 @@ export type Look = {
   readonly fog: number;
   /** The strength a city's border band rests at where it meets the line. */
   readonly borderBand: number;
-  readonly river: number;
   readonly built: number;
   readonly population: number;
   readonly wellFill: number;
@@ -165,7 +164,6 @@ export const LOOK: Look = {
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,
   borderBand: 0.6,
-  river: 0x62a9e0,
   built: 0xcfc6b4,
   population: 0x6b6b7d,
   wellFill: 0xb4b9c0,

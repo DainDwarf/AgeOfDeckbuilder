@@ -81,7 +81,8 @@ class LoadScene extends Phaser.Scene {
   private sheets: readonly Sheet[] = [];
 
   preload(): void {
-    // The features sheet after the face sheet: its tinted paintings are drawn off the face sheet's.
+    // The features sheet after the face and river sheets: its tinted paintings and the river's cut
+    // are drawn off theirs.
     this.sheets = [FACE_SHEET, RIVER_SHEET, featureSheet(CATALOGUE), BUILDING_SHEET];
     for (const sheet of this.sheets) queueSheet(this.load, sheet);
   }

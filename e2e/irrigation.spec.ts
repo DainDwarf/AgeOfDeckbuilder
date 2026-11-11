@@ -16,12 +16,12 @@ import {
   dragOut,
   firstSeed,
   idsOf,
-  marksIn,
   openSaved,
   panelRows,
   playedOn,
   playedOut,
   playerCityTile,
+  readings,
   ringedTile,
   riverRows,
   settledOn,
@@ -71,15 +71,22 @@ test('the irrigation card places irrigation on the tile a river runs along that 
   const paid = paidAlongRiver();
   const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
+  const key = tileKey(paid.tile);
+  const marks = [`improvement-disc-${IRRIGATION}-${key}`, `improvement-${IRRIGATION}-${key}`];
+  const standingMarks = async (): Promise<boolean[]> => {
+    const seen = await readings(page, marks);
+    return marks.map((name) => seen(name).standing);
+  };
+
   await openSaved(page, paid.chronicle, CAMPAIGN);
-  const before = await marksIn(page, 'improvements');
+  expect(await standingMarks()).toEqual([false, false]);
   await dragOut(page, paid.index);
   await aimed(page);
-  await click(page, `tile-${tileKey(paid.tile)}`);
+  await click(page, `tile-${key}`);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(placed);
-  expect(await marksIn(page, 'improvements')).toBe(before + 1);
+  expect(await standingMarks()).toEqual([true, true]);
   expect(problems).toEqual([]);
 });
 

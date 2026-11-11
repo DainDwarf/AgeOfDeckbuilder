@@ -1,7 +1,7 @@
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
 import { LOOK, type Wash } from './look';
-import type { Sheet } from './sheet';
+import type { Made, Sheet } from './sheet';
 
 const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
 
@@ -39,7 +39,7 @@ const FEATURE_LOOKS: Readonly<
 /** How many copies of its animal a herd's tile carries. */
 export const HERD_COPIES = 3;
 
-/** How wide an icon of a tile's row stands, in the map's units. */
+/** How wide a feature's icon stands, in the map's units. */
 export const ICON_WIDTH = 14;
 
 /** The disc under an icon of a tile's row, and its rim, in the map's units. */
@@ -407,6 +407,35 @@ export function mouthPaintingsOf(edge: number): string[] {
 /** His straight river, from his east edge to his west. */
 export const STRAIGHT_RIVER: string = riverFiles('Rivers', 'hexRiver', '001001', 1)[0];
 
+/** His river's source piece, running from his hexagon's middle to his east edge. */
+const SOURCE_TO_EAST: string = riverFiles('Rivers', 'hexRiver', '001000', 1)[0];
+
+/**
+ * How his straight river is cut round: how many of his pixels across, about which of his pixels, and
+ * how far it is turned anticlockwise, in degrees.
+ */
+const RIVER_CUT_OF = { across: 104, x: 128, y: 260, turn: 15 };
+
+/**
+ * His straight river cut round and turned, his east end rising: the one picture a river is told by
+ * off the map, and the one an irrigation's disc wears.
+ */
+export const RIVER_CUT: Made = {
+  frame: 'river-cut',
+  width: RIVER_CUT_OF.across,
+  height: RIVER_CUT_OF.across,
+  paint: (context, paintingIn) => {
+    const { canvas, x, y, width, height } = paintingIn(RIVER_SHEET.key, STRAIGHT_RIVER);
+    const radius = RIVER_CUT_OF.across / 2;
+    context.beginPath();
+    context.arc(radius, radius, radius, 0, 2 * Math.PI);
+    context.clip();
+    context.translate(radius, radius);
+    context.rotate((-RIVER_CUT_OF.turn * Math.PI) / 180);
+    context.drawImage(canvas, x, y, width, height, -RIVER_CUT_OF.x, -RIVER_CUT_OF.y, width, height);
+  },
+};
+
 /** The sheet every river piece, his straight river and every river mouth are drawn into. */
 export const RIVER_SHEET: Sheet = {
   key: 'rivers',
@@ -440,54 +469,113 @@ export const PONDS: readonly string[] = numberedFiles(
 /** Where his painting of an improvement lies: its size against the size he painted it at beside his tile, and its middle about the tile's. */
 export type LyingAt = { readonly size: number; readonly x: number; readonly y: number };
 
+/** His painting of an improvement lying on its tile, alone on it and beside a building that leaves it room. */
+export type LaidPainting = {
+  readonly kind: 'painting';
+  readonly painting: string;
+  readonly alone: LyingAt;
+  readonly beside: LyingAt;
+};
+
 /**
- * What an improvement is told by: his icon on a disc of its own, or its feature's disc turned pale,
- * each with his painting lying on its tile, alone on it and beside a building that leaves it room; or
+ * Ditches from the river into the tile: his file, the point a ditch is held at in his pixels, how far
+ * in from its edge's middle that stands, the units to his pixel along it and across, and its roll's
+ * reach either way, in degrees.
+ */
+export type Ditches = {
+  readonly kind: 'ditches';
+  readonly file: string;
+  readonly held: { readonly x: number; readonly y: number };
+  readonly inset: number;
+  readonly along: number;
+  readonly across: number;
+  readonly roll: number;
+};
+
+/**
+ * What an improvement is told by: his icon on a disc of its own, as wide as it says, with his painting
+ * or ditches from the river lying on its tile; its feature's disc turned pale, with his painting; or
  * its placeholder shape until the art pass, its corners about its own centre, raw.
  */
 export type ImprovementLook =
   | {
       readonly kind: 'icon';
       readonly icon: string;
-      readonly painting: string;
-      readonly alone: LyingAt;
-      readonly beside: LyingAt;
+      readonly width: number;
+      readonly lies: LaidPainting | Ditches;
     }
-  | {
-      readonly kind: 'feature';
-      readonly painting: string;
-      readonly alone: LyingAt;
-      readonly beside: LyingAt;
-    }
+  | { readonly kind: 'feature'; readonly lies: LaidPainting }
   | { readonly kind: 'shape'; readonly corners: number[] };
 
 const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
   trapping: { kind: 'shape', corners: [-5, -4, 5, -4, 0, 5] },
-  irrigation: { kind: 'shape', corners: [-6, -2, 6, -2, 6, 2, -6, 2] },
+  irrigation: {
+    kind: 'icon',
+    icon: RIVER_CUT.frame,
+    width: 17,
+    lies: {
+      kind: 'ditches',
+      file: SOURCE_TO_EAST,
+      held: { x: 246, y: 256 },
+      inset: 2.5,
+      along: 0.1549,
+      across: 0.0659,
+      roll: 25,
+    },
+  },
   pasture: {
     kind: 'feature',
-    painting: `${LOCATIONS}/corral00_cows.png`,
-    alone: { size: 1.5, x: 0, y: 3 },
-    beside: { size: 0.85, x: 10, y: 8 },
+    lies: {
+      kind: 'painting',
+      painting: `${LOCATIONS}/corral00_cows.png`,
+      alone: { size: 1.5, x: 0, y: 3 },
+      beside: { size: 0.85, x: 10, y: 8 },
+    },
   },
   'clay-pit': {
     kind: 'icon',
     icon: `${ICONS}/clay.png`,
-    painting: `${LOCATIONS}/clayPit01.png`,
-    alone: { size: 0.7, x: 0, y: 3 },
-    beside: { size: 0.4, x: 10, y: 8 },
+    width: 14,
+    lies: {
+      kind: 'painting',
+      painting: `${LOCATIONS}/clayPit01.png`,
+      alone: { size: 0.7, x: 0, y: 3 },
+      beside: { size: 0.4, x: 10, y: 8 },
+    },
   },
 };
 
-/** The files an improvement's look draws from the features sheet: its icon and its painting, its painting, or none. */
-function improvementFiles(look: ImprovementLook): string[] {
+/** The frames an improvement's look draws from the features sheet: its icon, and its painting where it lies on one. */
+function improvementFrames(look: ImprovementLook): string[] {
   switch (look.kind) {
     case 'icon':
-      return [look.icon, look.painting];
+      return [look.icon, ...paintingsLaid(look.lies)];
     case 'feature':
-      return [look.painting];
+      return paintingsLaid(look.lies);
     case 'shape':
       return [];
+  }
+}
+
+/** His painting of what an improvement lays on its tile's ground, and none for ditches, which the river sheet holds. */
+function paintingsLaid(lies: LaidPainting | Ditches): string[] {
+  switch (lies.kind) {
+    case 'painting':
+      return [lies.painting];
+    case 'ditches':
+      return [];
+  }
+}
+
+/** What an improvement lays on its tile's ground, and nothing for one told by its shape. */
+export function liesOf(improvement: string): LaidPainting | Ditches | undefined {
+  const look = improvementLookOf(improvement);
+  switch (look.kind) {
+    case 'icon':
+    case 'feature':
+      return look.lies;
+    case 'shape':
+      return undefined;
   }
 }
 
@@ -500,16 +588,20 @@ export const FEATURE_SHEET_KEY = 'features';
 
 /**
  * The sheet every feature's icon and his ponds are drawn into, every improvement's icon and painting,
- * and the paintings of the terrain each feature with a tint lies on, tinted for it off the face sheet.
+ * the river's cut off the river sheet, and the paintings of the terrain each feature with a tint lies
+ * on, tinted for it off the face sheet.
  */
 export function featureSheet(catalogue: MapContent): Sheet {
+  const made = [RIVER_CUT];
+  const frames = new Set([
+    ...Object.keys(FEATURE_LOOKS).map(featureIconOf),
+    ...PONDS,
+    ...Object.values(IMPROVEMENT_LOOKS).flatMap(improvementFrames),
+  ]);
   return {
     key: FEATURE_SHEET_KEY,
-    files: [
-      ...new Set(Object.keys(FEATURE_LOOKS).map(featureIconOf)),
-      ...PONDS,
-      ...new Set(Object.values(IMPROVEMENT_LOOKS).flatMap(improvementFiles)),
-    ],
+    files: [...frames].filter((frame) => !made.some((one) => one.frame === frame)),
+    made,
     tinted: Object.keys(catalogue.features).flatMap((feature) => {
       const dress = featureDressOf(feature);
       if (dress.kind !== 'tint') return [];

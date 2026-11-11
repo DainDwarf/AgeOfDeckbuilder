@@ -499,17 +499,27 @@ function riverEdges(rivers: readonly River[]): Set<string> {
 }
 
 /**
- * Whether one of the rivers runs along the tile. A river's corners stand one edge apart, so two
+ * The edges of the tile the rivers run along, each once, by its place: the edge at a place runs from
+ * the corner `cornersOf` gives there to the next. A river's corners stand one edge apart, so two
  * consecutive ones that are both corners of the tile are one of its six edges.
  */
+export function edgesAlong(rivers: readonly River[], coord: TileCoords): number[] {
+  const around = cornersOf(coord).map(cornerKey);
+  const edges = new Set<number>();
+  for (const river of rivers) {
+    for (let at = 1; at < river.length; at++) {
+      const one = around.indexOf(cornerKey(river[at - 1]));
+      const other = around.indexOf(cornerKey(river[at]));
+      if (one < 0 || other < 0) continue;
+      edges.add((one + 1) % around.length === other ? one : other);
+    }
+  }
+  return [...edges].sort((a, b) => a - b);
+}
+
+/** Whether one of the rivers runs along the tile. */
 export function runsAlong(rivers: readonly River[], coord: TileCoords): boolean {
-  const around = new Set(cornersOf(coord).map(cornerKey));
-  return rivers.some((river) =>
-    river.some(
-      (corner, at) =>
-        at > 0 && around.has(cornerKey(river[at - 1])) && around.has(cornerKey(corner)),
-    ),
-  );
+  return edgesAlong(rivers, coord).length > 0;
 }
 
 /**

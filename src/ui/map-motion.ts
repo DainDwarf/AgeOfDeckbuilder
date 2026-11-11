@@ -5,6 +5,7 @@ import {
   type FeatureId,
   type ImprovementId,
   neighbours,
+  type River,
   type Tile,
   type TileCoords,
   tileAt,
@@ -17,6 +18,7 @@ import { EASE, ended } from './card-motion';
 import {
   asTerrain,
   buildingStandsAs,
+  ditchesOf,
   facePaintingOn,
   featureMarksOn,
   featureToldOn,
@@ -40,6 +42,7 @@ type Swap = { readonly coming: readonly Mark[]; readonly going: readonly Mark[] 
 /** What a stage's motion reads and repaints of the map, which keeps all of it. */
 type MapInMotion = {
   readonly lying: Phaser.GameObjects.Layer;
+  readonly ditches: Phaser.GameObjects.Layer;
   readonly features: Phaser.GameObjects.Layer;
   readonly improvements: Phaser.GameObjects.Layer;
   readonly built: Phaser.GameObjects.Layer;
@@ -83,6 +86,8 @@ type MapInMotion = {
   featureOn(key: string, feature: FeatureId, x: number, y: number, inFog: boolean): Mark[];
   /** What lies on a tile's ground, painted. */
   lyingOn(laid: readonly Lying[], inFog: boolean): Mark[];
+  /** The ditches run into a tile, painted. */
+  ditchesOn(laid: readonly Lying<Phaser.GameObjects.Container>[], inFog: boolean): Mark[];
   /** A face from the pool the terrain crossfades on, standing in that tile's row. */
   crossfade(tile: TileCoords): Phaser.GameObjects.Image;
   /** A face from that pool a beach fades in on, standing over the face it lies on. */
@@ -327,6 +332,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     from: Tile,
     to: Tile,
     shore: string | undefined,
+    rivers: readonly River[],
   ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
     const inFog = !view.live().has(key);
@@ -374,19 +380,35 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       { ids: one(featureToldOn(from)), xs: [x] },
       { ids: one(featureToldOn(to)), xs: [x] },
     );
-    const laidBefore = improvementLyingOf(from, coord);
-    const laidAfter = improvementLyingOf(to, coord);
-    compare(
+    const compareLaid = <T extends Mark>(
+      on: Phaser.GameObjects.Layer,
+      before: readonly Lying<T>[],
+      after: readonly Lying<T>[],
+      paint: (laid: readonly Lying<T>[], inFog: boolean) => readonly Mark[],
+    ): void =>
+      compare(
+        on,
+        (name) => [name],
+        (name) =>
+          paint(
+            after.filter((laid) => laid.name === name),
+            inFog,
+          ),
+        y,
+        { ids: before.map(({ name }) => name), xs: before.map(() => x) },
+        { ids: after.map(({ name }) => name), xs: after.map(() => x) },
+      );
+    compareLaid(
       view.lying,
-      (name) => [name],
-      (name) =>
-        view.lyingOn(
-          laidAfter.filter((laid) => laid.name === name),
-          inFog,
-        ),
-      y,
-      { ids: laidBefore.map(({ name }) => name), xs: laidBefore.map(() => x) },
-      { ids: laidAfter.map(({ name }) => name), xs: laidAfter.map(() => x) },
+      improvementLyingOf(from, coord),
+      improvementLyingOf(to, coord),
+      view.lyingOn,
+    );
+    compareLaid(
+      view.ditches,
+      ditchesOf(from, coord, rivers),
+      ditchesOf(to, coord, rivers),
+      view.ditchesOn,
     );
     compare(
       view.improvements,
@@ -513,7 +535,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const motion =
       from === undefined
         ? () => fadeIn(to.paint())
-        : between(coord, from.tile, to.tile, to.shoreOn(coord));
+        : between(coord, from.tile, to.tile, to.shoreOn(coord), chronicle.rivers);
     const shores = shoresBeside(coord, to.shoreOn);
     const riversAt = view.riversAt(chronicle, coord);
     const rivers = riversAt === undefined ? undefined : swapped(riversAt);

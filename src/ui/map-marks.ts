@@ -4,9 +4,11 @@ import {
   CENTRE,
   type Corner,
   cornersOf,
+  edgesAlong,
   type FeatureId,
   type ImprovementId,
   neighbours,
+  type River,
   type Terrain,
   type Tile,
   type TileCoords,
@@ -38,6 +40,7 @@ import {
   ICON_WIDTH,
   improvementLookOf,
   leavesRoom,
+  liesOf,
   PAINTING,
   PATCH,
   PONDS,
@@ -45,6 +48,8 @@ import {
   paintingOn,
   paintingsOf,
   pickOf,
+  RIVER_CUT,
+  RIVER_SHEET,
   ROW_PITCH,
   shorePaintingsOf,
   tintedName,
@@ -107,9 +112,6 @@ const CITY_BADGE_INKS: Record<CityFaction, number> = {
 /** Placeholder primitive until the art pass: the hull an embarked unit stands on, raw, and its drop. */
 const HULL: number[] = [-16, -4, 16, -4, 10, 4, -10, 4];
 const HULL_DROP = 12;
-
-/** Placeholder primitive until the art pass: a river standing as a mark of its own, a bent band in its own blue. */
-const RIVER_MARK: number[] = corners([-12, -12, -4, 0, 4, -8, 12, 4, 12, 12, 4, 0, -4, 8, -12, -4]);
 
 // Phaser reads a polygon's first point at its construction, and one with none throws.
 /** What a polygon holds until a mark is read onto it. */
@@ -452,18 +454,16 @@ export function buildingMark(
 
 // The scale is set here and `asPainted` resets it to one: an icon is painted before it wears its file.
 /**
- * An image of the features sheet made to draw an icon of a tile's row: his file, at the width it
- * stands, darkened on a tile in fog.
+ * An image of the features sheet made to draw an icon of a tile's row: its frame, that wide, darkened
+ * on a tile in fog.
  */
 export function asIcon(
   image: Phaser.GameObjects.Image,
   icon: string,
+  width: number,
   inFog: boolean,
 ): Phaser.GameObjects.Image {
-  return asDarkened(
-    image.setTexture(FEATURE_SHEET_KEY, icon).setDisplaySize(ICON_WIDTH, ICON_WIDTH),
-    inFog,
-  );
+  return asDarkened(image.setTexture(FEATURE_SHEET_KEY, icon).setDisplaySize(width, width), inFog);
 }
 
 /** A feature off the map: its icon, bare. */
@@ -501,11 +501,11 @@ export function asRowDisc(
 
 /**
  * One mark a feature or an improvement lays on its tile's ground: its name, and the way to paint it
- * on an image of the features sheet, darkened on a tile in fog.
+ * on what it is drawn on, an image of the features sheet unless said, darkened on a tile in fog.
  */
-export type Lying = {
+export type Lying<T extends Mark = Phaser.GameObjects.Image> = {
   readonly name: string;
-  paint(image: Phaser.GameObjects.Image, inFog: boolean): Phaser.GameObjects.Image;
+  paint(mark: T, inFog: boolean): T;
 };
 
 /**
@@ -568,6 +568,7 @@ export type ImprovementMarks =
   | {
       readonly kind: 'icon';
       readonly icon: string;
+      readonly width: number;
       readonly names: { readonly disc: string; readonly icon: string };
     }
   | {
@@ -587,14 +588,14 @@ export function improvementMarksOn(
   const names = { disc: `improvement-disc-${improvement}-${key}`, icon: mark };
   switch (look.kind) {
     case 'icon':
-      return { kind: 'icon', icon: look.icon, names };
+      return { kind: 'icon', icon: look.icon, width: look.width, names };
     case 'feature':
       if (feature === undefined) {
         throw new Error(
           `the improvement ${improvement} is told on a feature its tile does not carry`,
         );
       }
-      return { kind: 'icon', icon: featureIconOf(feature), names };
+      return { kind: 'icon', icon: featureIconOf(feature), width: ICON_WIDTH, names };
     case 'shape':
       return { kind: 'shape', corners: look.corners, names: { shape: mark } };
   }
@@ -612,43 +613,79 @@ export function improvementLyingOf(
   const place =
     face.building === undefined ? 'alone' : leavesRoom(face.building) ? 'beside' : undefined;
   if (place === undefined) return [];
-  return face.improvements.flatMap((improvement) => paintingLying(improvement, place, coord));
+  return face.improvements.flatMap((improvement) => {
+    const lies = liesOf(improvement);
+    if (lies?.kind !== 'painting') return [];
+    const name = `improvement-painting-${improvement}-${place}-${tileKey(coord)}`;
+    const { x, y } = positionOf(coord);
+    const at = lies[place];
+    return [
+      {
+        name,
+        paint: (image, inFog) =>
+          asDarkened(image, inFog)
+            .setTexture(FEATURE_SHEET_KEY, lies.painting)
+            .setScale(at.size * PAINTED_SCALE)
+            .setFlipX(false)
+            .setPosition(x + at.x, y + at.y)
+            .setName(name),
+      },
+    ];
+  });
 }
 
-/** His painting of an improvement told on a disc lying on its tile at that place, and none for one told by its shape. */
-function paintingLying(
-  improvement: ImprovementId,
-  place: 'alone' | 'beside',
+// A motion tweens a mark's `scale`, which Phaser reads as the mean of its two and writes to both
+// (`Transform.js:125-135`): a ditch's two scales, one signed, ride on the image in its container.
+/** The ditches the improvements of a face run from the river, whatever the tile carries. */
+export function ditchesOf(
+  face: Pick<Tile, 'improvements'>,
   coord: TileCoords,
-): Lying[] {
-  const look = improvementLookOf(improvement);
-  switch (look.kind) {
-    case 'icon':
-    case 'feature': {
-      const name = `improvement-painting-${improvement}-${place}-${tileKey(coord)}`;
-      const { x, y } = positionOf(coord);
-      const at = look[place];
-      return [
-        {
-          name,
-          paint: (image, inFog) =>
-            asDarkened(image, inFog)
-              .setTexture(FEATURE_SHEET_KEY, look.painting)
-              .setScale(at.size * PAINTED_SCALE)
-              .setFlipX(false)
-              .setPosition(x + at.x, y + at.y)
-              .setName(name),
+  rivers: readonly River[],
+): Lying<Phaser.GameObjects.Container>[] {
+  const key = tileKey(coord);
+  const { q, r } = coord;
+  return face.improvements.flatMap((improvement) => {
+    const lies = liesOf(improvement);
+    if (lies?.kind !== 'ditches') return [];
+    const middle = positionOf(coord);
+    const corners = cornersOf(coord).map(cornerAt);
+    return edgesAlong(rivers, coord).map((edge) => {
+      const from = corners[edge];
+      const to = corners[(edge + 1) % corners.length];
+      const edgeMiddle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+      const way = Math.atan2(middle.y - edgeMiddle.y, middle.x - edgeMiddle.x);
+      const held = {
+        x: edgeMiddle.x + Math.cos(way) * lies.inset,
+        y: edgeMiddle.y + Math.sin(way) * lies.inset,
+      };
+      const even = pickOf(q * 17 + edge, r * 23 + 3 * edge + 1, 1001) / 1000;
+      const roll = Phaser.Math.DegToRad((even * 2 - 1) * lies.roll);
+      const mirror = pickOf(q * 29 + 5 * edge, r * 31 + edge + 2, 2) === 1 ? -1 : 1;
+      const name = `improvement-ditch-${improvement}-${edge}-${key}`;
+      return {
+        name,
+        paint: (container, inFog) => {
+          // A mirror by a flip turns the frame about its own middle and moves the paint off the river.
+          asDarkened(container.getAt<Phaser.GameObjects.Image>(0), inFog)
+            .setTexture(RIVER_SHEET.key, lies.file)
+            .setOrigin(lies.held.x / PAINTING.width, lies.held.y / PAINTING.height)
+            .setPosition(0, 0)
+            .setScale(lies.along, mirror * lies.across)
+            .setRotation(way + Math.PI + roll)
+            .setFlip(false, false)
+            .setAlpha(1)
+            .setVisible(true)
+            .setName(`improvement-ditch-paint-${improvement}-${edge}-${key}`);
+          return container.setPosition(held.x, held.y).setName(name);
         },
-      ];
-    }
-    case 'shape':
-      return [];
-  }
+      };
+    });
+  });
 }
 
-/** A river drawn off the map: its placeholder mark, in the blue a river runs in. */
-export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, RIVER_MARK, LOOK.river).setStrokeStyle(1, LOOK.mapOutline);
+/** A river drawn off the map: his straight river cut round, bare. */
+export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Image {
+  return scene.add.image(0, 0, FEATURE_SHEET_KEY, RIVER_CUT.frame);
 }
 
 /**
@@ -666,11 +703,15 @@ export function asImprovementShape(
     .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
 }
 
-/** An icon on the pale disc an improvement's icon stands on, off the map. */
-function onImprovementDisc(scene: Phaser.Scene, icon: string): Phaser.GameObjects.Container {
+/** An icon that wide on the pale disc an improvement's icon stands on, off the map. */
+function onImprovementDisc(
+  scene: Phaser.Scene,
+  icon: string,
+  width: number,
+): Phaser.GameObjects.Container {
   return scene.add.container(0, 0, [
     asRowDisc(rowDisc(scene), IMPROVEMENT_DISC, false),
-    asIcon(scene.add.image(0, 0, FEATURE_SHEET_KEY), icon, false),
+    asIcon(scene.add.image(0, 0, FEATURE_SHEET_KEY), icon, width, false),
   ]);
 }
 
@@ -683,9 +724,13 @@ export function improvementMark(
   const look = improvementLookOf(improvement);
   switch (look.kind) {
     case 'icon':
-      return onImprovementDisc(scene, look.icon);
+      return onImprovementDisc(scene, look.icon, look.width);
     case 'feature':
-      return onImprovementDisc(scene, featureIconOf(discFeatureOf(catalogue, improvement)));
+      return onImprovementDisc(
+        scene,
+        featureIconOf(discFeatureOf(catalogue, improvement)),
+        ICON_WIDTH,
+      );
     case 'shape':
       return asImprovementShape(scene.add.polygon(0, 0, UNREAD), look.corners, false);
   }

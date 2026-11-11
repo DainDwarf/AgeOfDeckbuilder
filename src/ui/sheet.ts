@@ -11,12 +11,27 @@ export type Tinted = {
   readonly composite: GlobalCompositeOperation;
 };
 
-/** A frame of a sheet drawn by code alone: its name, its size, and the way to paint it from its top-left corner. */
+/** Where a painting of a sheet lies: the canvas the sheet is, and the painting's box on it. */
+export type InSheet = {
+  readonly canvas: HTMLCanvasElement;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+/**
+ * A frame of a sheet drawn by code: its name, its size, and the way to paint it from its top-left
+ * corner, a painting of a sheet drawn before this one found by `paintingIn`.
+ */
 export type Made = {
   readonly frame: string;
   readonly width: number;
   readonly height: number;
-  paint(context: CanvasRenderingContext2D): void;
+  paint(
+    context: CanvasRenderingContext2D,
+    paintingIn: (sheet: string, painting: string) => InSheet,
+  ): void;
 };
 
 /** One sheet of paintings: the key its texture stands under, the files drawn into it, and its side. */
@@ -71,18 +86,23 @@ export function drawSheet(
     textures.remove(file);
   }
 
+  const paintingIn = (from: string, painting: string): InSheet => {
+    const holds = textures.exists(from) && textures.get(from).has(painting);
+    const canvas = holds ? textures.get(from).getSourceImage() : undefined;
+    if (!(canvas instanceof HTMLCanvasElement)) {
+      throw new Error(`the sheet ${from} holds no painting ${painting}`);
+    }
+    const { cutX, cutY, cutWidth, cutHeight } = textures.getFrame(from, painting);
+    return { canvas, x: cutX, y: cutY, width: cutWidth, height: cutHeight };
+  };
+
   const scratch = document.createElement('canvas');
   const context = scratch.getContext('2d');
   if (context === null) throw new Error('no canvas of the page draws in two dimensions');
   for (const { sheet: from, painting, frame, wash, composite } of tinted) {
-    const holds = textures.exists(from) && textures.get(from).has(painting);
-    const image = holds ? textures.get(from).getSourceImage() : undefined;
-    if (!(image instanceof HTMLCanvasElement)) {
-      throw new Error(`the sheet ${from} holds no painting ${painting} to tint`);
-    }
-    const { cutX, cutY, cutWidth: width, cutHeight: height } = textures.getFrame(from, painting);
+    const { canvas, x: cutX, y: cutY, width, height } = paintingIn(from, painting);
     const paint = (): void =>
-      context.drawImage(image, cutX, cutY, width, height, 0, 0, width, height);
+      context.drawImage(canvas, cutX, cutY, width, height, 0, 0, width, height);
     scratch.width = width;
     scratch.height = height;
     paint();
@@ -101,7 +121,7 @@ export function drawSheet(
     const at = room(frame, width, height);
     sheet.context.save();
     sheet.context.translate(at.x, at.y);
-    paint(sheet.context);
+    paint(sheet.context, paintingIn);
     sheet.context.restore();
   }
   sheet.refresh();

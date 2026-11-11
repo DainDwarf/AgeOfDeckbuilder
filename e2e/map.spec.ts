@@ -18,6 +18,7 @@ import {
   CENTRE,
   type Corner,
   cornersOf,
+  edgesAlong,
   neighbours,
   sameTile,
   type Tile,
@@ -595,6 +596,8 @@ test('a clay pit stands as his clay on a pale disc, a unit from a feature’s di
   const { chronicle, pits } = clayPitsPlaced(campaign);
   const look = improvementLookOf(CLAY_PIT);
   if (look.kind !== 'icon') throw new Error(`${CLAY_PIT} is told by no icon`);
+  const { lies } = look;
+  if (lies.kind !== 'painting') throw new Error(`${CLAY_PIT} lays no painting`);
 
   await openSaved(page, chronicle, campaign);
   await consoleKey(page);
@@ -621,7 +624,7 @@ test('a clay pit stands as his clay on a pale disc, a unit from a feature’s di
     expect([disc.standing, icon.standing]).toEqual([true, true]);
     expect(disc.fill).toBe(LOOK.built);
     expect(icon.frame).toBe(look.icon);
-    expect(icon.across.right - icon.across.left).toBeCloseTo(ICON_WIDTH, 3);
+    expect(icon.across.right - icon.across.left).toBeCloseTo(look.width, 3);
   }
 
   const middle = seen(`tile-${tileKey(pits.featured)}`).place.x;
@@ -631,12 +634,12 @@ test('a clay pit stands as his clay on a pale disc, a unit from a feature’s di
   expect((feature + improvement) / 2).toBeCloseTo(middle, 3);
 
   const liesAt = (tile: TileCoords, name: string, at: LyingAt): void =>
-    expectLying(seen, tile, name, look.painting, at);
+    expectLying(seen, tile, name, lies.painting, at);
   for (const tile of [pits.bare, pits.featured]) {
-    liesAt(tile, pitNames(tile).alone, look.alone);
+    liesAt(tile, pitNames(tile).alone, lies.alone);
     expect(seen(pitNames(tile).beside).standing).toBe(false);
   }
-  liesAt(pits.beside, pitNames(pits.beside).beside, look.beside);
+  liesAt(pits.beside, pitNames(pits.beside).beside, lies.beside);
   expect(seen(pitNames(pits.beside).alone).standing).toBe(false);
   const city = pitNames(pits.city);
   expect([seen(city.alone).standing, seen(city.beside).standing]).toEqual([false, false]);
@@ -780,14 +783,151 @@ test('a pasture turns its feature’s disc pale under the feature’s icon, its 
 
   const corral = (tile: TileCoords): { alone: string; beside: string } =>
     paintingNames(PASTURE, tile);
-  expectLying(seen, pastures.bare, corral(pastures.bare).alone, look.painting, look.alone);
+  const { lies } = look;
+  expectLying(seen, pastures.bare, corral(pastures.bare).alone, lies.painting, lies.alone);
   expect(seen(corral(pastures.bare).beside).standing).toBe(false);
   for (const tile of [pastures.tannery, pastures.megalith]) {
-    expectLying(seen, tile, corral(tile).beside, look.painting, look.beside);
+    expectLying(seen, tile, corral(tile).beside, lies.painting, lies.beside);
     expect(seen(corral(tile).alone).standing).toBe(false);
   }
   const city = corral(pastures.city);
   expect([seen(city.alone).standing, seen(city.beside).standing]).toEqual([false, false]);
+
+  expect(problems).toEqual([]);
+});
+
+/** The improvement the spec places along a river. */
+const IRRIGATION = 'irrigation';
+
+/** The tiles carrying the irrigation, by what else each carries. */
+type Irrigations = {
+  readonly bare: TileCoords;
+  readonly megalith: TileCoords;
+  readonly stage: TileCoords;
+};
+
+/**
+ * The first seed's Stone Age turn 1 whose rivers run along three bare tiles nobody stands on, each
+ * made the first terrain the irrigation names and carrying it, the second under the megalith and the
+ * third under the monument's first stage.
+ */
+function irrigationsPlaced(campaign: Campaign): { chronicle: Chronicle; irrigated: Irrigations } {
+  const [terrain] = improvementKind(CATALOGUE, IRRIGATION).terrains;
+  return firstSeed('runs a river along three bare tiles', (seed) => {
+    const opened = settledOn(seed, [], campaign);
+    const [bare, megalith, stage] = opened.tiles
+      .filter(
+        (tile) =>
+          tile.feature === undefined &&
+          tile.building === undefined &&
+          tile.improvements.length === 0 &&
+          unitAt(opened.units, tile) === undefined &&
+          edgesAlong(opened.rivers, tile).length > 0,
+      )
+      .map(({ q, r }) => ({ q, r }));
+    if (stage === undefined) return undefined;
+    const irrigated = { bare, megalith, stage };
+    let placing = unchanged(opened);
+    for (const at of Object.values(irrigated)) {
+      placing = followed(placing, (left) => terraformed(CATALOGUE, left, at, terrain));
+    }
+    placing = followed(placing, (left) => built(CATALOGUE, left, megalith, MEGALITH));
+    placing = followed(placing, (left) => built(CATALOGUE, left, stage, STAGES[0]));
+    for (const at of Object.values(irrigated)) {
+      placing = followed(placing, (left) => improvementPlaced(CATALOGUE, left, at, IRRIGATION));
+    }
+    const { chronicle } = placing;
+    const placed = Object.values(irrigated).every((at) => {
+      const tile = tileAt(chronicle.tiles, at);
+      return tile?.terrain === terrain && tile.improvements.includes(IRRIGATION);
+    });
+    return placed ? { chronicle, irrigated } : undefined;
+  });
+}
+
+/** Every edge of a tile by its place, as `cornersOf` walks them. */
+const EDGES = cornersOf(CENTRE).map((_, edge) => edge);
+
+/** The name the painting of the ditch from that edge of the tile stands under. */
+function ditchName(tile: TileCoords, edge: number): string {
+  return `improvement-ditch-paint-${IRRIGATION}-${edge}-${tileKey(tile)}`;
+}
+
+test('an irrigation stands as his river cut round on a pale disc, lays no painting, and runs one ditch from each edge of its tile a river runs along and none from any other, held in from the edge toward the middle and turned no further than its roll, alone and under a building alike, the veils off', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = neutralCampaign();
+  const { chronicle, irrigated } = irrigationsPlaced(campaign);
+  const look = improvementLookOf(IRRIGATION);
+  if (look.kind !== 'icon') throw new Error(`${IRRIGATION} is told by no icon`);
+  const { lies } = look;
+  if (lies.kind !== 'ditches') throw new Error(`${IRRIGATION} runs no ditches`);
+
+  await openSaved(page, chronicle, campaign);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+
+  const tiles = Object.values(irrigated);
+  const marks = (tile: TileCoords): { disc: string; icon: string } => ({
+    disc: `improvement-disc-${IRRIGATION}-${tileKey(tile)}`,
+    icon: `improvement-${IRRIGATION}-${tileKey(tile)}`,
+  });
+  const buildings = [irrigated.megalith, irrigated.stage].map(
+    (tile) => `building-${tileKey(tile)}`,
+  );
+  const seen = await readings(page, [
+    ...[...tiles, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`),
+    ...tiles.flatMap((tile) => [
+      ...Object.values(marks(tile)),
+      ...Object.values(paintingNames(IRRIGATION, tile)),
+      ...EDGES.map((edge) => ditchName(tile, edge)),
+    ]),
+    ...buildings,
+  ]);
+
+  for (const name of buildings) expect(seen(name).standing).toBe(true);
+  const placeOf = placedBy(LATTICE.map((tile) => seen(`tile-${tileKey(tile)}`).place));
+  for (const tile of tiles) {
+    const disc = seen(marks(tile).disc);
+    const icon = seen(marks(tile).icon);
+    expect([disc.count, icon.count]).toEqual([1, 1]);
+    expect(disc.fill).toBe(LOOK.built);
+    expect(icon.frame).toBe(look.icon);
+    expect(icon.across.right - icon.across.left).toBeCloseTo(look.width, 3);
+    for (const name of Object.values(paintingNames(IRRIGATION, tile))) {
+      expect(seen(name).standing).toBe(false);
+    }
+
+    const along = edgesAlong(chronicle.rivers, tile);
+    expect(along.length).toBeGreaterThan(0);
+    expect(EDGES.filter((edge) => seen(ditchName(tile, edge)).standing)).toEqual(along);
+
+    const middle = seen(`tile-${tileKey(tile)}`).place;
+    const corners = cornersOf(tile).map(placeOf);
+    for (const edge of along) {
+      const ditch = seen(ditchName(tile, edge));
+      const from = corners[edge];
+      const to = corners[(edge + 1) % corners.length];
+      const edgeMiddle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+      const reach = Math.hypot(middle.x - edgeMiddle.x, middle.y - edgeMiddle.y);
+      const way = { x: (middle.x - edgeMiddle.x) / reach, y: (middle.y - edgeMiddle.y) / reach };
+      expect(ditch.count).toBe(1);
+      expect(ditch.frame).toBe(lies.file);
+      expect(ditch.place.x).toBeCloseTo(edgeMiddle.x + way.x * lies.inset, 3);
+      expect(ditch.place.y).toBeCloseTo(edgeMiddle.y + way.y * lies.inset, 3);
+
+      const { axes } = ditch;
+      const length = Math.hypot(axes.x.x, axes.x.y);
+      expect(length).toBeCloseTo(lies.along, 4);
+      expect(Math.hypot(axes.y.x, axes.y.y)).toBeCloseTo(lies.across, 4);
+      const tip = { x: -axes.x.x / length, y: -axes.x.y / length };
+      const turned = (Math.acos(Math.min(1, tip.x * way.x + tip.y * way.y)) * 180) / Math.PI;
+      expect(turned).toBeLessThanOrEqual(lies.roll + 1e-3);
+    }
+  }
 
   expect(problems).toEqual([]);
 });

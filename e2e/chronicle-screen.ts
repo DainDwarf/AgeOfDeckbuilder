@@ -126,6 +126,7 @@ type PageReading = {
   tint: Answer<number | undefined>;
   tints: (number | undefined)[];
   place: Answer<{ x: number; y: number }>;
+  axes: Answer<Axes>;
   scale: Answer<number>;
   ringed: Answer<boolean>;
   rules: Answer<string>;
@@ -340,6 +341,12 @@ type DrawnName = { spot: Spot; reference: Reference };
 
 /** An object's left and right ends and its middle across, in design units. */
 type Across = { left: number; right: number; middle: number };
+
+/**
+ * Where one step of an object's own along its x and along its y lands in the design space: its turn,
+ * its two scales and their signs together.
+ */
+export type Axes = { x: { x: number; y: number }; y: { x: number; y: number } };
 
 /** How far a panel stands scrolled, and how far it can. */
 type Scrolled = { offset: number; overflow: number };
@@ -595,6 +602,10 @@ export async function readNames(page: Page): Promise<void> {
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
+        }),
+        axes: answer(() => {
+          const at = matrix();
+          return { x: { x: at.a, y: at.b }, y: { x: at.c, y: at.d } };
         }),
         scale: answer(() => {
           const scaled = (found().object as Partial<Phaser.GameObjects.Components.Transform>)
@@ -1296,6 +1307,7 @@ export type Reading = {
   readonly tints: readonly (number | undefined)[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
+  readonly axes: Axes;
   /** How much larger than its own frame the object is drawn across. */
   readonly scale: number;
   readonly ringed: boolean;
@@ -1345,6 +1357,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get place() {
       return owed(name, answered?.place);
+    },
+    get axes() {
+      return owed(name, answered?.axes);
     },
     get scale() {
       return owed(name, answered?.scale);

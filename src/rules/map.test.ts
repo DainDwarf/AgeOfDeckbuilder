@@ -21,8 +21,10 @@ import {
   CENTRE,
   type Corner,
   cornerKey,
+  cornersOf,
   dealtBiomes,
   distance,
+  edgesAlong,
   generateMap,
   type HexMap,
   MOVE_POINT,
@@ -31,6 +33,7 @@ import {
   riversAlong,
   routesFrom,
   routesToward,
+  runsAlong,
   type Tile,
   type TileCoords,
   tileAt,
@@ -431,6 +434,34 @@ test('with every tile of the map named, the rivers answer whole', () => {
 
 test('with no tile named, no river answers at all', () => {
   for (const seed of SEEDS) expect(riversAlong(riversOf(seed), new Set())).toEqual([]);
+});
+
+test('a river runs along each edge of a tile it runs between two of its corners, once however many rivers run it, and along none of a tile it touches at a corner alone', () => {
+  const corners = cornersOf(CENTRE);
+  const edgeOf = (tile: TileCoords, edge: number): Set<string> => {
+    const around = cornersOf(tile);
+    return new Set([around[edge], around[(edge + 1) % around.length]].map(cornerKey));
+  };
+  const river: River = corners.slice(0, 4);
+  const rivers = [river, [...river].reverse()];
+
+  expect(edgesAlong(rivers, CENTRE)).toEqual([0, 1, 2]);
+  expect(runsAlong(rivers, CENTRE)).toBe(true);
+  for (const edge of [0, 1, 2]) {
+    const beyond = tilesOfEdge(corners[edge], corners[edge + 1]).find(
+      (tile) => tileKey(tile) !== tileKey(CENTRE),
+    );
+    if (beyond === undefined) throw new Error(`no tile lies beyond edge ${edge}`);
+    const along = edgesAlong(rivers, beyond);
+    expect(along).toHaveLength(1);
+    expect(edgeOf(beyond, along[0])).toEqual(edgeOf(CENTRE, edge));
+  }
+  const touched = tilesOfEdge(corners[5], corners[0]).find(
+    (tile) => tileKey(tile) !== tileKey(CENTRE),
+  );
+  if (touched === undefined) throw new Error('no tile lies beyond the last edge');
+  expect(edgesAlong(rivers, touched)).toEqual([]);
+  expect(runsAlong(rivers, touched)).toBe(false);
 });
 
 test('the rivers of a map survive JSON and come back the same', () => {

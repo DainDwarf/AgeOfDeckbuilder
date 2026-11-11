@@ -64,6 +64,7 @@ import {
   CITY_FACTIONS,
   cityDim,
   diamond,
+  ditchesOf,
   FACTION_COLOURS,
   FEATURE_DISC,
   featureMarksOn,
@@ -109,6 +110,7 @@ import {
   FACE_SHEET,
   FEATURE_SHEET_KEY,
   featureIconOf,
+  ICON_WIDTH,
   onPatch,
   paintingOn,
   RIVER_SHEET,
@@ -286,6 +288,7 @@ export function createMapView(
 
   const ground = group(strata.terrain, 'terrain');
   const rivers = group(strata.terrain, 'rivers');
+  const ditches = group(strata.terrain, 'ditches');
   const lying = group(strata.terrain, 'lying');
   const claimMarks = createClaimMarks(scene, group(strata.terrain, 'claim-marks'), chronicle.tiles);
   const border = createBorder(scene, group(strata.terrain, 'border'), chronicle.tiles);
@@ -345,6 +348,9 @@ export function createMapView(
 
   const crossfadePool = poolOf(ground, () => tileFace(scene));
   const lyingPool = poolOf(lying, () => scene.add.image(0, 0, FEATURE_SHEET_KEY));
+  const ditchPool = poolOf(ditches, () =>
+    scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
+  );
   const patchPool = poolOf(built, () => scene.add.image(0, 0, BUILDING_SHEET.key));
   const piecesPool = poolOf(built, () => scene.add.container(0, 0));
   const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
@@ -611,7 +617,7 @@ export function createMapView(
           asRowDisc(improvementDiscPool.take(), IMPROVEMENT_DISC, inFog)
             .setPosition(x, y)
             .setName(marks.names.disc),
-          asIcon(improvementIconPool.take(), marks.icon, inFog)
+          asIcon(improvementIconPool.take(), marks.icon, marks.width, inFog)
             .setPosition(x, y)
             .setName(marks.names.icon),
         ];
@@ -673,13 +679,19 @@ export function createMapView(
     const own = tileObjects[key];
     return [
       asRowDisc(asPainted(own.featureDisc), FEATURE_DISC, inFog).setPosition(x, y),
-      asIcon(asPainted(own.feature), featureIconOf(feature), inFog).setPosition(x, y),
+      asIcon(asPainted(own.feature), featureIconOf(feature), ICON_WIDTH, inFog).setPosition(x, y),
     ];
   };
 
   /** What lies on a tile's ground, painted from the pool. */
   const lyingOn = (laid: readonly Lying[], inFog: boolean): Mark[] =>
     laid.map(({ paint }) => paint(lyingPool.take(), inFog));
+
+  /** The ditches run into a tile, painted from their pool. */
+  const ditchesOn = (
+    laid: readonly Lying<Phaser.GameObjects.Container>[],
+    inFog: boolean,
+  ): Mark[] => laid.map(({ paint }) => paint(ditchPool.take(), inFog));
 
   /**
    * Every layer of one tile as the map draws it on a chronicle, the faces drawn there beside it, and
@@ -715,6 +727,7 @@ export function createMapView(
       );
     }
     painted.push(...lyingOn(improvementLyingOf(face, tile), inFog));
+    painted.push(...ditchesOn(ditchesOf(face, tile, chronicle.rivers), inFog));
     face.improvements.forEach((improvement, index) => {
       painted.push(
         ...improvementOn(
@@ -759,6 +772,7 @@ export function createMapView(
     for (const object of paintedOnTiles) object.setVisible(false);
     crossfadePool.hide();
     lyingPool.hide();
+    ditchPool.hide();
     patchPool.hide();
     piecesPool.hide();
     improvementPool.hide();
@@ -930,6 +944,7 @@ export function createMapView(
 
   const motion = createMapMotion(scene, {
     lying,
+    ditches,
     features,
     improvements,
     built,
@@ -960,6 +975,7 @@ export function createMapView(
     patchOn,
     featureOn,
     lyingOn,
+    ditchesOn,
     crossfade: (tile) => crossfadePool.take().setDepth(tile.r + CROSSFADE_RISE),
     shoreOver: (face) => crossfadePool.take().setDepth(face.depth + SHORE_RISE),
     riversAt: (chronicle, tile) => {
