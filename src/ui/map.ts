@@ -47,12 +47,12 @@ import { createMapCamera } from './map-camera';
 import { selectionRims } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
-  asFeature,
-  asFeatureDisc,
   asGlow,
-  asImprovement,
+  asIcon,
+  asImprovementShape,
   asPatch,
   asPieces,
+  asRowDisc,
   assignedAt,
   assignedMark,
   asTerrain,
@@ -65,7 +65,11 @@ import {
   cityDim,
   diamond,
   FACTION_COLOURS,
-  featureDisc,
+  FEATURE_DISC,
+  IMPROVEMENT_DISC,
+  improvementLyingOf,
+  improvementMarksOn,
+  type Lying,
   lyingOf,
   type Mark,
   mapHexagon,
@@ -73,6 +77,7 @@ import {
   populationBadge,
   positionOf,
   ROW_RISE,
+  rowDisc,
   rowOf,
   SQUASH,
   shoreOn,
@@ -101,6 +106,7 @@ import {
   buildingPaintingsOf,
   FACE_SHEET,
   FEATURE_SHEET_KEY,
+  featureIconOf,
   onPatch,
   paintingOn,
   RIVER_SHEET,
@@ -321,7 +327,7 @@ export function createMapView(
               .setName(`shore-${key}`)
               .setDepth(tile.r + SHORE_RISE),
           ),
-          featureDisc: kept(features, featureDisc(scene).setName(`feature-disc-${key}`)),
+          featureDisc: kept(features, rowDisc(scene).setName(`feature-disc-${key}`)),
           feature: kept(
             features,
             scene.add.image(0, 0, FEATURE_SHEET_KEY).setName(`feature-${key}`),
@@ -339,6 +345,11 @@ export function createMapView(
   const patchPool = poolOf(built, () => scene.add.image(0, 0, BUILDING_SHEET.key));
   const piecesPool = poolOf(built, () => scene.add.container(0, 0));
   const improvementPool = poolOf(improvements, () => scene.add.polygon(0, 0, UNREAD));
+  const improvementDiscPool = poolOf(improvements, () => rowDisc(scene));
+  // The depth alone keeps an icon over its disc: both pools add to one layer in no order of pairs.
+  const improvementIconPool = poolOf(improvements, () =>
+    scene.add.image(0, 0, FEATURE_SHEET_KEY).setDepth(1),
+  );
   const fogUnitPool = poolOf(marks, () => scene.add.container(0, 0));
   const riverPool = poolOf(rivers, () => scene.add.image(0, 0, RIVER_SHEET.key));
   const straightPool = poolOf(rivers, () =>
@@ -578,15 +589,36 @@ export function createMapView(
     claimMarks.paint({ held: shown.held, claimable: claimable(catalogue, shown, 'player') });
   };
 
-  /** A placed improvement from the pool, read for that improvement on the tile of that key. */
+  /**
+   * A placed improvement's marks from the pools, read for that improvement on the tile of that key
+   * and standing at that point of its row: its disc and its icon, or its shape.
+   */
   const improvementOn = (
     improvement: ImprovementId,
     key: string,
+    x: number,
+    y: number,
     inFog: boolean,
-  ): Phaser.GameObjects.Polygon =>
-    asImprovement(improvementPool.take(), improvement, inFog).setName(
-      `improvement-${improvement}-${key}`,
-    );
+  ): Mark[] => {
+    const marks = improvementMarksOn(improvement, key);
+    switch (marks.kind) {
+      case 'icon':
+        return [
+          asRowDisc(improvementDiscPool.take(), IMPROVEMENT_DISC, inFog)
+            .setPosition(x, y)
+            .setName(marks.names.disc),
+          asIcon(improvementIconPool.take(), marks.icon, inFog)
+            .setPosition(x, y)
+            .setName(marks.names.icon),
+        ];
+      case 'shape':
+        return [
+          asImprovementShape(improvementPool.take(), marks.corners, inFog)
+            .setPosition(x, y)
+            .setName(marks.names.shape),
+        ];
+    }
+  };
 
   /**
    * A building standing on its tile, darkened in fog: its pieces from the pool, the front one named
@@ -636,14 +668,14 @@ export function createMapView(
   ): Mark[] => {
     const own = tileObjects[key];
     return [
-      asFeatureDisc(asPainted(own.featureDisc), inFog).setPosition(x, y),
-      asFeature(asPainted(own.feature), feature, inFog).setPosition(x, y),
+      asRowDisc(asPainted(own.featureDisc), FEATURE_DISC, inFog).setPosition(x, y),
+      asIcon(asPainted(own.feature), featureIconOf(feature), inFog).setPosition(x, y),
     ];
   };
 
-  /** What a feature lays on a tile's ground, painted from the pool. */
-  const lyingOn = (feature: FeatureId, tile: TileCoords, inFog: boolean): Mark[] =>
-    lyingOf(feature, tile).map(({ paint }) => paint(lyingPool.take(), inFog));
+  /** What lies on a tile's ground, painted from the pool. */
+  const lyingOn = (laid: readonly Lying[], inFog: boolean): Mark[] =>
+    laid.map(({ paint }) => paint(lyingPool.take(), inFog));
 
   /**
    * Every layer of one tile as the map draws it on a chronicle, the faces drawn there beside it, and
@@ -673,13 +705,14 @@ export function createMapView(
     const row = rowOf(face, x);
     if (face.feature !== undefined) {
       painted.push(
-        ...lyingOn(face.feature, tile, inFog),
+        ...lyingOn(lyingOf(face.feature, tile), inFog),
         ...featureOn(key, face.feature, row.feature, y - ROW_RISE, inFog),
       );
     }
+    painted.push(...lyingOn(improvementLyingOf(face, tile), inFog));
     face.improvements.forEach((improvement, index) => {
       painted.push(
-        improvementOn(improvement, key, inFog).setPosition(row.improvements[index], y - ROW_RISE),
+        ...improvementOn(improvement, key, row.improvements[index], y - ROW_RISE, inFog),
       );
     });
     if (face.building !== undefined) {
@@ -717,6 +750,8 @@ export function createMapView(
     patchPool.hide();
     piecesPool.hide();
     improvementPool.hide();
+    improvementDiscPool.hide();
+    improvementIconPool.hide();
     fogUnitPool.hide();
     for (const [key, own] of Object.entries(tileObjects)) own.void.setVisible(!drawn.has(key));
     if (shown === undefined) return;

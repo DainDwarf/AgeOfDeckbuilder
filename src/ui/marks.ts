@@ -39,18 +39,27 @@ const FEATURE_LOOKS: Readonly<
 /** How many copies of its animal a herd's tile carries. */
 export const HERD_COPIES = 3;
 
+/** How wide an icon of a tile's row stands, in the map's units. */
+export const ICON_WIDTH = 14;
+
+/** The disc under an icon of a tile's row, and its rim, in the map's units. */
+export const DISC_RADIUS = 9;
+export const DISC_RIM = 1;
+
+/**
+ * How far apart two discs of a tile's row stand, centre to centre, a unit between them, and any
+ * other two marks of it, in the map's units.
+ */
+export const DISC_PITCH = 2 * DISC_RADIUS + 1;
+export const ROW_PITCH = 11;
+
+/** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
+export const PAINTING = { width: 256, height: 384, middle: 256 };
+
 /** What a feature looks like; a feature with no icon is refused. */
 function featureLookOf(feature: string): { readonly icon: string; readonly dress: FeatureDress } {
   return drawn(FEATURE_LOOKS, feature, 'no icon is drawn for the feature');
 }
-
-/** Placeholder primitives until the art pass. */
-const IMPROVEMENT_MARKS: Readonly<Record<string, number[]>> = {
-  trapping: [-5, -4, 5, -4, 0, 5],
-  irrigation: [-6, -2, 6, -2, 6, 2, -6, 2],
-  pasture: [-4, -5, 5, 0, -4, 5],
-  'clay-pit': [-6, -4, 6, -4, 3, 4, -3, 4],
-};
 
 /** David Baumgart's paintings of each terrain: his pack's folder, the family's name, how many he painted. */
 const TERRAIN_FACES: Readonly<
@@ -137,10 +146,14 @@ export type BuildingPiece = {
   readonly y: number;
 };
 
-/** A building drawn as his paintings: whether they lie on the patch, and the pieces, back first. */
+/**
+ * A building drawn as his paintings: whether they lie on the patch, the pieces, back first, and
+ * whether they leave an improvement's painting room beside them.
+ */
 export type BuildingPaintings = {
   readonly patch: boolean;
   readonly pieces: readonly BuildingPiece[];
+  readonly leavesRoom?: true;
 };
 
 const LOCATIONS = 'store/hex-medieval-fantasy-locations/Decor';
@@ -194,7 +207,11 @@ const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
   },
   village: VILLAGE,
   'neutral-village': VILLAGE,
-  shelter: { patch: false, pieces: [piece(`${LOCATIONS}/houseLonghouse00.png`, 1.45, 0, -1.3)] },
+  shelter: {
+    patch: false,
+    pieces: [piece(`${LOCATIONS}/houseLonghouse00.png`, 1.45, 0, -1.3)],
+    leavesRoom: true,
+  },
   farm: {
     patch: false,
     pieces: [
@@ -206,7 +223,11 @@ const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
     patch: false,
     pieces: [piece(`${LOCATIONS}/foresterShed00.png`, 1.4, -3.6, -6), piece(FURS, 0.65, 5, 4.2)],
   },
-  megalith: { patch: false, pieces: [piece(`${LOCATIONS}/barrow03.png`, 2.2, 0, -0.8)] },
+  megalith: {
+    patch: false,
+    pieces: [piece(`${LOCATIONS}/barrow03.png`, 2.2, 0, -0.8)],
+    leavesRoom: true,
+  },
   fishery: {
     patch: false,
     pieces: [piece(DOCK, 1.6, -0.5, -3), piece(NET, 0.7, -1, 2)],
@@ -414,6 +435,47 @@ export const PONDS: readonly string[] = numberedFiles(
   4,
 );
 
+/** Where his painting of an improvement lies: its size against the size he painted it at beside his tile, and its middle about the tile's. */
+export type LyingAt = { readonly size: number; readonly x: number; readonly y: number };
+
+/**
+ * What an improvement is told by: his icon on its disc, and his painting lying on its tile, alone on
+ * it and beside a building that leaves it room; or its placeholder shape until the art pass, its
+ * corners about its own centre, raw.
+ */
+export type ImprovementLook =
+  | {
+      readonly kind: 'icon';
+      readonly icon: string;
+      readonly painting: string;
+      readonly alone: LyingAt;
+      readonly beside: LyingAt;
+    }
+  | { readonly kind: 'shape'; readonly corners: number[] };
+
+const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
+  trapping: { kind: 'shape', corners: [-5, -4, 5, -4, 0, 5] },
+  irrigation: { kind: 'shape', corners: [-6, -2, 6, -2, 6, 2, -6, 2] },
+  pasture: { kind: 'shape', corners: [-4, -5, 5, 0, -4, 5] },
+  'clay-pit': {
+    kind: 'icon',
+    icon: `${ICONS}/clay.png`,
+    painting: `${LOCATIONS}/clayPit01.png`,
+    alone: { size: 0.7, x: 0, y: 3 },
+    beside: { size: 0.4, x: 10, y: 8 },
+  },
+};
+
+/** The files an improvement's look draws from the features sheet: its icon and its painting, or none. */
+function improvementFiles(look: ImprovementLook): string[] {
+  switch (look.kind) {
+    case 'icon':
+      return [look.icon, look.painting];
+    case 'shape':
+      return [];
+  }
+}
+
 /** The frame a painting tinted for a feature stands under in the features sheet. */
 export function tintedName(painting: string, feature: string): string {
   return `${painting}#${feature}`;
@@ -422,13 +484,17 @@ export function tintedName(painting: string, feature: string): string {
 export const FEATURE_SHEET_KEY = 'features';
 
 /**
- * The sheet every feature's icon and his ponds are drawn into, and the paintings of the terrain each
- * feature with a tint lies on, tinted for it off the face sheet.
+ * The sheet every feature's icon and his ponds are drawn into, every improvement's icon and painting,
+ * and the paintings of the terrain each feature with a tint lies on, tinted for it off the face sheet.
  */
 export function featureSheet(catalogue: MapContent): Sheet {
   return {
     key: FEATURE_SHEET_KEY,
-    files: [...new Set(Object.keys(FEATURE_LOOKS).map(featureIconOf)), ...PONDS],
+    files: [
+      ...new Set(Object.keys(FEATURE_LOOKS).map(featureIconOf)),
+      ...PONDS,
+      ...new Set(Object.values(IMPROVEMENT_LOOKS).flatMap(improvementFiles)),
+    ],
     tinted: Object.keys(catalogue.features).flatMap((feature) => {
       const dress = featureDressOf(feature);
       if (dress.kind !== 'tint') return [];
@@ -487,9 +553,14 @@ export function onPatch(building: string): boolean {
   return buildingPaintingsOf(building).patch;
 }
 
-/** The corners an improvement's mark is drawn from; an improvement with no mark is refused. */
-export function improvementMarkOf(improvement: string): number[] {
-  return drawn(IMPROVEMENT_MARKS, improvement, 'no mark is drawn for the improvement');
+/** Whether a building's paintings leave an improvement's painting room beside them. */
+export function leavesRoom(building: string): boolean {
+  return buildingPaintingsOf(building).leavesRoom === true;
+}
+
+/** What an improvement is told by; an improvement with no look is refused. */
+export function improvementLookOf(improvement: string): ImprovementLook {
+  return drawn(IMPROVEMENT_LOOKS, improvement, 'no mark is drawn for the improvement');
 }
 
 /** The entry of one table a key names; a key the table does not hold is refused with the complaint. */

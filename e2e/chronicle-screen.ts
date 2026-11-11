@@ -126,6 +126,7 @@ type PageReading = {
   tint: Answer<number | undefined>;
   tints: (number | undefined)[];
   place: Answer<{ x: number; y: number }>;
+  scale: Answer<number>;
   ringed: Answer<boolean>;
   rules: Answer<string>;
   names: Answer<DrawnName[]>;
@@ -594,6 +595,12 @@ export async function readNames(page: Page): Promise<void> {
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
+        }),
+        scale: answer(() => {
+          const scaled = (found().object as Partial<Phaser.GameObjects.Components.Transform>)
+            .scaleX;
+          if (scaled === undefined) throw new Error(`${name} takes no scale`);
+          return scaled;
         }),
         ringed: answer(() => {
           const ring = part('ring', `${name} is no card face`);
@@ -1289,6 +1296,8 @@ export type Reading = {
   readonly tints: readonly (number | undefined)[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
+  /** How much larger than its own frame the object is drawn across. */
+  readonly scale: number;
   readonly ringed: boolean;
   /** The face's rules entry, its marks as written. */
   readonly rules: string;
@@ -1336,6 +1345,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get place() {
       return owed(name, answered?.place);
+    },
+    get scale() {
+      return owed(name, answered?.scale);
     },
     get ringed() {
       return owed(name, answered?.ringed);

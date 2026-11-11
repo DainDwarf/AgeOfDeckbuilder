@@ -105,6 +105,12 @@ export type Look = {
   /** The disc a feature's icon stands on, and the rim around it. */
   readonly featureDisc: Wash;
   readonly featureDiscRim: Wash;
+  /**
+   * The strength the disc an improvement's icon stands on rests at, in the stone everything worked
+   * is, and the strength of its rim, in the map's outline.
+   */
+  readonly improvementDisc: number;
+  readonly improvementDiscRim: number;
   /** What a fertile plain's painting is re-painted under, and a flint hill's. */
   readonly fertileTint: Wash;
   readonly flintTint: Wash;
@@ -191,6 +197,8 @@ export const LOOK: Look = {
   mapDim: { colour: 0x0d1014, strength: 0.6 },
   featureDisc: { colour: 0x0d1014, strength: 0.72 },
   featureDiscRim: { colour: 0xece2cc, strength: 0.55 },
+  improvementDisc: 0.94,
+  improvementDiscRim: 0.9,
   fertileTint: { colour: 0x3c9a3a, strength: 0.4 },
   flintTint: { colour: 0x5c6370, strength: 0.65 },
   monumentPatch: { colour: 0x302418, strength: 0.9 },

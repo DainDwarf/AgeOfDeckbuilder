@@ -12,8 +12,14 @@ import {
   water,
 } from '../rules/map';
 import type { MapContent } from '../rules/map-kinds';
-import { asDarkened, cornerAt, PAINTING, SQUASH, TILE_SIZE } from './map-marks';
-import { mouthPaintingsOf, paintingAtCorner, riverPaintingsOf, STRAIGHT_RIVER } from './marks';
+import { asDarkened, cornerAt, SQUASH, TILE_SIZE } from './map-marks';
+import {
+  mouthPaintingsOf,
+  PAINTING,
+  paintingAtCorner,
+  riverPaintingsOf,
+  STRAIGHT_RIVER,
+} from './marks';
 
 /** How much smaller than his file a piece is drawn: his leg, the apothem, half an edge. */
 const PIECE_SCALE = TILE_SIZE / PAINTING.width;

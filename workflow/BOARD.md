@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The clay pit** — a clay pit stands in the row as his clay on a pale disc of the feature's size, a unit from a flint's disc, and his worked pit lies on its hill, large about the middle of a tile with no building, small beside a megalith or a shelter, absent under any other building; the infopanel's row reads his clay bare; the clay pit's stone shape gone. Doc-impact: `docs/LOOK.md`. [board/clay-pit.md](board/clay-pit.md)
 - **The pasture** — a tile with a pasture shows its cattle on an improved disc in place of the feature's, no disc added beside it, and its art on the tile is settled at its intake against the buildings and the paintings its plain can wear.
 - **The irrigation** — an irrigation stands in the feature's row as his icon on a disc like a feature's, and its art on the tile is settled at its intake against the buildings and the paintings a plain or a desert by a river can wear, a pasture's among them.
 - **The trapping** — a tile with a trapping shows its deer on an improved disc in place of the feature's, no disc added beside it, and its art on the tile is settled at its intake against the buildings and the paintings its forest can wear.

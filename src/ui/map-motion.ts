@@ -18,6 +18,9 @@ import {
   asTerrain,
   buildingStandsAs,
   facePaintingOn,
+  improvementLyingOf,
+  improvementMarksOn,
+  type Lying,
   lyingOf,
   type Mark,
   positionOf,
@@ -61,19 +64,22 @@ type MapInMotion = {
   /** These units of this chronicle painted, and their markers. */
   paintArrivals(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
   paintHue(unit: Unit): Phaser.GameObjects.Polygon;
+  /** The marks of an improvement on the tile of that key, painted at that point of its row. */
   improvementOn(
     improvement: ImprovementId,
     key: string,
+    x: number,
+    y: number,
     inFog: boolean,
-  ): Phaser.GameObjects.Polygon;
+  ): Mark[];
   /** A building painted standing on its tile, its patch left out. */
   buildingOn(building: BuildingTypeId, coord: TileCoords, inFog: boolean): Mark;
   /** The patch a building's paintings lie on, painted on that tile. */
   patchOn(coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image;
   /** The disc and the icon the tile of that key keeps for a feature, painted at that point of its row. */
   featureOn(key: string, feature: FeatureId, x: number, y: number, inFog: boolean): Mark[];
-  /** What a feature lays on a tile's ground, painted. */
-  lyingOn(feature: FeatureId, tile: TileCoords, inFog: boolean): Mark[];
+  /** What lies on a tile's ground, painted. */
+  lyingOn(laid: readonly Lying[], inFog: boolean): Mark[];
   /** A face from the pool the terrain crossfades on, standing in that tile's row. */
   crossfade(tile: TileCoords): Phaser.GameObjects.Image;
   /** A face from that pool a beach fades in on, standing over the face it lies on. */
@@ -360,15 +366,29 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     compare(
       view.lying,
       (id) => lyingOf(id, coord).map(({ name }) => name),
-      (id) => view.lyingOn(id, coord, inFog),
+      (id) => view.lyingOn(lyingOf(id, coord), inFog),
       y,
       { ids: one(from.feature), xs: [x] },
       { ids: one(to.feature), xs: [x] },
     );
+    const laidBefore = improvementLyingOf(from, coord);
+    const laidAfter = improvementLyingOf(to, coord);
+    compare(
+      view.lying,
+      (name) => [name],
+      (name) =>
+        view.lyingOn(
+          laidAfter.filter((laid) => laid.name === name),
+          inFog,
+        ),
+      y,
+      { ids: laidBefore.map(({ name }) => name), xs: laidBefore.map(() => x) },
+      { ids: laidAfter.map(({ name }) => name), xs: laidAfter.map(() => x) },
+    );
     compare(
       view.improvements,
-      (id) => [`improvement-${id}-${key}`],
-      (id, slot, markY) => [view.improvementOn(id, key, inFog).setPosition(slot, markY)],
+      (id) => Object.values(improvementMarksOn(id, key).names),
+      (id, slot, markY) => view.improvementOn(id, key, slot, markY, inFog),
       y - ROW_RISE,
       { ids: from.improvements, xs: was.improvements },
       { ids: to.improvements, xs: is.improvements },

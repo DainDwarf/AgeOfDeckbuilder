@@ -1,6 +1,15 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { built, featurePlaced, made, reaches, slotFree, terraformed } from '../src/rules/cards';
+import type { Campaign } from '../src/rules/campaign';
+import {
+  built,
+  featurePlaced,
+  improvementPlaced,
+  made,
+  reaches,
+  slotFree,
+  terraformed,
+} from '../src/rules/cards';
 import { achievementOf, ageOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { claimable } from '../src/rules/city';
@@ -19,7 +28,7 @@ import {
   tilesOfEdge,
   water,
 } from '../src/rules/map';
-import { buildingKind, featureKind } from '../src/rules/map-kinds';
+import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, unchanged, walked } from '../src/rules/stages';
@@ -29,9 +38,15 @@ import { LOOK } from '../src/ui/look';
 import {
   buildingPaintingsOf,
   clearingsOf,
+  DISC_PITCH,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
+  ICON_WIDTH,
+  improvementLookOf,
+  type LyingAt,
+  leavesRoom,
+  PAINTING,
   PONDS,
   paintingsOf,
   shorePaintingsOf,
@@ -515,6 +530,128 @@ test("every feature stands as his icon on its disc, a herd's tile carries three 
     for (const name of lyingNames(feature, key)) expect(seen(name).count).toBe(1);
     if (featureDressOf(feature).kind === 'pond') expect(PONDS).toContain(seen(`pond-${key}`).frame);
   }
+
+  expect(problems).toEqual([]);
+});
+
+/** The improvement the spec places on the hills. */
+const CLAY_PIT = 'clay-pit';
+
+/** The tiles carrying the clay pit, by what else each carries. */
+type ClayPits = {
+  readonly bare: TileCoords;
+  readonly featured: TileCoords;
+  readonly beside: TileCoords;
+  readonly city: TileCoords;
+};
+
+/**
+ * The first seed's Stone Age turn 1 with the clay pit placed on three bare tiles made its terrain,
+ * the second carrying the feature lying on that terrain and the third the first building that leaves
+ * room and stands there, and on the city's tile made that terrain.
+ */
+function clayPitsPlaced(campaign: Campaign): { chronicle: Chronicle; pits: ClayPits } {
+  const opened = settledOn(1, [], campaign);
+  const [terrain] = improvementKind(CATALOGUE, CLAY_PIT).terrains;
+  const feature = Object.keys(CATALOGUE.features).find(
+    (id) => featureKind(CATALOGUE, id).terrain === terrain,
+  );
+  const building = Object.keys(CATALOGUE.buildings).find(
+    (id) => leavesRoom(id) && buildingKind(CATALOGUE, id).terrains.includes(terrain),
+  );
+  if (feature === undefined || building === undefined) {
+    throw new Error(`no feature lies on ${terrain}, or no building leaving room stands there`);
+  }
+  const [bare, featured, beside] = opened.tiles
+    .filter(
+      (tile) =>
+        tile.feature === undefined &&
+        tile.building === undefined &&
+        tile.improvements.length === 0 &&
+        unitAt(opened.units, tile) === undefined,
+    )
+    .map(({ q, r }) => ({ q, r }));
+  const pits = { bare, featured, beside, city: playerCityTile(opened) };
+  let placing = unchanged(opened);
+  for (const at of Object.values(pits)) {
+    placing = followed(placing, (left) => terraformed(CATALOGUE, left, at, terrain));
+  }
+  placing = followed(placing, (left) => featurePlaced(CATALOGUE, left, featured, feature));
+  placing = followed(placing, (left) => built(CATALOGUE, left, beside, building));
+  for (const at of Object.values(pits)) {
+    placing = followed(placing, (left) => improvementPlaced(CATALOGUE, left, at, CLAY_PIT));
+  }
+  const { chronicle } = placing;
+  if (tileAt(chronicle.tiles, pits.city)?.terrain !== terrain) {
+    throw new Error(`the city's tile of seed 1 is not made ${terrain}`);
+  }
+  return { chronicle, pits };
+}
+
+test('a clay pit stands as his clay on a pale disc, a unit from a feature’s disc, and his worked pit lies on its tile, large with no building, small beside a building that leaves room, and not at all under any other, the veils off', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = neutralCampaign();
+  const { chronicle, pits } = clayPitsPlaced(campaign);
+  const look = improvementLookOf(CLAY_PIT);
+  if (look.kind !== 'icon') throw new Error(`${CLAY_PIT} is told by no icon`);
+
+  await openSaved(page, chronicle, campaign);
+  await consoleKey(page);
+  await enter(page, 'uncharted');
+  await enter(page, 'fog');
+  await consoleKey(page);
+
+  const tiles = Object.values(pits);
+  const pitNames = (tile: TileCoords): { alone: string; beside: string } => ({
+    alone: `improvement-painting-${CLAY_PIT}-alone-${tileKey(tile)}`,
+    beside: `improvement-painting-${CLAY_PIT}-beside-${tileKey(tile)}`,
+  });
+  const seen = await readings(page, [
+    ...[...tiles, ...LATTICE].map((tile) => `tile-${tileKey(tile)}`),
+    ...tiles.flatMap((tile) => [
+      `improvement-disc-${CLAY_PIT}-${tileKey(tile)}`,
+      `improvement-${CLAY_PIT}-${tileKey(tile)}`,
+      ...Object.values(pitNames(tile)),
+    ]),
+    `feature-disc-${tileKey(pits.featured)}`,
+  ]);
+
+  for (const tile of tiles) {
+    const disc = seen(`improvement-disc-${CLAY_PIT}-${tileKey(tile)}`);
+    const icon = seen(`improvement-${CLAY_PIT}-${tileKey(tile)}`);
+    expect([disc.standing, icon.standing]).toEqual([true, true]);
+    expect(disc.fill).toBe(LOOK.built);
+    expect(icon.frame).toBe(look.icon);
+    expect(icon.across.right - icon.across.left).toBeCloseTo(ICON_WIDTH, 3);
+  }
+
+  const middle = seen(`tile-${tileKey(pits.featured)}`).place.x;
+  const feature = seen(`feature-disc-${tileKey(pits.featured)}`).place.x;
+  const improvement = seen(`improvement-disc-${CLAY_PIT}-${tileKey(pits.featured)}`).place.x;
+  expect(improvement - feature).toBeCloseTo(DISC_PITCH, 3);
+  expect((feature + improvement) / 2).toBeCloseTo(middle, 3);
+
+  const [origin, east] = LATTICE.map((tile) => seen(`tile-${tileKey(tile)}`).place);
+  const tileWidth = east.x - origin.x;
+  const liesAt = (tile: TileCoords, name: string, { size, x, y }: LyingAt): void => {
+    const pit = seen(name);
+    const at = seen(`tile-${tileKey(tile)}`).place;
+    expect(pit.standing).toBe(true);
+    expect(pit.frame).toBe(look.painting);
+    expect(pit.scale).toBeCloseTo((size * tileWidth) / PAINTING.width, 4);
+    expect(pit.place.x).toBeCloseTo(at.x + x, 3);
+    expect(pit.place.y).toBeCloseTo(at.y + y, 3);
+  };
+  for (const tile of [pits.bare, pits.featured]) {
+    liesAt(tile, pitNames(tile).alone, look.alone);
+    expect(seen(pitNames(tile).beside).standing).toBe(false);
+  }
+  liesAt(pits.beside, pitNames(pits.beside).beside, look.beside);
+  expect(seen(pitNames(pits.beside).alone).standing).toBe(false);
+  const city = pitNames(pits.city);
+  expect([seen(city.alone).standing, seen(city.beside).standing]).toEqual([false, false]);
 
   expect(problems).toEqual([]);
 });

@@ -41,7 +41,7 @@ import {
   buildingPaintingsOf,
   featureIconOf,
   groundColourOf,
-  improvementMarkOf,
+  improvementLookOf,
   paintingsOf,
   terrainColourOf,
   unitMarkOf,
@@ -136,10 +136,10 @@ test('every feature of the catalogue has a name and an icon on the screen', () =
   }
 });
 
-test('every improvement of the catalogue has a name and a mark on the screen', () => {
+test('every improvement of the catalogue has a name and either an icon with its painting or a stone shape on the screen, never both', () => {
   for (const id of Object.keys(CATALOGUE.improvements)) {
     expect(() => improvementName(id)).not.toThrow();
-    expect(() => improvementMarkOf(id)).not.toThrow();
+    expect(() => improvementLookOf(id)).not.toThrow();
   }
 });
 

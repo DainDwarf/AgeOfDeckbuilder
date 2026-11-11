@@ -26,18 +26,25 @@ import {
   type BuildingPiece,
   buildingPaintingsOf,
   clearingsOf,
+  DISC_PITCH,
+  DISC_RADIUS,
+  DISC_RIM,
   FACE_SHEET,
   FEATURE_SHEET_KEY,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
-  improvementMarkOf,
+  ICON_WIDTH,
+  improvementLookOf,
+  leavesRoom,
+  PAINTING,
   PATCH,
   PONDS,
   paintIn,
   paintingOn,
   paintingsOf,
   pickOf,
+  ROW_PITCH,
   shorePaintingsOf,
   tintedName,
   unitMarkOf,
@@ -65,9 +72,6 @@ export function hexagonOn(tile: TileCoords, size: number): { x: number; y: numbe
 export function mapHexagon(size: number): number[] {
   return corners(hexagonOn(CENTRE, size).flatMap(({ x, y }) => [x, y]));
 }
-
-/** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
-export const PAINTING = { width: 256, height: 384, middle: 256 };
 
 /** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
 const FACE_OVERLAP = 1.04;
@@ -112,13 +116,6 @@ export const UNREAD: number[] = [0, 0, 1, 0, 0, 1];
 
 /** How far above a tile's middle the row of its feature and its improvements stands. */
 export const ROW_RISE = 15;
-/** How far apart the marks of that row stand, centre to centre. */
-const ROW_PITCH = 11;
-
-/** How wide a feature's icon stands, and the disc under it with its rim. */
-const ICON_WIDTH = 14;
-const DISC_RADIUS = 9;
-const DISC_RIM = 1;
 
 /** How wide a copy of a herd's animal is, and how far across and down from the middle each may lie. */
 const HERD_WIDTH = 8;
@@ -193,14 +190,29 @@ export function assignedAt(tile: TileCoords): { x: number; y: number } {
   return { x, y: y + ASSIGNED_DROP };
 }
 
+/** Whether an improvement stands in its tile's row as an icon on a disc, rather than as a shape. */
+function onDisc(improvement: ImprovementId): boolean {
+  switch (improvementLookOf(improvement).kind) {
+    case 'icon':
+      return true;
+    case 'shape':
+      return false;
+  }
+}
+
 /**
  * Where the marks of a face's row stand across its tile, its feature first and its improvements
  * after, in the order the face holds them, the row centred on the tile's middle `x`.
  */
 export function rowOf(face: Tile, x: number): { feature: number; improvements: number[] } {
   const first = face.feature === undefined ? 0 : 1;
-  const count = first + face.improvements.length;
-  const at = (slot: number): number => x + (slot - (count - 1) / 2) * ROW_PITCH;
+  const discs = [...(first === 1 ? [true] : []), ...face.improvements.map(onDisc)];
+  let reached = 0;
+  const offsets = discs.map((disc, slot) => {
+    if (slot > 0) reached += disc && discs[slot - 1] ? DISC_PITCH : ROW_PITCH;
+    return reached;
+  });
+  const at = (slot: number): number => x + offsets[slot] - reached / 2;
   return { feature: at(0), improvements: face.improvements.map((_, index) => at(first + index)) };
 }
 
@@ -416,20 +428,18 @@ export function buildingMark(
   return pieces;
 }
 
-// The scale is set here and `asPainted` resets it to one: an icon is painted before it wears a feature.
+// The scale is set here and `asPainted` resets it to one: an icon is painted before it wears its file.
 /**
- * An image of the features sheet made to draw a feature on the map: its icon, at the width it
+ * An image of the features sheet made to draw an icon of a tile's row: his file, at the width it
  * stands, darkened on a tile in fog.
  */
-export function asFeature(
-  icon: Phaser.GameObjects.Image,
-  feature: FeatureId,
+export function asIcon(
+  image: Phaser.GameObjects.Image,
+  icon: string,
   inFog: boolean,
 ): Phaser.GameObjects.Image {
   return asDarkened(
-    icon
-      .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
-      .setDisplaySize(ICON_WIDTH, ICON_WIDTH),
+    image.setTexture(FEATURE_SHEET_KEY, icon).setDisplaySize(ICON_WIDTH, ICON_WIDTH),
     inFog,
   );
 }
@@ -439,25 +449,37 @@ export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.Gam
   return scene.add.image(0, 0, FEATURE_SHEET_KEY, featureIconOf(feature));
 }
 
-/** The disc a feature's icon stands on, with nothing painted on it yet. */
-export function featureDisc(scene: Phaser.Scene): Phaser.GameObjects.Arc {
+/** What a disc of a tile's row is painted in: its fill, and its rim. */
+export type DiscLook = { readonly fill: Wash; readonly rim: Wash };
+
+/** The disc a feature's icon stands on: dark, with a pale rim. */
+export const FEATURE_DISC: DiscLook = { fill: LOOK.featureDisc, rim: LOOK.featureDiscRim };
+
+/** The disc an improvement's icon stands on: pale, in the stone everything worked is, with a dark rim. */
+export const IMPROVEMENT_DISC: DiscLook = {
+  fill: { colour: LOOK.built, strength: LOOK.improvementDisc },
+  rim: { colour: LOOK.mapOutline, strength: LOOK.improvementDiscRim },
+};
+
+/** The disc an icon of a tile's row stands on, with nothing painted on it yet. */
+export function rowDisc(scene: Phaser.Scene): Phaser.GameObjects.Arc {
   return scene.add.circle(0, 0, DISC_RADIUS);
 }
 
-/** A `featureDisc` made to stand under an icon, with its rim, darkened on a tile in fog. */
-export function asFeatureDisc(
+/** A `rowDisc` made to stand under an icon, in its look with its rim, darkened on a tile in fog. */
+export function asRowDisc(
   disc: Phaser.GameObjects.Arc,
+  { fill, rim }: DiscLook,
   inFog: boolean,
 ): Phaser.GameObjects.Arc {
-  const { featureDisc: fill, featureDiscRim: rim } = LOOK;
   return disc
     .setFillStyle(darkened(fill.colour, inFog), fill.strength)
     .setStrokeStyle(DISC_RIM, darkened(rim.colour, inFog), rim.strength);
 }
 
 /**
- * One mark a feature lays on its tile's ground: its name, and the way to paint it on an image of the
- * features sheet, darkened on a tile in fog.
+ * One mark a feature or an improvement lays on its tile's ground: its name, and the way to paint it
+ * on an image of the features sheet, darkened on a tile in fog.
  */
 export type Lying = {
   readonly name: string;
@@ -511,31 +533,114 @@ export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
   }
 }
 
+/**
+ * What an improvement stands as in its tile's row on the tile of that key, each mark by the name it
+ * stands under: its icon on its disc, or its shape.
+ */
+export type ImprovementMarks =
+  | {
+      readonly kind: 'icon';
+      readonly icon: string;
+      readonly names: { readonly disc: string; readonly icon: string };
+    }
+  | {
+      readonly kind: 'shape';
+      readonly corners: number[];
+      readonly names: { readonly shape: string };
+    };
+
+export function improvementMarksOn(improvement: ImprovementId, key: string): ImprovementMarks {
+  const look = improvementLookOf(improvement);
+  const mark = `improvement-${improvement}-${key}`;
+  switch (look.kind) {
+    case 'icon':
+      return {
+        kind: 'icon',
+        icon: look.icon,
+        names: { disc: `improvement-disc-${improvement}-${key}`, icon: mark },
+      };
+    case 'shape':
+      return { kind: 'shape', corners: look.corners, names: { shape: mark } };
+  }
+}
+
+/**
+ * What the improvements of a face lay on its tile's ground: his painting of each one told by its
+ * icon, alone on a tile with no building, beside a building that leaves it room, and none under any
+ * other building.
+ */
+export function improvementLyingOf(
+  face: Pick<Tile, 'improvements' | 'building'>,
+  coord: TileCoords,
+): Lying[] {
+  const place =
+    face.building === undefined ? 'alone' : leavesRoom(face.building) ? 'beside' : undefined;
+  if (place === undefined) return [];
+  return face.improvements.flatMap((improvement) => paintingLying(improvement, place, coord));
+}
+
+/** His painting of an improvement told by its icon lying on its tile at that place, and none for one told by its shape. */
+function paintingLying(
+  improvement: ImprovementId,
+  place: 'alone' | 'beside',
+  coord: TileCoords,
+): Lying[] {
+  const look = improvementLookOf(improvement);
+  switch (look.kind) {
+    case 'icon': {
+      const name = `improvement-painting-${improvement}-${place}-${tileKey(coord)}`;
+      const { x, y } = positionOf(coord);
+      const at = look[place];
+      return [
+        {
+          name,
+          paint: (image, inFog) =>
+            asDarkened(image, inFog)
+              .setTexture(FEATURE_SHEET_KEY, look.painting)
+              .setScale(at.size * PAINTED_SCALE)
+              .setFlipX(false)
+              .setPosition(x + at.x, y + at.y)
+              .setName(name),
+        },
+      ];
+    }
+    case 'shape':
+      return [];
+  }
+}
+
 /** A river drawn off the map: its placeholder mark, in the blue a river runs in. */
 export function riverMark(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
   return scene.add.polygon(0, 0, RIVER_MARK, LOOK.river).setStrokeStyle(1, LOOK.mapOutline);
 }
 
 /**
- * A polygon made to draw an improvement: its placeholder mark, in the stone everything worked is,
- * darkened on a tile in fog.
+ * A polygon made to draw an improvement's placeholder shape from its corners, in the stone
+ * everything worked is, darkened on a tile in fog.
  */
-export function asImprovement(
+export function asImprovementShape(
   mark: Phaser.GameObjects.Polygon,
-  improvement: ImprovementId,
+  shape: number[],
   inFog: boolean,
 ): Phaser.GameObjects.Polygon {
   return mark
-    .setTo(corners(improvementMarkOf(improvement)))
+    .setTo(corners(shape))
     .setFillStyle(darkened(LOOK.built, inFog))
     .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
 }
 
+/** An improvement off the map: its icon, bare, or its shape. */
 export function improvementMark(
   scene: Phaser.Scene,
   improvement: ImprovementId,
-): Phaser.GameObjects.Polygon {
-  return asImprovement(scene.add.polygon(0, 0, UNREAD), improvement, false);
+): Phaser.GameObjects.Image | Phaser.GameObjects.Polygon {
+  const look = improvementLookOf(improvement);
+  switch (look.kind) {
+    case 'icon':
+      return scene.add.image(0, 0, FEATURE_SHEET_KEY, look.icon);
+    case 'shape':
+      return asImprovementShape(scene.add.polygon(0, 0, UNREAD), look.corners, false);
+  }
 }
 
 /** The shapes a unit's mark is drawn from, bottom first, each its corners and its drop below the middle. */
