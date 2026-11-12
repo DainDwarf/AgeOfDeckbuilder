@@ -1,20 +1,17 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, entered, unitKind } from '../src/rules/catalogue';
+import { entered } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { enemyEntering } from '../src/rules/enemies';
-import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
-import { charted } from '../src/rules/sight';
+import { type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { type Unit, unitAt } from '../src/rules/units';
 import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
 import {
   budget,
-  campKind,
   chronicleOf,
   dragTiles,
+  enemyBesideCity,
   firstSeed,
-  freeFor,
   openSaved,
   playerCityTile,
   playersOf,
@@ -29,21 +26,15 @@ import {
  * The first seed's turn 1 with a warrior of the player's entered on the city's tile and one enemy of
  * the camp's kind entered with the raider script on a tile beside it, and the two units.
  */
-function enemyBesideCity(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
+function warriorBesideAnEnemy(): { chronicle: Chronicle; warrior: Unit; enemy: Unit } {
   return firstSeed('stands an enemy beside its city', (seed) => {
     const settled = settledOn(seed);
     const city = playerCityTile(settled);
     const guarded = entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city });
-    const kind = campKind(settled);
-    const stats = unitKind(CATALOGUE, kind);
-    const beside = neighbours(city).find((tile) => freeFor(guarded.chronicle, stats, tile));
-    if (beside === undefined) return undefined;
-    const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
-    const beset = entered(CATALOGUE, guarded.chronicle, enemyEntering(kind, raider, beside));
-    const chronicle = charted(CATALOGUE, beset.chronicle);
-    const [warrior] = playersOf(chronicle);
-    const enemy = unitAt(chronicle.units, beside);
-    return enemy === undefined ? undefined : { chronicle, warrior, enemy };
+    const beset = enemyBesideCity(guarded.chronicle);
+    if (beset === undefined) return undefined;
+    const [warrior] = playersOf(beset.chronicle);
+    return { ...beset, warrior };
   });
 }
 
@@ -57,7 +48,7 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
 }) => {
   const problems = watch(page);
   test.setTimeout(budget(1));
-  const { chronicle, warrior, enemy } = enemyBesideCity();
+  const { chronicle, warrior, enemy } = warriorBesideAnEnemy();
   const attacked = outcome(
     apply(CATALOGUE, chronicle, { type: 'attack', unit: warrior.id, tile: enemy.tile }),
   );

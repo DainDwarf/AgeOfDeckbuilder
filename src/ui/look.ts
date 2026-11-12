@@ -30,9 +30,9 @@ export type Look = {
   readonly exhaustTabEdge: number;
   readonly exhaustTabInk: number;
   readonly selected: number;
-  /** The strength the selection's rim rests at on the selected tile's edge. */
+  /** The strength the selection's rim rests at on the selected tile's edge and on a unit's ring. */
   readonly selectionRim: number;
-  /** The strength the selection's line along the selected tile's edge rests at. */
+  /** The strength the selection's line along the selected tile's edge and along a unit's ring rests at. */
   readonly selectionLine: number;
   readonly selectedEdge: number;
   /** The strength the reach's band rests at where it meets the reach's line. */

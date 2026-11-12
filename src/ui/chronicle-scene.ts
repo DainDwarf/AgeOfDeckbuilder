@@ -51,7 +51,7 @@ import { createIconsButton } from './icons-button';
 import { cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
-import { createMapView, type PressedTile } from './map';
+import { type AimShown, createMapView, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
@@ -250,7 +250,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // The map's note hears only the presses this scene lets through to the map.
     this.input.on('pointerdown', note.hide);
 
-    /** The tile the ring stands on, and nothing while none is selected. */
+    /** The tile selected, and nothing while none is. */
     let selection: PressedTile | undefined;
 
     /** Whether city mode is on: a left click on the selection is the city's act on that tile. */
@@ -518,10 +518,20 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         /** Whether the aim at the tile is coming down for the aim at the unit it is played through. */
         let picking = false;
 
+        /** What the card's aim admits, as the map shows what it is aimed at: a tile, or a unit. */
+        const shownAs = (admits: TileCoords[]): AimShown => {
+          switch (card.aim) {
+            case 'tile':
+              return { tiles: admits, units: [] };
+            case 'unit':
+              return { tiles: [], units: admits };
+          }
+        };
+
         /** The aim at a unit, among those the card at this tile could be played through. */
         const throughOne = (played: TileCoords, at: Tile, units: readonly Unit[]): (() => void) =>
           view.aimTile(
-            [played, ...units.map((unit) => unit.tile)],
+            { tiles: [played], units: units.map((unit) => unit.tile) },
             (tile) => {
               const block = throughRefusal(CATALOGUE, this.current, card, at, tile);
               if (block !== undefined) {
@@ -549,7 +559,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           );
 
         let letGo = view.aimTile(
-          admitted(CATALOGUE, this.current, card),
+          shownAs(admitted(CATALOGUE, this.current, card)),
           (tile) => {
             if (!playable(refusal)) {
               note.overTile(refused(costOf(CATALOGUE, id), refusal), view.faceOf(tile));

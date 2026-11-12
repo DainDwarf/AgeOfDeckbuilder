@@ -44,7 +44,7 @@ import {
   type WornAsDrawn,
 } from './map-border';
 import { createMapCamera } from './map-camera';
-import { selectionRims } from './map-fade';
+import { selectionRims, unitRings } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
   asGlow,
@@ -90,6 +90,7 @@ import {
   tileFace,
   type UnitObjects,
   unitMarker,
+  unitStandsAt,
   unreadGlow,
   wearing,
 } from './map-marks';
@@ -160,15 +161,21 @@ export type Drawn = {
   readonly asStands: boolean;
 };
 
+/** What a card being aimed admits as the map shows it: the tiles it lights, and the tiles whose units it rings. */
+export type AimShown = {
+  readonly tiles: readonly TileCoords[];
+  readonly units: readonly TileCoords[];
+};
+
 export type MapView = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Lights those of the tiles it is given that the map draws, aims at them, and answers the way to
-   * let the aim go, which `released` follows.
+   * Lights the tiles it is given and rings the units, those the map draws, aims at their tiles, and
+   * answers the way to let the aim go, which `released` follows.
    */
   aimTile(
-    tiles: TileCoords[],
+    admitted: AimShown,
     chosen: (tile: TileCoords) => void,
     refused: (at: PressedTile) => void,
     released: () => void,
@@ -299,6 +306,9 @@ export function createMapView(
   const built = group(strata.buildings, 'buildings');
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
+  const ringed = group(strata.units, 'ringed');
+  const rings = scene.add.layer().setName('rings');
+  ringed.add(rings);
   const marks = group(strata.units, 'units');
   const badges = group(strata.units, 'badges');
   const cityMarks = group(strata.cityMarks, 'city-marks');
@@ -308,8 +318,8 @@ export function createMapView(
     .setName('yield-dim')
     .setVisible(false);
   strata.dim.layer.add(dim);
-  const selected = group(strata.ring, 'selected');
-  const path = createPath(scene, group(strata.ring, 'path'));
+  const selected = group(strata.selection, 'selected');
+  const path = createPath(scene, group(strata.selection, 'path'));
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
 
@@ -381,8 +391,12 @@ export function createMapView(
       .polygon(0, 0, mapHexagon(TILE_SIZE - 0.5), 0, 0)
       .setStrokeStyle(1, LOOK.selected, LOOK.selectionLine),
   ];
-  const ringing = selectionMarks().map((mark) => mark.setVisible(false));
-  selected.add(ringing);
+  const selectedRim = selectionMarks().map((mark) => mark.setVisible(false));
+  selected.add(selectedRim);
+
+  const ringOn = unitRings(scene);
+  // In a container: a take sets the scale back to one, and the ring is painted at four times its size.
+  const ringPool = poolOf(rings, () => scene.add.container(0, 0, [ringOn()]));
 
   const thresholdOnTile = thresholdMark(scene);
   thresholds.add(thresholdOnTile.root);
@@ -420,11 +434,18 @@ export function createMapView(
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * The tiles lit and the units glowed, under the dim's stratum but lifted onto it while it stands.
-   * What else must stand over the dim lives on a stratum above it, or is added to `lighted`.
+   * The tiles lit and the units glowed, lifted onto the dim's stratum while it stands, and the units
+   * ringed with their rings, lifted onto it while it or city mode's dim stands. What else must stand
+   * over a dim lives on a stratum above it, or is added to these.
    */
   const liftOverDim = (): void => {
     (showing.size > 0 ? strata.dim : strata.lit).layer.add(lighted);
+    if (showing.size > 0 || marking) {
+      strata.dim.layer.add(ringed);
+      strata.dim.layer.bringToTop(ringed);
+    } else {
+      strata.units.layer.addAt(ringed, 0);
+    }
   };
 
   /**
@@ -438,7 +459,7 @@ export function createMapView(
   } => {
     presser?.disableInteractive();
     const catcher = frame.catcherZone('aim');
-    const rims = group(strata.ring, 'aim-lit');
+    const rims = group(strata.selection, 'aim-lit');
     return {
       catcher,
       rims,
@@ -805,8 +826,38 @@ export function createMapView(
     }
   };
 
-  /** The tile the map rings, and nothing while none is selected. */
+  /** The tile selected, and nothing while none is. */
   let selection: TileCoords | undefined;
+
+  /** The tiles whose units the card being aimed rings, none while no aim rings any. */
+  let aimRinged: readonly TileCoords[] = [];
+
+  /** The unit standing on a tile in sight on the chronicle the map stands on: the one a ring there is worn by. */
+  const wearerOn = (tile: TileCoords): Unit | undefined =>
+    shown === undefined || !live.has(tileKey(tile)) ? undefined : unitAt(shown.units, tile);
+
+  /**
+   * The selection and the aim as the chronicle the map stands on wears them: the unit on the selected
+   * tile ringed out of city mode, the tile's rim where none is, and each unit the aim rings ringed, a
+   * unit ringed standing with its ring.
+   */
+  const paintRings = (): void => {
+    const onSelection = selection === undefined || marking ? undefined : wearerOn(selection);
+    for (const mark of selectedRim) {
+      mark.setVisible(selection !== undefined && onSelection === undefined);
+    }
+    const wearers = [
+      ...(onSelection === undefined ? [] : [onSelection]),
+      ...aimRinged.flatMap((tile) => wearerOn(tile) ?? []),
+    ];
+    ringPool.hide();
+    for (const { tile } of wearers) {
+      const { x, y } = unitStandsAt(tile);
+      ringPool.take().setPosition(x, y).setData('tile', tileKey(tile));
+    }
+    const worn = new Set(wearers.map(({ id }) => id));
+    for (const [id, { marker }] of unitObjects) (worn.has(id) ? ringed : marks).add(marker);
+  };
 
   /**
    * Which unit the map is lighting for, as it stood when lit, where its landings lie and which tiles
@@ -974,6 +1025,7 @@ export function createMapView(
     paintRivers();
     paintBorder();
     paintUnits(current);
+    paintRings();
     paintBadges();
     paintCityMarks();
     paintYields();
@@ -1094,11 +1146,11 @@ export function createMapView(
       threshold =
         cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
-      for (const shown of ringing) shown.setVisible(tile !== undefined);
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
-        for (const shown of ringing) shown.setPosition(x, y);
+        for (const mark of selectedRim) mark.setPosition(x, y);
       }
+      paintRings();
       paintThreshold();
       paintYields();
       lightUnit(selection);
@@ -1123,6 +1175,7 @@ export function createMapView(
     showCityMarks(on: boolean): void {
       marking = on;
       grab.dropPopulation();
+      paintRings();
       paintCityMarks();
       paintYields();
       lightUnit(selection);
@@ -1140,20 +1193,25 @@ export function createMapView(
     },
 
     aimTile(
-      tiles: TileCoords[],
+      admitted: AimShown,
       chosen: (tile: TileCoords) => void,
       refused: (at: PressedTile) => void,
       released: () => void,
     ): () => void {
       const { catcher, rims, close } = openAim();
-      const lit = tiles.filter((coord) => drawn.has(tileKey(coord)));
+      const drawnOnes = (tiles: readonly TileCoords[]): TileCoords[] =>
+        tiles.filter((coord) => drawn.has(tileKey(coord)));
+      const lit = drawnOnes(admitted.tiles);
       for (const coord of lit) {
         const { x, y } = positionOf(coord);
         rims.add(scene.add.container(x, y, selectionMarks()).setData('tile', tileKey(coord)));
       }
+      const ringing = drawnOnes(admitted.units);
+      aimRinged = ringing;
+      paintRings();
 
       const click = (tile: TileCoords): void => {
-        if (lit.some((coord) => sameTile(coord, tile))) chosen(tile);
+        if ([...lit, ...ringing].some((coord) => sameTile(coord, tile))) chosen(tile);
         else refused(pressedOn(tile));
       };
       aimClicked = click;
@@ -1164,6 +1222,10 @@ export function createMapView(
         stop();
         close();
         if (aimClicked === click) aimClicked = undefined;
+        if (aimRinged === ringing) {
+          aimRinged = [];
+          paintRings();
+        }
         released();
       };
     },

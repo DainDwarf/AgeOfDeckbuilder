@@ -3,7 +3,7 @@ import { CENTRE } from '../rules/map';
 import type { Point } from './border-loops';
 import { fadedAt } from './fade';
 import { css, LOOK } from './look';
-import { hexagonOn, positionOf, TILE_SIZE } from './map-marks';
+import { hexagonOn, positionOf, SQUASH, TILE_SIZE } from './map-marks';
 
 /** How deep the selection's rim fades in from the tile's edge, how many pixels of its texture make a unit, and how wide the texture is. */
 const RIM_DEPTH = 5;
@@ -11,6 +11,11 @@ const RIM_PIXELS = 4;
 const RIM_SIDE = 256;
 
 const RIM_KEY = 'selection-rim';
+
+/** How far to either side of a unit's painting its ring reaches, in the map's units. */
+const RING_REACH = 15;
+
+const RING_KEY = 'unit-ring';
 
 // A texture is the game's and outlives the scene's restart (docs/PHASER.md).
 /**
@@ -91,4 +96,39 @@ export function selectionRims(scene: Phaser.Scene): () => Phaser.GameObjects.Ima
   );
   texture.refresh();
   return () => scene.add.image(0, 0, RIM_KEY).setScale(1 / RIM_PIXELS);
+}
+
+/**
+ * Paints a unit's ring once at four pixels to the unit, and answers the way to make one about no
+ * point, shown at a quarter of its painting.
+ */
+export function unitRings(scene: Phaser.Scene): () => Phaser.GameObjects.Image {
+  const texture = sceneCanvas(scene, RING_KEY, 2 * RING_REACH * RIM_PIXELS);
+  const context = texture.getContext();
+  const middle = texture.width / 2;
+  const traced = (on: CanvasRenderingContext2D): void => {
+    on.ellipse(
+      middle,
+      middle,
+      RING_REACH * RIM_PIXELS,
+      RING_REACH * SQUASH * RIM_PIXELS,
+      0,
+      0,
+      2 * Math.PI,
+    );
+  };
+  paintFaded(context, traced, LOOK.selected, LOOK.selectionRim, RIM_DEPTH * RIM_PIXELS);
+  context.save();
+  context.beginPath();
+  traced(context);
+  context.clip();
+  context.beginPath();
+  traced(context);
+  context.lineWidth = 2 * RIM_PIXELS;
+  context.strokeStyle = css(LOOK.selected);
+  context.globalAlpha = LOOK.selectionLine;
+  context.stroke();
+  context.restore();
+  texture.refresh();
+  return () => scene.add.image(0, 0, RING_KEY).setScale(1 / RIM_PIXELS);
 }

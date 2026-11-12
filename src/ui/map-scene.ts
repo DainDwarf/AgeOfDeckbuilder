@@ -11,7 +11,8 @@ export type MapStrata = {
   readonly cityMarks: Stratum;
   /** The yield overlay's dim, and what stays at full strength through it. */
   readonly dim: Stratum;
-  readonly ring: Stratum;
+  /** The selected tile's rim, the rims of a card being aimed, and a unit's path. */
+  readonly selection: Stratum;
   /** The yield glyphs and the culture threshold. */
   readonly yields: Stratum;
   readonly infopanel: Stratum;
@@ -42,7 +43,7 @@ export class MapScene extends Phaser.Scene {
       units: stratum(),
       cityMarks: stratum(),
       dim: stratum(),
-      ring: stratum(),
+      selection: stratum(),
       yields: stratum(),
       infopanel: stratum(),
       note: stratum(),

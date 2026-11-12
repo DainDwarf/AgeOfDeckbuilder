@@ -488,11 +488,15 @@ export async function readNames(page: Page): Promise<void> {
     };
 
     // The mark a tile in fog carries is nameless, so a unit's mark is found by standing where the
-    // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
+    // tile's face does; a unit wearing its ring stands with it, out of the others' layer. The frames'
+    // endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
     window.unitMarkOn = (key) => {
       const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
       if (face === undefined) return undefined;
-      const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
+      const marks = [
+        ...(window.shownIn?.('units') ?? []),
+        ...(window.shownIn?.('ringed') ?? []).filter((one) => one.type === 'Container'),
+      ] as Phaser.GameObjects.Container[];
       const mark = marks.find((one) => one.x === face.x && one.y === face.y);
       if (mark === undefined) return undefined;
       const tintOf = (frame: string): number | undefined => {
@@ -1966,13 +1970,9 @@ export function firstDealtAlone(event: string, campaign = freshCampaign(CATALOGU
  * its turns ended, standing on the turn whose end captures the city before the timeline's first deal.
  */
 export function beforeTheFall(): Chronicle {
-  const settled = settledOn(1);
-  const kind = campKind(settled);
-  const stats = unitKind(CATALOGUE, kind);
-  const beside = neighbours(playerCityTile(settled)).find((tile) => freeFor(settled, stats, tile));
-  if (beside === undefined) throw new Error('seed 1 leaves no ground beside its city');
-  const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;
-  let chronicle = unitEntered(settled, enemyEntering(kind, raider, beside));
+  const beset = enemyBesideCity(settledOn(1));
+  if (beset === undefined) throw new Error('seed 1 leaves no ground beside its city');
+  let { chronicle } = beset;
   const due = chronicle.timeline.next;
   while (chronicle.turn < due - 1 && chronicle.ending === undefined) {
     const ended = endedTurn(chronicle);
@@ -2137,6 +2137,25 @@ export function campBeside(
   if (camp === undefined) throw new Error('seed 1 has no tile beside its city a camp stands on');
   const placed = charted(CATALOGUE, built(CATALOGUE, opened, camp, building).chronicle);
   return { chronicle: unitEntered(placed, planted(camp)), camp };
+}
+
+/**
+ * The chronicle with an enemy of the camp's kind entered with the raider script on the first tile
+ * beside the city it stands on with nobody on it, charted, and the enemy; nothing where none is.
+ */
+export function enemyBesideCity(
+  chronicle: Chronicle,
+): { chronicle: Chronicle; enemy: Unit } | undefined {
+  const kind = campKind(chronicle);
+  const stats = unitKind(CATALOGUE, kind);
+  const beside = neighbours(playerCityTile(chronicle)).find((tile) =>
+    freeFor(chronicle, stats, tile),
+  );
+  if (beside === undefined) return undefined;
+  const { raider } = ageOf(CATALOGUE, chronicle.age).camp.scripts;
+  const beset = unitEntered(chronicle, enemyEntering(kind, raider, beside));
+  const enemy = unitAt(beset.units, beside);
+  return enemy === undefined ? undefined : { chronicle: beset, enemy };
 }
 
 /** The unit kind cards are played through. */
@@ -2594,7 +2613,7 @@ export function endTurnFill(page: Page): Promise<number | undefined> {
   return fillOf(page, 'end-turn');
 }
 
-/** Which tile the map is ringing, or nothing while none is selected. */
+/** Which tile is selected, or nothing while none is. */
 export function ringedTile(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {
     const ring = window.named?.('selected')?.object;
@@ -2625,6 +2644,27 @@ export function marked(page: Page): Promise<{
       inspecting: panel.visible
         ? { card: panel.getData('card') as string, x: panel.x, y: panel.y }
         : undefined,
+    };
+  });
+}
+
+/**
+ * The tiles whose units wear their ring, and the tiles wearing the selection's rim, the selected one
+ * and those a card being aimed lights: each by tile key, in key order.
+ */
+export function ringsAndRims(page: Page): Promise<{ rings: string[]; rims: string[] }> {
+  return page.evaluate(() => {
+    const rings = window.shownIn?.('rings');
+    const selected = window.named?.('selected')?.object;
+    const rim = window.shownIn?.('selected');
+    if (rings === undefined || selected === undefined || rim === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    const aimed = window.shownIn?.('aim-lit') ?? [];
+    const tileOf = (mark: Phaser.GameObjects.GameObject): string => mark.getData('tile') as string;
+    return {
+      rings: rings.map(tileOf).sort(),
+      rims: [...(rim.length > 0 ? [tileOf(selected)] : []), ...aimed.map(tileOf)].sort(),
     };
   });
 }
