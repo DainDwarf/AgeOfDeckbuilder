@@ -2,12 +2,14 @@ import {
   distance,
   movementCost,
   type Passage,
+  pathBetween,
   pathCosts,
   type River,
   sameTile,
   type Tile,
   type TileCoords,
   tileKey,
+  type Walk,
 } from './map';
 import type { MapContent } from './map-kinds';
 
@@ -174,25 +176,46 @@ export function passageFor(chronicle: Crossed, faction: Faction): (coord: TileCo
   }
 }
 
+/** A unit's walk: on the move points it has left, embarked or ashore as it stands. */
+function walkOf(unit: Unit): Walk {
+  return { points: unit.movePoints, embarked: unit.embarked };
+}
+
+/** The faction of the unit standing on each tile, by the tile's key. */
+function standingOn(chronicle: Crossed): ReadonlyMap<string, Faction> {
+  return new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
+}
+
+/**
+ * What a unit's own walk does at a tile: a unit of another faction shuts it, one of its own lets it
+ * pass, and the faction's passage says the rest.
+ */
+function unitPassage(
+  chronicle: Crossed,
+  unit: Unit,
+  standing: ReadonlyMap<string, Faction>,
+): (coord: TileCoords) => Passage {
+  const passage = passageFor(chronicle, unit.faction);
+  return (coord) => {
+    const held = standing.get(tileKey(coord));
+    return held !== undefined && held !== unit.faction ? 'shut' : passage(coord);
+  };
+}
+
 /**
  * Where a unit can land on the move points it has left, each at the cheapest route there, a step
  * over a river edge spending every point it has left. A tile one of its own holds is crossed but
  * never offered; the faction's passage says the rest.
  */
 export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit): Landing[] {
-  const standing = new Map(chronicle.units.map((other) => [tileKey(other.tile), other.faction]));
-  const passage = passageFor(chronicle, unit.faction);
-
+  const standing = standingOn(chronicle);
   const spent = pathCosts(
     catalogue,
     chronicle.tiles,
     chronicle.rivers,
     unit.tile,
-    { points: unit.movePoints, embarked: unit.embarked },
-    (coord) => {
-      const held = standing.get(tileKey(coord));
-      return held !== undefined && held !== unit.faction ? 'shut' : passage(coord);
-    },
+    walkOf(unit),
+    unitPassage(chronicle, unit, standing),
   );
 
   return chronicle.tiles.flatMap(({ q, r }) => {
@@ -201,6 +224,29 @@ export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit)
     if (cost === undefined || standing.has(at)) return [];
     return [{ tile: { q, r }, cost }];
   });
+}
+
+/**
+ * A unit's path to one of the tiles `reachable` offers it, the tile it stands on first and the
+ * landing last, as `pathBetween` reads a path; nothing for a tile it does not offer.
+ */
+export function pathTo(
+  catalogue: MapContent,
+  chronicle: Crossed,
+  unit: Unit,
+  landing: TileCoords,
+): TileCoords[] | undefined {
+  const standing = standingOn(chronicle);
+  if (standing.has(tileKey(landing))) return undefined;
+  return pathBetween(
+    catalogue,
+    chronicle.tiles,
+    chronicle.rivers,
+    unit.tile,
+    landing,
+    walkOf(unit),
+    unitPassage(chronicle, unit, standing),
+  );
 }
 
 /**

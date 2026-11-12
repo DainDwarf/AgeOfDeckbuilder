@@ -1132,13 +1132,13 @@ function treeHeld(content: Catalogue): void {
   }
 
   const settled = new Set<string>();
-  const needed = (id: string, path: readonly string[]): void => {
+  const needed = (id: string, neededBy: readonly string[]): void => {
     if (settled.has(id)) return;
-    if (path.includes(id)) {
-      const ring = [...path.slice(path.indexOf(id)), id].join(' needs ');
+    if (neededBy.includes(id)) {
+      const ring = [...neededBy.slice(neededBy.indexOf(id)), id].join(' needs ');
       refuse(content, `the technology ${id} needs itself: ${ring}`);
     }
-    for (const need of technologyOf(content, id).needs) needed(need, [...path, id]);
+    for (const need of technologyOf(content, id).needs) needed(need, [...neededBy, id]);
     settled.add(id);
   };
   for (const id of Object.keys(content.technologies)) needed(id, []);

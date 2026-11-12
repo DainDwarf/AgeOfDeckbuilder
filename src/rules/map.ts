@@ -324,6 +324,90 @@ export function pathCosts(
 }
 
 /**
+ * The tiles a unit's walk crosses from a start to a tile, the start first, and nothing where no route
+ * reaches it: of the cheapest ways, the fewest tiles, then nearest the straight line, then the first
+ * in the map's order where two part. `passage` says which tiles a route ends on or keeps off.
+ */
+export function pathBetween(
+  catalogue: MapContent,
+  tiles: readonly Tile[],
+  rivers: readonly River[],
+  from: TileCoords,
+  to: TileCoords,
+  walk: Walk,
+  passage: (coord: TileCoords) => Passage,
+): TileCoords[] | undefined {
+  const ground = groundOf(tiles, rivers);
+  const spending = spends(catalogue, walk);
+  const ranked = new Map(tiles.map((tile, rank) => [tileKey(tile), { tile, rank }]));
+  const toward = { q: to.q - from.q, r: to.r - from.r };
+  /** How far a tile stands from the straight line, times one factor every tile shares: a whole number. */
+  const offLine = ({ q, r }: TileCoords): number =>
+    Math.abs(toward.q * (r - from.r) - toward.r * (q - from.q));
+
+  /** The tiles of a way past the start, their places in the map's order, and how far off the line it runs. */
+  type Way = { readonly tiles: TileCoords[]; readonly ranks: number[]; readonly off: number };
+  /** Whether a way goes before another of as many tiles. */
+  const before = (one: Way, other: Way): boolean => {
+    if (one.off !== other.off) return one.off < other.off;
+    const parted = one.ranks.findIndex((rank, at) => rank !== other.ranks[at]);
+    return parted >= 0 && one.ranks[parted] < other.ranks[parted];
+  };
+  /** Where a way stands, what it has spent there, and the way. */
+  type Stand = { readonly at: TileCoords; readonly paid: number; readonly way: Way };
+  const standKey = (at: TileCoords, paid: number): string => `${tileKey(at)}/${paid}`;
+
+  // A stand is a tile and what was spent reaching it, not the tile alone: a crossing spends what is
+  // left, so a way reaching a tile dearer can still cost no more at the end.
+  const reached = new Set([standKey(from, 0)]);
+  let front: Stand[] = [{ at: from, paid: 0, way: { tiles: [], ranks: [], off: 0 } }];
+  let landed: Stand | undefined;
+  while (front.length > 0) {
+    const next = new Map<string, Stand>();
+    for (const { at, paid, way } of front) {
+      if (sameTile(at, to)) continue;
+      const here = ground.at(at);
+      for (const coord of neighbours(at)) {
+        const there = ranked.get(tileKey(coord));
+        if (there === undefined) continue;
+        const onto = passage(coord);
+        if (!(sameTile(coord, to) ? landable(onto) : crossable(onto))) continue;
+        const step = {
+          at: here,
+          atEmbarked: walk.embarked,
+          onto: there.tile,
+          embarked: walk.embarked,
+          river: ground.river(at, coord),
+        };
+        const total = spending(paid, step);
+        if (total === undefined) continue;
+        const key = standKey(coord, total);
+        if (reached.has(key)) continue;
+        const taken: Stand = {
+          at: coord,
+          paid: total,
+          way: {
+            tiles: [...way.tiles, coord],
+            ranks: [...way.ranks, there.rank],
+            off: way.off + offLine(coord),
+          },
+        };
+        const held = next.get(key);
+        if (held === undefined || before(taken.way, held.way)) next.set(key, taken);
+      }
+    }
+    front = [...next.values()];
+    for (const [key, stand] of next) {
+      reached.add(key);
+      if (sameTile(stand.at, to) && (landed === undefined || stand.paid < landed.paid)) {
+        landed = stand;
+      }
+    }
+  }
+  return landed === undefined ? undefined : [from, ...landed.way.tiles];
+}
+
+/**
  * What the cheapest route to each tile weighs from a start, ashore and embarked apart, on a walk over
  * the whole map with these moves: it embarks where the ground ends and disembarks where it begins,
  * wherever the moves name both. `passage` says which tiles the walk ends on or keeps off.
@@ -701,15 +785,15 @@ function flowRivers(
   const run = new Set<string>();
 
   const walkFrom = (source: Corner): River | undefined => {
-    const path: Corner[] = [source];
+    const bed: Corner[] = [source];
     const visited = new Set<string>([cornerKey(source)]);
     const along = new Map<number, number>();
     let turned: number | undefined;
 
     for (;;) {
-      const at = path[path.length - 1];
+      const at = bed[bed.length - 1];
       // The corner arrived by is already visited, so the two edges ahead are all that is left.
-      const arrived = path[path.length - 2];
+      const arrived = bed[bed.length - 2];
       const candidates: [{ to: Corner; banks: number[]; turn: number | undefined }, number][] = [];
 
       for (const to of cornersBeside(at)) {
@@ -733,13 +817,13 @@ function flowRivers(
       const pick = pickWeighted(rng, candidates);
       rng = pick.rng;
       const { to, banks, turn } = pick.picked;
-      path.push(to);
+      bed.push(to);
       visited.add(cornerKey(to));
       for (const index of banks) along.set(index, (along.get(index) ?? 0) + 1);
       turned = turn;
 
       if (touchesWater(to) || run.has(cornerKey(to))) {
-        return path.length - 1 >= leastEdges ? path : undefined;
+        return bed.length - 1 >= leastEdges ? bed : undefined;
       }
     }
   };

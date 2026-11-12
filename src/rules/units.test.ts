@@ -34,7 +34,7 @@ import {
 import { MOVE_POINT, type TileCoords, tileKey } from './map';
 import { walked } from './stages';
 import type { Chronicle } from './state';
-import { attackable, type Faction, relationsOf } from './units';
+import { attackable, type Faction, pathTo, relationsOf } from './units';
 
 /** A unit of the player's sent to a tile, ready to hand to `apply`. */
 function moveTo(unit: number, to: TileCoords): Command {
@@ -506,6 +506,60 @@ test('a unit crosses to a tile the cheapest way, not the fewest tiles', () => {
 
   expect(round.units[0].tile).toEqual({ q: 3, r: -1 });
   expect(pointsOf(round, 1)).toBe(0);
+});
+
+test('a unit’s path is a cheapest way over the fewest tiles, nearest the straight line and through its own units, and walked step by step it spends what its landing costs', () => {
+  const moving = { move: 3 * MOVE_POINT, sight: 3 };
+  /** The path of the chronicle's first unit to the tile, by tile key. */
+  const pathOf = (chronicle: Chronicle, to: TileCoords): string[] | undefined =>
+    pathTo(CATALOGUE, chronicle, chronicle.units[0], to)?.map(tileKey);
+
+  // Straight across the river, or onto the plain on this bank and across from there: either spends
+  // every point.
+  const bank = { q: 1, r: -1 };
+  const across = { q: 1, r: 0 };
+  const river = cityOf(['urban'], {
+    tiles: only(2, [CITY, bank, across]),
+    rivers: [riverBetween(CITY, across), riverBetween(bank, across)],
+    units: [standing('player', CITY, moving)],
+  });
+  // The forest and the plain beyond it, or the three plains round it: three points either way. The
+  // worker sees what the forest hides from the unit.
+  const beyond = { q: 2, r: 0 };
+  const forest = cityOf(['urban'], {
+    tiles: madeOf(field(3), 'forest', [{ q: 1, r: 0 }]),
+    units: [standing('player', CITY, moving), worker({ q: 2, r: 1 })],
+  });
+  const far = { q: 3, r: -1 };
+  const open = cityOf(['urban'], { tiles: field(3), units: [standing('player', CITY, moving)] });
+  const crowded = cityOf(['urban'], {
+    tiles: field(3),
+    units: [standing('player', CITY), standing('player', { q: 1, r: 0 })],
+  });
+
+  expect(pathOf(river, across)).toEqual(['0,0', '1,0']);
+  expect(pathOf(forest, beyond)).toEqual(['0,0', '1,0', '2,0']);
+  expect(pathOf(open, far)).toEqual(['0,0', '1,0', '2,-1', '3,-1']);
+  expect(pathOf(crowded, beyond)).toEqual(['0,0', '1,0', '2,0']);
+
+  for (const [chronicle, to] of [
+    [river, across],
+    [forest, beyond],
+    [open, far],
+  ] as const) {
+    const [unit] = chronicle.units;
+    const landing = byHand(CATALOGUE, chronicle, unit).landings.find(
+      ({ tile }) => tileKey(tile) === tileKey(to),
+    );
+    if (landing === undefined) throw new Error(`${tileKey(to)} is no landing`);
+    let walked = chronicle;
+    for (const tile of pathTo(CATALOGUE, chronicle, unit, to)?.slice(1) ?? []) {
+      walked = outcome(apply(CATALOGUE, walked, moveTo(unit.id, tile)));
+    }
+
+    expect(unitNamed(walked, unit.id).tile).toEqual(to);
+    expect(pointsOf(walked, unit.id)).toBe(unit.movePoints - landing.cost);
+  }
 });
 
 test('water is crossed by no unit ashore, and neither is everything only water leads to', () => {
