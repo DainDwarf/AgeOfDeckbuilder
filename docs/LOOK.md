@@ -6,7 +6,7 @@
 
 Everything drawn is one of two families, and each has one job.
 
-- **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects, his painted resource icons. Code draws geometry, recolours and composes his pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
+- **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects, his painted resource icons, his painted arms and armour icons. Code draws geometry, recolours and composes his pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
 - **Symbols** are signs of quantities and kinds: a resource, a yield, a cost, the icons the screens read. Every symbol is a **flat one-colour glyph from game-icons.net**, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol is never a picture of a thing on the map.
 
 A painted world under flat symbols is the convention of the genre, and the two families do not read as two styles because they never do the same job.

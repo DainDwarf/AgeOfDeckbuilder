@@ -718,11 +718,11 @@ function shadeTint(shade: UnitShade): number {
   }
 }
 
-/** A unit's mark with nothing drawn on it yet: its halo, his canoe and its painting, bottom first. */
+/** A unit's mark with nothing drawn on it yet: his canoe, its halo and its painting, bottom first. */
 export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   return scene.add.container(0, 0, [
-    scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.image(0, 0, UNIT_SHEET.key, CANOE),
+    scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.image(0, 0, UNIT_SHEET.key),
   ]);
 }
@@ -740,7 +740,7 @@ export function asUnit(
 ): Phaser.GameObjects.Container {
   const { painting, halo, scale } = unitPaintingOf(type);
   const tint = shadeTint(shade);
-  const [haloImage, canoe, paintingImage] = mark.list as Phaser.GameObjects.Image[];
+  const [canoe, haloImage, paintingImage] = mark.list as Phaser.GameObjects.Image[];
   haloImage
     .setTexture(UNIT_SHEET.key, halo)
     .setScale(scale)
@@ -761,7 +761,7 @@ export function asUnit(
 
 /** What a unit's mark is fitted to a box by: its painting, and his canoe while it stands embarked. */
 export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObjects.Image[] {
-  const [, canoe, painting] = mark.list as Phaser.GameObjects.Image[];
+  const [canoe, , painting] = mark.list as Phaser.GameObjects.Image[];
   return canoe.visible ? [canoe, painting] : [painting];
 }
 
