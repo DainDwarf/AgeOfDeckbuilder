@@ -62,6 +62,8 @@ export type Look = {
   readonly fog: number;
   /** The strength a city's border band rests at where it meets the line. */
   readonly borderBand: number;
+  /** The strength a unit's halo rests at on its painting's outline. */
+  readonly unitHalo: number;
   readonly built: number;
   readonly population: number;
   readonly wellFill: number;
@@ -164,6 +166,7 @@ export const LOOK: Look = {
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,
   borderBand: 0.6,
+  unitHalo: 0.9,
   built: 0xcfc6b4,
   population: 0x6b6b7d,
   wellFill: 0xb4b9c0,
@@ -248,6 +251,15 @@ export function multiplied(colour: number, tint: number): number {
   const channel = (shift: number): number =>
     Math.round((((colour >> shift) & 0xff) * ((tint >> shift) & 0xff)) / 0xff);
   return (channel(16) << 16) | (channel(8) << 8) | channel(0);
+}
+
+/**
+ * The tint that darkens a painting by as much as the wash laid over it darkens what lies under it,
+ * the wash's own colour left out.
+ */
+export function darkeningOf({ strength }: Wash): number {
+  const channel = Math.round(0xff * (1 - strength));
+  return (channel << 16) | (channel << 8) | channel;
 }
 
 /** What a card's every colour goes through as it is drawn. */

@@ -32,6 +32,12 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **From:** David Baumgart, by email on 2026-11-03; not on sale, the files as he sent them.
 - **Licence:** he named none for these files, and they are taken under his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
 
+## Icons: Medieval Arms & Armor
+
+- **What:** David Baumgart's painted arms and armour icons, 106 icons of 128 px, in `store/icons-medieval-arms-and-armor/`, his description beside them.
+- **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.0.2 of 11 October 2025, the files as released.
+- **Licence:** his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
+
 ## Source Sans 3
 
 - **What:** the UI typeface, regular and bold, in `fonts/source-sans-3/`.

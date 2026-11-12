@@ -21,12 +21,13 @@ import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
-import { css, type Glow, LOOK, multiplied, type Wash } from './look';
+import { css, darkeningOf, type Glow, LOOK, multiplied, type Wash } from './look';
 import {
   BUILDING_SHEET,
   type BuildingPaintings,
   type BuildingPiece,
   buildingPaintingsOf,
+  CANOE,
   clearingsOf,
   clearsItsTile,
   DISC_PITCH,
@@ -54,7 +55,8 @@ import {
   RIVER_SHEET,
   shorePaintingsOf,
   tintedName,
-  unitMarkOf,
+  UNIT_SHEET,
+  unitPaintingOf,
   VOIDS,
 } from './marks';
 import { text } from './text';
@@ -108,15 +110,13 @@ const CITY_BADGE_INKS: Record<CityFaction, number> = {
   neutral: LOOK.neutralBadgeInk,
 };
 
-// No corner of the hull, shifted by half its size, lands on the corner before it: Phaser's stroke
-// would skip it and leave the outline open (the trap over `diamond`).
-/** Placeholder primitive until the art pass: the hull an embarked unit stands on, raw, and its drop. */
-const HULL: number[] = [-16, -4, 16, -4, 10, 4, -10, 4];
-const HULL_DROP = 12;
-
-// Phaser reads a polygon's first point at its construction, and one with none throws.
-/** What a polygon holds until a mark is read onto it. */
-const UNREAD: number[] = [0, 0, 1, 0, 0, 1];
+/**
+ * How far below its tile's middle a unit's painting stands, how far below the painting's middle his
+ * canoe's stands, and how wide the canoe is drawn, in the map's units.
+ */
+const UNIT_DROP = 8;
+const CANOE_DROP = 8;
+const CANOE_WIDTH = 30;
 
 /** How far above a tile's middle the row of its feature and its improvements stands. */
 export const ROW_RISE = 15;
@@ -176,8 +176,6 @@ export type TileObjects = {
 /** What the map keeps of a unit from its entering to its leaving, shown as the unit stands. */
 export type UnitObjects = {
   readonly marker: Phaser.GameObjects.Container;
-  readonly parts: Phaser.GameObjects.Container;
-  readonly dim: Phaser.GameObjects.Container;
   readonly hue: Phaser.GameObjects.Polygon;
 };
 
@@ -399,8 +397,7 @@ export function asPieces(
 export function paintedBounds(mark: Phaser.GameObjects.GameObject): Phaser.Geom.Rectangle {
   if (mark instanceof Phaser.GameObjects.Container) {
     // A Container's own bounds count the children it hides (docs/PHASER.md).
-    const shown = mark.list.filter((child) => (child as Mark).visible).map(paintedBounds);
-    return shown.reduce((union, box) => Phaser.Geom.Rectangle.Union(union, box, union));
+    return paintedBoundsOf(mark.list.filter((child) => (child as Mark).visible));
   }
   const box = (mark as Mark).getBounds();
   if (!(mark instanceof Phaser.GameObjects.Image)) return box;
@@ -414,6 +411,15 @@ export function paintedBounds(mark: Phaser.GameObjects.GameObject): Phaser.Geom.
     paint.width * across,
     paint.height * down,
   );
+}
+
+/** The box the paint of these marks fills together, where they stand. */
+export function paintedBoundsOf(
+  marks: readonly Phaser.GameObjects.GameObject[],
+): Phaser.Geom.Rectangle {
+  return marks
+    .map(paintedBounds)
+    .reduce((union, box) => Phaser.Geom.Rectangle.Union(union, box, union));
 }
 
 /** The name of the container a building's pieces stand in on the tile of that key. */
@@ -697,67 +703,81 @@ export function improvementMark(
   ]);
 }
 
-/** The shapes a unit's mark is drawn from, bottom first, each its corners and its drop below the middle. */
-function unitShapes(type: string, embarked: boolean): { corners: number[]; drop: number }[] {
-  const kind = { corners: corners(unitMarkOf(type)), drop: 0 };
-  return embarked ? [{ corners: corners(HULL), drop: HULL_DROP }, kind] : [kind];
+/** What a unit's painting, its halo and its canoe are darkened by: nothing, the fog, or the dim of a unit whose turn is done. */
+export type UnitShade = 'clear' | 'fog' | 'done';
+
+/** The tint a shade multiplies a unit's three images by. */
+function shadeTint(shade: UnitShade): number {
+  switch (shade) {
+    case 'clear':
+      return 0xffffff;
+    case 'fog':
+      return LOOK.fog;
+    case 'done':
+      return darkeningOf(LOOK.mapDim);
+  }
+}
+
+/** A unit's mark with nothing drawn on it yet: its halo, his canoe and its painting, bottom first. */
+export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return scene.add.container(0, 0, [
+    scene.add.image(0, 0, UNIT_SHEET.key),
+    scene.add.image(0, 0, UNIT_SHEET.key, CANOE),
+    scene.add.image(0, 0, UNIT_SHEET.key),
+  ]);
 }
 
 /**
- * A container read as a unit's shapes, one polygon each, dressed by `dress`: a polygon is added where
- * it holds too few, and the ones left over are hidden.
- */
-function asShapes(
-  on: Phaser.GameObjects.Container,
-  type: string,
-  embarked: boolean,
-  dress: (part: Phaser.GameObjects.Polygon) => void,
-): Phaser.GameObjects.Container {
-  const shapes = unitShapes(type, embarked);
-  while (on.length < shapes.length) on.add(on.scene.add.polygon(0, 0, UNREAD));
-  (on.list as Phaser.GameObjects.Polygon[]).forEach((part, at) => {
-    part.setVisible(at < shapes.length);
-    if (at < shapes.length) dress(part.setTo(shapes[at].corners).setY(shapes[at].drop));
-  });
-  return on;
-}
-
-/**
- * A container read as a unit's mark, over a hull while it is embarked, in its faction's colour,
- * darkened on a tile in fog.
+ * A `unitMarker` made to draw a unit: its kind's painting low on its tile in a halo of its faction's
+ * colour, in his canoe while embarked, the three darkened by the shade.
  */
 export function asUnit(
   mark: Phaser.GameObjects.Container,
   type: string,
   faction: Faction,
   embarked: boolean,
-  inFog: boolean,
+  shade: UnitShade,
 ): Phaser.GameObjects.Container {
-  return asShapes(mark, type, embarked, (part) => {
-    part
-      .setFillStyle(darkened(FACTION_COLOURS[faction], inFog))
-      .setStrokeStyle(2, darkened(LOOK.mapOutline, inFog));
-  });
+  const { painting, halo, scale } = unitPaintingOf(type);
+  const tint = shadeTint(shade);
+  const [haloImage, canoe, paintingImage] = mark.list as Phaser.GameObjects.Image[];
+  haloImage
+    .setTexture(UNIT_SHEET.key, halo)
+    .setScale(scale)
+    .setPosition(0, UNIT_DROP)
+    .setTint(multiplied(FACTION_COLOURS[faction], tint));
+  canoe
+    .setScale(CANOE_WIDTH / canoe.frame.width)
+    .setPosition(0, UNIT_DROP + CANOE_DROP)
+    .setTint(tint)
+    .setVisible(embarked);
+  paintingImage
+    .setTexture(UNIT_SHEET.key, painting)
+    .setScale(scale)
+    .setPosition(0, UNIT_DROP)
+    .setTint(tint);
+  return mark;
 }
 
+/** What a unit's mark is fitted to a box by: its painting, and his canoe while it stands embarked. */
+export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObjects.Image[] {
+  const [, canoe, painting] = mark.list as Phaser.GameObjects.Image[];
+  return canoe.visible ? [canoe, painting] : [painting];
+}
+
+/** A unit off the map, undarkened, its painting and his canoe centred on the container's point. */
 export function unitMark(
   scene: Phaser.Scene,
   type: string,
   faction: Faction,
   embarked: boolean,
 ): Phaser.GameObjects.Container {
-  return asUnit(scene.add.container(0, 0), type, faction, embarked, false);
-}
-
-/** A container read as the scrim of a unit's own shape. */
-export function asUnitDim(
-  dim: Phaser.GameObjects.Container,
-  type: string,
-  embarked: boolean,
-): Phaser.GameObjects.Container {
-  return asShapes(dim, type, embarked, (part) => {
-    part.setFillStyle(LOOK.mapOutline, LOOK.mapDim.strength);
-  });
+  const mark = asUnit(unitMarker(scene), type, faction, embarked, 'clear');
+  const { centerX, centerY } = paintedBoundsOf(unitFittedBy(mark));
+  for (const image of mark.list as Phaser.GameObjects.Image[]) {
+    image.setPosition(image.x - centerX, image.y - centerY);
+  }
+  return mark;
 }
 
 // A stroked diamond is a square turned: a stroked polygon comes out open (docs/PHASER.md, under

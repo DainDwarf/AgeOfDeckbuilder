@@ -7,6 +7,7 @@ import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { type Unit, unitAt } from '../src/rules/units';
+import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
 import {
   budget,
   campKind,
@@ -19,7 +20,7 @@ import {
   playersOf,
   ringedTile,
   settledOn,
-  standing,
+  unitMarksOn,
   WARRIOR,
   watch,
 } from './chronicle-screen';
@@ -75,8 +76,13 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   expect(struck.action).toBe(0);
   expect(struck.movePoints).toBe(0);
   // Nothing left to spend: the warrior stands dimmed, and the enemy it struck never is.
-  await expect.poll(() => standing(page, `unit-dim-${tileKey(warrior.tile)}`)).toBe(true);
-  expect(await standing(page, `unit-dim-${tileKey(enemy.tile)}`)).toBe(false);
+  const dim = darkeningOf(LOOK.mapDim);
+  await expect
+    .poll(() => unitMarksOn(page, [warrior.tile, enemy.tile]))
+    .toEqual([
+      { halo: multiplied(LOOK.civilization, dim), painting: dim },
+      { halo: LOOK.enemy, painting: undefined },
+    ]);
   // The warrior is selected again where it stands, so one more press is its next command.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(warrior.tile));
 

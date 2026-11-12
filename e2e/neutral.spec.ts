@@ -1,5 +1,4 @@
 import { expect, type Page, test } from '@playwright/test';
-import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { ageOf, cardOf, neutralOf, neutralWorkerKind, unitKind } from '../src/rules/catalogue';
 import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
@@ -72,6 +71,7 @@ import {
   textOf,
   tileOnScreen,
   unitEntered,
+  unitMarksOn,
   WARRIOR,
   type Worn,
   watch,
@@ -171,16 +171,6 @@ function kindEntered(chronicle: Chronicle): string {
   return kind;
 }
 
-/** The colours the named unit's mark is filled in, its hull's among them where it stands embarked. */
-function unitFills(page: Page, name: string): Promise<number[]> {
-  return page.evaluate((target) => {
-    const marker = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
-    if (marker === undefined) throw new Error(`nothing named ${target} stands on the screen`);
-    const [mark] = marker.list as Phaser.GameObjects.Container[];
-    return (mark.list as Phaser.GameObjects.Polygon[]).map((shape) => shape.fillColor);
-  }, name);
-}
-
 test('a unit of the neutral’s entered on its city stands on the map in the neutral’s colour, and its tile inspected heads its unit card with its kind’s name', async ({
   page,
 }) => {
@@ -193,7 +183,6 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
     script: neutralOf(CATALOGUE, AGE).scripts.guard,
     tile: city,
   });
-  const mark = `unit-${tileKey(city)}`;
 
   await openSaved(page, guarded, CAMPAIGN);
   await consoleKey(page);
@@ -202,7 +191,7 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   await consoleKey(page);
   await broughtIn(page, city);
 
-  expect(await unitFills(page, mark)).toEqual([LOOK.neutral]);
+  expect(await unitMarksOn(page, [city])).toEqual([{ halo: LOOK.neutral, painting: undefined }]);
 
   const at = await tileOnScreen(page, city);
   await page.mouse.click(at.x, at.y, { button: 'right' });

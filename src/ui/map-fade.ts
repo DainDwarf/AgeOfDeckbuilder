@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { CENTRE } from '../rules/map';
 import type { Point } from './border-loops';
+import { fadedAt } from './fade';
 import { css, LOOK } from './look';
 import { hexagonOn, positionOf, TILE_SIZE } from './map-marks';
 
@@ -26,25 +27,6 @@ export function sceneCanvas(
   if (texture === null) throw new Error(`a texture stands under ${key} already`);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.textures.remove(key));
   return texture;
-}
-
-/** The standard normal's cumulative distribution, through Abramowitz and Stegun's 7.1.26 for the error function. */
-function normal(x: number): number {
-  const z = Math.abs(x) / Math.SQRT2;
-  const t = 1 / (1 + 0.3275911 * z);
-  const polynomial =
-    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t;
-  const erf = 1 - polynomial * Math.exp(-z * z);
-  return 0.5 * (1 + Math.sign(x) * erf);
-}
-
-/**
- * How strong a fade is at `inside` from its line: a stroke twice the depth wide at the strength,
- * under a Gaussian blur of half the depth, read inside the path.
- */
-function fadedAt(strength: number, depth: number, inside: number): number {
-  const sigma = depth / 2;
-  return strength * (normal((depth - inside) / sigma) - normal((-depth - inside) / sigma));
 }
 
 // Not the context's `filter`: Safari ships it disabled.

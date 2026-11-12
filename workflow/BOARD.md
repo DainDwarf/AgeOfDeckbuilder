@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The units** — every unit kind of the catalogue is drawn on the map, in fog and on the infopanel as his painting in a halo of its faction's colour, in his canoe while embarked, no code-drawn unit shape left, `e2e/fog.spec.ts` reading a unit's halo in its faction's colour in sight and under the fog's tint in fog, and `docs/LOOK.md` says so. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`. [board/the-units.md](board/the-units.md)
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
 - **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
 - **A health bar on units** — a unit on the map shows its health.

@@ -161,8 +161,8 @@ declare global {
      * the voids left out; and how many of them that tint darkens.
      */
     faceCounts?: (fog: number) => { shown: number; inFog: number };
-    /** The colours the unit mark standing on the tile of that key is filled in, and nothing where none stands. */
-    unitMarkOn?: (key: string) => number[] | undefined;
+    /** The tints of the unit mark standing on the tile of that key, and nothing where none stands. */
+    unitMarkOn?: (key: string) => UnitTints | undefined;
   }
 }
 
@@ -351,6 +351,9 @@ export type Axes = { x: { x: number; y: number }; y: { x: number; y: number } };
 /** How far a panel stands scrolled, and how far it can. */
 type Scrolled = { offset: number; overflow: number };
 
+/** What a unit's mark is tinted by: its halo and its painting, nothing where one is untinted. */
+export type UnitTints = { halo: number | undefined; painting: number | undefined };
+
 /** Everything the run logged that it should not have; a clean run leaves it empty. */
 export function watch(page: Page): string[] {
   const problems: string[] = [];
@@ -484,21 +487,22 @@ export async function readNames(page: Page): Promise<void> {
       return { shown: faces.length, inFog: inFog.length };
     };
 
-    // A live unit's marker holds its shapes in a container of their own beside its dim, named for its
-    // tile; the mark a tile in fog carries is a nameless container of the shapes, so it is found by
-    // standing where the tile's face does.
+    // The mark a tile in fog carries is nameless, so a unit's mark is found by standing where the
+    // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
     window.unitMarkOn = (key) => {
       const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
       if (face === undefined) return undefined;
       const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
       const mark = marks.find((one) => one.x === face.x && one.y === face.y);
       if (mark === undefined) return undefined;
-      const [first] = mark.list;
-      const shapes =
-        first?.type === 'Container' ? (first as Phaser.GameObjects.Container).list : mark.list;
-      return (shapes as Phaser.GameObjects.Polygon[])
-        .filter((shape) => shape.visible)
-        .map((shape) => shape.fillColor);
+      const tintOf = (frame: string): number | undefined => {
+        const image = (mark.list as Phaser.GameObjects.Image[]).find((one) =>
+          one.frame.name.endsWith(frame),
+        );
+        if (image === undefined) throw new Error(`the unit mark on ${key} draws no ${frame}`);
+        return image.isTinted ? image.tint : undefined;
+      };
+      return { halo: tintOf('#halo'), painting: tintOf('#lined') };
     };
 
     /** Where a point of the camera's world sits on the page, and what one unit of it measures there. */
@@ -1462,8 +1466,8 @@ function readerOf(
 
 /**
  * Every name handed read, and the unit mark standing on each tile handed, in one question to the
- * page: the reading of one of the names, and the colours a tile's mark is filled in, its hull's among
- * them where it stands embarked; nothing on a tile no mark stands on.
+ * page: the reading of one of the names, and the tints of a tile's mark; nothing on a tile no mark
+ * stands on.
  */
 export async function readingsAndUnitMarks(
   page: Page,
@@ -1471,7 +1475,7 @@ export async function readingsAndUnitMarks(
   tiles: readonly TileCoords[],
 ): Promise<{
   read: (name: string) => Reading;
-  unitMarkOn: (tile: TileCoords) => number[] | undefined;
+  unitMarkOn: (tile: TileCoords) => UnitTints | undefined;
 }> {
   const keys = tiles.map(tileKey);
   const { answers, marks } = await page.evaluate(
@@ -1489,6 +1493,15 @@ export async function readingsAndUnitMarks(
       return marks[at] ?? undefined;
     },
   };
+}
+
+/** The tints of the unit mark standing on each tile handed, in one question to the page; nothing on a tile no mark stands on. */
+export async function unitMarksOn(
+  page: Page,
+  tiles: readonly TileCoords[],
+): Promise<(UnitTints | undefined)[]> {
+  const { unitMarkOn } = await readingsAndUnitMarks(page, [], tiles);
+  return tiles.map(unitMarkOn);
 }
 
 /**

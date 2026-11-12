@@ -1,20 +1,8 @@
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
+import { grownOf, haloOf } from './fade';
 import { LOOK, type Wash } from './look';
 import type { Made, Sheet } from './sheet';
-
-const BLOCK: number[] = [-11, -11, 11, -11, 11, 11, -11, 11];
-
-const POINT: number[] = [0, -14, 13, 9, -13, 9];
-
-/** Placeholder primitives until the art pass, each its corners about its own centre, raw. */
-const UNIT_MARKS: Readonly<Record<string, number[]>> = {
-  worker: BLOCK,
-  warrior: POINT,
-  scout: [0, -14, 11, 12, 0, 5, -11, 12],
-  archer: [-13, -9, 13, -9, 0, 14],
-  leader: [0, -14, 13, -4, 8, 12, -8, 12, -13, -4],
-};
 
 /** What a feature's tile wears beside its icon: a herd of its animal, his pond, or its painting tinted. */
 export type FeatureDress =
@@ -256,6 +244,178 @@ const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
   'stone-beast-bones': BEAST_BONES,
 };
 
+const ARMS = 'store/icons-medieval-arms-and-armor/icons';
+
+/** His canoe, which an embarked unit stands in, under the assets folder. */
+export const CANOE = 'store/hex-rivers-coasts-and-seas/Decor/canoe00.png';
+
+/** How many of his pixels wide an arms icon is, and how many of the map's units it is drawn at a size of one. */
+const ARMS_PIXELS = 128;
+const UNIT_WIDTH = 18;
+
+/** How deep a unit's halo fades out from its painting's outline, and how wide the dark line between them is, in the map's units. */
+const HALO_DEPTH = 4;
+const DARK_LINE = 0.25;
+
+/** His arms icon a unit kind is drawn as: its file, its size against `UNIT_WIDTH`, and where his paint lies in it, in his pixels. */
+type UnitPicture = { readonly file: string; readonly size: number; readonly ink: Box };
+
+const UNIT_PICTURES: Readonly<Record<string, UnitPicture>> = {
+  worker: { file: `${ARMS}/mallet.png`, size: 1, ink: { x: 25, y: 21, width: 82, height: 93 } },
+  warrior: {
+    file: `${ARMS}/spiked_club.png`,
+    size: 1,
+    ink: { x: 8, y: 8, width: 113, height: 114 },
+  },
+  scout: {
+    file: `${ARMS}/shoes_leather.png`,
+    size: 1,
+    ink: { x: 7, y: 16, width: 112, height: 97 },
+  },
+  archer: { file: `${ARMS}/shortbow.png`, size: 1.1, ink: { x: 35, y: 1, width: 57, height: 126 } },
+  leader: {
+    file: `${ARMS}/decorative_axe.png`,
+    size: 1.15,
+    ink: { x: 3, y: 1, width: 121, height: 124 },
+  },
+};
+
+/** How many of his pixels one of the map's units is in a painting drawn at that size. */
+function pixelsToTheUnit(size: number): number {
+  return ARMS_PIXELS / (UNIT_WIDTH * size);
+}
+
+/** The room a frame painted off his icon keeps round it on every side to reach that many units past it, in his pixels. */
+function roomFor(reach: number, size: number): number {
+  return Math.ceil(reach * pixelsToTheUnit(size)) + 1;
+}
+
+/** The frame of the units sheet a unit kind's painting stands in, the dark line round it. */
+function linedName(file: string): string {
+  return `${file}#lined`;
+}
+
+/** The frame of the units sheet a unit kind's halo stands in, white for a tint to colour. */
+function haloName(file: string): string {
+  return `${file}#halo`;
+}
+
+/**
+ * A frame his icon is painted off, the icon in its middle with room round it to reach that many
+ * units past it: `paint` is handed a canvas of the frame's size, the icon's alpha on it, how many
+ * pixels a unit is, and the way to draw the icon onto it.
+ */
+function aroundIcon(
+  { file, size }: UnitPicture,
+  frame: string,
+  reach: number,
+  paint: (
+    on: CanvasRenderingContext2D,
+    alpha: Uint8ClampedArray,
+    pixels: number,
+    icon: () => void,
+  ) => void,
+): Made {
+  const room = roomFor(reach, size);
+  const side = ARMS_PIXELS + 2 * room;
+  return {
+    frame,
+    width: side,
+    height: side,
+    paint: (context, paintingIn) => {
+      const from = paintingIn(UNIT_SHEET.key, file);
+      const canvas = document.createElement('canvas');
+      canvas.width = side;
+      canvas.height = side;
+      const on = canvas.getContext('2d');
+      if (on === null) throw new Error('no canvas of the page draws in two dimensions');
+      const icon = (): void =>
+        on.drawImage(
+          from.canvas,
+          from.x,
+          from.y,
+          from.width,
+          from.height,
+          room,
+          room,
+          from.width,
+          from.height,
+        );
+      icon();
+      const { data } = on.getImageData(0, 0, side, side);
+      const alpha = Uint8ClampedArray.from({ length: side * side }, (_, at) => data[4 * at + 3]);
+      paint(on, alpha, pixelsToTheUnit(size), icon);
+      context.drawImage(canvas, 0, 0);
+    },
+  };
+}
+
+/** Every pixel of a canvas painted in a colour, as strong as `strengths` says, out of one. */
+function washed(on: CanvasRenderingContext2D, colour: number, strengths: Float64Array): void {
+  const { width, height } = on.canvas;
+  const image = on.createImageData(width, height);
+  strengths.forEach((strength, at) => {
+    image.data[4 * at] = (colour >> 16) & 0xff;
+    image.data[4 * at + 1] = (colour >> 8) & 0xff;
+    image.data[4 * at + 2] = colour & 0xff;
+    image.data[4 * at + 3] = Math.round(0xff * strength);
+  });
+  on.putImageData(image, 0, 0);
+}
+
+/** A unit kind's painting over the dark line round it: his outline grown by the line, in the map's outline colour. */
+function linedFrame(picture: UnitPicture): Made {
+  return aroundIcon(picture, linedName(picture.file), DARK_LINE, (on, alpha, pixels, icon) => {
+    const { width, height } = on.canvas;
+    washed(on, LOOK.mapOutline, grownOf(alpha, width, height, DARK_LINE * pixels));
+    icon();
+  });
+}
+
+/** A unit kind's halo, in white: the fade out from his outline, painted once for every faction's tint. */
+function haloFrame(picture: UnitPicture): Made {
+  return aroundIcon(picture, haloName(picture.file), 2.5 * HALO_DEPTH, (on, alpha, pixels) => {
+    const { width, height } = on.canvas;
+    washed(on, 0xffffff, haloOf(alpha, width, height, LOOK.unitHalo, HALO_DEPTH * pixels));
+  });
+}
+
+/** The sheet his arms icons a unit kind is drawn as are drawn into, his canoe, and each kind's painting lined and its halo. */
+export const UNIT_SHEET: Sheet = {
+  key: 'units',
+  files: [...Object.values(UNIT_PICTURES).map(({ file }) => file), CANOE],
+  made: [
+    ...Object.values(UNIT_PICTURES).map(linedFrame),
+    ...Object.values(UNIT_PICTURES).map(haloFrame),
+  ],
+  side: 1024,
+};
+
+/** How a unit kind is drawn: its painting lined and its halo, frames of the units sheet, each drawn at `scale` about its middle. */
+export type UnitPainting = {
+  readonly painting: string;
+  readonly halo: string;
+  readonly scale: number;
+};
+
+/** How a unit kind is drawn; a kind with no painting is refused. */
+export function unitPaintingOf(type: string): UnitPainting {
+  const { file, size } = drawn(UNIT_PICTURES, type, 'no painting is drawn for the unit kind');
+  return { painting: linedName(file), halo: haloName(file), scale: 1 / pixelsToTheUnit(size) };
+}
+
+/** Where his paint and the dark line round it lie in each frame a unit kind's painting stands in, in its pixels. */
+const LINED_PAINT: Readonly<Record<string, Box>> = Object.fromEntries(
+  Object.values(UNIT_PICTURES).map(({ file, size, ink }) => {
+    const shift = roomFor(DARK_LINE, size) - DARK_LINE * pixelsToTheUnit(size);
+    const grown = 2 * DARK_LINE * pixelsToTheUnit(size);
+    return [
+      linedName(file),
+      { x: ink.x + shift, y: ink.y + shift, width: ink.width + grown, height: ink.height + grown },
+    ];
+  }),
+);
+
 /** A box in a frame's own pixels, from its top-left corner. */
 type Box = {
   readonly x: number;
@@ -264,8 +424,9 @@ type Box = {
   readonly height: number;
 };
 
-/** Where his paint lies in each file a building is drawn with, in his pixels. */
+/** Where his paint lies in each file a building is drawn with and each frame a unit kind's painting stands in, in its pixels. */
 const PAINT: Readonly<Record<string, Box>> = {
+  ...LINED_PAINT,
   [YURT]: { x: 1, y: 5, width: 96, height: 76 },
   [`${LOCATIONS}/villageThatched00.png`]: { x: 2, y: 130, width: 250, height: 223 },
   [`${LOCATIONS}/villageThatched01.png`]: { x: 4, y: 121, width: 243, height: 231 },
@@ -682,11 +843,6 @@ export function pickOf(one: number, other: number, count: number): number {
   hash = Math.imul(hash ^ (hash >>> 15), 0x85ebca6b);
   hash ^= hash >>> 13;
   return (hash >>> 0) % count;
-}
-
-/** The corners a unit kind's mark is drawn from; a kind with no mark is refused. */
-export function unitMarkOf(type: string): number[] {
-  return drawn(UNIT_MARKS, type, 'no mark is drawn for the unit kind');
 }
 
 /** The flat colour a terrain is known by; a terrain with no colour is refused. */

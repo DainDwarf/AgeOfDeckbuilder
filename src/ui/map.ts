@@ -56,7 +56,6 @@ import {
   assignedMark,
   asTerrain,
   asUnit,
-  asUnitDim,
   asVoid,
   asYield,
   buildingStandsAs,
@@ -90,6 +89,7 @@ import {
   thresholdMark,
   tileFace,
   type UnitObjects,
+  unitMarker,
   unreadGlow,
   wearing,
 } from './map-marks';
@@ -358,7 +358,7 @@ export function createMapView(
   const improvementIconPool = poolOf(improvements, () =>
     scene.add.image(0, 0, FEATURE_SHEET_KEY).setDepth(1),
   );
-  const fogUnitPool = poolOf(marks, () => scene.add.container(0, 0));
+  const fogUnitPool = poolOf(marks, () => unitMarker(scene));
   const riverPool = poolOf(rivers, () => scene.add.image(0, 0, RIVER_SHEET.key));
   const straightPool = poolOf(rivers, () =>
     scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
@@ -736,7 +736,7 @@ export function createMapView(
     }
     if (!inFog) return painted;
     const unitMarked = (type: string, faction: Faction, embarked: boolean): void => {
-      painted.push(asUnit(fogUnitPool.take(), type, faction, embarked, true).setPosition(x, y));
+      painted.push(asUnit(fogUnitPool.take(), type, faction, embarked, 'fog').setPosition(x, y));
     };
     // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
     // walked onto it since.
@@ -865,13 +865,11 @@ export function createMapView(
   const objectsOf = (unit: Unit): UnitObjects => {
     const kept = unitObjects.get(unit.id);
     if (kept !== undefined) return kept;
-    const parts = scene.add.container(0, 0);
-    const dim = scene.add.container(0, 0);
-    const marker = scene.add.container(0, 0, [parts, dim]).setDepth(1);
+    const marker = unitMarker(scene).setDepth(1);
     const hue = unreadGlow(scene);
     marks.add(marker);
     hues.add(hue);
-    const made = { marker, parts, dim, hue };
+    const made = { marker, hue };
     unitObjects.set(unit.id, made);
     return made;
   };
@@ -884,21 +882,19 @@ export function createMapView(
 
   /**
    * Everything the map keeps of a unit as it draws it on a chronicle, over whatever a motion left: a
-   * unit of the player's with no move points and no action left under its dim, and a tile not drawn
-   * live showing none of it.
+   * unit of the player's with no move points and no action left dimmed, and a tile not drawn live
+   * showing none of it.
    */
   const paintUnit = (chronicle: Chronicle, seen: Drawing, unit: Unit): UnitObjects => {
     const own = objectsOf(unit);
-    const { marker, parts, dim, hue } = own;
+    const { marker, hue } = own;
     const key = tileKey(unit.tile);
     const { x, y } = positionOf(unit.tile);
-    const { type } = unit.stats;
     const stands = seen.live.has(key);
     const spent = unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0;
     stopMotion(scene, [marker, hue]);
     asPainted(marker).setPosition(x, y).setName(`unit-${key}`).setVisible(stands);
-    asUnit(parts, type, unit.faction, unit.embarked, false);
-    asUnitDim(dim, type, unit.embarked).setName(`unit-dim-${key}`).setVisible(spent);
+    asUnit(marker, unit.stats.type, unit.faction, unit.embarked, spent ? 'done' : 'clear');
     paintHue(unit).setVisible(stands && preparedAs(chronicle, unit) !== undefined);
     return own;
   };

@@ -25,9 +25,10 @@ import {
   featureMark,
   improvementMark,
   type Mark,
-  paintedBounds,
+  paintedBoundsOf,
   riverMark,
   terrainMark,
+  unitFittedBy,
   unitMark,
 } from './map-marks';
 import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
@@ -453,7 +454,7 @@ function buildFace(
   drawCardSurface(paper, 0, 0, { width });
 
   const head = headOf(scene, catalogue, card);
-  const mark = fitMark(head.mark, markBox).setPosition(left + markBox / 2, middle);
+  const mark = fitMark(head.mark, markBox, head.fittedBy).setPosition(left + markBox / 2, middle);
   const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title)
     .setOrigin(0, 0.5)
     .setName('panel-name');
@@ -609,15 +610,16 @@ function buildFace(
   return { root: scene.add.container(0, 0, contents), hovers };
 }
 
-/** What the card is headed by: the unit it stands for, or the first row it holds. */
+/** What the card is headed by, the unit it stands for or the first row it holds, and what fits it to its box. */
 function headOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   card: Drawing,
-): { mark: Mark; name: string } {
+): { mark: Mark; fittedBy?: readonly Mark[]; name: string } {
   if (card.kind === 'unit') {
     const { stats, faction, embarked } = card.unit;
-    return { mark: unitMark(scene, stats.type, faction, embarked), name: unitName(stats.type) };
+    const mark = unitMark(scene, stats.type, faction, embarked);
+    return { mark, fittedBy: unitFittedBy(mark), name: unitName(stats.type) };
   }
   return { mark: markOf(scene, catalogue, card.rows[0]), name: nameOf(card.rows[0]) };
 }
@@ -740,10 +742,13 @@ function amountsOf(amounts: Partial<Resources>): { resource: Resource; amount: n
   return named;
 }
 
-/** A mark drawn at the size it has on the map, brought into a box by its paint; an outline keeps its weight. */
-function fitMark(mark: Mark, box: number): Mark {
+/**
+ * A mark drawn at the size it has on the map, brought into a box by the paint of what it is fitted
+ * by; an outline keeps its weight.
+ */
+function fitMark(mark: Mark, box: number, fittedBy: readonly Mark[] = [mark]): Mark {
   const shapes = mark instanceof Phaser.GameObjects.Container ? mark.list : [mark];
-  const { width, height } = paintedBounds(mark);
+  const { width, height } = paintedBoundsOf(fittedBy);
   const scale = box / Math.max(width, height);
   for (const shape of shapes) {
     if (shape instanceof Phaser.GameObjects.Shape) {

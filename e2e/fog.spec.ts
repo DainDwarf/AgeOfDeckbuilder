@@ -377,7 +377,7 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   expect(read(`improvement-${TRAPPING}-${trappedKey}`).tint).toBe(LOOK.fog);
   expect(read(`improvement-painting-${TRAPPING}-alone-${trappedKey}`).tint).toBe(LOOK.fog);
   expect(read(`building-${campKey}`).tint).toBe(LOOK.fog);
-  expect(unitMarkOn(camp)).toEqual([fogged(LOOK.enemy)]);
+  expect(unitMarkOn(camp)).toEqual({ halo: fogged(LOOK.enemy), painting: LOOK.fog });
 
   // A tile in sight: no tint, and every colour as it is.
   expect(read(`feature-${wildKey}`).tint).toBeUndefined();
@@ -387,7 +387,7 @@ test('every painting and mark a tile in fog carries is darkened by the fog’s t
   expect(read(`improvement-${TRAPPING}-${litKey}`).tint).toBeUndefined();
   expect(read(`improvement-painting-${TRAPPING}-alone-${litKey}`).tint).toBeUndefined();
   expect(read(`building-${cityKey}`).tint).toBeUndefined();
-  expect(unitMarkOn(lit)).toEqual([LOOK.civilization]);
+  expect(unitMarkOn(lit)).toEqual({ halo: LOOK.civilization, painting: undefined });
 
   const tints = read('river').tints;
   expect(tints.filter((tint) => tint === LOOK.fog).length).toBe(corners.inFog);

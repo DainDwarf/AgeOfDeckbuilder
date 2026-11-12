@@ -45,7 +45,7 @@ import {
   improvementLookOf,
   paintingsOf,
   terrainColourOf,
-  unitMarkOf,
+  unitPaintingOf,
 } from '../ui/marks';
 import {
   achievementGoal,
@@ -109,10 +109,10 @@ test('the catalogue holds together', () => {
   expect(catalogued(CATALOGUE)).toBe(CATALOGUE);
 });
 
-test('every unit kind of the catalogue has a name and a mark on the screen', () => {
+test('every unit kind of the catalogue has a name and a painting on the screen', () => {
   for (const id of Object.keys(CATALOGUE.units)) {
     expect(() => unitName(id)).not.toThrow();
-    expect(() => unitMarkOf(id)).not.toThrow();
+    expect(() => unitPaintingOf(id)).not.toThrow();
   }
 });
 
