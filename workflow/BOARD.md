@@ -19,6 +19,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **A unit's path drawn** — during the move aim, hovering or dragging over the reach zone displays the path the unit would take.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
 - **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
 - **A health bar on units** — a unit on the map shows its health.
