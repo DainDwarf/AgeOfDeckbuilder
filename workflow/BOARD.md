@@ -19,10 +19,10 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Fix the overlay design** — the dims and what they lift over them are a design issue, the reach left over the prepared tint once the yield overlay goes off and the ringed unit under the other units with no dim among it; do NOT reorder sheets.
+- **Fix the overlay design** — what the map draws stands in one order whatever is switched on, from the ground up the land and its borders, the buildings and discs with a city's badge, city mode's marks and dim, the yield overlay's dim, the marks of the selection and the aim, the units, the yield glyphs, and nothing changes place when a dim comes on; `e2e/map-order.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`. [board/fix-the-overlay-design.md](board/fix-the-overlay-design.md)
 - **A unit or its tile selected** — successive left clicks on a tile a unit stands on switch between selecting the unit and selecting the tile, the unit first, and an inspection starts on the card of what is selected.
 - **The attack on a unit** — the enemies a selected unit can attack wear their mark on the unit itself, read with the path's hover and drag, an attack icon at the path's end where the move results in an attack maybe.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, read beside its ring and the attack's mark.
 - **A health bar on units** — a unit on the map shows its health.
-- **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold.
+- **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.
 - **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.
