@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { entered } from './catalogue';
+import { entered, fullHealth } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cultureThreshold } from './city';
 import {
@@ -36,7 +36,7 @@ import { seedRng } from './rng';
 import { charted, chartedAt, inSight } from './sight';
 import { type Stage, walked } from './stages';
 import type { Chronicle, CitySection, NeutralCity, Snapshot } from './state';
-import type { UnitStats } from './units';
+import { type UnitStats, unitAt } from './units';
 
 /** The city's own tile and the six around it. */
 const RING: readonly TileCoords[] = [CITY, ...neighbours(CITY)];
@@ -366,16 +366,32 @@ function leftInFog(neutral?: NeutralCity): {
   return { seen, left: [once, twice] };
 }
 
-const ENEMY = { type: 'PH_Warrior', faction: 'enemy', embarked: false } as const;
+const ENEMY = { stats: { type: 'PH_Warrior' }, faction: 'enemy', embarked: false } as const;
 
 test('a unit kept in fog stays in the snapshot through the commands of the turn', () => {
   const { seen, left } = leftInFog();
-  expect(snapshotOf(seen, off(2, 0))?.unit).toEqual(ENEMY);
+  expect(snapshotOf(seen, off(2, 0))?.unit).toMatchObject(ENEMY);
 
   for (const chronicle of left) {
     expect(sees(chronicle, off(2, 0))).toBe(false);
-    expect(snapshotOf(chronicle, off(2, 0))?.unit).toEqual(ENEMY);
+    expect(snapshotOf(chronicle, off(2, 0))?.unit).toMatchObject(ENEMY);
   }
+});
+
+test('a unit wounded in sight is recorded wounded, and kept so once the fog covers it', () => {
+  const target = off(2, 0);
+  const raided = raiding(
+    watching(watching(cityOn(ground()), WATCHER, { sight: SIGHT }), off(1, 0), { sight: 0 }),
+    target,
+  );
+  const struck = outcome(apply(CATALOGUE, raided, { type: 'attack', unit: 2, tile: target }));
+  const left = outcome(apply(CATALOGUE, struck, { type: 'move', unit: 1, tile: off(0, -1) }));
+  const wounded = unitAt(struck.units, target);
+
+  if (wounded === undefined) throw new Error('the attack killed the enemy');
+  expect(wounded.stats.health).toBeLessThan(fullHealth(CATALOGUE, wounded.stats));
+  expect(sees(left, target)).toBe(false);
+  expect(snapshotOf(left, target)?.unit?.stats.health).toBe(wounded.stats.health);
 });
 
 test('when the turn ticks a unit kept in fog leaves the snapshot, and its tile stays as it was last seen', () => {
@@ -420,9 +436,9 @@ test('an enemy seen embarking is kept in the snapshot embarked, in fog as in sig
   const ticked = outcome(apply(rowing, raided, { type: 'end-turn' }));
   const left = outcome(apply(rowing, ticked, { type: 'move', unit: 1, tile: off(0, -2) }));
 
-  expect(snapshotOf(ticked, coast)?.unit).toEqual({ ...ENEMY, embarked: true });
+  expect(snapshotOf(ticked, coast)?.unit).toMatchObject({ ...ENEMY, embarked: true });
   expect(sees(left, coast)).toBe(false);
-  expect(snapshotOf(left, coast)?.unit).toEqual({ ...ENEMY, embarked: true });
+  expect(snapshotOf(left, coast)?.unit).toMatchObject({ ...ENEMY, embarked: true });
 });
 
 test('a snapshot keeps the city whose border its tile stands inside: taken again as a claim moves the border in sight, and kept when the turn ticks a unit out of it in fog', () => {
@@ -463,7 +479,7 @@ test('a unit standing in sight when the turn ticks is still recorded', () => {
   expect(ticked.turn).toBe(raided.turn + 1);
   if (enemy === undefined) throw new Error('no enemy stands on the map');
   expect(sees(ticked, enemy.tile)).toBe(true);
-  expect(snapshotOf(ticked, enemy.tile)?.unit).toEqual(ENEMY);
+  expect(snapshotOf(ticked, enemy.tile)?.unit).toMatchObject(ENEMY);
 });
 
 test('a killed unit charts nothing more: its killer, out of sight, leaves the snapshot when the turn ticks', () => {
@@ -481,7 +497,7 @@ test('a killed unit charts nothing more: its killer, out of sight, leaves the sn
 
   expect(killed.units.every((unit) => unit.faction === 'enemy')).toBe(true);
   expect(tileKey(killed.units[0].tile)).toBe(tileKey(stood));
-  expect(seenAtTheBlow?.unit).toEqual(ENEMY);
+  expect(seenAtTheBlow?.unit).toMatchObject(ENEMY);
   expect(sees(killed, stood)).toBe(false);
   expect(snapshotOf(killed, stood)?.unit).toBeUndefined();
   expect(snapshotOf(killed, stood)?.tile).toBe(seenAtTheBlow?.tile);

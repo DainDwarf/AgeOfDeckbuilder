@@ -1,24 +1,17 @@
 import Phaser from 'phaser';
 import { bonusOf, type Catalogue, damageOf, fullHealth, unitKind } from '../rules/catalogue';
 import { preparedAs } from '../rules/enemies';
-import {
-  groundCost,
-  movementCost,
-  type River,
-  runsAlong,
-  type Tile,
-  type TilesBeside,
-} from '../rules/map';
+import { groundCost, movementCost, runsAlong, type TilesBeside } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { Chronicle } from '../rules/state';
-import { relationsOf, type Unit, unitAt } from '../rules/units';
+import { relationsOf, type Unit } from '../rules/units';
 import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf, SMALLEST_TYPE } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
-import type { TileFace } from './map';
+import { type Drawn, type TileFace, unitDrawn } from './map';
 import {
   buildingMark,
   featureMark,
@@ -39,9 +32,9 @@ import type { Tooltip } from './tooltip';
 type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Partial<Resources> };
 
 /**
- * What a unit card reads: a unit on the map, or a unit kind read as a unit fresh of it, the damage
- * its attack removes, what its prepare lands as, if it has prepared, and whether it is the neutral's
- * while it is hostile.
+ * What a unit card reads: a unit on the map, one a snapshot kept as it stood, or a unit kind read as
+ * a unit fresh of it, the damage its attack removes, what its prepare lands as, if it has prepared,
+ * and whether it is the neutral's while it is hostile.
  */
 type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
   readonly damage: number;
@@ -156,24 +149,27 @@ function placeOf(source: YieldSource): 'building' | 'ground' | 'beside' {
 }
 
 /**
- * What a tile is made of right now, as the cards an inspection steps, each row read off the tile's
+ * What the map draws of a tile, as the cards an inspection steps, each row read off the face's
  * yield: the unit, the building card, and the terrain card, which always stands.
  */
 export function cardsOf(
   catalogue: Catalogue,
-  tile: Tile,
-  units: readonly Unit[],
-  chronicle: Pick<Chronicle, 'city' | 'relations' | 'turn' | 'timeline'>,
-  rivers: readonly River[],
+  face: Drawn,
+  chronicle: Pick<
+    Chronicle,
+    'city' | 'neutral' | 'relations' | 'turn' | 'timeline' | 'units' | 'rivers'
+  >,
   beside: TilesBeside,
 ): Card[] {
+  const { tile } = face;
   const cards: Card[] = [];
 
-  const unit = unitAt(units, tile);
-  if (unit !== undefined) {
+  const drawn = unitDrawn(face, chronicle.units);
+  if (drawn !== undefined) {
+    const unit = { ...drawn, tile: { q: tile.q, r: tile.r } };
     const prepares = preparedAs(chronicle, unit);
     const hostile = unit.faction === 'neutral' && relationsOf(chronicle) === 'hostile';
-    const damage = damageOf(catalogue, units, unit);
+    const damage = damageOf(catalogue, chronicle.units, unit);
     cards.push({ kind: 'unit', unit: { ...unit, damage, prepares, hostile } });
   }
 
@@ -184,7 +180,7 @@ export function cardsOf(
   const built = rows('building');
   if (built.length > 0) cards.push({ kind: 'building', rows: built });
 
-  const river: Row[] = runsAlong(rivers, tile) ? [{ kind: 'river', yields: {} }] : [];
+  const river: Row[] = runsAlong(chronicle.rivers, tile) ? [{ kind: 'river', yields: {} }] : [];
   cards.push({
     kind: 'terrain',
     rows: [...rows('ground'), ...river, ...rows('beside')],

@@ -780,18 +780,17 @@ function rankedClaims(
  */
 function shownEntering(
   tile: TileCoords,
-  { type, faction, embarked }: SnapshotUnit,
+  { stats, faction, embarked }: SnapshotUnit,
   embarkedMove: number | undefined,
 ): Entering {
-  const carried = { type, tile, embarkedMove: embarked ? embarkedMove : undefined };
-  switch (faction) {
-    case 'player':
-      return { ...carried, faction };
-    case 'enemy':
-    case 'neutral':
-      // The map shows no script: the walk and the attack the unit is handed to read none.
-      return { ...carried, faction, script: '' };
-  }
+  // The map shows no script: the walk and the attack the unit is handed to read none.
+  return {
+    type: stats.type,
+    tile,
+    faction,
+    script: '',
+    embarkedMove: embarked ? embarkedMove : undefined,
+  };
 }
 
 /**

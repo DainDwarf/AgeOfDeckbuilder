@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A unit in fog read as last seen** — the snapshot keeps the unit on its tile as it stood, and a tile in fog holds that unit's card, first in its cycle, read as last seen, Hostile alone read as the neutral stands now; a test in `src/rules/sight.test.ts` holds what the snapshot keeps, `e2e/fog.spec.ts` proves the card, and the two pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`. [board/a-unit-in-fog-read-as-last-seen.md](board/a-unit-in-fog-read-as-last-seen.md)
 - **A unit or its tile selected** — a left click on a tile a unit stands on, in sight or kept in fog, selects the unit, a click on the selected unit selects its tile, and a click on that tile selects the unit again or, on the player's city's own tile, enters city mode; an inspection of the selection opens on the card of what is selected; `e2e/unit-ring.spec.ts` proves it and the three pages say so. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/a-unit-or-its-tile-selected.md](board/a-unit-or-its-tile-selected.md)
 - **The personas read a unit as last seen** — the map a persona knows stands each unit a snapshot carries as it was last seen, in place of a fresh one of its kind.
 - **The attack on a unit** — the enemies a selected unit can attack wear their mark on the unit itself, read with the path's hover and drag, an attack icon at the path's end where the move results in an attack maybe.

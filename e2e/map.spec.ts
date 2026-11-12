@@ -62,7 +62,6 @@ import {
   type BorderStroke,
   borderStrokes,
   budget,
-  campGround,
   campKind,
   campsOf,
   chronicleOf,
@@ -76,6 +75,7 @@ import {
   endTurn,
   enter,
   firstSeed,
+  freeGround,
   idsOf,
   inside,
   mapFrame,
@@ -226,7 +226,7 @@ async function standsOver(
  * its one move with a tile of it in sight and no deal, and the crossing's two tiles.
  */
 function raiderThreeOff(): { chronicle: Chronicle; from: TileCoords; to: TileCoords } {
-  for (const tile of campGround(OPENED, 3)) {
+  for (const tile of freeGround(OPENED, campKind(OPENED), 3)) {
     const { raider } = ageOf(CATALOGUE, OPENED.age).camp.scripts;
     const chronicle = unitEntered(OPENED, enemyEntering(campKind(OPENED), raider, tile));
     const stages = [...walked(apply(CATALOGUE, chronicle, { type: 'end-turn' }))];

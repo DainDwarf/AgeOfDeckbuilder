@@ -1201,7 +1201,11 @@ export function bonusOf(catalogue: Catalogue, stats: UnitStats): number {
 }
 
 /** The bonus a unit carries: that of every unit of its faction standing beside it, together. */
-export function bonusCarried(catalogue: Catalogue, units: readonly Unit[], unit: Unit): number {
+export function bonusCarried(
+  catalogue: Catalogue,
+  units: readonly Unit[],
+  unit: Pick<Unit, 'faction' | 'tile'>,
+): number {
   let carried = 0;
   for (const other of units) {
     if (other.faction !== unit.faction || distance(other.tile, unit.tile) !== 1) continue;
@@ -1211,7 +1215,11 @@ export function bonusCarried(catalogue: Catalogue, units: readonly Unit[], unit:
 }
 
 /** The damage a unit's attack removes: its own, and the bonus it carries. */
-export function damageOf(catalogue: Catalogue, units: readonly Unit[], unit: Unit): number {
+export function damageOf(
+  catalogue: Catalogue,
+  units: readonly Unit[],
+  unit: Pick<Unit, 'stats' | 'faction' | 'tile'>,
+): number {
   return unit.stats.damage + bonusCarried(catalogue, units, unit);
 }
 

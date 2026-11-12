@@ -12,8 +12,8 @@ import {
   tilesBeside,
 } from './map';
 import { type MapContent, refuse } from './map-kinds';
-import { type Chronicle, holderOf, onSettlePhase, type Snapshot } from './state';
-import { type Unit, unitAt } from './units';
+import { type Chronicle, holderOf, onSettlePhase, type Snapshot, type SnapshotUnit } from './state';
+import { type Unit, type UnitStats, unitAt } from './units';
 
 /** A tile in the cube coordinates a line is drawn in: `x` is its q, `z` its r, and the three sum to nought. */
 type Cube = { readonly x: number; readonly y: number; readonly z: number };
@@ -175,6 +175,20 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
   return sightReading(catalogue, chronicle).inSight;
 }
 
+/** Whether two units kept read alike, stat by stat. */
+function sameUnit(kept: SnapshotUnit | undefined, now: SnapshotUnit | undefined): boolean {
+  if (kept === undefined || now === undefined) return kept === now;
+  const stats = Object.keys(kept.stats) as (keyof UnitStats)[];
+  return (
+    stats.every((stat) => kept.stats[stat] === now.stats[stat]) &&
+    kept.faction === now.faction &&
+    kept.movePoints === now.movePoints &&
+    kept.action === now.action &&
+    kept.embarked === now.embarked &&
+    kept.prepared === now.prepared
+  );
+}
+
 /**
  * Whether a snapshot already records what the tile, the city holding it and whoever stands on it now
  * show. A tile whose layers did not change is the very object it was: every path that layers a tile
@@ -185,22 +199,21 @@ function records(kept: Snapshot | undefined, snapshot: Snapshot): boolean {
     kept !== undefined &&
     kept.tile === snapshot.tile &&
     kept.holder === snapshot.holder &&
-    kept.unit?.type === snapshot.unit?.type &&
-    kept.unit?.faction === snapshot.unit?.faction &&
-    kept.unit?.embarked === snapshot.unit?.embarked
+    sameUnit(kept.unit, snapshot.unit)
   );
 }
 
 /**
  * The snapshot a tile is charted as: the tile as it stands, the city holding it, and the unit
- * standing on it, nobody where nobody stands and nobody where the unit is the player's own.
+ * standing on it as it stands, nobody where nobody stands and nobody where the unit is the player's
+ * own.
  */
 function taken(chronicle: Chronicle, tile: Tile): Snapshot {
   const standing = unitAt(chronicle.units, tile);
   const at: Snapshot = { q: tile.q, r: tile.r, tile, holder: holderOf(chronicle, tile) };
   if (standing === undefined || standing.faction === 'player') return at;
-  const { stats, faction, embarked } = standing;
-  return { ...at, unit: { type: stats.type, faction, embarked } };
+  const { stats, faction, movePoints, action, embarked, prepared } = standing;
+  return { ...at, unit: { stats, faction, movePoints, action, embarked, prepared } };
 }
 
 /** The chronicle with a snapshot taken of every tile in sight, as `chartedEach` takes them. */

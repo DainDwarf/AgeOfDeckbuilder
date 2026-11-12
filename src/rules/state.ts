@@ -1,7 +1,7 @@
 import { type River, type Tile, type TileCoords, tileKey } from './map';
 import { RESOURCES, type Resource, type Resources } from './resources';
 import type { Rng } from './rng';
-import type { Faction, Relations, Unit } from './units';
+import type { Relations, ScriptedFaction, Unit } from './units';
 
 /**
  * What ended the chronicle in defeat: an enemy captured the city, it was left without population, its
@@ -84,11 +84,13 @@ export type ChronicleAchievement = {
   readonly tally: Tally;
 };
 
-/** What a snapshot keeps of the unit that stood on the tile: what its mark is drawn from. */
-export type SnapshotUnit = {
-  readonly type: string;
-  readonly faction: Faction;
-  readonly embarked: boolean;
+/**
+ * What a snapshot keeps of the unit that stood on the tile, as it stood: what its mark is drawn from
+ * and what its card reads of the unit itself.
+ */
+export type SnapshotUnit = Pick<Unit, 'stats' | 'movePoints' | 'action' | 'embarked'> & {
+  readonly faction: ScriptedFaction;
+  readonly prepared: boolean;
 };
 
 /**

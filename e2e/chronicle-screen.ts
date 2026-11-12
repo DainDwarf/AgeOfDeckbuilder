@@ -2382,11 +2382,11 @@ export function campKind(chronicle: Chronicle): string {
 }
 
 /**
- * The tiles that far from the city the camp's kind can stand on with nobody on them, in the order the
- * map lists them.
+ * The tiles that far from the city a unit of the kind can stand on with nobody on them, in the order
+ * the map lists them.
  */
-export function campGround(chronicle: Chronicle, away: number): TileCoords[] {
-  const stats = unitKind(CATALOGUE, campKind(chronicle));
+export function freeGround(chronicle: Chronicle, kind: string, away: number): TileCoords[] {
+  const stats = unitKind(CATALOGUE, kind);
   const city = playerCityTile(chronicle);
   return chronicle.tiles
     .filter((tile) => distance(tile, city) === away && freeFor(chronicle, stats, tile))

@@ -58,6 +58,7 @@ import {
   FIRST_UNIT_NUMBER,
   LEAST_STATS,
   type Relations,
+  type ScriptedFaction,
   type Unit,
   type UnitStats,
 } from './units';
@@ -659,9 +660,9 @@ function snapshotOf(catalogue: Catalogue, slot: Slot): Snapshot {
     unit: optional(field('unit'), (item): SnapshotUnit => {
       const standing = record(catalogue, item);
       return {
-        type: id(catalogue, standing('type'), unitKind),
-        faction: factionOf(catalogue, standing('faction')),
-        embarked: flag(catalogue, standing('embarked')),
+        ...selfOf(catalogue, item),
+        faction: scriptedFactionOf(catalogue, standing('faction')),
+        prepared: flag(catalogue, standing('prepared')),
       };
     }),
   };
@@ -746,6 +747,17 @@ function factionOf(catalogue: Catalogue, slot: Slot): Faction {
   return refused(catalogue, slot, `names no faction ${unlisted}`);
 }
 
+function scriptedFactionOf(catalogue: Catalogue, slot: Slot): ScriptedFaction {
+  const faction = string(catalogue, slot) as ScriptedFaction;
+  switch (faction) {
+    case 'enemy':
+    case 'neutral':
+      return faction;
+  }
+  const unlisted: never = faction;
+  return refused(catalogue, slot, `names no scripted faction ${unlisted}`);
+}
+
 function cityFactionOf(catalogue: Catalogue, slot: Slot): CityFaction {
   const whose = string(catalogue, slot) as CityFaction;
   switch (whose) {
@@ -768,6 +780,25 @@ function relationsIn(catalogue: Catalogue, slot: Slot): Relations {
   return refused(catalogue, slot, `names no relations ${unlisted}`);
 }
 
+/** What a unit is of itself, on the map or kept in a snapshot. */
+function selfOf(
+  catalogue: Catalogue,
+  slot: Slot,
+): Pick<Unit, 'stats' | 'movePoints' | 'action' | 'embarked'> {
+  const field = record(catalogue, slot);
+  return {
+    stats: statsOf(catalogue, field('stats')),
+    movePoints: count(
+      catalogue,
+      field('movePoints'),
+      slot,
+      (points) => `has ${points} move points left`,
+    ),
+    action: count(catalogue, field('action'), slot, (action) => `has ${action} action left`),
+    embarked: flag(catalogue, field('embarked')),
+  };
+}
+
 function unitOf(catalogue: Catalogue, slot: Slot): Unit {
   const field = record(catalogue, slot);
   const standing = {
@@ -778,16 +809,8 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
       (number) => `is numbered ${number}, below the first unit number ${FIRST_UNIT_NUMBER}`,
       FIRST_UNIT_NUMBER,
     ),
-    stats: statsOf(catalogue, field('stats')),
     tile: coordsIn(catalogue, record(catalogue, field('tile'))),
-    movePoints: count(
-      catalogue,
-      field('movePoints'),
-      slot,
-      (points) => `has ${points} move points left`,
-    ),
-    action: count(catalogue, field('action'), slot, (action) => `has ${action} action left`),
-    embarked: flag(catalogue, field('embarked')),
+    ...selfOf(catalogue, slot),
   };
   const faction = factionOf(catalogue, field('faction'));
   switch (faction) {

@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import type { Campaign } from '../src/rules/campaign';
 import { built, featurePlaced, improvementPlaced, made, slotFree } from '../src/rules/cards';
-import { ageOf, unitKind } from '../src/rules/catalogue';
+import { ageOf, fullHealth, neutralOf, neutralScriptOf, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { enemyEntering } from '../src/rules/enemies';
+import { warDeclared } from '../src/rules/city';
+import { enemyEntering, preparedAs } from '../src/rules/enemies';
 import {
   cornerKey,
   neighbours,
@@ -18,14 +20,14 @@ import {
 } from '../src/rules/map';
 import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
-import { charted, chartedAt, inSight } from '../src/rules/sight';
+import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { reachable, type UnitStats, unitAt } from '../src/rules/units';
+import { reachable, relationsOf, type UnitStats, unitAt } from '../src/rules/units';
 import { LOOK, multiplied } from '../src/ui/look';
+import { text, unitName } from '../src/ui/text';
 import {
   budget,
-  campGround,
   campKind,
   chronicleOf,
   consoleKey,
@@ -36,12 +38,15 @@ import {
   faceCounts,
   firstSeed,
   freeFor,
+  freeGround,
   glyphs,
   glyphsOf,
   nearestUncharted,
+  neutralCampaign,
   onDeer,
   onDesignedSpeed,
   openSaved,
+  panelRows,
   playerCityTile,
   playersOf,
   readings,
@@ -109,16 +114,25 @@ function roundTrip(): {
 }
 
 /**
- * Seed 1's bare turn 1 with an enemy of the camp's kind entered four tiles from the city and that
- * tile charted, so the enemy's mark stands in fog there; and the tile.
+ * Seed 1's bare turn 1 on a campaign reaching the neutral, a unit of the neutral's of the first
+ * fighting kind its ratio names entered four tiles from the city out of its sight, wounded, its tile
+ * charted, wounded again unseen, and war declared after; the campaign, and the tile.
  */
-function enemyInFog(): { chronicle: Chronicle; fog: TileCoords } {
-  const bare = settledOn(1);
-  const [fog] = campGround(bare, 4);
-  if (fog === undefined) throw new Error('seed 1 leaves no ground four tiles from its city');
-  const { guard } = ageOf(CATALOGUE, bare.age).camp.scripts;
-  const guarded = unitEntered(bare, enemyEntering(campKind(bare), guard, fog));
-  return { chronicle: charted(CATALOGUE, chartedAt(CATALOGUE, guarded, fog)), fog };
+function neutralInFog(): { chronicle: Chronicle; campaign: Campaign; fog: TileCoords } {
+  const campaign = neutralCampaign();
+  const bare = settledOn(1, [], campaign);
+  const neutral = neutralOf(CATALOGUE, bare.age);
+  const kind = neutral.ratio.find((row) => !unitKind(CATALOGUE, row.kind).worker)?.kind;
+  if (kind === undefined) throw new Error(`the neutral of the age ${bare.age} fights with no kind`);
+  if (unitKind(CATALOGUE, kind).health <= 2) throw new Error(`${kind} lives through no two wounds`);
+  const seen = inSight(CATALOGUE, bare);
+  const fog = freeGround(bare, kind, 4).find((tile) => !seen.has(tileKey(tile)));
+  if (fog === undefined) throw new Error('seed 1 leaves no ground unseen four tiles from its city');
+  const script = neutralScriptOf(CATALOGUE, neutral, kind);
+  const entered = unitEntered(bare, { type: kind, faction: 'neutral', script, tile: fog });
+  const kept = chartedAt(CATALOGUE, unitDamaged(entered, fog, 1).chronicle, fog);
+  const unseen = unitDamaged(kept, fog, 1).chronicle;
+  return { chronicle: warDeclared(unseen).chronicle, campaign, fog };
 }
 
 /**
@@ -398,30 +412,36 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle: stood, fog } = enemyInFog();
+  const { chronicle: stood, campaign, fog } = neutralInFog();
   const uncharted = nearestUncharted(stood);
+  const kept = stood.snapshots.find((snapshot) => tileKey(snapshot) === tileKey(fog))?.unit;
+  if (kept === undefined) throw new Error('the snapshot of the tile in fog keeps no unit');
+  expect(kept.faction).toBe('neutral');
+  expect(kept.stats.health).not.toBe(unitAt(stood.units, fog)?.stats.health);
+  expect(relationsOf(stood)).toBe('hostile');
+  // Hostile stands alone on the card's state line: the unit kept is neither embarked nor prepared.
+  expect(kept.embarked).toBe(false);
+  expect(preparedAs(stood, { ...kept, tile: fog })).toBeUndefined();
 
-  await openSaved(page, stood);
+  await openSaved(page, stood, campaign);
 
   // The overlay glyphs the tiles the map draws, each from the faces it draws.
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  const kept = stood.snapshots.find((snapshot) => tileKey(snapshot) === tileKey(fog));
-  expect(kept?.unit?.faction).toBe('enemy');
   expect(await glyphs(page)).toEqual(glyphsOf(stood, drawnFaces(stood)));
 
-  // The tile in fog inspects as it was last seen, and the enemy on it is a mark and not a card.
+  // The tile in fog inspects as it was last seen, the card of the unit its snapshot keeps first:
+  // its health as kept, and Hostile as the neutral stands now.
   const fogged = await tileOnScreen(page, fog);
   await page.mouse.click(fogged.x, fogged.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(fog));
-  for (let press = 0; press < 3; press++) {
-    await page.keyboard.press('i');
-    await rested(page);
-    await rested(page);
-    const card = await shownCard(page);
-    expect(card).toBeDefined();
-    expect(card).not.toBe('unit');
-  }
+  await page.keyboard.press('i');
+  await expect.poll(() => shownCard(page)).toBe('unit');
+  const rows = (await panelRows(page)).map((row) => row.text);
+  expect(rows.slice(0, 2)).toEqual([unitName(kept.stats.type), text('unit-state.hostile')]);
+  expect(rows[rows.indexOf(text('label.health')) + 1]).toBe(
+    `${kept.stats.health} / ${fullHealth(CATALOGUE, kept.stats)}`,
+  );
 
   // A press on an uncharted tile lands off the map, on his void: it rings nothing and inspects nothing.
   expect(await standing(page, `void-${tileKey(uncharted)}`)).toBe(true);

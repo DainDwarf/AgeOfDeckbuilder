@@ -191,15 +191,26 @@ test('a chronicle saved with a camp mid-wait reads back with it waiting, and wai
   expect(outcome(played)).toEqual(outcome(apply(waiting, entered, command)));
 });
 
-test('a chronicle saved with an enemy prepared reads back with it prepared', () => {
+test('a chronicle saved with an enemy prepared reads back with it prepared, on the map and in the snapshot of its tile, and one whose snapshot keeps a unit of the player’s is dropped', () => {
   const city = cityOf(['urban'], { tiles: field(2), units: [standing('enemy', CITY)] });
   const prepared = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const save = { chronicle: prepared, civilization: CIVILIZATION_ID };
+  const at = prepared.snapshots.findIndex(({ unit }) => unit !== undefined);
+  const theirs = tampered(save, (chronicle) => ({
+    ...chronicle,
+    snapshots: chronicle.snapshots.map((snapshot, index) =>
+      index === at ? { ...snapshot, unit: { ...snapshot.unit, faction: 'player' } } : snapshot,
+    ),
+  }));
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
   expect(prepared.units[0]).toMatchObject({ faction: 'enemy', prepared: true });
+  expect(prepared.snapshots[at]?.unit).toMatchObject({ faction: 'enemy', prepared: true });
   expect(read.chronicle).toEqual(save);
+  expect(chronicleDropped(theirs)).toEqual([
+    `fixture: the save's chronicle.snapshots[${at}].unit.faction names no scripted faction player`,
+  ]);
 });
 
 test('a chronicle saved with the neutral hostile and a unit of its prepared reads back with both, and one naming no relations it knows is dropped', () => {

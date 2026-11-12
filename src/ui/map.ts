@@ -29,6 +29,7 @@ import {
   cityTileOf,
   holderOf,
   type Snapshot,
+  type SnapshotUnit,
 } from '../rules/state';
 import { type Faction, type Landing, pathTo, type Unit, unitAt } from '../rules/units';
 import { tileYield } from '../rules/yields';
@@ -158,14 +159,14 @@ export type PressedTile = {
   readonly at: TileFace;
 };
 
-/** What the map draws of a tile: the face it draws, and whether that face is the tile as it stands. */
+/** What the map draws of a tile: the face it draws, and the snapshot it draws it from, if it does. */
 export type Drawn = {
   readonly tile: Tile;
   /**
-   * Whether the face is the tile as it stands, whoever stands on it included, rather than its
-   * snapshot: a snapshot answers for its tile whole.
+   * The snapshot the face is drawn from, whoever stood on it included, and none where the face is the
+   * tile as it stands: a snapshot answers for its tile whole.
    */
-  readonly asStands: boolean;
+  readonly snapshot?: Snapshot;
 };
 
 /** What a card being aimed admits as the map shows it: the tiles it lights, and the tiles whose units it rings. */
@@ -273,8 +274,17 @@ function faceIn(drawing: Drawing, tile: Tile): Drawn | undefined {
   const key = tileKey(tile);
   if (!drawing.drawn.has(key)) return undefined;
   const snapshot = drawing.charted.get(key);
-  if (drawing.live.has(key) || snapshot === undefined) return { tile, asStands: true };
-  return { tile: snapshot.tile, asStands: false };
+  if (drawing.live.has(key) || snapshot === undefined) return { tile };
+  return { tile: snapshot.tile, snapshot };
+}
+
+/**
+ * The unit the map draws on a face: the one the face's snapshot kept, or, where the face is the tile
+ * as it stands, the one standing there. A snapshot answers for its tile whole: one taken of an empty
+ * tile hides the unit that has walked onto it since.
+ */
+export function unitDrawn(face: Drawn, units: readonly Unit[]): Unit | SnapshotUnit | undefined {
+  return face.snapshot === undefined ? unitAt(units, face.tile) : face.snapshot.unit;
 }
 
 /** The faces the map draws of these tiles, read beside any tile: what a yield and a beach read there. */
@@ -749,19 +759,12 @@ export function createMapView(
       painted.push(buildingOn(face.building, tile, inFog));
     }
     if (!inFog) return painted;
-    const unitMarked = (type: string, faction: Faction, embarked: boolean): void => {
-      painted.push(asUnit(fogUnitPool.take(), type, faction, embarked, 'fog').setPosition(x, y));
-    };
-    // A snapshot answers for its tile whole: one taken of an empty tile hides the unit that has
-    // walked onto it since.
-    if (drawing.asStands) {
-      const standing = unitAt(chronicle.units, tile);
-      if (standing !== undefined) {
-        unitMarked(standing.stats.type, standing.faction, standing.embarked);
-      }
-    } else {
-      const kept = seen.charted.get(key)?.unit;
-      if (kept !== undefined) unitMarked(kept.type, kept.faction, kept.embarked);
+    const standing = unitDrawn(drawing, chronicle.units);
+    if (standing !== undefined) {
+      const { stats, faction, embarked } = standing;
+      painted.push(
+        asUnit(fogUnitPool.take(), stats.type, faction, embarked, 'fog').setPosition(x, y),
+      );
     }
     return painted;
   };
@@ -946,7 +949,7 @@ export function createMapView(
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const inFog = !live.has(tileKey(tile));
-      const holder = face.asStands ? holderOf(current, tile) : charted.get(tileKey(tile))?.holder;
+      const holder = face.snapshot === undefined ? holderOf(current, tile) : face.snapshot.holder;
       if (holder !== undefined) worn[holder].push({ tile, inFog });
       if (face.tile.building === camp) worn.enemy.push({ tile, inFog });
     }

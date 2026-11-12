@@ -111,7 +111,11 @@ export function otherCityOn(
  */
 export function preparedAs(
   chronicle: Pick<Chronicle, 'city' | 'neutral'>,
-  unit: Unit,
+  unit: Pick<Unit, 'tile'> &
+    (
+      | { readonly faction: 'player' }
+      | { readonly faction: ScriptedFaction; readonly prepared: boolean }
+    ),
 ): 'capture' | 'pillage' | undefined {
   if (unit.faction === 'player' || !unit.prepared) return undefined;
   switch (otherCityOn(chronicle, unit.tile, unit.faction)) {
