@@ -19,7 +19,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The personas read a unit as last seen** — the map a persona knows stands each unit a snapshot carries as it was last seen, in place of a fresh one of its kind.
+- **The personas read a unit as last seen** — the map a persona knows stands each unit as the screen's card reads it, the one standing where the tile is in sight and the one its snapshot kept where it is in fog, through one reading in `src/rules/` that the screen and the personas both ask; the pursuit's test in `tools/sim.test.ts` holds a wounded enemy in fog pursued ahead of a healthy one equally near. Doc-impact: none. [board/the-personas-read-a-unit-as-last-seen.md](board/the-personas-read-a-unit-as-last-seen.md)
 - **The attack on a unit** — the enemies a selected unit can attack wear their mark on the unit itself, read with the path's hover and drag, an attack icon at the path's end where the move results in an attack maybe.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, a unit kept in fog as last seen among them, read beside its ring and the attack's mark.
 - **A health bar on units** — a unit on the map shows its health.
