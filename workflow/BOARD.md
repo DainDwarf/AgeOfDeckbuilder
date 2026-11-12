@@ -19,6 +19,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **A press draws nothing by itself** — whatever a press draws waits for the button's release or the start of a drag, a unit's reach coming with its ring and a refusal's note going with the click that replaces it, in the code and the design alike.
 - **A unit or its tile selected** — successive left clicks on a tile a unit stands on switch between selecting the unit and selecting the tile, the unit first, and an inspection starts on the card of what is selected.
 - **The attack on a unit** — the enemies a selected unit can attack wear their mark on the unit itself, read with the path's hover and drag, an attack icon at the path's end where the move results in an attack maybe.
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, read beside its ring and the attack's mark.
