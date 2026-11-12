@@ -206,9 +206,11 @@ test('a scout being aimed wears its path to the lit tile the pointer is on, keep
   expect(row.slice(1).map(tileKey)).toContain(tileKey(under));
   await drawnTo(page, chronicle, scout, under);
 
-  // A click on the lit tile under it is the step, and the pointer rests on the scout's tile then.
+  // A click on the lit tile under it is the step: the path goes with the click, and the pointer
+  // rests on the scout's tile once it has landed.
   await page.mouse.down();
   await page.mouse.up();
+  expect(await pathDrawn(page)).toBeUndefined();
   await playedOut(page);
   const stepped = outcome(
     apply(CATALOGUE, chronicle, { type: 'move', unit: scout.id, tile: under }),
