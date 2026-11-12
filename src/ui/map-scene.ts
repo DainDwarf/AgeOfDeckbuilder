@@ -4,15 +4,14 @@ import { followFactor, type Stratum, stratumOf } from './design-space';
 /** The map's strata, in the order they stand, all painted by its one camera. */
 export type MapStrata = {
   readonly terrain: Stratum;
-  /** The tiles lit and the units glowed, while no yield dim stands to lift them over. */
-  readonly lit: Stratum;
+  /** The buildings, the discs and a city's badge. */
   readonly buildings: Stratum;
-  readonly units: Stratum;
   readonly cityMarks: Stratum;
-  /** The yield overlay's dim, and what stays at full strength through it. */
+  /** The yield overlay's dim. */
   readonly dim: Stratum;
-  /** The selected tile's rim, the rims of a card being aimed, and a unit's path. */
+  /** The marks of the selection and the aim. */
   readonly selection: Stratum;
+  readonly units: Stratum;
   /** The yield glyphs and the culture threshold. */
   readonly yields: Stratum;
   readonly infopanel: Stratum;
@@ -38,12 +37,11 @@ export class MapScene extends Phaser.Scene {
     const stratum = (): Stratum => stratumOf(this.add.layer(), camera);
     this.strata = {
       terrain: stratum(),
-      lit: stratum(),
       buildings: stratum(),
-      units: stratum(),
       cityMarks: stratum(),
       dim: stratum(),
       selection: stratum(),
+      units: stratum(),
       yields: stratum(),
       infopanel: stratum(),
       note: stratum(),

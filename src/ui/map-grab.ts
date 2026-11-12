@@ -34,6 +34,8 @@ type MapUnderPress = {
   lightUnit(tile: TileCoords | undefined): void;
   /** The marker of the unit of that number, and nothing where the map keeps none. */
   markerOf(unit: number): Phaser.GameObjects.Container | undefined;
+  /** The unit of that number drawn over every other unit, and every unit among the others on none. */
+  carry(unit: number | undefined): void;
   /** The mark drawn on a tile the population stands on, and nothing where none is. */
   assignedMarkOn(tile: TileCoords): Phaser.GameObjects.Rectangle | undefined;
 };
@@ -97,8 +99,9 @@ export function createMapGrab(
     }
   };
 
-  /** What a press had hold of sliding home from where it was let go. */
+  /** What a press had hold of back among the others, sliding home from where it was let go. */
   const slideHome = (grab: Grab): void => {
+    view.carry(undefined);
     const mark = markOf(grab);
     const home = homeOf(grab);
     if (mark === undefined || home === undefined) return;
@@ -133,17 +136,18 @@ export function createMapGrab(
       /** Whether a press has come far enough to be a drag; it stays one once it has. */
       const travelled = (grab: Grab, pointer: Phaser.Input.Pointer): boolean => {
         if (!grab.dragging && !dragged(scene, grab.from, pointer)) return false;
+        if (!grab.dragging && grab.kind === 'unit') view.carry(grab.unit);
         grab.dragging = true;
         frame.setCarried('left');
         return true;
       };
 
-      const carry = (pointer: Phaser.Input.Pointer): void => {
+      const follow = (pointer: Phaser.Input.Pointer): void => {
         if (grabbed === undefined || !travelled(grabbed, pointer)) return;
         const at = map.at(pointer.x, pointer.y);
         markOf(grabbed)?.setPosition(at.x, at.y);
       };
-      scene.input.on('pointermove', carry);
+      scene.input.on('pointermove', follow);
 
       const letGo = (grab: Grab): void => {
         slideHome(grab);

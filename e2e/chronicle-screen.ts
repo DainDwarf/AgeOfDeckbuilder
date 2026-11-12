@@ -488,15 +488,11 @@ export async function readNames(page: Page): Promise<void> {
     };
 
     // The mark a tile in fog carries is nameless, so a unit's mark is found by standing where the
-    // tile's face does; a unit wearing its ring stands with it, out of the others' layer. The frames'
-    // endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
+    // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
     window.unitMarkOn = (key) => {
       const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
       if (face === undefined) return undefined;
-      const marks = [
-        ...(window.shownIn?.('units') ?? []),
-        ...(window.shownIn?.('ringed') ?? []).filter((one) => one.type === 'Container'),
-      ] as Phaser.GameObjects.Container[];
+      const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
       const mark = marks.find((one) => one.x === face.x && one.y === face.y);
       if (mark === undefined) return undefined;
       const tintOf = (frame: string): number | undefined => {
@@ -2176,6 +2172,9 @@ export const HUNT = 'hunt';
 /** The card that embarks a unit. */
 export const EMBARK = 'embark';
 
+/** The card that heals, aimed at a unit. */
+export const HEAL = 'heal';
+
 /** The card a card becomes; one that becomes none throws. */
 export function becomes(card: CardId): CardId {
   const named = cardOf(CATALOGUE, card).becomes;
@@ -2399,6 +2398,42 @@ export function freeFor(chronicle: Chronicle, stats: UnitStats, tile: TileCoords
     standsOn(CATALOGUE, stats, false, tileAt(chronicle.tiles, tile)) &&
     unitAt(chronicle.units, tile) === undefined
   );
+}
+
+/**
+ * The first seed's turn 1, launched from a campaign holding the heal card, with that card in hand and
+ * paid for, a warrior of the player's hurt on the city's tile and another on a tile beside it the city
+ * has claimed, an enemy beside the city, and a bare tile nobody stands on.
+ */
+export function hurtBesideAnEnemy(campaign: Campaign): {
+  chronicle: Chronicle;
+  index: number;
+  city: TileCoords;
+  enemy: TileCoords;
+  bare: TileCoords;
+} {
+  return firstSeed(`opens turn 1 on ${HEAL} in hand, an enemy beside its city`, (seed) => {
+    const opened = settledOn(seed, [], campaign);
+    if (!idsOf(opened.hand).includes(HEAL)) return undefined;
+    const city = playerCityTile(opened);
+    const warrior = unitKind(CATALOGUE, WARRIOR);
+    const [claim] = neighbours(city).flatMap((tile) => {
+      const claimed = freeFor(opened, warrior, tile) ? claimedAt(opened, tile) : undefined;
+      return claimed === undefined ? [] : [{ tile, claimed }];
+    });
+    if (claim === undefined) return undefined;
+    let guarded = claim.claimed;
+    for (const tile of [city, claim.tile]) {
+      const standing = unitEntered(guarded, { type: WARRIOR, faction: 'player', tile });
+      guarded = unitDamaged(standing, tile, 1).chronicle;
+    }
+    const beset = enemyBesideCity(guarded);
+    if (beset === undefined) return undefined;
+    const bare = bareTile(beset.chronicle);
+    if (unitAt(beset.chronicle.units, bare) !== undefined) return undefined;
+    const { chronicle, index } = paidFor(beset.chronicle, HEAL);
+    return { chronicle, index, city, enemy: beset.enemy.tile, bare };
+  });
 }
 
 /** The tile nearest the city that has never been in sight: the closest dark ground to press on. */
@@ -2667,6 +2702,54 @@ export function ringsAndRims(page: Page): Promise<{ rings: string[]; rims: strin
       rims: [...(rim.length > 0 ? [tileOf(selected)] : []), ...aimed.map(tileOf)].sort(),
     };
   });
+}
+
+/** A group the map draws, by its name, and the stratum it stands on, counted from the ground up. */
+export type MapGroup = { name: string; stratum: number };
+
+/**
+ * The map's named groups as they were drawn at the last frame, from the ground up, each with the
+ * stratum it stands on; the tiles whose units wear their ring, by tile key, in key order; and the
+ * name of the group the unit's marker stands in on each of these tiles and of those.
+ */
+export function mapOrder(
+  page: Page,
+  tiles: readonly string[],
+): Promise<{ groups: MapGroup[]; rings: string[]; markersIn: Record<string, string | undefined> }> {
+  return page.evaluate((asked) => {
+    const map = window.game?.scene.getScene('map');
+    if (map === undefined || map === null) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    // A display list sorts itself by depth as it draws (docs/PHASER.md), so after a frame its order
+    // is the order drawn; a catcher is a zone, which draws nothing.
+    const strata = map.children.list as Phaser.GameObjects.Layer[];
+    const groups = strata.flatMap((stratum, at) =>
+      stratum.list.flatMap((child) =>
+        child.name === '' || child.type === 'Zone' ? [] : [{ name: child.name, stratum: at }],
+      ),
+    );
+    const ringed = window.shownIn?.('rings');
+    if (ringed === undefined) throw new Error('the map is not on the chronicle screen');
+    const rings = ringed.map((ring) => ring.getData('tile') as string).sort();
+    const markersIn = Object.fromEntries(
+      [...new Set([...asked, ...rings])].map((key) => {
+        const marker = window.named?.(`unit-${key}`)?.object;
+        if (marker === undefined) throw new Error(`no unit's marker stands on ${key}`);
+        return [key, (marker.displayList as Phaser.GameObjects.Layer | null)?.name];
+      }),
+    );
+    return { groups, rings, markersIn };
+  }, tiles);
+}
+
+/** The names of what the named group of the map shows, in the order it was drawn at the last frame. */
+export function drawnIn(page: Page, group: string): Promise<string[]> {
+  return page.evaluate((target) => {
+    const shown = window.shownIn?.(target);
+    if (shown === undefined) throw new Error(`there is no ${target} on the map`);
+    return shown.map(({ name }) => name);
+  }, group);
 }
 
 /** The tiles the map lights for the unit it is lighting for, by tile key, in key order. */

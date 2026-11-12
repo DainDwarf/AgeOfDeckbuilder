@@ -12,6 +12,7 @@ import {
   click,
   dragOut,
   firstSeed,
+  HEAL,
   idsOf,
   openSaved,
   playedAtUnit,
@@ -22,9 +23,6 @@ import {
   WARRIOR,
   watch,
 } from './chronicle-screen';
-
-/** The card that heals. */
-const HEAL = 'heal';
 
 const CAMPAIGN = campaignWith([HEAL]);
 

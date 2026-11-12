@@ -131,6 +131,13 @@ const SHORE_RISE = 0.25;
 /** How far over its tile's row a building's pieces stand: over its patch, short of the row in front. */
 const PIECES_RISE = 0.5;
 
+/**
+ * Where a live unit's marker stands among the units, over a unit the fog keeps at 0, and where the
+ * one a press carries stands, over them all.
+ */
+const UNIT_DEPTH = 1;
+const CARRIED_DEPTH = 2;
+
 /** How many glyphs a row of them holds before the next row starts. */
 const GLYPH_ROW = 3;
 
@@ -300,17 +307,10 @@ export function createMapView(
   const lying = group(strata.terrain, 'lying');
   const claimMarks = createClaimMarks(scene, group(strata.terrain, 'claim-marks'), chronicle.tiles);
   const border = createBorder(scene, group(strata.terrain, 'border'), chronicle.tiles);
-  const lighted = group(strata.lit, 'lit');
-  const reach = createReach(scene, lighted, chronicle.tiles);
-  const hues = group(strata.lit, 'prepared');
   const built = group(strata.buildings, 'buildings');
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
-  const ringed = group(strata.units, 'ringed');
-  const rings = scene.add.layer().setName('rings');
-  ringed.add(rings);
-  const marks = group(strata.units, 'units');
-  const badges = group(strata.units, 'badges');
+  const badges = group(strata.buildings, 'badges');
   const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
@@ -318,8 +318,14 @@ export function createMapView(
     .setName('yield-dim')
     .setVisible(false);
   strata.dim.layer.add(dim);
+  const hues = group(strata.selection, 'prepared');
+  const lighted = group(strata.selection, 'lit');
+  const reach = createReach(scene, lighted, chronicle.tiles);
+  const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
-  const path = createPath(scene, group(strata.selection, 'path'));
+  const pathGroup = group(strata.selection, 'path');
+  const path = createPath(scene, pathGroup);
+  const marks = group(strata.units, 'units');
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
 
@@ -434,23 +440,8 @@ export function createMapView(
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
-   * The tiles lit and the units glowed, lifted onto the dim's stratum while it stands, and the units
-   * ringed with their rings, lifted onto it while it or city mode's dim stands. What else must stand
-   * over a dim lives on a stratum above it, or is added to these.
-   */
-  const liftOverDim = (): void => {
-    (showing.size > 0 ? strata.dim : strata.lit).layer.add(lighted);
-    if (showing.size > 0 || marking) {
-      strata.dim.layer.add(ringed);
-      strata.dim.layer.bringToTop(ringed);
-    } else {
-      strata.units.layer.addAt(ringed, 0);
-    }
-  };
-
-  /**
-   * The ground every aim runs on: its own catcher, a group for its rims on the selection's stratum,
-   * and the tile presses held off.
+   * The ground every aim runs on: its own catcher, a group for its rims on the selection's stratum
+   * under the path, and the tile presses held off.
    */
   const openAim = (): {
     catcher: Phaser.GameObjects.Zone;
@@ -460,6 +451,7 @@ export function createMapView(
     presser?.disableInteractive();
     const catcher = frame.catcherZone('aim');
     const rims = group(strata.selection, 'aim-lit');
+    strata.selection.layer.moveBelow(rims, pathGroup);
     return {
       catcher,
       rims,
@@ -524,7 +516,6 @@ export function createMapView(
   const paintYields = (): void => {
     glyphPool.hide();
     dim.setVisible(showing.size > 0);
-    liftOverDim();
     if (shown === undefined) return;
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
@@ -838,8 +829,7 @@ export function createMapView(
 
   /**
    * The selection and the aim as the chronicle the map stands on wears them: the unit on the selected
-   * tile ringed out of city mode, the tile's rim where none is, and each unit the aim rings ringed, a
-   * unit ringed standing with its ring.
+   * tile ringed out of city mode, the tile's rim where none is, and each unit the aim rings ringed.
    */
   const paintRings = (): void => {
     const onSelection = selection === undefined || marking ? undefined : wearerOn(selection);
@@ -855,8 +845,6 @@ export function createMapView(
       const { x, y } = unitStandsAt(tile);
       ringPool.take().setPosition(x, y).setData('tile', tileKey(tile));
     }
-    const worn = new Set(wearers.map(({ id }) => id));
-    for (const [id, { marker }] of unitObjects) (worn.has(id) ? ringed : marks).add(marker);
   };
 
   /**
@@ -969,7 +957,7 @@ export function createMapView(
   const objectsOf = (unit: Unit): UnitObjects => {
     const kept = unitObjects.get(unit.id);
     if (kept !== undefined) return kept;
-    const marker = unitMarker(scene).setDepth(1);
+    const marker = unitMarker(scene).setDepth(UNIT_DEPTH);
     const hue = unreadGlow(scene);
     marks.add(marker);
     hues.add(hue);
@@ -1094,6 +1082,11 @@ export function createMapView(
     tileUnder,
     lightUnit,
     markerOf: (unit) => unitObjects.get(unit)?.marker,
+    carry: (unit) => {
+      for (const [id, { marker }] of unitObjects) {
+        marker.setDepth(id === unit ? CARRIED_DEPTH : UNIT_DEPTH);
+      }
+    },
     assignedMarkOn: (tile) => assignedMarks.get(tileKey(tile)),
   });
 
