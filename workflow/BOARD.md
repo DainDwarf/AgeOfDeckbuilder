@@ -19,8 +19,10 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
-- **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
+- **A unit's ring** — the unit standing on the selected tile, whoever's it is, and each unit a card aimed at a unit admits wear one ring on the ground under the unit in the selection's white, the tile under a ringed unit wears no rim, and a ringed unit stands over every dim the map lays; `e2e/unit-ring.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`. [board/a-units-ring.md](board/a-units-ring.md)
+- **A unit or its tile selected** — successive left clicks on a tile a unit stands on switch between selecting the unit and selecting the tile, the unit first, and an inspection starts on the card of what is selected.
+- **The attack on a unit** — the enemies a selected unit can attack wear their mark on the unit itself, read with the path's hover and drag, an attack icon at the path's end where the move results in an attack maybe.
+- **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, read beside its ring and the attack's mark.
 - **A health bar on units** — a unit on the map shows its health.
 - **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold.
 - **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.
