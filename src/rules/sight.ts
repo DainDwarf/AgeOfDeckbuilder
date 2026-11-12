@@ -175,6 +175,23 @@ export function inSight(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet
   return sightReading(catalogue, chronicle).inSight;
 }
 
+/** A unit as a tile shows it: the one standing there, or the one its snapshot kept, on that tile. */
+export type ShownUnit = Unit | (SnapshotUnit & { readonly tile: TileCoords });
+
+/**
+ * The unit a tile shows: the one the snapshot handed with it kept, on that tile, or, with none
+ * handed, the one standing there. A snapshot answers for its tile whole: one taken of an empty tile hides the unit
+ * that has walked onto it since.
+ */
+export function unitShown(
+  units: readonly Unit[],
+  { tile, snapshot }: { readonly tile: TileCoords; readonly snapshot?: Snapshot },
+): ShownUnit | undefined {
+  if (snapshot === undefined) return unitAt(units, tile);
+  const { unit } = snapshot;
+  return unit === undefined ? undefined : { ...unit, tile: { q: tile.q, r: tile.r } };
+}
+
 /** Whether two units kept read alike, stat by stat. */
 function sameUnit(kept: SnapshotUnit | undefined, now: SnapshotUnit | undefined): boolean {
   if (kept === undefined || now === undefined) return kept === now;

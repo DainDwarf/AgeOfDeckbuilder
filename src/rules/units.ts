@@ -83,7 +83,7 @@ export const FIRST_UNIT_NUMBER = 1;
 export type Landing = { readonly tile: TileCoords; readonly cost: number };
 
 /** A unit's move points refreshed to its move, whatever it had left of them. */
-export function refreshedMovePoints(unit: Unit): Unit {
+export function refreshedMovePoints<U extends Pick<Unit, 'stats' | 'movePoints'>>(unit: U): U {
   return { ...unit, movePoints: unit.stats.move };
 }
 
@@ -106,7 +106,7 @@ export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefi
 }
 
 /** Whether a unit acts against the player as an enemy does: an enemy, or the neutral's while hostile. */
-export function actsAsEnemy(unit: Unit, relations: Relations): boolean {
+export function actsAsEnemy(unit: Pick<Unit, 'faction'>, relations: Relations): boolean {
   switch (unit.faction) {
     case 'player':
       return false;
@@ -144,7 +144,7 @@ export function standsOn(
 type Crossed = {
   readonly tiles: readonly Tile[];
   readonly rivers: readonly River[];
-  readonly units: readonly Unit[];
+  readonly units: readonly Pick<Unit, 'tile' | 'faction'>[];
   readonly snapshots: readonly TileCoords[];
   readonly held: readonly TileCoords[];
   readonly neutral?: { readonly held: readonly TileCoords[] };
@@ -177,7 +177,7 @@ export function passageFor(chronicle: Crossed, faction: Faction): (coord: TileCo
 }
 
 /** A unit's walk: on the move points it has left, embarked or ashore as it stands. */
-function walkOf(unit: Unit): Walk {
+function walkOf(unit: Pick<Unit, 'movePoints' | 'embarked'>): Walk {
   return { points: unit.movePoints, embarked: unit.embarked };
 }
 
@@ -192,7 +192,7 @@ function standingOn(chronicle: Crossed): ReadonlyMap<string, Faction> {
  */
 function unitPassage(
   chronicle: Crossed,
-  unit: Unit,
+  unit: Pick<Unit, 'faction'>,
   standing: ReadonlyMap<string, Faction>,
 ): (coord: TileCoords) => Passage {
   const passage = passageFor(chronicle, unit.faction);
@@ -207,7 +207,11 @@ function unitPassage(
  * over a river edge spending every point it has left. A tile one of its own holds is crossed but
  * never offered; the faction's passage says the rest.
  */
-export function reachable(catalogue: MapContent, chronicle: Crossed, unit: Unit): Landing[] {
+export function reachable(
+  catalogue: MapContent,
+  chronicle: Crossed,
+  unit: Pick<Unit, 'tile' | 'faction' | 'movePoints' | 'embarked'>,
+): Landing[] {
   const standing = standingOn(chronicle);
   const spent = pathCosts(
     catalogue,
@@ -255,7 +259,7 @@ export function pathTo(
  * and a unit whose range is one no embarked unit; any other attack lands within its range.
  */
 export function canAttack(
-  attacker: Unit,
+  attacker: Pick<Unit, 'stats' | 'faction' | 'embarked'>,
   target: Unit,
   away: number,
   relations: Relations,

@@ -4,6 +4,7 @@ import { preparedAs } from '../rules/enemies';
 import { groundCost, movementCost, runsAlong, type TilesBeside } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
+import { unitShown } from '../rules/sight';
 import type { Chronicle } from '../rules/state';
 import { relationsOf, type Unit } from '../rules/units';
 import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
@@ -11,7 +12,7 @@ import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf, SMALLEST_TYPE } fr
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
-import { type Drawn, type TileFace, unitDrawn } from './map';
+import type { Drawn, TileFace } from './map';
 import {
   buildingMark,
   featureMark,
@@ -164,9 +165,8 @@ export function cardsOf(
   const { tile } = face;
   const cards: Card[] = [];
 
-  const drawn = unitDrawn(face, chronicle.units);
-  if (drawn !== undefined) {
-    const unit = { ...drawn, tile: { q: tile.q, r: tile.r } };
+  const unit = unitShown(chronicle.units, face);
+  if (unit !== undefined) {
     const prepares = preparedAs(chronicle, unit);
     const hostile = unit.faction === 'neutral' && relationsOf(chronicle) === 'hostile';
     const damage = damageOf(catalogue, chronicle.units, unit);

@@ -18,7 +18,7 @@ import {
   tilesBeside,
 } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
-import { inSight } from '../rules/sight';
+import { inSight, unitShown } from '../rules/sight';
 import type { Stage } from '../rules/stages';
 import {
   assignedTo,
@@ -29,7 +29,6 @@ import {
   cityTileOf,
   holderOf,
   type Snapshot,
-  type SnapshotUnit,
 } from '../rules/state';
 import { type Faction, type Landing, pathTo, type Unit, unitAt } from '../rules/units';
 import { tileYield } from '../rules/yields';
@@ -283,15 +282,6 @@ function faceIn(drawing: Drawing, tile: Tile): Drawn | undefined {
   const snapshot = drawing.charted.get(key);
   if (drawing.live.has(key) || snapshot === undefined) return { tile };
   return { tile: snapshot.tile, snapshot };
-}
-
-/**
- * The unit the map draws on a face: the one the face's snapshot kept, or, where the face is the tile
- * as it stands, the one standing there. A snapshot answers for its tile whole: one taken of an empty
- * tile hides the unit that has walked onto it since.
- */
-export function unitDrawn(face: Drawn, units: readonly Unit[]): Unit | SnapshotUnit | undefined {
-  return face.snapshot === undefined ? unitAt(units, face.tile) : face.snapshot.unit;
 }
 
 /** The faces the map draws of these tiles, read beside any tile: what a yield and a beach read there. */
@@ -766,7 +756,7 @@ export function createMapView(
       painted.push(buildingOn(face.building, tile, inFog));
     }
     if (!inFog) return painted;
-    const standing = unitDrawn(drawing, chronicle.units);
+    const standing = unitShown(chronicle.units, drawing);
     if (standing !== undefined) {
       const { stats, faction, embarked } = standing;
       painted.push(
@@ -846,7 +836,7 @@ export function createMapView(
   /** Whether a selection on the tile can be the unit the map draws there: never in city mode. */
   const unitSelectableOn = (tile: TileCoords): boolean => {
     const face = marking ? undefined : drawnAs(tile);
-    return face !== undefined && shown !== undefined && unitDrawn(face, shown.units) !== undefined;
+    return face !== undefined && shown !== undefined && unitShown(shown.units, face) !== undefined;
   };
 
   /** The selection on the tile, the unit drawn there where `unit` asks for it and it is selectable. */
