@@ -36,6 +36,8 @@ import {
   earningOf,
   entered,
   type InfluenceCard,
+  neutralOf,
+  neutralScriptOf,
   strikeOf,
   technologyOf,
   unitKind,
@@ -43,13 +45,20 @@ import {
 import {
   admitted,
   apply,
+  byHand,
   countOn,
   launchedFromCampaign,
   outcome,
   reckoned,
   refusalOf,
 } from '../src/rules/chronicle';
-import { arrived, claimable, cultureThreshold, growthThreshold } from '../src/rules/city';
+import {
+  arrived,
+  claimable,
+  cultureThreshold,
+  growthThreshold,
+  warDeclared,
+} from '../src/rules/city';
 import { enemyEntering } from '../src/rules/enemies';
 import {
   CENTRE,
@@ -68,7 +77,7 @@ import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kin
 import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
 import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
 import { addedToDrawPileTop, answerRefusal, offered, unitDamaged } from '../src/rules/schedule';
-import { charted } from '../src/rules/sight';
+import { charted, chartedAt, inSight } from '../src/rules/sight';
 import { type Aimed, followed, unchanged } from '../src/rules/stages';
 import {
   type CardId,
@@ -2393,6 +2402,28 @@ export function freeGround(chronicle: Chronicle, kind: string, away: number): Ti
     .map(({ q, r }) => ({ q, r }));
 }
 
+/**
+ * Seed 1's bare turn 1 on a campaign reaching the neutral, a unit of the neutral's of the first
+ * fighting kind its ratio names entered four tiles from the city out of its sight, wounded, its tile
+ * charted, wounded again unseen, and war declared after; the campaign, and the tile.
+ */
+export function neutralInFog(): { chronicle: Chronicle; campaign: Campaign; fog: TileCoords } {
+  const campaign = neutralCampaign();
+  const bare = settledOn(1, [], campaign);
+  const neutral = neutralOf(CATALOGUE, bare.age);
+  const kind = neutral.ratio.find((row) => !unitKind(CATALOGUE, row.kind).worker)?.kind;
+  if (kind === undefined) throw new Error(`the neutral of the age ${bare.age} fights with no kind`);
+  if (unitKind(CATALOGUE, kind).health <= 2) throw new Error(`${kind} lives through no two wounds`);
+  const seen = inSight(CATALOGUE, bare);
+  const fog = freeGround(bare, kind, 4).find((tile) => !seen.has(tileKey(tile)));
+  if (fog === undefined) throw new Error('seed 1 leaves no ground unseen four tiles from its city');
+  const script = neutralScriptOf(CATALOGUE, neutral, kind);
+  const entered = unitEntered(bare, { type: kind, faction: 'neutral', script, tile: fog });
+  const kept = chartedAt(CATALOGUE, unitDamaged(entered, fog, 1).chronicle, fog);
+  const unseen = unitDamaged(kept, fog, 1).chronicle;
+  return { chronicle: warDeclared(unseen).chronicle, campaign, fog };
+}
+
 /** Whether a unit of the kind stands on the tile ashore with nobody on it. */
 export function freeFor(chronicle: Chronicle, stats: UnitStats, tile: TileCoords): boolean {
   return (
@@ -2708,47 +2739,76 @@ export function marked(page: Page): Promise<{
   });
 }
 
+/** What the chronicle screen shows of its selection and the inspection, as `selectionShown` reads it. */
+export type SelectionShown = {
+  selected: string | undefined;
+  rings: string[];
+  rims: string[];
+  lit: string[];
+  card: string | undefined;
+};
+
 /**
- * The tiles whose units wear their ring, and the tiles wearing the selection's rim, the selected one
- * and those a card being aimed lights: each by tile key, in key order.
+ * In one question: the tile selected; the tiles whose units wear their ring; the tiles wearing the
+ * selection's rim, the selected one and those a card being aimed lights; the tiles the map lights and
+ * glows for a unit, each by tile key, the lists in key order; and the infopanel's card, if up.
  */
-export function ringsAndRims(page: Page): Promise<{ rings: string[]; rims: string[] }> {
+export function selectionShown(page: Page): Promise<SelectionShown> {
   return page.evaluate(() => {
-    const rings = window.shownIn?.('rings');
     const selected = window.named?.('selected')?.object;
+    const rings = window.shownIn?.('rings');
     const rim = window.shownIn?.('selected');
-    if (rings === undefined || selected === undefined || rim === undefined) {
+    const lit = window.litKeys?.();
+    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
+    if (
+      selected === undefined ||
+      rings === undefined ||
+      rim === undefined ||
+      lit === undefined ||
+      panel === undefined
+    ) {
       throw new Error('the map is not on the chronicle screen');
     }
     const aimed = window.shownIn?.('aim-lit') ?? [];
     const tileOf = (mark: Phaser.GameObjects.GameObject): string => mark.getData('tile') as string;
     return {
+      selected: selected.getData('tile') as string | undefined,
       rings: rings.map(tileOf).sort(),
       rims: [...(rim.length > 0 ? [tileOf(selected)] : []), ...aimed.map(tileOf)].sort(),
+      lit: lit.sort(),
+      card: panel.visible ? (panel.getData('card') as string) : undefined,
     };
   });
+}
+
+/**
+ * The tiles whose units wear their ring, and the tiles wearing the selection's rim, the selected one
+ * and those a card being aimed lights: each by tile key, in key order.
+ */
+export async function ringsAndRims(page: Page): Promise<{ rings: string[]; rims: string[] }> {
+  const { rings, rims } = await selectionShown(page);
+  return { rings, rims };
+}
+
+/** The tiles the map lights and glows for the unit standing on the tile, by tile key, in key order. */
+export function litFor(chronicle: Chronicle, tile: TileCoords): string[] {
+  const unit = unitAt(chronicle.units, tile);
+  if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
+  const { landings, targets } = byHand(CATALOGUE, chronicle, unit);
+  return [...landings.map((landing) => landing.tile), ...targets.map((target) => target.tile)]
+    .map(tileKey)
+    .sort();
 }
 
 /**
  * The tile selected, the tiles whose units wear their ring and the tiles the map lights and glows for
  * a unit, each by tile key, the lists in key order: read together, in one question.
  */
-export function ringedAndLit(
+export async function ringedAndLit(
   page: Page,
 ): Promise<{ selected: string | undefined; rings: string[]; lit: string[] }> {
-  return page.evaluate(() => {
-    const selected = window.named?.('selected')?.object;
-    const rings = window.shownIn?.('rings');
-    const lit = window.litKeys?.();
-    if (selected === undefined || rings === undefined || lit === undefined) {
-      throw new Error('the map is not on the chronicle screen');
-    }
-    return {
-      selected: selected.getData('tile') as string | undefined,
-      rings: rings.map((ring) => ring.getData('tile') as string).sort(),
-      lit: lit.sort(),
-    };
-  });
+  const { selected, rings, lit } = await selectionShown(page);
+  return { selected, rings, lit };
 }
 
 /** A group the map draws, by its name, and the stratum it stands on, counted from the ground up. */

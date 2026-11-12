@@ -34,6 +34,7 @@ import {
   readNames,
   rested,
   ringedTile,
+  ringsAndRims,
   settledOn,
   shows,
   standing,
@@ -355,11 +356,16 @@ test('unit on the chronicle screen enters the unit on the tile selected as the r
   await enter(page, 'unit');
   expect((await consoleLines(page))[3]).toBe(text('console.unit-takes'));
 
-  // The worker stands on the city's tile, and selected it lights the tiles it steps to: the press
-  // beside the tiles lets it go before any of them is pressed.
+  // The worker stands on the city's tile: the first click selects the worker, which is no tile, and
+  // the second its tile, which refuses a second unit.
   const cityAt = await tileOnScreen(page, city);
   await page.mouse.click(cityAt.x, cityAt.y);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(city));
+  await expect.poll(() => ringsAndRims(page)).toEqual({ rings: [tileKey(city)], rims: [] });
+  await enter(page, `unit ${WARRIOR}`);
+  expect((await consoleLines(page))[3]).toBe(text('console.no-tile-selected'));
+
+  await page.mouse.click(cityAt.x, cityAt.y);
+  await expect.poll(() => ringsAndRims(page)).toEqual({ rings: [], rims: [tileKey(city)] });
   await enter(page, `unit ${WARRIOR}`);
   expect((await consoleLines(page))[3]).toBe(text('refusal.unit-standing'));
 

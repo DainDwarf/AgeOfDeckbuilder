@@ -341,7 +341,8 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   expect(await shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();
 
-  // The city's tile carries all three cards: the worker entered at the settle, the city, the terrain.
+  // The city's tile carries all three cards: the worker entered at the settle, the city, the terrain;
+  // the click selects the worker, so the inspection opens on its card.
   await page.mouse.click(city.x, city.y);
   await expect.poll(() => ringedTile(page)).toBe(cityTile);
   expect(await shownCard(page)).toBeUndefined();

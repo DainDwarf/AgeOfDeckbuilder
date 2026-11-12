@@ -1,11 +1,9 @@
 import { expect, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
-import type { Campaign } from '../src/rules/campaign';
 import { built, featurePlaced, improvementPlaced, made, slotFree } from '../src/rules/cards';
-import { ageOf, fullHealth, neutralOf, neutralScriptOf, unitKind } from '../src/rules/catalogue';
+import { ageOf, fullHealth, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { warDeclared } from '../src/rules/city';
 import { enemyEntering, preparedAs } from '../src/rules/enemies';
 import {
   cornerKey,
@@ -38,11 +36,10 @@ import {
   faceCounts,
   firstSeed,
   freeFor,
-  freeGround,
   glyphs,
   glyphsOf,
   nearestUncharted,
-  neutralCampaign,
+  neutralInFog,
   onDeer,
   onDesignedSpeed,
   openSaved,
@@ -111,28 +108,6 @@ function roundTrip(): {
     };
   }
   throw new Error('no round trip of the scout off the city leaves a tile in fog');
-}
-
-/**
- * Seed 1's bare turn 1 on a campaign reaching the neutral, a unit of the neutral's of the first
- * fighting kind its ratio names entered four tiles from the city out of its sight, wounded, its tile
- * charted, wounded again unseen, and war declared after; the campaign, and the tile.
- */
-function neutralInFog(): { chronicle: Chronicle; campaign: Campaign; fog: TileCoords } {
-  const campaign = neutralCampaign();
-  const bare = settledOn(1, [], campaign);
-  const neutral = neutralOf(CATALOGUE, bare.age);
-  const kind = neutral.ratio.find((row) => !unitKind(CATALOGUE, row.kind).worker)?.kind;
-  if (kind === undefined) throw new Error(`the neutral of the age ${bare.age} fights with no kind`);
-  if (unitKind(CATALOGUE, kind).health <= 2) throw new Error(`${kind} lives through no two wounds`);
-  const seen = inSight(CATALOGUE, bare);
-  const fog = freeGround(bare, kind, 4).find((tile) => !seen.has(tileKey(tile)));
-  if (fog === undefined) throw new Error('seed 1 leaves no ground unseen four tiles from its city');
-  const script = neutralScriptOf(CATALOGUE, neutral, kind);
-  const entered = unitEntered(bare, { type: kind, faction: 'neutral', script, tile: fog });
-  const kept = chartedAt(CATALOGUE, unitDamaged(entered, fog, 1).chronicle, fog);
-  const unseen = unitDamaged(kept, fog, 1).chronicle;
-  return { chronicle: warDeclared(unseen).chronicle, campaign, fog };
 }
 
 /**
@@ -430,8 +405,8 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
   expect(await glyphs(page)).toEqual(glyphsOf(stood, drawnFaces(stood)));
 
-  // The tile in fog inspects as it was last seen, the card of the unit its snapshot keeps first:
-  // its health as kept, and Hostile as the neutral stands now.
+  // The click selects the unit the tile in fog keeps, and the inspection opens on its card as it
+  // was last seen: its health as kept, and Hostile as the neutral stands now.
   const fogged = await tileOnScreen(page, fog);
   await page.mouse.click(fogged.x, fogged.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(fog));

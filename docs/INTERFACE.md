@@ -48,7 +48,7 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 **The pointer is a hand over a thing that answers a left click or a rest**, and an arrow beside the things and over the map and a scrim, whatever those answer. It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still.
 
-**The selection is one thing, a tile or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
+**The selection is one thing, a tile, a unit or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
 
 **A selected thing being aimed filters every left click by its aim.** It is being aimed while what its aim admits is offered, and its aim is at one kind of thing. A left click on a thing of that kind is the act attempted there, and the rules answer: an act refused says why over that thing, in the note a refusal raises, and the aim stands. A left click on anything else, the selection itself excepted, lets the aimed thing go, selected no more, the inspection standing, and then lands, in the one press, as it would on a clean screen. The right click inspects and the aim stands, and the back key lets the aimed thing go as the selection it is.
 
@@ -66,7 +66,7 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 The **back key** walks these back in this order: the thing shown large, the newest of them where several stand, then a window's own selection and then the window, then the inspection, then the selection.
 
-Two verbs cover it all. **Select** is the tile the map rings, the card lifted out of the hand, or the card ringed in a window; **inspect** is the tile in the infopanel, the card shown large and the pile in its browse. "Zoom" stays the map's word.
+Two verbs cover it all. **Select** is the tile or the unit the map rings, the card lifted out of the hand, or the card ringed in a window; **inspect** is the tile in the infopanel, the card shown large and the pile in its browse. "Zoom" stays the map's word.
 
 ## A card's names and its label ✅
 

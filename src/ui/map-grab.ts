@@ -27,8 +27,8 @@ type MapUnderPress = {
   shown(): Chronicle | undefined;
   /** Whether the map is showing what city mode marks. */
   marking(): boolean;
-  /** The tile the map rings. */
-  selection(): TileCoords | undefined;
+  /** The tile of the selected unit, and nothing while a tile or nothing is selected. */
+  selectedUnit(): TileCoords | undefined;
   /** The tile the map draws at this point of its surface, and nothing where it draws none. */
   tileUnder(x: number, y: number): TileCoords | undefined;
   lightUnit(tile: TileCoords | undefined): void;
@@ -163,7 +163,7 @@ export function createMapGrab(
       const letGo = (grab: Grab): void => {
         if (grab.dragging) slideHome(grab);
         grabbed = undefined;
-        view.lightUnit(view.selection());
+        view.lightUnit(view.selectedUnit());
       };
 
       frame.takePress(catcher, {
@@ -215,7 +215,7 @@ export function createMapGrab(
                 }
               }
             }
-            view.lightUnit(view.selection());
+            view.lightUnit(view.selectedUnit());
           });
         },
         abandon: () => {

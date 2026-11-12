@@ -1,10 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { unitKind } from '../src/rules/catalogue';
-import { byHand } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { unitAt } from '../src/rules/units';
 import {
   bareWith,
   besideTiles,
@@ -13,6 +11,7 @@ import {
   dragSlack,
   firstSeed,
   freeFor,
+  litFor,
   onScreen,
   openSaved,
   playerCityTile,
@@ -27,16 +26,6 @@ import {
   unitEntered,
   watch,
 } from './chronicle-screen';
-
-/** The tiles the map lights and glows for the unit standing on the tile, by tile key, in key order. */
-function litFor(chronicle: Chronicle, tile: TileCoords): string[] {
-  const unit = unitAt(chronicle.units, tile);
-  if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
-  const { landings, targets } = byHand(CATALOGUE, chronicle, unit);
-  return [...landings.map((landing) => landing.tile), ...targets.map((target) => target.tile)]
-    .map(tileKey)
-    .sort();
-}
 
 /**
  * The first seed's turn 1 settled bare, a scout of the player's entered on the city's tile and one on

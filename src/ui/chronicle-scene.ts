@@ -16,7 +16,7 @@ import {
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
-import { type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
+import { sameTile, type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
@@ -250,7 +250,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // A press reaches the map only where this scene lets it through.
     note.hearPressesOf(this);
 
-    /** The tile selected, and nothing while none is. */
+    /**
+     * The tile selected or the one the selected unit stands on, and nothing while neither is: which
+     * of the two is selected is the map's to answer (`unitSelected`).
+     */
     let selection: PressedTile | undefined;
 
     /** Whether city mode is on: a left click on the selection is the city's act on that tile. */
@@ -368,36 +371,31 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     /**
-     * The one place the screen's selection changes: the tile takes the ring, or nothing does, and
-     * the card the hand held, the inspection standing on whatever was selected before and the note
-     * over it are let go of. The selection is one thing, a tile or a card.
+     * The one place the screen's selection changes: the unit on the tile, or the tile where `unit` is
+     * false or the map has no unit to select there, or nothing; and the card the hand held, the
+     * inspection standing on whatever was selected before and the note over it are let go of.
      */
-    const select = (found: PressedTile | undefined): void => {
-      if (
-        found !== undefined &&
-        selection !== undefined &&
-        tileKey(found.tile) === tileKey(selection.tile)
-      ) {
-        return;
-      }
+    const select = (found: PressedTile | undefined, unit = true): void => {
+      if (found !== undefined && view.isSelected(found.tile, unit)) return;
       selection = found;
       note.hide();
       uninspect();
       hand.unselect();
-      view.markSelected(found?.tile, thresholdOn(found));
+      view.markSelected(found?.tile, unit, thresholdOn(found));
     };
 
-    /** The unit being aimed let go of: its tile selected no more, the inspection standing. */
+    /** The unit being aimed let go of: selected no more, the inspection standing. */
     const unaimUnit = (): void => {
       selection = undefined;
-      view.markSelected(undefined, undefined);
+      view.markSelected(undefined, false, undefined);
     };
 
     /**
      * One step of the inspection on a tile: the next of its cards in the infopanel, and after the
-     * last of them the first again. The one place the infopanel is shown.
+     * last of them the first again; on a tile it does not stand on yet, the tile's first card, or the
+     * first of the tile's own past its unit's where `tileOwn`. The one place the infopanel is shown.
      */
-    const inspect = (on: PressedTile): void => {
+    const inspect = (on: PressedTile, tileOwn: boolean): void => {
       const face = view.drawnAs(on.tile);
       if (face === undefined) {
         uninspect();
@@ -408,7 +406,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)
           ? inspection
           : undefined;
-      const stepped = already === undefined ? 0 : (already.card + 1) % cards.length;
+      const opening = tileOwn ? cards.findIndex((card) => card.kind !== 'unit') : 0;
+      const stepped = already === undefined ? opening : (already.card + 1) % cards.length;
       panel.show(cards, stepped, on.at, already !== undefined && stepped !== already.card);
       inspection = { on, card: stepped };
     };
@@ -449,12 +448,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     view.onPress(
       (found) => {
-        if (selection === undefined || tileKey(found.tile) !== tileKey(selection.tile)) {
-          select(found);
-          return;
-        }
-        if (cityMode) void act(found);
+        if (selection === undefined || !sameTile(found.tile, selection.tile)) select(found);
+        else if (cityMode) void act(found);
+        else if (view.unitSelected()) select(found, false);
         else if (cityOn(this.current, found.tile) === 'player') enterCityMode();
+        else select(found);
       },
       () => {
         panel.rescale();
@@ -726,7 +724,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         case 'thing':
           return;
         case 'tile':
-          inspect(view.pressedOn(place.tile));
+          inspect(
+            view.pressedOn(place.tile),
+            selection !== undefined && sameTile(selection.tile, place.tile) && !view.unitSelected(),
+          );
           return;
         case 'beside':
           uninspect();
@@ -796,7 +797,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (boundTo(press, 'inspect')) {
         const selected = hand.selection();
         if (selected !== undefined) overlay.inspect(this.current, selected);
-        else if (selection !== undefined) inspect(selection);
+        else if (selection !== undefined) inspect(selection, !view.unitSelected());
         return;
       }
       if (!boundTo(press, 'back')) return;
@@ -828,7 +829,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
           const chronicle = this.latest;
           return {
             ended: chronicle.ending !== undefined,
-            selected: selection?.tile,
+            selected: view.unitSelected() ? undefined : selection?.tile,
             holdsKind: (kind) => Object.hasOwn(CATALOGUE.units, kind),
             holdsScript: (script) => Object.hasOwn(CATALOGUE.scripts, script),
             refusal: (kind, tile) => {

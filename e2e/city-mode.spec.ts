@@ -193,7 +193,7 @@ test('city mode lets go of the selection as it comes on', async ({ page }) => {
   expect(problems).toEqual([]);
 });
 
-test('a second left click on the city’s own tile enters city mode, and on any other tile changes nothing', async ({
+test('a left click on the city’s own tile once selected enters city mode, and on any other tile no unit stands on changes nothing', async ({
   page,
 }) => {
   const problems = watch(page);

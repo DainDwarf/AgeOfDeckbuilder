@@ -202,7 +202,7 @@ export type MapView = {
    * lit where it lights or glows that tile, else the tile reported to `onPress`.
    */
   click(tile: TileCoords): void;
-  /** Whether a unit of the player's on the selected tile lights or glows anything: it is being aimed. */
+  /** Whether the selected unit lights or glows anything: it is being aimed. */
   unitBeingAimed(): boolean;
   /**
    * Reports a click on a drawn tile to `clicked`; `commanded` is the step or the attack a click or a
@@ -216,11 +216,15 @@ export type MapView = {
     reassigned: (command: ReassignCommand) => void,
   ): void;
   /**
-   * Rings the selected tile and lights what the unit of the player's on it can do, or clears both.
-   * `cost` is the threshold the tile wears in its middle, over everything else it carries and in
-   * place of its yield glyphs; nothing leaves it bare.
+   * Rings the unit the map draws on the selected tile, in sight or kept in fog, and lights what it
+   * can do where `unit` asks for it and city mode is off, else rims the tile. `cost` is the
+   * threshold the tile wears in its middle, over everything else and in place of its yield glyphs.
    */
-  markSelected(tile: TileCoords | undefined, cost: Cost | undefined): void;
+  markSelected(tile: TileCoords | undefined, unit: boolean, cost: Cost | undefined): void;
+  /** Whether `markSelected` on the tile, asking for its unit or not, would select what is selected. */
+  isSelected(tile: TileCoords, unit: boolean): boolean;
+  /** Whether what is selected is the unit drawn on the selected tile, and not the tile. */
+  unitSelected(): boolean;
   /** Where a tile's face stands, for whatever floats beside a tile no press picked out. */
   faceOf(tile: TileCoords): TileFace;
   /** A tile named as a press landed on it names it: where its face stands goes with it. */
@@ -257,6 +261,9 @@ function faceAt(tile: TileCoords): TileFace {
 function pressedOn(tile: TileCoords): PressedTile {
   return { tile, at: faceAt(tile) };
 }
+
+/** A selected tile, and whether the unit drawn on it is what is selected in its place. */
+type MapSelection = { readonly tile: TileCoords; readonly unit: boolean };
 
 /** What the map draws of a chronicle and what of it it draws live, by tile key, and the snapshots it draws in fog. */
 type Drawing = {
@@ -820,31 +827,58 @@ export function createMapView(
     }
   };
 
-  /** The tile selected, and nothing while none is. */
-  let selection: TileCoords | undefined;
+  /** What is selected, and nothing while nothing is. */
+  let selection: MapSelection | undefined;
 
   /** The tiles whose units the card being aimed rings, none while no aim rings any. */
   let aimRinged: readonly TileCoords[] = [];
 
-  /** The unit standing on a tile in sight on the chronicle the map stands on: the one a ring there is worn by. */
+  /** The unit standing on a tile in sight on the chronicle the map stands on: the one an aim's ring there is worn by. */
   const wearerOn = (tile: TileCoords): Unit | undefined =>
     shown === undefined || !live.has(tileKey(tile)) ? undefined : unitAt(shown.units, tile);
 
+  /** The face the map draws of a tile named by its coordinates, and nothing where it draws none. */
+  const drawnAs = (tile: TileCoords): Drawn | undefined => {
+    const standing = shown === undefined ? undefined : tileAt(shown.tiles, tile);
+    return standing === undefined ? undefined : drawnOf(standing);
+  };
+
+  /** Whether a selection on the tile can be the unit the map draws there: never in city mode. */
+  const unitSelectableOn = (tile: TileCoords): boolean => {
+    const face = marking ? undefined : drawnAs(tile);
+    return face !== undefined && shown !== undefined && unitDrawn(face, shown.units) !== undefined;
+  };
+
+  /** The selection on the tile, the unit drawn there where `unit` asks for it and it is selectable. */
+  const selectionOn = (tile: TileCoords, unit: boolean): MapSelection => ({
+    tile: { q: tile.q, r: tile.r },
+    unit: unit && unitSelectableOn(tile),
+  });
+
+  /** Whether a selection on the tile, asking for its unit or not, is what is already selected. */
+  const isSelected = (tile: TileCoords, unit: boolean): boolean => {
+    if (selection === undefined || !sameTile(selection.tile, tile)) return false;
+    return selectionOn(tile, unit).unit === selection.unit;
+  };
+
+  /** The tile of the selected unit, and nothing while a tile or nothing is selected. */
+  const selectedUnit = (): TileCoords | undefined => (selection?.unit ? selection.tile : undefined);
+
   /**
-   * The selection and the aim as the chronicle the map stands on wears them: the unit on the selected
-   * tile ringed out of city mode, the tile's rim where none is, and each unit the aim rings ringed.
+   * The selection and the aim as the chronicle the map stands on wears them: the selected unit
+   * ringed, the selected tile's rim where no unit is selected, and each unit the aim rings ringed.
    */
   const paintRings = (): void => {
-    const onSelection = selection === undefined || marking ? undefined : wearerOn(selection);
+    const onSelection = selectedUnit();
     for (const mark of selectedRim) {
       mark.setVisible(selection !== undefined && onSelection === undefined);
     }
     const wearers = [
       ...(onSelection === undefined ? [] : [onSelection]),
-      ...aimRinged.flatMap((tile) => wearerOn(tile) ?? []),
+      ...aimRinged.filter((tile) => wearerOn(tile) !== undefined),
     ];
     ringPool.hide();
-    for (const { tile } of wearers) {
+    for (const tile of wearers) {
       const { x, y } = unitStandsAt(tile);
       ringPool.take().setPosition(x, y).setData('tile', tileKey(tile));
     }
@@ -1011,6 +1045,7 @@ export function createMapView(
     motion.takeDown();
     shown = current;
     ({ drawn, live, charted } = drawing(current));
+    if (selection !== undefined) selection = selectionOn(selection.tile, selection.unit);
 
     paintTiles();
     paintRivers();
@@ -1020,7 +1055,7 @@ export function createMapView(
     paintBadges();
     paintCityMarks();
     paintYields();
-    lightUnit(selection);
+    lightUnit(selectedUnit());
   };
 
   const motion = createMapMotion(scene, {
@@ -1081,7 +1116,7 @@ export function createMapView(
   const grab = createMapGrab(scene, map, frame, {
     shown: () => shown,
     marking: () => marking,
-    selection: () => selection,
+    selectedUnit,
     tileUnder,
     lightUnit,
     markerOf: (unit) => unitObjects.get(unit)?.marker,
@@ -1137,10 +1172,10 @@ export function createMapView(
       grab.onPress(catcher, commandUnitOn, reassigned);
     },
 
-    markSelected(tile: TileCoords | undefined, cost: Cost | undefined): void {
-      selection = tile === undefined ? undefined : { q: tile.q, r: tile.r };
+    markSelected(tile: TileCoords | undefined, unit: boolean, cost: Cost | undefined): void {
+      selection = tile === undefined ? undefined : selectionOn(tile, unit);
       threshold =
-        cost === undefined || selection === undefined ? undefined : { tile: selection, cost };
+        cost === undefined || selection === undefined ? undefined : { tile: selection.tile, cost };
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
@@ -1149,7 +1184,13 @@ export function createMapView(
       paintRings();
       paintThreshold();
       paintYields();
-      lightUnit(selection);
+      lightUnit(selectedUnit());
+    },
+
+    isSelected,
+
+    unitSelected(): boolean {
+      return selectedUnit() !== undefined;
     },
 
     faceOf(tile: TileCoords): TileFace {
@@ -1158,10 +1199,7 @@ export function createMapView(
 
     pressedOn,
 
-    drawnAs(tile: TileCoords): Drawn | undefined {
-      const standing = shown === undefined ? undefined : tileAt(shown.tiles, tile);
-      return standing === undefined ? undefined : drawnOf(standing);
-    },
+    drawnAs,
 
     showYields(shownResources: ReadonlySet<Resource>): void {
       showing = shownResources;
@@ -1174,7 +1212,7 @@ export function createMapView(
       paintRings();
       paintCityMarks();
       paintYields();
-      lightUnit(selection);
+      lightUnit(selectedUnit());
     },
 
     showVeils(next: Veils): void {
