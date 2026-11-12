@@ -49,6 +49,7 @@ import {
   rested,
   ringedTile,
   riverRuns,
+  SCOUT,
   settledOn,
   shownCard,
   shows,
@@ -62,9 +63,6 @@ import {
 
 /** The settle card that enters the scout. */
 const FIRST_SCOUT = 'first-scout';
-
-/** The unit kind that card enters. */
-const SCOUT = 'scout';
 
 /** The chronicle the step leaves, or none where the rules refuse the move. */
 function stepped(chronicle: Chronicle, to: TileCoords): Chronicle | undefined {

@@ -30,11 +30,11 @@ import {
   holderOf,
   type Snapshot,
 } from '../rules/state';
-import { type Faction, type Landing, type Unit, unitAt } from '../rules/units';
+import { type Faction, type Landing, pathTo, type Unit, unitAt } from '../rules/units';
 import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
-import { onResize, type Stratum } from './design-space';
+import { onResize, type Stratum, thingUnder, whileUp } from './design-space';
 import { LOOK } from './look';
 import {
   createBorder,
@@ -94,6 +94,7 @@ import {
   wearing,
 } from './map-marks';
 import { createMapMotion } from './map-motion';
+import { createPath } from './map-path';
 import {
   asPressedStraight,
   asRiverMouth,
@@ -308,6 +309,7 @@ export function createMapView(
     .setVisible(false);
   strata.dim.layer.add(dim);
   const selected = group(strata.ring, 'selected');
+  const path = createPath(scene, group(strata.ring, 'path'));
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
 
@@ -560,7 +562,7 @@ export function createMapView(
   const paintAtZoom = (): void => {
     const resolution = frame.atZoom();
     const numbers = CITY_FACTIONS.map((whose) => cityBadges[whose].number);
-    for (const label of [thresholdOnTile.number, ...numbers]) {
+    for (const label of [thresholdOnTile.number, path.number, ...numbers]) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
     paintThreshold();
@@ -807,12 +809,27 @@ export function createMapView(
   let selection: TileCoords | undefined;
 
   /**
-   * Which unit the map is lighting for, by the number it is named by, where its landings lie and
-   * which tiles hold a unit it can attack; nothing while none is lit.
+   * Which unit the map is lighting for, as it stood when lit, where its landings lie and which tiles
+   * hold a unit it can attack; nothing while none is lit.
    */
   let lit:
-    | { readonly unit: number; readonly landings: Landing[]; readonly targets: TileCoords[] }
+    | { readonly standing: Unit; readonly landings: Landing[]; readonly targets: TileCoords[] }
     | undefined;
+
+  /** The landing the lit unit's path is drawn to, and nothing while none is. */
+  let pathEnd: Landing | undefined;
+
+  /** The lit unit's path to one of its landings, or none. */
+  const showPath = (landing: Landing | undefined): void => {
+    const current = shown;
+    const tiles =
+      landing === undefined || lit === undefined || current === undefined
+        ? undefined
+        : pathTo(catalogue, current, lit.standing, landing.tile);
+    pathEnd = tiles === undefined ? undefined : landing;
+    if (tiles === undefined || landing === undefined || lit === undefined) path.hide();
+    else path.show(tiles, lit.standing.movePoints - landing.cost);
+  };
 
   /**
    * What the unit of the player's standing on a tile can do: every tile its move points reach drawn
@@ -825,20 +842,56 @@ export function createMapView(
       tile === undefined || current === undefined || marking
         ? undefined
         : unitAt(current.units, tile);
+    const was = lit?.standing;
     lit = undefined;
     let reached: Reach | undefined;
     if (current !== undefined && standing?.faction === 'player') {
       const { landings, targets } = byHand(catalogue, current, standing);
-      lit = { unit: standing.id, landings, targets: targets.map((other) => other.tile) };
+      lit = { standing, landings, targets: targets.map((other) => other.tile) };
       reached = { own: standing.tile, landings: landings.map((landing) => landing.tile) };
     }
     reach.paint(reached);
+
+    const kept = pathEnd?.tile;
+    // A step moves the unit, and an attack spends the move points it had left, which lights nothing.
+    const asBefore =
+      was !== undefined &&
+      standing !== undefined &&
+      was.id === standing.id &&
+      sameTile(was.tile, standing.tile);
+    showPath(
+      kept === undefined || !asBefore
+        ? undefined
+        : lit?.landings.find((landing) => sameTile(landing.tile, kept)),
+    );
 
     litPool.hide();
     for (const coord of lit?.targets ?? []) {
       asGlow(litPool.take(), coord, FACTION_COLOURS.enemy, LOOK.targetGlow);
     }
   };
+
+  /**
+   * The pointer read once a frame while a unit lights a tile: a lit tile it is on takes the path,
+   * the unit's own tile takes it down, and anywhere else leaves it where it stands.
+   */
+  const followPath = (): void => {
+    if (lit === undefined || lit.landings.length === 0 || presser === undefined) return;
+    if (thingUnder(scene.game) !== presser) return;
+    const pointer = scene.input.activePointer;
+    const at = map.at(pointer.x, pointer.y);
+    const tile = tileUnder(at.x, at.y);
+    if (tile === undefined) return;
+    if (sameTile(tile, lit.standing.tile)) {
+      if (pathEnd !== undefined) showPath(undefined);
+      return;
+    }
+    if (pathEnd !== undefined && sameTile(pathEnd.tile, tile)) return;
+    const landing = lit.landings.find((one) => sameTile(one.tile, tile));
+    if (landing !== undefined) showPath(landing);
+  };
+  // Outside Phaser's dispatch: a hit test inside it refills the list being walked (docs/PHASER.md).
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followPath);
 
   /**
    * Every border on the chronicle the map stands on, darkened in fog: both cities' around each one's
@@ -1016,7 +1069,7 @@ export function createMapView(
 
       /** The step or the attack a release on a tile is for the unit the map has lit, and nothing else. */
       const commandUnitOn = (unit: number, on: TileCoords): boolean => {
-        if (lit?.unit !== unit) return false;
+        if (lit?.standing.id !== unit) return false;
         if (lit.landings.some((landing) => sameTile(landing.tile, on))) {
           commanded({ type: 'move', unit, tile: on });
           return true;
@@ -1029,7 +1082,7 @@ export function createMapView(
       };
 
       clickedTile = (tile) => {
-        if (lit !== undefined && commandUnitOn(lit.unit, tile)) return;
+        if (lit !== undefined && commandUnitOn(lit.standing.id, tile)) return;
         clicked(pressedOn(tile));
       };
 

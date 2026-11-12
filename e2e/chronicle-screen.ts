@@ -2145,6 +2145,9 @@ export const WORKER = 'worker';
 /** The unit kind of the player's that fights. */
 export const WARRIOR = 'warrior';
 
+/** The unit kind the first scout enters. */
+export const SCOUT = 'scout';
+
 /** The card that places the improvement, and the improvement it places. */
 export const TRAPPING = 'trapping';
 
@@ -2632,6 +2635,51 @@ export function litTiles(page: Page): Promise<string[]> {
     const lit = window.litKeys?.();
     if (lit === undefined) throw new Error('no chronicle was opened on this page');
     return lit.sort();
+  });
+}
+
+/** A point on the map's own surface. */
+type OnMap = { x: number; y: number };
+
+/**
+ * A unit's path as the map draws it: its tiles' keys, from the unit's to the landing, and where each
+ * of their faces stands; where each chevron stands, in the order drawn; and what the number reads and
+ * where it stands, all on the map's own surface.
+ */
+export type PathDrawn = {
+  tiles: string[];
+  faces: OnMap[];
+  chevrons: OnMap[];
+  left: { text: string; at: OnMap };
+};
+
+/** The path the map draws, and nothing while none stands. */
+export function pathDrawn(page: Page): Promise<PathDrawn | undefined> {
+  return page.evaluate(() => {
+    // The path is one layer carrying its tiles' keys.
+    const layer = window.named?.('path')?.object;
+    const shown = window.shownIn?.('path');
+    if (layer === undefined || shown === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    if (shown.length === 0) return undefined;
+    const placeOf = (object: Phaser.GameObjects.GameObject): OnMap => {
+      const placed = object as Phaser.GameObjects.Image;
+      return { x: placed.x, y: placed.y };
+    };
+    const tiles = layer.getData('path') as string[];
+    const left = shown.find((mark) => mark.name === 'path-left') as Phaser.GameObjects.Container;
+    const number = left.list.find((part) => part.type === 'Text') as Phaser.GameObjects.Text;
+    return {
+      tiles,
+      faces: tiles.map((key) => {
+        const face = window.named?.(`tile-${key}`)?.object;
+        if (face === undefined) throw new Error(`there is no face on ${key}`);
+        return placeOf(face);
+      }),
+      chevrons: shown.filter((mark) => mark.name === 'path-chevron').map(placeOf),
+      left: { text: number.text, at: placeOf(left) },
+    };
   });
 }
 

@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A unit's path drawn** — a unit being aimed wears its path to the tile of its reach the pointer is on, or the one it is dragged over: chevrons from the unit to the landing and the move points it would have left at the end, kept on the last such tile once the pointer leaves the reach; the rules answer the path; `e2e/path.spec.ts` passes. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/a-units-path-drawn.md](board/a-units-path-drawn.md)
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, both decided on one mockup with the two marks of the line after.
 - **The screen's answers on a unit** — the enemies a selected unit can attack and a unit a card is aimed at wear their marks on the unit itself, as that mockup settled them.
 - **A health bar on units** — a unit on the map shows its health.

@@ -39,6 +39,9 @@ export type Look = {
   readonly reachBand: number;
   /** The strength the reach's line along the region's edges rests at. */
   readonly reachLine: number;
+  /** The strength a unit's path's chevrons rest at, and the dark edge under them. */
+  readonly pathChevron: number;
+  readonly pathEdge: number;
   readonly pin: number;
   /** The dark line on each side of a pinned plate's edge. */
   readonly pinEdge: number;
@@ -148,6 +151,8 @@ export const LOOK: Look = {
   selectedEdge: 0x0d1014,
   reachBand: 0.6,
   reachLine: 0.9,
+  pathChevron: 0.9,
+  pathEdge: 0.63,
   pin: 0xf2f6ff,
   pinEdge: 0x0d1014,
   pinMark: 0xb4453c,

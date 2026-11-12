@@ -7,6 +7,7 @@ import {
   edgesAlong,
   type FeatureId,
   type ImprovementId,
+  MOVE_POINT,
   neighbours,
   type River,
   type Terrain,
@@ -184,6 +185,12 @@ export function positionOf({ q, r }: TileCoords): { x: number; y: number } {
     x: DESIGN_WIDTH / 2 + Math.sqrt(3) * TILE_SIZE * (q + r / 2),
     y: DESIGN_HEIGHT / 2 + 1.5 * TILE_SIZE * SQUASH * r,
   };
+}
+
+/** Where a unit's painting stands on a tile: below its middle. */
+export function unitStandsAt(tile: TileCoords): { x: number; y: number } {
+  const { x, y } = positionOf(tile);
+  return { x, y: y + UNIT_DROP };
 }
 
 /** Where the mark of a tile the population stands on lies: below the middle of that tile. */
@@ -835,32 +842,55 @@ function drawPill(
 }
 
 /**
- * What a claim asks for: its number and its resource's own diamond on their plate, in one container,
- * and the width the plate is drawn at, none until it is.
+ * A number on the culture threshold's plate, in one container with whatever else stands on it, and
+ * the width the plate is drawn at, none until it is.
  */
-type ThresholdMark = {
+export type PlatedNumber = {
   readonly root: Phaser.GameObjects.Container;
   readonly pill: Phaser.GameObjects.Graphics;
   readonly number: Phaser.GameObjects.Text;
-  readonly glyph: Phaser.GameObjects.Rectangle;
   width: number | undefined;
 };
 
-export function thresholdMark(scene: Phaser.Scene): ThresholdMark {
+/** What a claim asks for: its number and its resource's own diamond on their plate. */
+type ThresholdMark = PlatedNumber & { readonly glyph: Phaser.GameObjects.Rectangle };
+
+/** The plate and its number in a container of that name, hidden, with what else stands on it over them. */
+function platedNumber(
+  scene: Phaser.Scene,
+  name: string,
+  over: Phaser.GameObjects.GameObject[] = [],
+): PlatedNumber {
   const pill = scene.add.graphics();
   const number = addText(scene, 0, 0, '', THRESHOLD_STYLE).setOrigin(0.5, 0.5);
-  const glyph = diamond(scene, THRESHOLD_GLYPH, 0);
   const root = scene.add
-    .container(0, 0, [pill, number, glyph])
-    .setName('threshold')
+    .container(0, 0, [pill, number, ...over])
+    .setName(name)
     .setVisible(false);
-  return { root, pill, number, glyph, width: undefined };
+  return { root, pill, number, width: undefined };
+}
+
+/**
+ * The plate drawn as the feature disc is round what stands on it, that wide: its room on each side,
+ * and never narrower than it is tall.
+ */
+function drawPlate(mark: PlatedNumber, inner: number): void {
+  const width = Math.max(inner + 2 * THRESHOLD_PLATE_PAD, THRESHOLD_PLATE_HEIGHT);
+  drawPill(mark, width, THRESHOLD_PLATE_HEIGHT, LOOK.featureDisc, {
+    ...LOOK.featureDiscRim,
+    width: DISC_RIM,
+  });
+}
+
+export function thresholdMark(scene: Phaser.Scene): ThresholdMark {
+  const glyph = diamond(scene, THRESHOLD_GLYPH, 0);
+  return { ...platedNumber(scene, 'threshold', [glyph]), glyph };
 }
 
 /**
  * What a claim asks for standing on its tile: the threshold as a minus and its number, its
- * resource's own diamond beside it, the pair centred on the tile's middle on a plate drawn as the
- * feature disc is, widening about its middle with the number.
+ * resource's own diamond beside it, the pair centred on the tile's middle on the plate, widening
+ * about its middle with the number.
  */
 export function showThreshold(mark: ThresholdMark, coord: TileCoords, cost: Cost): void {
   const { root, number, glyph } = mark;
@@ -870,12 +900,29 @@ export function showThreshold(mark: ThresholdMark, coord: TileCoords, cost: Cost
   const width = own + THRESHOLD_GAP + THRESHOLD_GLYPH;
   number.setX((own - width) / 2);
   glyph.setX((width - THRESHOLD_GLYPH) / 2);
-  drawPill(mark, width + 2 * THRESHOLD_PLATE_PAD, THRESHOLD_PLATE_HEIGHT, LOOK.featureDisc, {
-    ...LOOK.featureDiscRim,
-    width: DISC_RIM,
-  });
+  drawPlate(mark, width);
   const { x, y } = positionOf(coord);
   root.setPosition(x, y).setVisible(true);
+}
+
+/** A count of hundredths as the move points it is worth: what every card reads one by. */
+export function inMovePoints(hundredths: number): string {
+  return (hundredths / MOVE_POINT).toString();
+}
+
+export function movePointsLeftMark(scene: Phaser.Scene): PlatedNumber {
+  return platedNumber(scene, 'path-left');
+}
+
+/**
+ * The move points a unit would have left at the end of its path, the number alone on the plate,
+ * where a unit's painting stands on the landing.
+ */
+export function showMovePointsLeft(mark: PlatedNumber, coord: TileCoords, left: number): void {
+  mark.number.setText(inMovePoints(left));
+  drawPlate(mark, ownBoxOf(mark.number).width);
+  const { x, y } = unitStandsAt(coord);
+  mark.root.setPosition(x, y).setVisible(true);
 }
 
 /** A city's badge: its pill, its number, and the width the pill is drawn at, none until it is. */

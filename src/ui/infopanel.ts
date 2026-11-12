@@ -3,7 +3,6 @@ import { bonusOf, type Catalogue, damageOf, fullHealth, unitKind } from '../rule
 import { preparedAs } from '../rules/enemies';
 import {
   groundCost,
-  MOVE_POINT,
   movementCost,
   type River,
   runsAlong,
@@ -24,6 +23,7 @@ import {
   buildingMark,
   featureMark,
   improvementMark,
+  inMovePoints,
   type Mark,
   paintedBoundsOf,
   riverMark,
@@ -265,11 +265,6 @@ function readsRow(catalogue: Catalogue, unit: UnitReading, stat: Stat): boolean 
 
 /** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
 type Term = Stat | Resource;
-
-/** A count of hundredths as the move points it is worth: what every card reads one by. */
-function inMovePoints(hundredths: number): string {
-  return (hundredths / MOVE_POINT).toString();
-}
 
 /**
  * What a stat's row reads: what the unit has left over its own number, where it has two, and its own
