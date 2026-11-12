@@ -1,13 +1,10 @@
 import { aimOf } from '../src/rules/cards';
 import {
-  ageOf,
   type Catalogue,
   capstoneOf,
   cardOf,
   costOf,
-  type Entering,
   earningOf,
-  entered,
   fullHealth,
   strikeOf,
   victoryTechnologyOf,
@@ -40,7 +37,7 @@ import {
 } from '../src/rules/map';
 import { RESOURCES, type Resources, takenBelowNothing } from '../src/rules/resources';
 import { offered } from '../src/rules/schedule';
-import { inSight } from '../src/rules/sight';
+import { inSight, type ShownUnit, unitShown } from '../src/rules/sight';
 import {
   assignedTo,
   type CardId,
@@ -52,16 +49,15 @@ import {
   idle,
   onSettlePhase,
   playable,
-  type SnapshotUnit,
 } from '../src/rules/state';
 import {
   actsAsEnemy,
   canAttack,
   type Landing,
   reachable,
+  refreshedMovePoints,
   relationsOf,
   type Unit,
-  unitAt,
   unitOf,
 } from '../src/rules/units';
 import { tileYield, worthOf } from '../src/rules/yields';
@@ -775,41 +771,22 @@ function rankedClaims(
 }
 
 /**
- * How a unit a snapshot carries enters the map: as one of its kind, embarked on its age's embarked
- * move where it stands embarked.
+ * The map the player knows: the charted tiles as last seen, the player's units, and each other unit
+ * a charted tile shows, standing in sight and as its snapshot kept it in fog, at its move.
  */
-function shownEntering(
-  tile: TileCoords,
-  { stats, faction, embarked }: SnapshotUnit,
-  embarkedMove: number | undefined,
-): Entering {
-  // The map shows no script: the walk and the attack the unit is handed to read none.
-  return {
-    type: stats.type,
-    tile,
-    faction,
-    script: '',
-    embarkedMove: embarked ? embarkedMove : undefined,
-  };
-}
-
-/**
- * The map the player knows: the charted tiles as last seen, the player's units, and each unit a
- * snapshot carries standing as one of its kind, in sight or in fog this turn.
- */
-function shownMap(catalogue: Catalogue, chronicle: Chronicle): Chronicle {
-  const { embarkedMove } = ageOf(catalogue, chronicle.age).camp;
+function shownMap(catalogue: Catalogue, chronicle: Chronicle) {
+  const seen = inSight(catalogue, chronicle);
+  const others = chronicle.snapshots.flatMap((snapshot) => {
+    const fog = seen.has(tileKey(snapshot)) ? undefined : snapshot;
+    const unit = unitShown(chronicle.units, { tile: snapshot, snapshot: fog });
+    return unit === undefined || unit.faction === 'player' ? [] : [refreshedMovePoints(unit)];
+  });
   // Not the chronicle: its tiles are the snapshots', so `reachable` never reads the map unseen.
-  let known: Chronicle = {
+  return {
     ...chronicle,
     tiles: chronicle.snapshots.map(({ tile }) => tile),
-    units: playersUnits(chronicle),
+    units: [...playersUnits(chronicle), ...others],
   };
-  for (const { q, r, unit } of chronicle.snapshots) {
-    if (unit === undefined) continue;
-    known = entered(catalogue, known, shownEntering({ q, r }, unit, embarkedMove)).chronicle;
-  }
-  return known;
 }
 
 /**
@@ -1280,23 +1257,20 @@ export function* enemyAttacked(
 
 /**
  * The enemies the map shows within `radius` tiles of the city's tile, the nearest it first, of least
- * health of equals, each at the health the screen shows: its own in sight, its kind's in fog.
+ * health of equals.
  */
 function shownEnemiesNear(
   catalogue: Catalogue,
   chronicle: Chronicle,
   city: TileCoords,
   radius: number,
-): Unit[] {
+): ShownUnit[] {
   const relations = relationsOf(chronicle);
-  const seen = inSight(catalogue, chronicle);
   const near = nearTheCity(chronicle, radius);
   const order = tileOrder(chronicle);
   return ranked(
-    shownMap(catalogue, chronicle).units.flatMap((shown) => {
-      if (!actsAsEnemy(shown, relations) || !near(shown.tile)) return [];
-      const enemy = seen.has(tileKey(shown.tile)) ? unitAt(chronicle.units, shown.tile) : shown;
-      if (enemy === undefined) return [];
+    shownMap(catalogue, chronicle).units.flatMap((enemy) => {
+      if (!actsAsEnemy(enemy, relations) || !near(enemy.tile)) return [];
       return [
         { item: enemy, rank: [distance(enemy.tile, city), enemy.stats.health, order(enemy.tile)] },
       ];

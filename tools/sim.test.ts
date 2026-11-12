@@ -95,7 +95,7 @@ import {
 import { RESOURCES } from '../src/rules/resources';
 import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
-import { chartedAt } from '../src/rules/sight';
+import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, type Stage, unchanged, walked } from '../src/rules/stages';
 import { type Chronicle, cardKeyed, cardsInPiles } from '../src/rules/state';
 import { type Faction, type UnitStats, unitAt } from '../src/rules/units';
@@ -1460,7 +1460,7 @@ test('a unit that attacks walks to the tile furthest from the enemy within its r
   }
 });
 
-test('a unit that attacks walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, one in fog read at its kind’s health, to its landing nearest that enemy, and toward none beyond the three', () => {
+test('a unit that attacks walks toward the enemy the map shows within three tiles of the city, the nearest the city first, of least health of equals, one in fog read at the health it was last seen with, to its landing nearest that enemy, and toward none beyond the three', () => {
   const at = { q: -1, r: 0 };
   const west = { q: -3, r: 0 };
   const east = { q: 3, r: 0 };
@@ -1490,6 +1490,7 @@ test('a unit that attacks walks toward the enemy the map shows within three tile
     tile,
   });
 
+  expect(inSight(CATALOGUE, fogged).has(tileKey(east))).toBe(false);
   for (const [persona, gambit] of [
     ['builder', 28],
     ['warlord', 27],
@@ -1497,7 +1498,7 @@ test('a unit that attacks walks toward the enemy the map shows within three tile
     expect(answerOf(persona, gambit, two)).toEqual(walksTo(two, { q: 1, r: 0 }));
     expect(answerOf(persona, gambit, beyond)).toBeUndefined();
     expect(answerOf(persona, gambit, watched)).toEqual(walksTo(watched, { q: 1, r: 0 }));
-    expect(answerOf(persona, gambit, fogged)).toEqual(walksTo(fogged, { q: -2, r: 0 }));
+    expect(answerOf(persona, gambit, fogged)).toEqual(walksTo(fogged, { q: 1, r: 0 }));
   }
 });
 
