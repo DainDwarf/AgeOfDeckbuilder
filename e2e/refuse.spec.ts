@@ -1,11 +1,9 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf, refuses } from '../src/rules/cards';
-import { cardOf, costOf } from '../src/rules/catalogue';
-import { refusalOf } from '../src/rules/chronicle';
+import { cardOf } from '../src/rules/catalogue';
 import { tileAt, tileKey } from '../src/rules/map';
-import type { CardId, Chronicle } from '../src/rules/state';
-import { refused, refusedAim, type Said } from '../src/ui/refusal-lines';
+import { refusedAim } from '../src/ui/refusal-lines';
 import {
   admits,
   aimed,
@@ -17,12 +15,13 @@ import {
   inHand,
   type Judged,
   mapFrame,
-  type OnScreen,
   onDeer,
   onScreen,
   openSaved,
   playerCityTile,
   refusalLines,
+  refusalSaid,
+  refusedLiftedOut,
   rested,
   selected,
   settledOn,
@@ -32,26 +31,6 @@ import {
   watch,
 } from './chronicle-screen';
 
-function reasons(chronicle: Chronicle, id: CardId): Said {
-  return refused(costOf(CATALOGUE, id), refusalOf(CATALOGUE, chronicle, id));
-}
-
-/** The first card the rules refuse on turn 1, dragged past the play height and released on the canvas. */
-async function letGo(
-  page: Page,
-): Promise<{ opened: Chronicle; card: CardId; index: number; name: string; home: OnScreen }> {
-  const { chronicle: opened, index } = bareWith(
-    'a card the rules refuse',
-    ({ playable }) => !playable,
-  );
-  await openSaved(page, opened);
-
-  const name = `hand-${index}`;
-  const home = await onScreen(page, name);
-  await dragOut(page, index);
-  return { opened, card: opened.hand[index].id, index, name, home };
-}
-
 /** Longer than any motion on the chronicle screen takes to play out, so nothing is still on its way. */
 const A_WHILE = 2000;
 
@@ -60,8 +39,8 @@ test('a card the rules refuse stays selected, plays nothing, and stands its note
 }) => {
   const problems = watch(page);
 
-  const { opened, card, index, home } = await letGo(page);
-  const said = reasons(opened, card);
+  const { opened, card, index, home } = await refusedLiftedOut(page);
+  const said = refusalSaid(opened, card);
 
   expect(await chronicleOf(page)).toEqual(opened);
   expect(await refusalLines(page)).toEqual(said);
@@ -127,7 +106,7 @@ test('a second click on a card the city cannot pay for says why over it, and it 
   await openSaved(page, opened);
   const name = `hand-${index}`;
   const home = await onScreen(page, name);
-  const said = reasons(opened, opened.hand[index].id);
+  const said = refusalSaid(opened, opened.hand[index].id);
 
   await page.mouse.click(home.x, home.y);
   await rested(page);
@@ -174,7 +153,7 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
   await page.mouse.click(face.x, face.y);
   await rested(page);
 
-  expect(await refusalLines(page)).toEqual(reasons(aiming, aiming.hand[index].id));
+  expect(await refusalLines(page)).toEqual(refusalSaid(aiming, aiming.hand[index].id));
   expect(await standing(page, 'aim')).toBe(true);
   expect(await chronicleOf(page)).toEqual(aiming);
 
@@ -185,10 +164,12 @@ test('a press on a lit tile the city cannot pay for says the cost over it, and t
   expect(problems).toEqual([]);
 });
 
-test('a press on the chronicle screen takes the refusal note down at once', async ({ page }) => {
+test('a press on the chronicle screen takes the refusal note down as it is let go', async ({
+  page,
+}) => {
   const problems = watch(page);
 
-  await letGo(page);
+  await refusedLiftedOut(page);
   expect(await standing(page, 'refusal')).toBe(true);
 
   const frame = await mapFrame(page);

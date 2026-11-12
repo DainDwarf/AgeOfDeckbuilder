@@ -1,5 +1,15 @@
 import type Phaser from 'phaser';
-import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Stratum, UI_FONT } from './design-space';
+import { type Press, pressOf } from './bindings';
+import {
+  addText,
+  DESIGN_WIDTH,
+  dragged,
+  drawBubble,
+  MARGIN,
+  onLetGoOffCanvas,
+  type Stratum,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK } from './look';
 import type { TileFace } from './map';
 import type { Said } from './refusal-lines';
@@ -26,12 +36,14 @@ export type RefusalNote = {
   /** Stands what it is saying over the same place again, at the size on screen it already had. */
   rescale(): void;
   hide(): void;
+  /** The presses landing on that scene heard as those landing on its own. */
+  hearPressesOf(other: Phaser.Scene): void;
 };
 
 /**
  * The bubble a cost and a refusal answer with, on the surface it was raised from: one stands per
- * surface, a second replaces the first, nothing to say raises none, and any press on that scene
- * takes it down.
+ * surface, a second replaces the first, nothing to say raises none, and the next press on that
+ * scene takes it down as it is let go or as its drag starts.
  */
 export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote {
   let note: Phaser.GameObjects.Container | undefined;
@@ -45,7 +57,40 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
     note = undefined;
   };
 
-  scene.input.on('pointerdown', hide);
+  /** Each press held: where it landed, and the note standing as it did, the one its answer takes down. */
+  const held = new Map<
+    Press,
+    {
+      readonly from: { x: number; y: number };
+      readonly standing: Phaser.GameObjects.Container | undefined;
+    }
+  >();
+
+  const pressLanded = (pointer: Phaser.Input.Pointer): void => {
+    const press = pressOf(pointer);
+    if (press === undefined) return;
+    held.set(press, { from: { x: pointer.x, y: pointer.y }, standing: note });
+  };
+
+  // A note this press raised stands: the hand's and a window's are raised before the scene hears the
+  // release that raises them (phaser/src/input/InputPlugin.js:2041, :2069).
+  const pressAnswered = (press: Press): void => {
+    const pressing = held.get(press);
+    if (pressing === undefined) return;
+    held.delete(press);
+    if (pressing.standing === note) hide();
+  };
+
+  scene.input.on('pointerdown', pressLanded);
+  // A held press's moves and every release reach this scene wherever the press landed (docs/PHASER.md).
+  scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+    for (const [press, { from }] of held) if (dragged(scene, from, pointer)) pressAnswered(press);
+  });
+  scene.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+    const press = pressOf(pointer);
+    if (press !== undefined) pressAnswered(press);
+  });
+  onLetGoOffCanvas(scene, pressAnswered);
 
   const raise = (said: Said, place: Place): void => {
     hide();
@@ -96,5 +141,9 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
     },
 
     hide,
+
+    hearPressesOf(other: Phaser.Scene): void {
+      other.input.on('pointerdown', pressLanded);
+    },
   };
 }

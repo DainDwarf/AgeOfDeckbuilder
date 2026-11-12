@@ -247,8 +247,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
     const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
     const note = createRefusalNote(map, map.strata.note);
-    // The map's note hears only the presses this scene lets through to the map.
-    this.input.on('pointerdown', note.hide);
+    // A press reaches the map only where this scene lets it through.
+    note.hearPressesOf(this);
 
     /** The tile selected, and nothing while none is. */
     let selection: PressedTile | undefined;

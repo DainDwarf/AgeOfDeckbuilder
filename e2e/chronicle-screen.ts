@@ -103,6 +103,7 @@ import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import type { PileKind } from '../src/ui/piles';
+import { refused, type Said } from '../src/ui/refusal-lines';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, eventName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
@@ -2577,6 +2578,30 @@ export function tooltipText(page: Page, name: string): Promise<string> {
   }, name);
 }
 
+/** What the note refusing the card on the chronicle says, line by line, as the rules answer it. */
+export function refusalSaid(chronicle: Chronicle, id: CardId): Said {
+  return refused(costOf(CATALOGUE, id), refusalOf(CATALOGUE, chronicle, id));
+}
+
+/**
+ * The first card the rules refuse on turn 1, dragged past the play height and released on the canvas,
+ * where it stands selected under its note.
+ */
+export async function refusedLiftedOut(
+  page: Page,
+): Promise<{ opened: Chronicle; card: CardId; index: number; name: string; home: OnScreen }> {
+  const { chronicle: opened, index } = bareWith(
+    'a card the rules refuse',
+    ({ playable }) => !playable,
+  );
+  await openSaved(page, opened);
+
+  const name = `hand-${index}`;
+  const home = await onScreen(page, name);
+  await dragOut(page, index);
+  return { opened, card: opened.hand[index].id, index, name, home };
+}
+
 /** What the refusal note says, line by line, or nothing while none stands. */
 export function refusalLines(page: Page): Promise<string[] | undefined> {
   return page.evaluate(() => {
@@ -2700,6 +2725,28 @@ export function ringsAndRims(page: Page): Promise<{ rings: string[]; rims: strin
     return {
       rings: rings.map(tileOf).sort(),
       rims: [...(rim.length > 0 ? [tileOf(selected)] : []), ...aimed.map(tileOf)].sort(),
+    };
+  });
+}
+
+/**
+ * The tile selected, the tiles whose units wear their ring and the tiles the map lights and glows for
+ * a unit, each by tile key, the lists in key order: read together, in one question.
+ */
+export function ringedAndLit(
+  page: Page,
+): Promise<{ selected: string | undefined; rings: string[]; lit: string[] }> {
+  return page.evaluate(() => {
+    const selected = window.named?.('selected')?.object;
+    const rings = window.shownIn?.('rings');
+    const lit = window.litKeys?.();
+    if (selected === undefined || rings === undefined || lit === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    return {
+      selected: selected.getData('tile') as string | undefined,
+      rings: rings.map((ring) => ring.getData('tile') as string).sort(),
+      lit: lit.sort(),
     };
   });
 }

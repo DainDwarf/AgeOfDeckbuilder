@@ -83,6 +83,12 @@ export function createMapGrab(
     }
   };
 
+  /** The tile the unit of that number stands on, on the chronicle the map stands on. */
+  const tileOfUnit = (unit: number): TileCoords | undefined => {
+    const shown = view.shown();
+    return shown === undefined ? undefined : unitOf(shown.units, unit)?.tile;
+  };
+
   /**
    * Where the map draws what a press has hold of standing: the unit on the tile it stands on, the
    * population under the tile it is assigned to.
@@ -90,9 +96,8 @@ export function createMapGrab(
   const homeOf = (grab: Grab): { x: number; y: number } | undefined => {
     switch (grab.kind) {
       case 'unit': {
-        const shown = view.shown();
-        const standing = shown === undefined ? undefined : unitOf(shown.units, grab.unit);
-        return standing === undefined ? undefined : positionOf(standing.tile);
+        const tile = tileOfUnit(grab.unit);
+        return tile === undefined ? undefined : positionOf(tile);
       }
       case 'assigned':
         return assignedAt(grab.tile);
@@ -120,11 +125,16 @@ export function createMapGrab(
     homing.set(mark, { ...home, slide });
   };
 
-  /** A press taking hold: what it holds, if it is sliding home, stops where it stands. */
+  /**
+   * A press's drag starting: what it holds, if it is sliding home, stops where it stands, and a unit
+   * is carried over the others, lighting what it reaches.
+   */
   const takeHold = (grab: Grab): void => {
-    grabbed = grab;
     const mark = markOf(grab);
     if (mark !== undefined) homing.get(mark)?.slide.stop();
+    if (grab.kind !== 'unit') return;
+    view.carry(grab.unit);
+    view.lightUnit(tileOfUnit(grab.unit));
   };
 
   return {
@@ -135,10 +145,11 @@ export function createMapGrab(
     ): void {
       /** Whether a press has come far enough to be a drag; it stays one once it has. */
       const travelled = (grab: Grab, pointer: Phaser.Input.Pointer): boolean => {
-        if (!grab.dragging && !dragged(scene, grab.from, pointer)) return false;
-        if (!grab.dragging && grab.kind === 'unit') view.carry(grab.unit);
+        if (grab.dragging) return true;
+        if (!dragged(scene, grab.from, pointer)) return false;
         grab.dragging = true;
         frame.setCarried('left');
+        takeHold(grab);
         return true;
       };
 
@@ -150,7 +161,7 @@ export function createMapGrab(
       scene.input.on('pointermove', follow);
 
       const letGo = (grab: Grab): void => {
-        slideHome(grab);
+        if (grab.dragging) slideHome(grab);
         grabbed = undefined;
         view.lightUnit(view.selection());
       };
@@ -165,13 +176,12 @@ export function createMapGrab(
           const from = { x: pointer.x, y: pointer.y };
           if (view.marking()) {
             if (!assignedTo(shown, under)) return true;
-            takeHold({ kind: 'assigned', tile: under, from, dragging: false });
+            grabbed = { kind: 'assigned', tile: under, from, dragging: false };
             return false;
           }
           const standing = unitAt(shown.units, under);
           if (standing?.faction !== 'player') return true;
-          takeHold({ kind: 'unit', unit: standing.id, from, dragging: false });
-          view.lightUnit(under);
+          grabbed = { kind: 'unit', unit: standing.id, from, dragging: false };
           return false;
         },
         release: (pointer) => {
