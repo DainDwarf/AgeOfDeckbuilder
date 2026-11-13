@@ -66,6 +66,7 @@ import {
   type FeatureId,
   generateMap,
   type HexMap,
+  offLine,
   runsAlong,
   type Terrain,
   type Tile,
@@ -145,6 +146,7 @@ import {
   type Faction,
   FIRST_UNIT_NUMBER,
   type Landing,
+  pathTo,
   reachable,
   refreshedAction,
   refreshedMovePoints,
@@ -1262,6 +1264,48 @@ export function byHand(
   };
 }
 
+/** A unit a step brings within an attacker's range, and the landing the attack comes from. */
+export type BroughtInRange = { readonly target: Unit; readonly landing: Landing };
+
+/**
+ * Every unit in sight out of a unit's range that a step to one of the landings `byHand` offers it
+ * brings in range, while it has the action an attack spends.
+ */
+export function broughtInRange(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+): BroughtInRange[] {
+  if (onSettlePhase(chronicle) || unit.action <= 0) return [];
+  const relations = relationsOf(chronicle);
+  const landings = reachable(catalogue, chronicle, unit);
+  const seen = inSight(catalogue, chronicle);
+  return chronicle.units.flatMap((target) => {
+    if (!seen.has(tileKey(target.tile))) return [];
+    if (canAttack(unit, target, distance(unit.tile, target.tile), relations)) return [];
+    const off = offLine(unit.tile, target.tile);
+    let kept = landings.filter(({ tile }) =>
+      canAttack(unit, target, distance(tile, target.tile), relations),
+    );
+    // Past the four ties the page names, the first landing in the map's order is taken, as
+    // `pathBetween` takes the first way.
+    for (const measure of [
+      (landing: Landing) =>
+        declaredByLanding(chronicle, unit, landing.tile).stages.length > 0 ? 1 : 0,
+      (landing: Landing) => landing.cost,
+      (landing: Landing) =>
+        pathTo(catalogue, chronicle, unit, landing.tile)?.length ?? Number.POSITIVE_INFINITY,
+      (landing: Landing) => off(landing.tile),
+    ]) {
+      const measured = kept.map(measure);
+      const least = Math.min(...measured);
+      kept = kept.filter((_, at) => measured[at] === least);
+    }
+    const [landing] = kept;
+    return landing === undefined ? [] : [{ target, landing }];
+  });
+}
+
 /** Whether a command declares war: whether what it resolves as raises the neutral's `relations`. */
 export function declaresWar(catalogue: Catalogue, chronicle: Chronicle, command: Command): boolean {
   return [...walked(resolved(catalogue, chronicle, command))].some(
@@ -1309,20 +1353,25 @@ function move(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand):
 }
 
 /**
- * One unit of the player's attacking what stands on a tile, the declaration of war the attack may
- * raise first in its `attack` group; any other unit's, or an attack `byHand` does not offer, is
- * `refused`.
+ * One unit of the player's attacking what stands on a tile, from where it stands or from the landing
+ * `broughtInRange` names, war declared first in its `attack` group on a unit of the neutral's; any
+ * other unit's, or any other attack, is `refused`.
  */
 function attack(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand): Sequence {
   const unit = unitOf(chronicle.units, command.unit);
   if (unit === undefined || unit.faction !== 'player') return refused(chronicle);
+  const on = (other: Unit): boolean => tileKey(other.tile) === tileKey(command.tile);
+  const opened = (left: Chronicle, target: Unit): Landed =>
+    target.faction === 'neutral' ? warDeclared(left) : unchanged(left);
 
-  const target = byHand(catalogue, chronicle, unit).targets.find(
-    (other) => tileKey(other.tile) === tileKey(command.tile),
+  const target = byHand(catalogue, chronicle, unit).targets.find(on);
+  if (target !== undefined) return blow(catalogue, opened(chronicle, target), unit, target);
+  const stepped = broughtInRange(catalogue, chronicle, unit).find(({ target }) => on(target));
+  if (stepped === undefined) return refused(chronicle);
+  const { landing } = stepped;
+  return followed<Stage>(crossed(chronicle, unit, landing), (left) =>
+    blow(catalogue, opened(left, stepped.target), { ...unit, tile: landing.tile }, stepped.target),
   );
-  if (target === undefined) return refused(chronicle);
-  const opening = target.faction === 'neutral' ? warDeclared(chronicle) : unchanged(chronicle);
-  return blow(catalogue, opening, unit, target);
 }
 
 /**

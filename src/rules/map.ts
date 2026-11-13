@@ -324,6 +324,15 @@ export function pathCosts(
 }
 
 /**
+ * How far a tile stands from the straight line between two, times one factor every tile shares: a
+ * whole number.
+ */
+export function offLine(from: TileCoords, to: TileCoords): (coord: TileCoords) => number {
+  const toward = { q: to.q - from.q, r: to.r - from.r };
+  return ({ q, r }) => Math.abs(toward.q * (r - from.r) - toward.r * (q - from.q));
+}
+
+/**
  * The tiles a unit's walk crosses from a start to a tile, the start first, and nothing where no route
  * reaches it: of the cheapest ways, the fewest tiles, then nearest the straight line, then the first
  * in the map's order where two part. `passage` says which tiles a route ends on or keeps off.
@@ -340,10 +349,7 @@ export function pathBetween(
   const ground = groundOf(tiles, rivers);
   const spending = spends(catalogue, walk);
   const ranked = new Map(tiles.map((tile, rank) => [tileKey(tile), { tile, rank }]));
-  const toward = { q: to.q - from.q, r: to.r - from.r };
-  /** How far a tile stands from the straight line, times one factor every tile shares: a whole number. */
-  const offLine = ({ q, r }: TileCoords): number =>
-    Math.abs(toward.q * (r - from.r) - toward.r * (q - from.q));
+  const off = offLine(from, to);
 
   /** The tiles of a way past the start, their places in the map's order, and how far off the line it runs. */
   type Way = { readonly tiles: TileCoords[]; readonly ranks: number[]; readonly off: number };
@@ -389,7 +395,7 @@ export function pathBetween(
           way: {
             tiles: [...way.tiles, coord],
             ranks: [...way.ranks, there.rank],
-            off: way.off + offLine(coord),
+            off: way.off + off(coord),
           },
         };
         const held = next.get(key);

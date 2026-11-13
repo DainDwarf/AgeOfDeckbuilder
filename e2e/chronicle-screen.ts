@@ -45,6 +45,7 @@ import {
 import {
   admitted,
   apply,
+  broughtInRange,
   byHand,
   countOn,
   launchedFromCampaign,
@@ -2170,15 +2171,24 @@ export function campBeside(
 export function enemyBesideCity(
   chronicle: Chronicle,
 ): { chronicle: Chronicle; enemy: Unit } | undefined {
-  const kind = campKind(chronicle);
-  const stats = unitKind(CATALOGUE, kind);
+  const stats = unitKind(CATALOGUE, campKind(chronicle));
   const beside = neighbours(playerCityTile(chronicle)).find((tile) =>
     freeFor(chronicle, stats, tile),
   );
-  if (beside === undefined) return undefined;
+  return beside === undefined ? undefined : enemyEnteredOn(chronicle, beside);
+}
+
+/**
+ * The chronicle with an enemy of the camp's kind entered with the raider script on the tile, charted,
+ * and the enemy; nothing where none stands there.
+ */
+export function enemyEnteredOn(
+  chronicle: Chronicle,
+  tile: TileCoords,
+): { chronicle: Chronicle; enemy: Unit } | undefined {
   const { raider } = ageOf(CATALOGUE, chronicle.age).camp.scripts;
-  const beset = unitEntered(chronicle, enemyEntering(kind, raider, beside));
-  const enemy = unitAt(beset.units, beside);
+  const beset = unitEntered(chronicle, enemyEntering(campKind(chronicle), raider, tile));
+  const enemy = unitAt(beset.units, tile);
   return enemy === undefined ? undefined : { chronicle: beset, enemy };
 }
 
@@ -2842,9 +2852,10 @@ export function litFor(
   const unit = unitAt(chronicle.units, tile);
   if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
   const { landings, targets } = byHand(CATALOGUE, chronicle, unit);
+  const stepped = broughtInRange(CATALOGUE, chronicle, unit).map(({ target }) => target);
   return {
     lit: landings.map((landing) => tileKey(landing.tile)).sort(),
-    marked: targets.map((target) => tileKey(target.tile)).sort(),
+    marked: [...targets, ...stepped].map((target) => tileKey(target.tile)).sort(),
   };
 }
 
@@ -2975,12 +2986,14 @@ export type AimDrawn = {
   lit: string[];
   hexagons: string[];
   path: string[];
+  left: string | undefined;
   attack: AttackDrawn | undefined;
 };
 
 /**
  * In one question: the tiles ringed in white and those ringed in the attack's colour; the tiles lit;
- * the tiles wearing a hexagon, lit or prepared; the path's tiles; and the attack, while it stands.
+ * the tiles wearing a hexagon, lit or prepared; the path's tiles and what its number reads, while it
+ * stands; and the attack, while it stands.
  */
 export async function aimDrawn(page: Page): Promise<AimDrawn> {
   const { rings, ...drawn } = await page.evaluate(() => {
@@ -3001,6 +3014,9 @@ export async function aimDrawn(page: Page): Promise<AimDrawn> {
       | Phaser.GameObjects.Image
       | undefined;
     const health = shown.find((mark) => mark.name === 'attack-health') as
+      | Phaser.GameObjects.Container
+      | undefined;
+    const left = shown.find((mark) => mark.name === 'path-left') as
       | Phaser.GameObjects.Container
       | undefined;
     const attack = (): AttackDrawn | undefined => {
@@ -3028,6 +3044,8 @@ export async function aimDrawn(page: Page): Promise<AimDrawn> {
         .map((mark) => mark.getData('tile') as string)
         .sort(),
       path: layer.getData('path') as string[],
+      left: (left?.list.find((part) => part.type === 'Text') as Phaser.GameObjects.Text | undefined)
+        ?.text,
       attack: attack(),
     };
   });

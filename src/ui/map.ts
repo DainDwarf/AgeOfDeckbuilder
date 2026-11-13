@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ageOf, type Catalogue, damageOf } from '../rules/catalogue';
-import { byHand, type UnitCommand } from '../rules/chronicle';
+import { apply, broughtInRange, byHand, outcome, type UnitCommand } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
 import {
@@ -264,10 +264,16 @@ function pressedOn(tile: TileCoords): PressedTile {
 /** A selected tile, and whether the unit drawn on it is what is selected in its place. */
 type MapSelection = { readonly tile: TileCoords; readonly unit: boolean };
 
+/**
+ * A unit the lit unit marks, and the landing it would step to first where it is not already in
+ * range.
+ */
+type Marked = { readonly tile: TileCoords; readonly landing: Landing | undefined };
+
 /** What the pointer reads of a unit being aimed: its path to one of its landings, or its attack on a unit it marks. */
 type PointerReading =
   | { readonly kind: 'path'; readonly landing: Landing }
-  | { readonly kind: 'attack'; readonly target: TileCoords };
+  | { readonly kind: 'attack'; readonly target: Marked };
 
 /** The tile the pointer read it on. */
 function readOn(read: PointerReading): TileCoords {
@@ -275,7 +281,7 @@ function readOn(read: PointerReading): TileCoords {
     case 'path':
       return read.landing.tile;
     case 'attack':
-      return read.target;
+      return read.target.tile;
   }
 }
 
@@ -868,11 +874,11 @@ export function createMapView(
   const selectedUnit = (): TileCoords | undefined => (selection?.unit ? selection.tile : undefined);
 
   /**
-   * Which unit the map is lighting for, as it stood when lit, where its landings lie and which tiles
-   * hold a unit it marks; nothing while none is lit.
+   * Which unit the map is lighting for, as it stood when lit, where its landings lie and the units it
+   * marks; nothing while none is lit.
    */
   let lit:
-    | { readonly standing: Unit; readonly landings: Landing[]; readonly targets: TileCoords[] }
+    | { readonly standing: Unit; readonly landings: Landing[]; readonly targets: Marked[] }
     | undefined;
 
   /** A ring from the pool about the unit standing on the tile, in that colour. */
@@ -898,7 +904,7 @@ export function createMapView(
     ];
     ringPool.hide();
     for (const tile of wearers) ringAbout(tile, LOOK.selected);
-    for (const tile of lit?.targets ?? []) ringAbout(tile, LOOK.attack);
+    for (const { tile } of lit?.targets ?? []) ringAbout(tile, LOOK.attack);
   };
 
   /** What the lit unit's pointer reads, and nothing while it reads nothing. */
@@ -922,13 +928,32 @@ export function createMapView(
         path.showPath(tiles, lit.standing.movePoints - read.landing.cost);
         break;
       }
-      case 'attack':
-        path.showAttack(
-          lit.standing.tile,
-          read.target,
-          damageOf(catalogue, current.units, lit.standing),
+      case 'attack': {
+        const { tile, landing } = read.target;
+        if (landing === undefined) {
+          path.showAttack(
+            lit.standing.tile,
+            tile,
+            damageOf(catalogue, current.units, lit.standing),
+          );
+          break;
+        }
+        const tiles = pathTo(catalogue, current, lit.standing, landing.tile);
+        const step: UnitCommand = { type: 'move', unit: lit.standing.id, tile: landing.tile };
+        const { units } = outcome(apply(catalogue, current, step));
+        const landed = unitAt(units, landing.tile);
+        if (tiles === undefined || landed === undefined) {
+          path.hide();
+          return;
+        }
+        path.showStepAndAttack(
+          tiles,
+          lit.standing.movePoints - landing.cost,
+          tile,
+          damageOf(catalogue, units, landed),
         );
         break;
+      }
     }
     pointerReading = read;
   };
@@ -937,8 +962,8 @@ export function createMapView(
   const readingOn = (tile: TileCoords): PointerReading | undefined => {
     const landing = lit?.landings.find((one) => sameTile(one.tile, tile));
     if (landing !== undefined) return { kind: 'path', landing };
-    if (lit?.targets.some((one) => sameTile(one, tile))) return { kind: 'attack', target: tile };
-    return undefined;
+    const target = lit?.targets.find((one) => sameTile(one.tile, tile));
+    return target === undefined ? undefined : { kind: 'attack', target };
   };
 
   /**
@@ -957,7 +982,15 @@ export function createMapView(
     let reached: Reach | undefined;
     if (current !== undefined && standing?.faction === 'player') {
       const { landings, targets } = byHand(catalogue, current, standing);
-      lit = { standing, landings, targets: targets.map((other) => other.tile) };
+      const stepped = broughtInRange(catalogue, current, standing);
+      lit = {
+        standing,
+        landings,
+        targets: [
+          ...targets.map((other) => ({ tile: other.tile, landing: undefined })),
+          ...stepped.map(({ target, landing }) => ({ tile: target.tile, landing })),
+        ],
+      };
       reached = { own: standing.tile, landings: landings.map((landing) => landing.tile) };
     }
     reach.paint(reached);
@@ -1185,7 +1218,7 @@ export function createMapView(
           commanded({ type: 'move', unit, tile: on });
           return true;
         }
-        if (lit.targets.some((coord) => sameTile(coord, on))) {
+        if (lit.targets.some((target) => sameTile(target.tile, on))) {
           commanded({ type: 'attack', unit, tile: on });
           return true;
         }

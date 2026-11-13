@@ -1,9 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { terraformed } from '../src/rules/cards';
-import { ageOf, unitKind } from '../src/rules/catalogue';
+import { unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { charted, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
@@ -15,6 +14,7 @@ import {
   chronicleOf,
   click,
   dragTiles,
+  enemyEnteredOn,
   firstSeed,
   freeFor,
   marksIn,
@@ -48,13 +48,9 @@ function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidde
     const city = playerCityTile(settled);
     const armed = unitEntered(settled, { type: ARCHER, faction: 'player', tile: city });
     const [archer] = playersOf(armed);
-    const kind = campKind(armed);
-    const stats = unitKind(CATALOGUE, kind);
-    const { raider } = ageOf(CATALOGUE, armed.age).camp.scripts;
+    const stats = unitKind(CATALOGUE, campKind(armed));
     const enemyOn = (chronicle: Chronicle, tile: TileCoords): Chronicle | undefined =>
-      freeFor(chronicle, stats, tile)
-        ? unitEntered(chronicle, enemyEntering(kind, raider, tile))
-        : undefined;
+      freeFor(chronicle, stats, tile) ? enemyEnteredOn(chronicle, tile)?.chronicle : undefined;
 
     for (const ridge of neighbours(city)) {
       const behind = beyond(city, ridge);

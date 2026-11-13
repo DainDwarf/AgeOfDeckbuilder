@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { bonusCarried, bonusOf, unitKind } from './catalogue';
-import { apply, byHand, type Command, outcome } from './chronicle';
+import { apply, broughtInRange, byHand, type Command, declaresWar, outcome } from './chronicle';
 import { warDeclared } from './city';
 import {
   actionOf,
@@ -31,10 +31,10 @@ import {
   withUnits,
   worker,
 } from './fixtures';
-import { MOVE_POINT, type TileCoords, tileKey } from './map';
+import { MOVE_POINT, sameTile, type TileCoords, tileKey } from './map';
 import { walked } from './stages';
 import type { Chronicle } from './state';
-import { attackable, type Faction, pathTo, relationsOf } from './units';
+import { attackable, type Faction, pathTo, relationsOf, type Unit } from './units';
 
 /** A unit of the player's sent to a tile, ready to hand to `apply`. */
 function moveTo(unit: number, to: TileCoords): Command {
@@ -223,7 +223,7 @@ test('a worker with range and damage attacks nothing all the same', () => {
 
 test('an attack reaches its range and no further, and lands on a unit of another faction alone', () => {
   const units = [
-    standing('player', CITY, { damage: 2, range: 1 }),
+    standing('player', CITY, { damage: 2, range: 1 }, 0),
     standing('enemy', { q: 2, r: 0 }, { health: 5 }),
     standing('player', { q: 1, r: 0 }),
   ];
@@ -391,6 +391,125 @@ test('an attack spends the move points the attacker has left, and a step no acti
   const andAttacked = outcome(apply(CATALOGUE, steppedFirst, attackOn(1, { q: 2, r: 0 })));
   expect(andAttacked.units[1].stats.health).toBe(4);
   expect(pointsOf(andAttacked, 1)).toBe(0);
+});
+
+test('an attack on a unit a step brings in range is the move to the landing and then the attack from it, the action spent there; a unit already in range is attacked with no step', () => {
+  const near = { q: 1, r: -1 };
+  const far = { q: 2, r: 0 };
+  const city = cityOf(['urban'], {
+    tiles: field(3),
+    units: [
+      standing('player', CITY, { damage: 2, range: 1 }),
+      standing('enemy', near, { health: 5 }),
+      standing('enemy', far, { health: 5 }),
+    ],
+  });
+  const [attacker] = city.units;
+  const landing = { q: 1, r: 0 };
+
+  expect(
+    broughtInRange(CATALOGUE, city, attacker).map((stepped) => [
+      stepped.target.tile,
+      stepped.landing,
+    ]),
+  ).toEqual([[far, { tile: landing, cost: MOVE_POINT }]]);
+
+  const stages = apply(CATALOGUE, city, attackOn(attacker.id, far));
+  const [crossed, struck] = stages;
+  const after = outcome(stages);
+
+  expect(namesOf(stages)).toEqual(['move', 'attack', 'action-spent', 'damaged']);
+  expect(crossed).toMatchObject({ from: CITY, to: landing });
+  expect(struck).toMatchObject({ attacker: landing, target: far });
+  expect(unitNamed(after, attacker.id).tile).toEqual(landing);
+  expect(actionOf(after, attacker.id)).toBe(0);
+  expect(pointsOf(after, attacker.id)).toBe(0);
+  expect(unitNamed(after, 3).stats.health).toBe(3);
+
+  expect(stagedBy(city, attackOn(attacker.id, near))).toEqual([
+    'attack',
+    'action-spent',
+    'damaged',
+  ]);
+  expect(
+    unitNamed(outcome(apply(CATALOGUE, city, attackOn(attacker.id, near))), attacker.id).tile,
+  ).toEqual(CITY);
+});
+
+test('of the landings a step brings a unit in range from, it attacks from the cheapest, then the one its path reaches over the fewest tiles, then the one nearest the straight line', () => {
+  /** The landing the chronicle's first unit attacks the unit on the tile from. */
+  const from = (chronicle: Chronicle, target: TileCoords): string | undefined => {
+    const [unit] = chronicle.units;
+    const stepped = broughtInRange(CATALOGUE, chronicle, unit).find(({ target: other }) =>
+      sameTile(other.tile, target),
+    );
+    const after = outcome(apply(CATALOGUE, chronicle, attackOn(unit.id, target)));
+    expect(unitNamed(after, unit.id).tile).toEqual(stepped?.landing.tile);
+    return stepped === undefined ? undefined : tileKey(stepped.landing.tile);
+  };
+  const moving = { move: 3 * MOVE_POINT, sight: 4 };
+  const aslant = { q: 3, r: -2 };
+
+  // Both three tiles long; the one nearer the line crosses a forest. The worker sees what the forest
+  // hides from the unit.
+  const forest = cityOf(['urban'], {
+    tiles: madeOf(field(4), 'forest', [{ q: 2, r: -1 }]),
+    units: [standing('player', CITY, moving), standing('enemy', aslant), worker({ q: 4, r: -3 })],
+  });
+  // Across a river for every point it has left, or three plains round its own units for as many.
+  const diagonal = { q: 2, r: -1 };
+  const river = cityOf(['urban'], {
+    tiles: field(4),
+    rivers: [riverBetween({ q: 1, r: -1 }, { q: 2, r: -2 })],
+    units: [
+      standing('player', CITY, moving),
+      standing('player', { q: 1, r: 0 }),
+      standing('player', { q: 1, r: -1 }),
+      standing('player', { q: 2, r: 0 }),
+      standing('enemy', diagonal),
+    ],
+  });
+  // As cheap and as long either way; the first in the map's order lies further off the line.
+  const open = cityOf(['urban'], {
+    tiles: field(4),
+    units: [standing('player', CITY, moving), standing('enemy', aslant)],
+  });
+
+  expect(from(forest, aslant)).toBe('2,-2');
+  expect(from(river, diagonal)).toBe('2,-2');
+  expect(from(open, aslant)).toBe('2,-1');
+});
+
+test('a step that declares war brings a unit in range only where no other landing does, and the war is declared once', () => {
+  const target = { q: 2, r: 0 };
+  const attacker = standing('player', CITY);
+  const open = withUnits(besideTheNeutral(), [attacker, standing('enemy', target)]);
+  const lined = withUnits(onTheLine(attacker), [neutralStanding(target)]);
+  /** The chronicle's one unit of the player's. */
+  const playerOf = (chronicle: Chronicle): Unit => {
+    const unit = chronicle.units.find(({ faction }) => faction === 'player');
+    if (unit === undefined) throw new Error('no unit of the player’s stands');
+    return unit;
+  };
+  const attackOf = (chronicle: Chronicle): Command => attackOn(playerOf(chronicle).id, target);
+  /** Where the chronicle's one unit of the player's attacks the target from. */
+  const landingOf = (chronicle: Chronicle): TileCoords | undefined =>
+    broughtInRange(CATALOGUE, chronicle, playerOf(chronicle)).find((stepped) =>
+      sameTile(stepped.target.tile, target),
+    )?.landing.tile;
+
+  expect(landingOf(open)).toBeDefined();
+  expect(landingOf(open)).not.toEqual(NEUTRAL_TILE);
+  expect(stagedBy(open, attackOf(open))).toEqual(['move', 'attack', 'action-spent', 'damaged']);
+  expect(landingOf(lined)).toEqual(NEUTRAL_TILE);
+  expect(stagedBy(lined, attackOf(lined))).toEqual([
+    'relations',
+    'move',
+    'attack',
+    'action-spent',
+    'damaged',
+  ]);
+  expect(declaresWar(CATALOGUE, lined, attackOf(lined))).toBe(true);
 });
 
 test('a chronicle with units on the map survives JSON', () => {

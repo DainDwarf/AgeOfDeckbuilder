@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A step and an attack in one press** — a unit out of the selected unit's range that a step brings in range wears the attack's ring, the pointer on it reads the path to the tile the attack comes from with the move points left there and then the attack, and one press, a click or a drag, is the step and the attack, the war warning asked once before anything moves; a rules test holds which tile is taken, `e2e/attack.spec.ts` proves the reading and the press, and the pages say so. Doc-impact: `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/a-step-and-an-attack-in-one-press.md](board/a-step-and-an-attack-in-one-press.md)
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, a unit kept in fog as last seen among them, read beside its ring and the attack's mark.
 - **A health bar on units** — a unit on the map shows its health; the health an attack would remove, read as a number over the unit attacked, is looked at again once a bar can show it.
 - **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.

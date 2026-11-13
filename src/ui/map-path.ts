@@ -46,6 +46,16 @@ export type PathView = {
    * in place of the path; the layer carries the two tiles' keys.
    */
   showAttack(from: TileCoords, to: TileCoords, health: number): void;
+  /**
+   * A unit's path to the tile it would attack from with the move points it would have left there,
+   * and its attack from that tile, as `showPath` and `showAttack` draw each.
+   */
+  showStepAndAttack(
+    tiles: readonly TileCoords[],
+    left: number,
+    to: TileCoords,
+    health: number,
+  ): void;
   /** Neither the path nor the attack. */
   hide(): void;
   /** The numbers' texts, which the map raises at its own zoom. */
@@ -151,8 +161,8 @@ function createArrow(scene: Phaser.Scene): {
 }
 
 /**
- * A unit's path and its attack on the map's own surface, on this layer, one of the two at a time:
- * the path's chevrons pooled and its number, the attack's arrow and its number.
+ * A unit's path and its attack on the map's own surface, on this layer: the path's chevrons pooled
+ * and its number, the attack's arrow and its number.
  */
 export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): PathView {
   paintChevron(scene);
@@ -172,40 +182,54 @@ export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): P
   };
   hide();
 
+  const drawPath = (tiles: readonly TileCoords[], points: number): void => {
+    for (let step = 1; step < tiles.length; step++) {
+      const from = unitStandsAt(tiles[step - 1]);
+      const to = unitStandsAt(tiles[step]);
+      const angle = Math.atan2(to.y - from.y, to.x - from.x);
+      for (const along of ALONG) {
+        chevrons
+          .take()
+          .setScale(1 / CHEVRON_PIXELS)
+          .setRotation(angle)
+          .setPosition(from.x + (to.x - from.x) * along, from.y + (to.y - from.y) * along);
+      }
+    }
+    showMovePointsLeft(left, tiles[tiles.length - 1], points);
+    on.setData('path', tiles.map(tileKey));
+  };
+
+  const drawAttack = (from: TileCoords, to: TileCoords, removed: number): void => {
+    const start = unitStandsAt(from);
+    const end = unitStandsAt(to);
+    const span = Math.hypot(end.x - start.x, end.y - start.y);
+    const way = { x: (end.x - start.x) / span, y: (end.y - start.y) / span };
+    const tail = { x: start.x + way.x * ARROW_START, y: start.y + way.y * ARROW_START };
+    const point = { x: end.x - way.x * ARROW_STOP, y: end.y - way.y * ARROW_STOP };
+    arrow.paint(span - ARROW_START - ARROW_STOP);
+    arrow.image
+      .setPosition((tail.x + point.x) / 2, (tail.y + point.y) / 2)
+      .setRotation(Math.atan2(way.y, way.x))
+      .setVisible(true);
+    showHealthRemoved(health, to, removed);
+    on.setData('attack', [tileKey(from), tileKey(to)]);
+  };
+
   return {
     showPath(tiles, points): void {
       hide();
-      for (let step = 1; step < tiles.length; step++) {
-        const from = unitStandsAt(tiles[step - 1]);
-        const to = unitStandsAt(tiles[step]);
-        const angle = Math.atan2(to.y - from.y, to.x - from.x);
-        for (const along of ALONG) {
-          chevrons
-            .take()
-            .setScale(1 / CHEVRON_PIXELS)
-            .setRotation(angle)
-            .setPosition(from.x + (to.x - from.x) * along, from.y + (to.y - from.y) * along);
-        }
-      }
-      showMovePointsLeft(left, tiles[tiles.length - 1], points);
-      on.setData('path', tiles.map(tileKey));
+      drawPath(tiles, points);
     },
 
     showAttack(from, to, removed): void {
       hide();
-      const start = unitStandsAt(from);
-      const end = unitStandsAt(to);
-      const span = Math.hypot(end.x - start.x, end.y - start.y);
-      const way = { x: (end.x - start.x) / span, y: (end.y - start.y) / span };
-      const tail = { x: start.x + way.x * ARROW_START, y: start.y + way.y * ARROW_START };
-      const point = { x: end.x - way.x * ARROW_STOP, y: end.y - way.y * ARROW_STOP };
-      arrow.paint(span - ARROW_START - ARROW_STOP);
-      arrow.image
-        .setPosition((tail.x + point.x) / 2, (tail.y + point.y) / 2)
-        .setRotation(Math.atan2(way.y, way.x))
-        .setVisible(true);
-      showHealthRemoved(health, to, removed);
-      on.setData('attack', [tileKey(from), tileKey(to)]);
+      drawAttack(from, to, removed);
+    },
+
+    showStepAndAttack(tiles, points, to, removed): void {
+      hide();
+      drawPath(tiles, points);
+      drawAttack(tiles[tiles.length - 1], to, removed);
     },
 
     hide,
