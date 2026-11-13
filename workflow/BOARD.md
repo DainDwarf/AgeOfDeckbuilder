@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A robust path spec on CI** — `e2e/path.spec.ts`'s scout-path test presses no pan key and no zoom key, its click that is the step landing on the lit tile beside the scout, and passes locally, as it stands and with every frame stretched to 250 ms. Doc-impact: none. [board/a-robust-path-spec-on-ci.md](board/a-robust-path-spec-on-ci.md)
 - **A unit's own states** — a unit whose turn is done and a unit that has prepared wear their marks on the unit itself, a unit kept in fog as last seen among them, read beside its ring and the attack's mark.
 - **A health bar on units** — a unit on the map shows its health; the health an attack would remove, read as a number over the unit attacked, is looked at again once a bar can show it.
 - **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.

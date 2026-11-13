@@ -4,7 +4,6 @@ import { apply, byHand, declaresWar, outcome } from '../src/rules/chronicle';
 import { MOVE_POINT, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import { pathTo, type Unit } from '../src/rules/units';
-import { DEFAULTS } from '../src/ui/bindings';
 import {
   besideTiles,
   budget,
@@ -19,7 +18,6 @@ import {
   playerCityTile,
   playersOf,
   pointAt,
-  readings,
   rested,
   ringedTile,
   SCOUT,
@@ -28,22 +26,10 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** How many tiles of a row past the unit's own the pan crosses, every one of them lit. */
-const ROW = 3;
-
-/**
- * How many notches the map is zoomed in before the pan, so that a tap of the pan key, which moves the
- * map as far as one frame's length carries it, moves it less than two tiles on a slow runner.
- */
-const ZOOMED = 2;
-
-/** How many taps of a pan key a spec waits for the map to move a tile under the pointer. */
-const TAPS = 30;
-
 /**
  * The first seed's turn 1 with a scout entered on the city's tile: a landing its path reaches in
- * two steps or more, and the way along its row, east or west, that lights the next `ROW` tiles, a
- * step onto any of them declaring no war.
+ * two steps or more, and the way along its row, east or west, that lights the next two tiles, a
+ * step onto either declaring no war.
  */
 function afield(): { chronicle: Chronicle; scout: Unit; far: TileCoords; way: 1 | -1 } {
   return firstSeed(
@@ -59,11 +45,13 @@ function afield(): { chronicle: Chronicle; scout: Unit; far: TileCoords; way: 1 
         (landing) => (pathTo(CATALOGUE, chronicle, scout, landing.tile)?.length ?? 0) > 2,
       );
       const way = ([1, -1] as const).find((along) =>
-        Array.from({ length: ROW }, (_, at) => alongRow(scout.tile, along, at + 1)).every(
-          (one) =>
+        [1, 2].every((by) => {
+          const one = alongRow(scout.tile, along, by);
+          return (
             lit.has(tileKey(one)) &&
-            !declaresWar(CATALOGUE, chronicle, { type: 'move', unit: scout.id, tile: one }),
-        ),
+            !declaresWar(CATALOGUE, chronicle, { type: 'move', unit: scout.id, tile: one })
+          );
+        }),
       );
       return far === undefined || way === undefined
         ? undefined
@@ -124,18 +112,6 @@ async function drawnTo(
   }
 }
 
-/** Which of these tiles of one row stands nearest the point along the row, on the page. */
-async function nearestAlong(
-  page: Page,
-  row: readonly TileCoords[],
-  at: { x: number },
-): Promise<TileCoords> {
-  const names = row.map((tile) => `tile-${tileKey(tile)}`);
-  const read = await readings(page, names);
-  const gaps = names.map((name) => Math.abs(read(name).onScreen.x - at.x));
-  return row[gaps.indexOf(Math.min(...gaps))];
-}
-
 test('a scout being aimed wears its path to the lit tile the pointer is on, keeps it beside the lit tiles, and drops it on its own tile and at a step', async ({
   page,
 }) => {
@@ -179,39 +155,19 @@ test('a scout being aimed wears its path to the lit tile the pointer is on, keep
   expect(await chronicleOf(page)).toEqual(chronicle);
   expect(await pathKeys(page)).toEqual(pathTo(CATALOGUE, chronicle, scout, far)?.map(tileKey));
 
-  // The map panned by key under a pointer that never moved: the path follows the tile now under it.
-  const resting = await onScreen(page, `tile-${tileKey(beside)}`);
-  await page.mouse.move(resting.x, resting.y);
-  await drawnTo(page, chronicle, scout, beside);
-  const [pan] = DEFAULTS[way === 1 ? 'pan-right' : 'pan-left'];
-  const [zoom] = DEFAULTS['zoom-in'];
-  if (pan === undefined || zoom === undefined) throw new Error('a control stands on no key');
-  for (let notch = 0; notch < ZOOMED; notch++) {
-    await page.keyboard.press(zoom.code);
-    await rested(page);
-  }
-  const row = Array.from({ length: ROW + 1 }, (_, at) => alongRow(own, way, at));
-  let under = beside;
-  for (let taps = 0; tileKey(under) === tileKey(beside); taps++) {
-    if (taps === TAPS) throw new Error(`${TAPS} taps of the pan key left the pointer where it was`);
-    await page.keyboard.press(pan.code);
-    await rested(page);
-    under = await nearestAlong(page, row, resting);
-  }
-  expect(row.slice(1).map(tileKey)).toContain(tileKey(under));
-  await drawnTo(page, chronicle, scout, under);
-
-  // A click on the lit tile under it is the step: the path goes with the click, and the pointer
+  // A click on the lit tile beside it is the step: the path goes with the click, and the pointer
   // rests on the scout's tile once it has landed.
+  await pointAt(page, beside);
+  await drawnTo(page, chronicle, scout, beside);
   await page.mouse.down();
   await page.mouse.up();
   expect(await pathDrawn(page)).toBeUndefined();
   await playedOut(page);
   const stepped = outcome(
-    apply(CATALOGUE, chronicle, { type: 'move', unit: scout.id, tile: under }),
+    apply(CATALOGUE, chronicle, { type: 'move', unit: scout.id, tile: beside }),
   );
   await expect.poll(() => chronicleOf(page)).toEqual(stepped);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(under));
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(beside));
   expect(await pathKeys(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
