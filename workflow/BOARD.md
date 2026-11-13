@@ -19,7 +19,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A health bar on units** — a unit on the map shows its health; the health an attack would remove, read as a number over the unit attacked, is looked at again once a bar can show it.
+- **A health bar on units** — a unit below its full health wears the bar with its heart on the map, in sight and kept in fog; the attack read turns the health it would remove red on the attacked unit's bar, a skull in the heart's place where it would kill; the attack's number is gone from the map, the text table and the pages; `e2e/attack.spec.ts` proves it. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`. [board/health-bar.md](board/health-bar.md)
 - **Your units' states** — how a unit of the player's shows what it still holds, its move points and its action, so what still needs a move or an action and what does not reads at a glance; the done dim is looked at again there.
 - **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.
 - **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.
