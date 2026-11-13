@@ -19,5 +19,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.
+- **The city badge** — the player's city wears two bars along the bottom of its building, the food stock against the growth threshold over the culture stock against the culture threshold, each with what ending the turn would add paler past it, each city's badge stands at the bars' right end, all of it is drawn over the unit on the tile, and `e2e/population-badge.spec.ts` reads the bars off the rules and passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/the-city-badge.md](board/the-city-badge.md)
 - **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.
