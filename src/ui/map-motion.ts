@@ -32,6 +32,7 @@ import {
   rowOf,
   type TileObjects,
   unitBadgeOf,
+  unitHealthBarOf,
   wearing,
 } from './map-marks';
 import { FACE_SHEET, onPatch } from './marks';
@@ -68,6 +69,8 @@ type MapInMotion = {
   markerOf(unit: number): Phaser.GameObjects.Container | undefined;
   /** The markers of these units painted as the map draws them on this chronicle. */
   paintMarkers(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
+  /** The health bar of a marker painted as the map draws this unit's, the rest of the marker left as it stands. */
+  paintHealthBar(marker: Phaser.GameObjects.Container, unit: Unit): void;
   /** The marks of an improvement on the tile of that key carrying that feature, painted at that point of its row. */
   improvementOn(
     improvement: ImprovementId,
@@ -132,9 +135,18 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     return marker?.visible === true ? marker : undefined;
   };
 
-  /** A unit's marker bumped where it stands, as an attack's target is. */
-  const bump = (marker: Phaser.GameObjects.Container, delay: number): Promise<void> =>
-    ended(
+  /**
+   * A unit's marker bumped where it stands on a tile, as an attack's target is, its health bar taking
+   * what the chronicle leaves the unit there as the bump starts.
+   */
+  const bump = (
+    marker: Phaser.GameObjects.Container,
+    coord: TileCoords,
+    chronicle: Chronicle,
+    delay: number,
+  ): Promise<void> => {
+    let taken = Promise.resolve();
+    const bumping = ended(
       scene.tweens.add({
         targets: marker,
         scale: 1.35,
@@ -142,8 +154,33 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         duration: 60,
         ease: EASE,
         yoyo: true,
+        onStart: () => {
+          taken = healthTaken(marker, coord, chronicle);
+        },
       }),
     );
+    return bumping.then(() => taken);
+  };
+
+  /**
+   * The health bar of a marker taking the health of the unit a chronicle leaves on its tile: its fill
+   * at once, the bar fading in as a badge does where it was not worn and out where the unit is healed
+   * to full; a unit killed keeps the bar it wore, to shrink with.
+   */
+  const healthTaken = (
+    marker: Phaser.GameObjects.Container,
+    coord: TileCoords,
+    chronicle: Chronicle,
+  ): Promise<void> => {
+    const standing = unitAt(chronicle.units, coord);
+    if (standing === undefined) return Promise.resolve();
+    const bar = unitHealthBarOf(marker);
+    const worn = bar.visible;
+    view.paintHealthBar(marker, standing);
+    if (!worn && bar.visible) return fadeIn([bar]);
+    if (worn && !bar.visible) return fadeOut([bar.setVisible(true)]);
+    return Promise.resolve();
+  };
 
   /** Whatever the map drew shrinking to nothing where it stands. */
   const shrink = (
@@ -154,11 +191,12 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
   const bumped = async (
     marker: Phaser.GameObjects.Container,
-    killed: boolean,
+    coord: TileCoords,
+    chronicle: Chronicle,
     token: symbol,
   ): Promise<void> => {
-    await bump(marker, 150);
-    if (!killed || flight !== token) return;
+    await bump(marker, coord, chronicle, 150);
+    if (unitAt(chronicle.units, coord) !== undefined || flight !== token) return;
     await shrink(marker, 200);
   };
 
@@ -185,10 +223,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         yoyo: true,
       }),
     );
-    const taken =
-      hit === undefined
-        ? Promise.resolve()
-        : bumped(hit, unitAt(chronicle.units, target) === undefined, token);
+    const taken = hit === undefined ? Promise.resolve() : bumped(hit, target, chronicle, token);
 
     return Promise.all([lunge, taken]).then(() => settle(token, chronicle));
   };
@@ -255,7 +290,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const marker = markerOn(coord);
     if (marker === undefined) return undefined;
     const token = takeOff();
-    return bump(marker, 0).then(() => settle(token, chronicle));
+    return bump(marker, coord, chronicle, 0).then(() => settle(token, chronicle));
   };
 
   /** The unit on a tile killed by no attacker: its marker shrinks off the map as one an attack killed does. */
@@ -279,10 +314,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     }
     if (!badged) return undefined;
     const token = takeOff();
-    const worn = unitBadgeOf(marker);
-    return ended(scene.tweens.add({ targets: worn, alpha: 0, duration: 250, ease: EASE })).then(
-      () => settle(token, chronicle),
-    );
+    return fadeOut(unitBadgeOf(marker)).then(() => settle(token, chronicle));
   };
 
   /** A mark painted where it stands on the face a change leaves, raised from nothing to its scale. */
@@ -303,6 +335,10 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   };
 
   const fadeIn = (painted: readonly Mark[]): Promise<void> => fade(painted, 1);
+
+  /** A unit's badge or health bar fading to nothing from where it stands. */
+  const fadeOut = (worn: readonly Mark[]): Promise<void> =>
+    ended(scene.tweens.add({ targets: worn, alpha: 0, duration: 250, ease: EASE }));
 
   /**
    * The motion between two faces of one tile, and nothing where they are alike, in the fog the map

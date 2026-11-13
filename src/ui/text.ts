@@ -24,7 +24,6 @@ const TEXT = {
   'reading.plus': '+{count}',
   'reading.minus': '−{count}',
   'threshold.culture': '−{culture}',
-  'attack.health': '−{health}',
   'tooltip.food': 'Grows your population if you reach the threshold', // glossary exception: reach
   'tooltip.production': 'Build, place, and terraform',
   'tooltip.military': 'Defend and attack',

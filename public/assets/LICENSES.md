@@ -46,6 +46,6 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 
 ## game-icons.net
 
-- **What:** two glyphs, white on nothing, in `game-icons/`: Fire by sbed and Flying flag by Lorc.
-- **From:** <https://game-icons.net>, `1x1/sbed/fire` and `1x1/lorc/flying-flag`, the SVG files as downloaded on the day they entered.
-- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" by sbed, <http://opengameart.org/content/95-game-icons>, and "Flying flag" by Lorc, <https://lorcblog.blogspot.com>, from game-icons.net under CC BY 3.0. The files may be modified; this record ships with the build and is their credit until the credits screen reads it.
+- **What:** four glyphs, white on nothing, in `game-icons/`: Fire by sbed, Flying flag by Lorc, Hearts by Skoll and Death skull by sbed.
+- **From:** <https://game-icons.net>, `1x1/sbed/fire`, `1x1/lorc/flying-flag`, `1x1/skoll/hearts` and `1x1/sbed/death-skull`, the SVG files as downloaded on the day they entered.
+- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" by sbed, <http://opengameart.org/content/95-game-icons>, "Flying flag" by Lorc, <https://lorcblog.blogspot.com>, "Hearts" by Skoll, and "Death skull" by sbed, <http://opengameart.org/content/95-game-icons>, from game-icons.net under CC BY 3.0. The files may be modified; this record ships with the build and is their credit until the credits screen reads it.

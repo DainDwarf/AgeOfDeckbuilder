@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ageOf, type Catalogue, damageOf } from '../rules/catalogue';
+import { ageOf, type Catalogue, damageOf, fullHealth } from '../rules/catalogue';
 import { apply, broughtInRange, byHand, outcome, type UnitCommand } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
@@ -30,11 +30,12 @@ import {
   holderOf,
   type Snapshot,
 } from '../rules/state';
-import { type Faction, type Landing, pathTo, type Unit, unitAt } from '../rules/units';
+import { type Faction, type Landing, pathTo, type Unit, unitAt, unitOf } from '../rules/units';
 import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { onResize, type Stratum, thingUnder, whileUp } from './design-space';
+import { type HealthBar, healthBarOf } from './health-bar';
 import { LOOK } from './look';
 import {
   createBorder,
@@ -55,6 +56,7 @@ import {
   assignedMark,
   asTerrain,
   asUnit,
+  asUnitHealthBar,
   asVoid,
   asYield,
   buildingStandsAs,
@@ -86,8 +88,9 @@ import {
   type TileObjects,
   thresholdMark,
   tileFace,
-  unitBadgeOf,
+  type UnitShade,
   unitMarker,
+  unitMotionTargets,
   unitStandsAt,
   wearing,
 } from './map-marks';
@@ -262,15 +265,22 @@ function pressedOn(tile: TileCoords): PressedTile {
 type MapSelection = { readonly tile: TileCoords; readonly unit: boolean };
 
 /**
- * A unit the lit unit marks, and the landing it would step to first where it is not already in
- * range.
+ * A unit the lit unit marks, by its number and its tile, and the landing it would step to first where
+ * it is not already in range.
  */
-type Marked = { readonly tile: TileCoords; readonly landing: Landing | undefined };
+type Marked = {
+  readonly unit: number;
+  readonly tile: TileCoords;
+  readonly landing: Landing | undefined;
+};
 
 /** What the pointer reads of a unit being aimed: its path to one of its landings, or its attack on a unit it marks. */
 type PointerReading =
   | { readonly kind: 'path'; readonly landing: Landing }
   | { readonly kind: 'attack'; readonly target: Marked };
+
+/** An attack the pointer reads: the unit it is read on, by its number, and the attacker's damage. */
+type AttackShown = { readonly unit: number; readonly damage: number };
 
 /** The tile the pointer read it on. */
 function readOn(read: PointerReading): TileCoords {
@@ -598,7 +608,7 @@ export function createMapView(
   const paintAtZoom = (): void => {
     const resolution = frame.atZoom();
     const numbers = CITY_FACTIONS.map((whose) => cityBadges[whose].number);
-    for (const label of [thresholdOnTile.number, ...path.numbers, ...numbers]) {
+    for (const label of [thresholdOnTile.number, path.number, ...numbers]) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
     paintThreshold();
@@ -777,7 +787,8 @@ export function createMapView(
     if (standing !== undefined) {
       const { stats, faction, embarked } = standing;
       const prepares = preparedAs(chronicle, standing);
-      const kept = asUnit(fogUnitPool.take(), stats.type, faction, embarked, 'fog', prepares);
+      const bar = barOf(standing, undefined);
+      const kept = asUnit(fogUnitPool.take(), stats.type, faction, embarked, 'fog', prepares, bar);
       painted.push(kept.setPosition(x, y));
     }
     return painted;
@@ -908,52 +919,85 @@ export function createMapView(
   /** What the lit unit's pointer reads, and nothing while it reads nothing. */
   let pointerReading: PointerReading | undefined;
 
-  /** The lit unit reading this, or nothing: its path drawn to the landing, or its attack drawn on the unit. */
-  const showReading = (read: PointerReading | undefined): void => {
+  /** The attack the pointer reads, and nothing while it reads none. */
+  let attackShown: AttackShown | undefined;
+
+  /** The damage of the attack the pointer reads on a unit, and none where it reads none on it. */
+  const damageReadOn = (unit: Unit): number | undefined =>
+    attackShown?.unit === unit.id ? attackShown.damage : undefined;
+
+  /** The health bar a unit wears, with the damage of an attack read on it where one is handed. */
+  const barOf = (
+    { stats }: Pick<Unit, 'stats'>,
+    damage: number | undefined,
+  ): HealthBar | undefined => healthBarOf(stats.health, fullHealth(catalogue, stats), damage);
+
+  /** What a live unit's marker is darkened by: the dim of a unit of the player's with no move points and no action left. */
+  const shadeOf = (unit: Unit): UnitShade =>
+    unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0 ? 'done' : 'clear';
+
+  /** The health bar of a unit's marker painted as the unit wears it, the rest of the marker left as it stands. */
+  const paintBar = (marker: Phaser.GameObjects.Container, unit: Unit): void => {
+    asUnitHealthBar(marker, barOf(unit, damageReadOn(unit)), shadeOf(unit));
+  };
+
+  /**
+   * The health bar of the unit of that number painted on the chronicle the map stands on; nothing
+   * where no unit is named or the map keeps no marker of it.
+   */
+  const paintBarOf = (unit: number | undefined): void => {
+    const marker = unit === undefined ? undefined : unitMarkers.get(unit);
+    const standing =
+      unit === undefined || shown === undefined ? undefined : unitOf(shown.units, unit);
+    if (marker !== undefined && standing !== undefined) paintBar(marker, standing);
+  };
+
+  /**
+   * The path or the attack the lit unit reads drawn, and the attack read where it draws one; nothing
+   * where it draws neither.
+   */
+  const drawReading = (
+    read: PointerReading | undefined,
+  ): { readonly attack: AttackShown | undefined } | undefined => {
     const current = shown;
-    pointerReading = undefined;
-    if (read === undefined || lit === undefined || current === undefined) {
-      path.hide();
-      return;
-    }
+    if (read === undefined || lit === undefined || current === undefined) return undefined;
     switch (read.kind) {
       case 'path': {
         const tiles = pathTo(catalogue, current, lit.standing, read.landing.tile);
-        if (tiles === undefined) {
-          path.hide();
-          return;
-        }
+        if (tiles === undefined) return undefined;
         path.showPath(tiles, lit.standing.movePoints - read.landing.cost);
-        break;
+        return { attack: undefined };
       }
       case 'attack': {
-        const { tile, landing } = read.target;
+        const { unit, tile, landing } = read.target;
         if (landing === undefined) {
-          path.showAttack(
-            lit.standing.tile,
-            tile,
-            damageOf(catalogue, current.units, lit.standing),
-          );
-          break;
+          path.showAttack(lit.standing.tile, tile);
+          return { attack: { unit, damage: damageOf(catalogue, current.units, lit.standing) } };
         }
         const tiles = pathTo(catalogue, current, lit.standing, landing.tile);
         const step: UnitCommand = { type: 'move', unit: lit.standing.id, tile: landing.tile };
         const { units } = outcome(apply(catalogue, current, step));
         const landed = unitAt(units, landing.tile);
-        if (tiles === undefined || landed === undefined) {
-          path.hide();
-          return;
-        }
-        path.showStepAndAttack(
-          tiles,
-          lit.standing.movePoints - landing.cost,
-          tile,
-          damageOf(catalogue, units, landed),
-        );
-        break;
+        if (tiles === undefined || landed === undefined) return undefined;
+        path.showStepAndAttack(tiles, lit.standing.movePoints - landing.cost, tile);
+        return { attack: { unit, damage: damageOf(catalogue, units, landed) } };
       }
     }
-    pointerReading = read;
+  };
+
+  /**
+   * The lit unit reading this, or nothing: its path drawn to the landing, or its attack drawn on the
+   * unit, and the health bars of the unit the attack was read on and of the one it is read on
+   * painted again.
+   */
+  const showReading = (read: PointerReading | undefined): void => {
+    const was = attackShown?.unit;
+    const reading = drawReading(read);
+    if (reading === undefined) path.hide();
+    pointerReading = reading === undefined ? undefined : read;
+    attackShown = reading?.attack;
+    paintBarOf(was);
+    paintBarOf(attackShown?.unit);
   };
 
   /** What the lit unit reads on a tile: the path where it is lit, the attack where it marks the unit; nothing elsewhere. */
@@ -985,8 +1029,12 @@ export function createMapView(
         standing,
         landings,
         targets: [
-          ...targets.map((other) => ({ tile: other.tile, landing: undefined })),
-          ...stepped.map(({ target, landing }) => ({ tile: target.tile, landing })),
+          ...targets.map((other) => ({ unit: other.id, tile: other.tile, landing: undefined })),
+          ...stepped.map(({ target, landing }) => ({
+            unit: target.id,
+            tile: target.tile,
+            landing,
+          })),
         ],
       };
       reached = { own: standing.tile, landings: landings.map((landing) => landing.tile) };
@@ -1065,9 +1113,8 @@ export function createMapView(
   };
 
   /**
-   * A unit's marker as the map draws it on a chronicle, over whatever a motion left: a unit of the
-   * player's with no move points and no action left dimmed, and a tile not drawn live showing none of
-   * it.
+   * A unit's marker as the map draws it on a chronicle, over whatever a motion left, with its health
+   * bar and the attack the pointer reads on it, and a tile not drawn live showing none of it.
    */
   const paintUnit = (
     chronicle: Chronicle,
@@ -1077,12 +1124,12 @@ export function createMapView(
     const marker = markerKeptFor(unit);
     const key = tileKey(unit.tile);
     const { x, y } = positionOf(unit.tile);
-    const spent = unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0;
-    stopMotion(scene, [marker, ...unitBadgeOf(marker)]);
+    stopMotion(scene, unitMotionTargets(marker));
     asPainted(marker).setPosition(x, y).setName(`unit-${key}`).setVisible(seen.live.has(key));
     const { stats, faction, embarked } = unit;
-    const shade = spent ? 'done' : 'clear';
-    return asUnit(marker, stats.type, faction, embarked, shade, preparedAs(chronicle, unit));
+    const prepares = preparedAs(chronicle, unit);
+    const bar = barOf(unit, damageReadOn(unit));
+    return asUnit(marker, stats.type, faction, embarked, shadeOf(unit), prepares, bar);
   };
 
   /** Every unit of a chronicle written, and the markers of the units gone destroyed. */
@@ -1090,7 +1137,7 @@ export function createMapView(
     const standing = new Set(current.units.map((unit) => unit.id));
     for (const [id, marker] of unitMarkers) {
       if (standing.has(id)) continue;
-      stopMotion(scene, [marker, ...unitBadgeOf(marker)]);
+      stopMotion(scene, unitMotionTargets(marker));
       marker.destroy();
       unitMarkers.delete(id);
     }
@@ -1140,6 +1187,7 @@ export function createMapView(
       const seen = drawing(chronicle);
       return units.map((unit) => paintUnit(chronicle, seen, unit));
     },
+    paintHealthBar: paintBar,
     improvementOn,
     buildingOn,
     patchOn,

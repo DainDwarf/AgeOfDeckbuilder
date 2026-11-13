@@ -366,16 +366,23 @@ type Scrolled = { offset: number; overflow: number };
 
 /**
  * What a unit's mark shows: the tints of its halo and its painting, nothing where one is untinted,
- * and its badge, nothing where it wears none.
+ * its badge and its health bar, nothing where it wears none.
  */
 export type UnitMarkShown = {
   halo: number | undefined;
   painting: number | undefined;
   badge: BadgeShown | undefined;
+  bar: BarShown | undefined;
 };
 
 /** A unit's badge: its disc's fill and its rim's colour, the frame its glyph draws, and the glyph's tint. */
 export type BadgeShown = { disc: number; rim: number; glyph: string; ink: number | undefined };
+
+/**
+ * A unit's health bar: the health it shows held and the health it shows an attack would remove, each
+ * a share of the bar's length, and the file of the glyph at its foot.
+ */
+export type BarShown = { held: number; removed: number; glyph: string };
 
 /** Everything the run logged that it should not have; a clean run leaves it empty. */
 export function watch(page: Page): string[] {
@@ -542,6 +549,16 @@ export async function readNames(page: Page): Promise<void> {
         | undefined;
       if (disc === undefined) throw new Error(`the unit mark on ${key} holds no badge`);
       const glyph = mark.list[mark.list.indexOf(disc) + 1] as Phaser.GameObjects.Image;
+      // The health bar is the mark's one container: its track, the health lost the bar's whole length,
+      // the health held under the health removed, then its glyph, in `edgedName`'s frame.
+      const bar = mark.list.find((one) => one.type === 'Container') as
+        | Phaser.GameObjects.Container
+        | undefined;
+      if (bar === undefined) throw new Error(`the unit mark on ${key} holds no health bar`);
+      const [, length, held, removed] = bar.list as Phaser.GameObjects.Rectangle[];
+      const foot = bar.list[4] as Phaser.GameObjects.Image;
+      const share = (part: Phaser.GameObjects.Rectangle): number =>
+        part.visible ? part.height / length.height : 0;
       return {
         halo: tintOf(framed('#halo')),
         painting: tintOf(framed('#lined')),
@@ -551,6 +568,13 @@ export async function readNames(page: Page): Promise<void> {
               rim: disc.strokeColor,
               glyph: glyph.frame.name,
               ink: tintOf(glyph),
+            }
+          : undefined,
+        bar: bar.visible
+          ? {
+              held: share(held) + share(removed),
+              removed: share(removed),
+              glyph: foot.frame.name.replace(/#edged$/, ''),
             }
           : undefined,
       };
@@ -2997,14 +3021,14 @@ export function pathDrawn(page: Page): Promise<PathDrawn | undefined> {
 
 /**
  * The attack as the map draws it: its two tiles' keys, the attacker's first, and where their faces
- * stand; where the arrow's middle stands and the way it points, in radians; and what the number
- * reads and where it stands, all on the map's own surface.
+ * stand; where the arrow's middle stands and the way it points, in radians, on the map's own surface;
+ * and the health bar the attacked unit wears.
  */
 export type AttackDrawn = {
   tiles: string[];
   faces: OnMap[];
   arrow: { at: OnMap; angle: number };
-  health: { text: string; at: OnMap };
+  bar: BarShown;
 };
 
 /** What the map draws for a unit being aimed, as `aimDrawn` reads it. */
@@ -3047,18 +3071,15 @@ export async function aimDrawn(page: Page): Promise<AimDrawn> {
     const arrow = shown.find((mark) => mark.name === 'attack-arrow') as
       | Phaser.GameObjects.Image
       | undefined;
-    const health = shown.find((mark) => mark.name === 'attack-health') as
-      | Phaser.GameObjects.Container
-      | undefined;
     const left = shown.find((mark) => mark.name === 'path-left') as
       | Phaser.GameObjects.Container
       | undefined;
     const attack = (): AttackDrawn | undefined => {
       if (tiles.length === 0) return undefined;
-      if (arrow === undefined || health === undefined) {
-        throw new Error(`the attack on ${tiles[1]} stands without its arrow or its number`);
+      const bar = window.unitMarkOn?.(tiles[1])?.bar;
+      if (arrow === undefined || bar === undefined) {
+        throw new Error(`the attack on ${tiles[1]} stands without its arrow or its health bar`);
       }
-      const number = health.list.find((part) => part.type === 'Text') as Phaser.GameObjects.Text;
       return {
         tiles,
         faces: tiles.map((key) => {
@@ -3067,7 +3088,7 @@ export async function aimDrawn(page: Page): Promise<AimDrawn> {
           return placeOf(face);
         }),
         arrow: { at: placeOf(arrow), angle: arrow.rotation },
-        health: { text: number.text, at: placeOf(health) },
+        bar,
       };
     };
     return {

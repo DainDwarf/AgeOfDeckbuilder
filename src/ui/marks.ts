@@ -2,8 +2,8 @@ import type { PreparedAs } from '../rules/enemies';
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
 import { grownOf, haloOf } from './fade';
-import { LOOK, type Wash } from './look';
-import type { Made, Sheet } from './sheet';
+import { css, LOOK, type Wash } from './look';
+import { blankCanvas, type Made, type Sheet } from './sheet';
 
 /** What a feature's tile wears beside its icon: a herd of its animal, his pond, or its painting tinted. */
 export type FeatureDress =
@@ -286,9 +286,23 @@ function pixelsToTheUnit(size: number): number {
   return ARMS_PIXELS / (UNIT_WIDTH * size);
 }
 
-/** The room a frame painted off his icon keeps round it on every side to reach that many units past it, in his pixels. */
-function roomFor(reach: number, size: number): number {
-  return Math.ceil(reach * pixelsToTheUnit(size)) + 1;
+/**
+ * The room a frame painted off a square picture keeps round it on every side to reach that many units
+ * past it, in the picture's pixels, that many of them to the unit.
+ */
+function roomFor(reach: number, pixels: number): number {
+  return Math.ceil(reach * pixels) + 1;
+}
+
+/**
+ * A square picture of the units sheet: its file, how many pixels a side it is, and how many of them
+ * make one of the map's units where it is drawn.
+ */
+type Square = { readonly file: string; readonly side: number; readonly pixels: number };
+
+/** His arms icon a unit kind is drawn as, as the square it is drawn from. */
+function armsSquare({ file, size }: UnitPicture): Square {
+  return { file, side: ARMS_PIXELS, pixels: pixelsToTheUnit(size) };
 }
 
 /** The frame of the units sheet a unit kind's painting stands in, the dark line round it. */
@@ -302,12 +316,12 @@ function haloName(file: string): string {
 }
 
 /**
- * A frame his icon is painted off, the icon in its middle with room round it to reach that many
- * units past it: `paint` is handed a canvas of the frame's size, the icon's alpha on it, how many
- * pixels a unit is, and the way to draw the icon onto it.
+ * A frame a square picture is painted off, the picture in its middle with room round it to reach that
+ * many units past it: `paint` is handed a canvas of the frame's size, the picture's alpha on it, how
+ * many pixels a unit is, and the way to draw the picture onto it.
  */
 function aroundIcon(
-  { file, size }: UnitPicture,
+  { file, side: pictured, pixels }: Square,
   frame: string,
   reach: number,
   paint: (
@@ -317,19 +331,15 @@ function aroundIcon(
     icon: () => void,
   ) => void,
 ): Made {
-  const room = roomFor(reach, size);
-  const side = ARMS_PIXELS + 2 * room;
+  const room = roomFor(reach, pixels);
+  const side = pictured + 2 * room;
   return {
     frame,
     width: side,
     height: side,
     paint: (context, paintingIn) => {
       const from = paintingIn(UNIT_SHEET.key, file);
-      const canvas = document.createElement('canvas');
-      canvas.width = side;
-      canvas.height = side;
-      const on = canvas.getContext('2d');
-      if (on === null) throw new Error('no canvas of the page draws in two dimensions');
+      const on = blankCanvas(side, side);
       const icon = (): void =>
         on.drawImage(
           from.canvas,
@@ -345,8 +355,8 @@ function aroundIcon(
       icon();
       const { data } = on.getImageData(0, 0, side, side);
       const alpha = Uint8ClampedArray.from({ length: side * side }, (_, at) => data[4 * at + 3]);
-      paint(on, alpha, pixelsToTheUnit(size), icon);
-      context.drawImage(canvas, 0, 0);
+      paint(on, alpha, pixels, icon);
+      context.drawImage(on.canvas, 0, 0);
     },
   };
 }
@@ -366,19 +376,29 @@ function washed(on: CanvasRenderingContext2D, colour: number, strengths: Float64
 
 /** A unit kind's painting over the dark line round it: his outline grown by the line, in the map's outline colour. */
 function linedFrame(picture: UnitPicture): Made {
-  return aroundIcon(picture, linedName(picture.file), DARK_LINE, (on, alpha, pixels, icon) => {
-    const { width, height } = on.canvas;
-    washed(on, LOOK.mapOutline, grownOf(alpha, width, height, DARK_LINE * pixels));
-    icon();
-  });
+  return aroundIcon(
+    armsSquare(picture),
+    linedName(picture.file),
+    DARK_LINE,
+    (on, alpha, pixels, icon) => {
+      const { width, height } = on.canvas;
+      washed(on, LOOK.mapOutline, grownOf(alpha, width, height, DARK_LINE * pixels));
+      icon();
+    },
+  );
 }
 
 /** A unit kind's halo, in white: the fade out from his outline, painted once for every faction's tint. */
 function haloFrame(picture: UnitPicture): Made {
-  return aroundIcon(picture, haloName(picture.file), 2.5 * HALO_DEPTH, (on, alpha, pixels) => {
-    const { width, height } = on.canvas;
-    washed(on, 0xffffff, haloOf(alpha, width, height, LOOK.unitHalo, HALO_DEPTH * pixels));
-  });
+  return aroundIcon(
+    armsSquare(picture),
+    haloName(picture.file),
+    2.5 * HALO_DEPTH,
+    (on, alpha, pixels) => {
+      const { width, height } = on.canvas;
+      washed(on, 0xffffff, haloOf(alpha, width, height, LOOK.unitHalo, HALO_DEPTH * pixels));
+    },
+  );
 }
 
 /** The glyph a prepared unit's badge wears by what its prepare lands as, white, under the assets folder. */
@@ -387,25 +407,69 @@ const PREPARED_GLYPHS: Readonly<Record<PreparedAs, string>> = {
   capture: 'game-icons/flying-flag.svg',
 };
 
-/** How many pixels a side a prepared glyph is rasterised at: past what it covers at the closest zoom. */
-const PREPARED_GLYPH_PIXELS = 128;
+/** How many pixels a side a glyph is rasterised at: past what it covers at the closest zoom. */
+const GLYPH_PIXELS = 128;
 
 /** The frame of the units sheet the glyph of what a prepare lands as stands in. */
 export function preparedGlyphOf(prepares: PreparedAs): string {
   return PREPARED_GLYPHS[prepares];
 }
 
+/** A glyph standing at a health bar's foot: its file, white, how many units across its square is drawn, and its colour. */
+type BarGlyph = { readonly file: string; readonly across: number; readonly colour: number };
+
+const HEART: BarGlyph = { file: 'game-icons/hearts.svg', across: 6, colour: LOOK.heart };
+const SKULL: BarGlyph = { file: 'game-icons/death-skull.svg', across: 8, colour: LOOK.skull };
+
+/** How wide every dark edge on a unit's marks is, the painting's dark line excepted, in the map's units. */
+export const MARK_EDGE = 0.5;
+
+/** The frame of the units sheet a glyph at a health bar's foot stands in, in its colour and its dark edge. */
+function edgedName(file: string): string {
+  return `${file}#edged`;
+}
+
+/** A glyph at a health bar's foot in its colour over its dark edge: its outline grown by the edge, in the map's outline colour. */
+function edgedFrame({ file, across, colour }: BarGlyph): Made {
+  const square = { file, side: GLYPH_PIXELS, pixels: GLYPH_PIXELS / across };
+  return aroundIcon(square, edgedName(file), MARK_EDGE, (on, alpha, pixels) => {
+    const { width, height } = on.canvas;
+    const glyph = blankCanvas(width, height);
+    glyph.drawImage(on.canvas, 0, 0);
+    glyph.globalCompositeOperation = 'source-in';
+    glyph.fillStyle = css(colour);
+    glyph.fillRect(0, 0, width, height);
+    washed(on, LOOK.mapOutline, grownOf(alpha, width, height, MARK_EDGE * pixels));
+    on.drawImage(glyph.canvas, 0, 0);
+  });
+}
+
+/**
+ * The glyph standing at a health bar's foot, the skull where the attack read on it would kill and the
+ * heart anywhere else: its frame of the units sheet, and the scale that draws it at its size about
+ * its middle.
+ */
+export function barGlyphOf(kills: boolean): { readonly frame: string; readonly scale: number } {
+  const { file, across } = kills ? SKULL : HEART;
+  return { frame: edgedName(file), scale: across / GLYPH_PIXELS };
+}
+
 /**
  * The sheet his arms icons a unit kind is drawn as are drawn into, his canoe, the glyphs of what a
- * prepare lands as, and each kind's painting lined and its halo.
+ * prepare lands as and of a health bar's foot, each kind's painting lined and its halo, and each
+ * glyph of a health bar's foot edged.
  */
 export const UNIT_SHEET: Sheet = {
   key: 'units',
   files: [...Object.values(UNIT_PICTURES).map(({ file }) => file), CANOE],
-  rasterised: { files: Object.values(PREPARED_GLYPHS), side: PREPARED_GLYPH_PIXELS },
+  rasterised: {
+    files: [...Object.values(PREPARED_GLYPHS), HEART.file, SKULL.file],
+    side: GLYPH_PIXELS,
+  },
   made: [
     ...Object.values(UNIT_PICTURES).map(linedFrame),
     ...Object.values(UNIT_PICTURES).map(haloFrame),
+    ...[HEART, SKULL].map(edgedFrame),
   ],
   side: 1024,
 };
@@ -426,7 +490,7 @@ export function unitPaintingOf(type: string): UnitPainting {
 /** Where his paint and the dark line round it lie in each frame a unit kind's painting stands in, in its pixels. */
 const LINED_PAINT: Readonly<Record<string, Box>> = Object.fromEntries(
   Object.values(UNIT_PICTURES).map(({ file, size, ink }) => {
-    const shift = roomFor(DARK_LINE, size) - DARK_LINE * pixelsToTheUnit(size);
+    const shift = roomFor(DARK_LINE, pixelsToTheUnit(size)) - DARK_LINE * pixelsToTheUnit(size);
     const grown = 2 * DARK_LINE * pixelsToTheUnit(size);
     return [
       linedName(file),

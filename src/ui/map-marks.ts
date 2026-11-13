@@ -23,11 +23,13 @@ import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
+import type { HealthBar } from './health-bar';
 import { css, darkeningOf, LOOK, multiplied, type Wash } from './look';
 import {
   BUILDING_SHEET,
   type BuildingPaintings,
   type BuildingPiece,
+  barGlyphOf,
   buildingPaintingsOf,
   CANOE,
   clearingsOf,
@@ -46,6 +48,7 @@ import {
   improvementLookOf,
   leavesRoom,
   liesOf,
+  MARK_EDGE,
   PAINTING,
   PATCH,
   PONDS,
@@ -147,9 +150,6 @@ const THRESHOLD_GAP = 3;
 const THRESHOLD_PLATE_HEIGHT = 16;
 const THRESHOLD_PLATE_PAD = 4;
 
-/** How far above its tile's middle the health an attack would remove stands, clear of the unit's painting. */
-const HEALTH_REMOVED_RISE = 9;
-
 /**
  * A city's badge: how far right of and below its tile's middle its centre stands, how tall it is,
  * the pad on each side of its number, and how the number reads.
@@ -168,7 +168,18 @@ const UNIT_BADGE_SIZE = 11;
 const UNIT_BADGE_GLYPH = 8;
 
 /** The dark rim a city's badge and a prepared unit's wear. */
-const BADGE_RIM: Rim = { colour: LOOK.mapOutline, strength: 1, width: 0.5 };
+const BADGE_RIM: Rim = { colour: LOOK.mapOutline, strength: 1, width: MARK_EDGE };
+
+/**
+ * A unit's health bar, upright, its middle level with the painting's: how far left of its tile's
+ * middle that stands, how long and how wide the bar is, how round its track's corners are, and how
+ * far under the track's end the middle of the glyph at its foot stands.
+ */
+const BAR_OFF = 12;
+const BAR_LENGTH = 18;
+const BAR_WIDTH = 2.5;
+const TRACK_ROUND = 1;
+const BAR_FOOT = 1.5;
 
 /**
  * What the map draws a tile's things as: a picture, one polygon, a feature's disc, or a unit's mark,
@@ -720,10 +731,10 @@ export function improvementMark(
   ]);
 }
 
-/** What a unit's painting, its halo and its canoe are darkened by: nothing, the fog, or the dim of a unit whose turn is done. */
+/** What a unit's mark is darkened by: nothing, the fog, or the dim of a unit whose turn is done. */
 export type UnitShade = 'clear' | 'fog' | 'done';
 
-/** The tint a shade multiplies a unit's three images by. */
+/** The tint a shade multiplies a unit's images by, and the colours of its shapes. */
 function shadeTint(shade: UnitShade): number {
   switch (shade) {
     case 'clear':
@@ -736,8 +747,8 @@ function shadeTint(shade: UnitShade): number {
 }
 
 /**
- * A unit's mark with nothing drawn on it yet: his canoe, its halo, its painting, and its badge's
- * disc and glyph, bottom first.
+ * A unit's mark with nothing drawn on it yet: his canoe, its halo, its painting, its badge's disc and
+ * glyph, and its health bar, bottom first.
  */
 export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   return scene.add.container(0, 0, [
@@ -746,6 +757,24 @@ export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
     scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
     scene.add.image(0, 0, UNIT_SHEET.key),
+    healthBarMarker(scene),
+  ]);
+}
+
+/**
+ * A unit's health bar with nothing drawn on it yet, about the bar's middle: its track, the health
+ * lost the whole bar long, the health held rising from the bar's foot, the health an attack would
+ * remove, and the glyph at its foot, bottom first.
+ */
+function healthBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  const foot = BAR_LENGTH / 2;
+  const track = { width: BAR_WIDTH + 2 * MARK_EDGE, length: BAR_LENGTH + 2 * MARK_EDGE };
+  return scene.add.container(-BAR_OFF, UNIT_DROP, [
+    scene.add.rectangle(0, 0, track.width, track.length).setRounded(TRACK_ROUND),
+    scene.add.rectangle(0, 0, BAR_WIDTH, BAR_LENGTH),
+    scene.add.rectangle(0, foot, BAR_WIDTH, BAR_LENGTH).setOrigin(0.5, 1),
+    scene.add.rectangle(0, 0, BAR_WIDTH, BAR_LENGTH).setOrigin(0.5, 0),
+    scene.add.image(0, foot + MARK_EDGE + BAR_FOOT, UNIT_SHEET.key),
   ]);
 }
 
@@ -757,10 +786,58 @@ export function unitBadgeOf(
   return [disc as Phaser.GameObjects.Arc, glyph as Phaser.GameObjects.Image];
 }
 
+/** The health bar of a `unitMarker`, its parts in one container. */
+export function unitHealthBarOf(mark: Phaser.GameObjects.Container): Phaser.GameObjects.Container {
+  return mark.getAt<Phaser.GameObjects.Container>(5);
+}
+
+/** What a motion of a `unitMarker` moves: the marker, its badge's disc and glyph, and its health bar. */
+export function unitMotionTargets(
+  mark: Phaser.GameObjects.Container,
+): Phaser.GameObjects.GameObject[] {
+  return [mark, ...unitBadgeOf(mark), unitHealthBarOf(mark)];
+}
+
+/**
+ * The health bar of a `unitMarker` made to show the bar it is handed, darkened by the shade, and
+ * hidden where it is handed none.
+ */
+export function asUnitHealthBar(
+  mark: Phaser.GameObjects.Container,
+  bar: HealthBar | undefined,
+  shade: UnitShade,
+): Phaser.GameObjects.Container {
+  const worn = unitHealthBarOf(mark)
+    .setAlpha(1)
+    .setVisible(bar !== undefined);
+  if (bar === undefined) return worn;
+  const tint = shadeTint(shade);
+  const [track, lost, held, removed] = worn.list as Phaser.GameObjects.Rectangle[];
+  const kept = (bar.held - bar.removed) * BAR_LENGTH;
+  track.setFillStyle(multiplied(LOOK.mapOutline, tint));
+  lost.setFillStyle(multiplied(LOOK.healthLost, tint));
+  held
+    .setFillStyle(multiplied(LOOK.health, tint))
+    .setSize(BAR_WIDTH, kept)
+    .setVisible(kept > 0);
+  removed
+    .setFillStyle(multiplied(LOOK.attack, tint))
+    .setSize(BAR_WIDTH, bar.removed * BAR_LENGTH)
+    .setY(BAR_LENGTH / 2 - bar.held * BAR_LENGTH)
+    .setVisible(bar.removed > 0);
+  const { frame, scale } = barGlyphOf(bar.kills);
+  worn
+    .getAt<Phaser.GameObjects.Image>(4)
+    .setTexture(UNIT_SHEET.key, frame)
+    .setScale(scale)
+    .setTint(tint);
+  return worn;
+}
+
 /**
  * A `unitMarker` made to draw a unit: its kind's painting low on its tile in a halo of its faction's
- * colour, in his canoe while embarked, and the badge of what its prepare lands as where it has
- * prepared, all of it darkened by the shade.
+ * colour, in his canoe while embarked, the badge of what its prepare lands as where it has prepared,
+ * and the health bar it is handed where it is handed one, all of it darkened by the shade.
  */
 export function asUnit(
   mark: Phaser.GameObjects.Container,
@@ -769,6 +846,7 @@ export function asUnit(
   embarked: boolean,
   shade: UnitShade,
   prepares: PreparedAs | undefined,
+  bar: HealthBar | undefined,
 ): Phaser.GameObjects.Container {
   const { painting, halo, scale } = unitPaintingOf(type);
   const tint = shadeTint(shade);
@@ -805,6 +883,7 @@ export function asUnit(
       .setTexture(UNIT_SHEET.key, preparedGlyphOf(prepares))
       .setDisplaySize(UNIT_BADGE_GLYPH, UNIT_BADGE_GLYPH);
   }
+  asUnitHealthBar(mark, bar, shade);
   return mark;
 }
 
@@ -814,14 +893,17 @@ export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObj
   return canoe.visible ? [canoe, painting] : [painting];
 }
 
-/** A unit off the map, undarkened, its painting and his canoe centred on the container's point. */
+/**
+ * A unit off the map, undarkened and wearing neither badge nor health bar, its painting and his canoe
+ * centred on the container's point.
+ */
 export function unitMark(
   scene: Phaser.Scene,
   type: string,
   faction: Faction,
   embarked: boolean,
 ): Phaser.GameObjects.Container {
-  const mark = asUnit(unitMarker(scene), type, faction, embarked, 'clear', undefined);
+  const mark = asUnit(unitMarker(scene), type, faction, embarked, 'clear', undefined, undefined);
   const { centerX, centerY } = paintedBoundsOf(unitFittedBy(mark));
   for (const part of mark.list as Mark[]) part.setPosition(part.x - centerX, part.y - centerY);
   return mark;
@@ -950,13 +1032,6 @@ export function inMovePoints(hundredths: number): string {
   return (hundredths / MOVE_POINT).toString();
 }
 
-/** A plated number reading these words alone on its plate, its middle at that point. */
-function showPlated(mark: PlatedNumber, words: string, at: { x: number; y: number }): void {
-  mark.number.setText(words);
-  drawPlate(mark, ownBoxOf(mark.number).width);
-  mark.root.setPosition(at.x, at.y).setVisible(true);
-}
-
 export function movePointsLeftMark(scene: Phaser.Scene): PlatedNumber {
   return platedNumber(scene, 'path-left');
 }
@@ -966,17 +1041,10 @@ export function movePointsLeftMark(scene: Phaser.Scene): PlatedNumber {
  * where a unit's painting stands on the landing.
  */
 export function showMovePointsLeft(mark: PlatedNumber, coord: TileCoords, left: number): void {
-  showPlated(mark, inMovePoints(left), unitStandsAt(coord));
-}
-
-export function healthRemovedMark(scene: Phaser.Scene): PlatedNumber {
-  return platedNumber(scene, 'attack-health');
-}
-
-/** The health an attack would remove, on the plate above the middle of the attacked unit's tile. */
-export function showHealthRemoved(mark: PlatedNumber, coord: TileCoords, health: number): void {
-  const { x, y } = positionOf(coord);
-  showPlated(mark, text('attack.health', { health }), { x, y: y - HEALTH_REMOVED_RISE });
+  mark.number.setText(inMovePoints(left));
+  drawPlate(mark, ownBoxOf(mark.number).width);
+  const at = unitStandsAt(coord);
+  mark.root.setPosition(at.x, at.y).setVisible(true);
 }
 
 /** A city's badge: its pill, its number, and the width the pill is drawn at, none until it is. */

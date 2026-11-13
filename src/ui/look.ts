@@ -22,7 +22,10 @@ export type Look = {
   readonly civilization: number;
   readonly enemy: number;
   readonly neutral: number;
-  /** What the attack's marks are drawn in: the ring on a unit the selected unit can attack, and the arrow to it. */
+  /**
+   * What the attack's marks are drawn in: the ring on a unit the selected unit can attack, the arrow
+   * to it, and the health the attack would remove on its health bar.
+   */
   readonly attack: number;
   readonly pileCount: number;
   readonly exhaustTab: number;
@@ -53,6 +56,12 @@ export type Look = {
   readonly neutralCityBadgeInk: number;
   /** The ink the glyph on a prepared unit's badge reads in, whoever's the unit is. */
   readonly unitBadgeInk: number;
+  /** The health a unit holds on its health bar, and the rest of the bar, the health it lost. */
+  readonly health: number;
+  readonly healthLost: number;
+  /** The heart at a health bar's foot, and the skull an attack that would kill sets in its place. */
+  readonly heart: number;
+  readonly skull: number;
   readonly settlePhase: number;
   readonly panelFill: number;
   readonly panelEdge: number;
@@ -160,6 +169,10 @@ export const LOOK: Look = {
   civilizationCityBadgeInk: 0x0d1014,
   neutralCityBadgeInk: 0xd4d7db,
   unitBadgeInk: 0xf2f6ff,
+  health: 0x7fd14f,
+  healthLost: 0x3a4049,
+  heart: 0xe0564a,
+  skull: 0xf2f6ff,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,

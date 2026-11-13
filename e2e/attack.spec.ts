@@ -1,15 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { damageOf, entered } from '../src/rules/catalogue';
+import { damageOf, entered, fullHealth } from '../src/rules/catalogue';
 import { apply, broughtInRange, byHand, declaresWar, outcome } from '../src/rules/chronicle';
 import { MOVE_POINT, sameTile, type TileCoords, tileKey } from '../src/rules/map';
+import { unitDamaged } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { type Landing, pathTo, type Unit, unitAt } from '../src/rules/units';
 import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
-import { text } from '../src/ui/text';
 import {
   type AimDrawn,
   aimDrawn,
+  type BarShown,
   besideTiles,
   budget,
   campKind,
@@ -82,26 +83,42 @@ function warriorAStepFromAnEnemy(): {
   });
 }
 
+/** The glyph at a health bar's foot, as `docs/LOOK.md` names it: a heart, and a skull where the attack read would kill. */
+const GLYPHS = { heart: 'game-icons/hearts.svg', skull: 'game-icons/death-skull.svg' };
+
+/**
+ * The health bar a unit wears as the rules read it, with the attack of that damage read on it or
+ * none: the health it holds and the health the attack would remove, the smaller of the damage and
+ * the health held, as shares of its full health, and the skull at its foot where the attack would kill.
+ */
+function barOf(unit: Unit, damage: number | undefined): Record<keyof BarShown, unknown> {
+  const full = fullHealth(CATALOGUE, unit.stats);
+  const { health } = unit.stats;
+  return {
+    held: expect.closeTo(health / full, 6),
+    removed: expect.closeTo(Math.min(damage ?? 0, health) / full, 6),
+    glyph: damage !== undefined && damage >= health ? GLYPHS.skull : GLYPHS.heart,
+  };
+}
+
 /**
  * The map reads the attack from one tile on the unit on the other, after the step's path where one is
  * named and with no path where none is: the arrow from the first to the second, its middle between
- * them, and the number the health the attack would remove, over the attacked unit's tile.
+ * them, and the health bar the attacked unit wears with the attack read on it.
  */
 function readsTheAttack(
   drawn: AimDrawn,
   from: string,
   to: string,
-  health: string,
+  bar: Record<keyof BarShown, unknown>,
   step?: { path: string[]; left: string },
 ): void {
   expect({ path: drawn.path, left: drawn.left }).toEqual(step ?? { path: [], left: undefined });
   const { attack } = drawn;
   expect(attack?.tiles).toEqual([from, to]);
   if (attack === undefined) return;
-  expect(attack.health.text).toBe(health);
+  expect(attack.bar).toEqual(bar);
   const [attacker, attacked] = attack.faces;
-  expect(attack.health.at.x).toBeCloseTo(attacked.x, 6);
-  expect(attack.health.at.y).toBeLessThan(attacked.y);
   const span = { x: attacked.x - attacker.x, y: attacked.y - attacker.y };
   expect(attack.arrow.angle).toBeCloseTo(Math.atan2(span.y, span.x), 6);
   const off = { x: attack.arrow.at.x - attacker.x, y: attack.arrow.at.y - attacker.y };
@@ -121,7 +138,7 @@ async function attackRead(page: Page): Promise<string[] | undefined> {
   return (await aimDrawn(page)).attack?.tiles;
 }
 
-test('a warrior dragged onto an enemy attacks it, and its spent action refuses a second attack', async ({
+test('a warrior dragged onto an enemy attacks it, the enemy wearing its health bar at the health left it, and its spent action refuses a second attack', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -144,13 +161,16 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   expect(struck.tile).toEqual(warrior.tile);
   expect(struck.action).toBe(0);
   expect(struck.movePoints).toBe(0);
-  // Nothing left to spend: the warrior stands dimmed, and the enemy it struck never is.
+  // Nothing left to spend: the warrior stands dimmed, and the enemy it struck never is; the enemy
+  // wears its health bar at the health the attack left it.
   const dim = darkeningOf(LOOK.mapDim);
+  const hurt = unitAt(attacked.units, enemy.tile);
+  if (hurt === undefined) throw new Error(`the attack kills the enemy on ${tileKey(enemy.tile)}`);
   await expect
     .poll(() => unitMarksOn(page, [warrior.tile, enemy.tile]))
     .toEqual([
       { halo: multiplied(LOOK.civilization, dim), painting: dim },
-      { halo: LOOK.enemy, painting: undefined },
+      { halo: LOOK.enemy, painting: undefined, bar: barOf(hurt, undefined) },
     ]);
   // The warrior is selected again where it stands, so one more press is its next command.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(warrior.tile));
@@ -172,7 +192,7 @@ test('a warrior selected beside an enemy marks it with the attack’s ring; the 
   const [landing] = landings;
   if (landing === undefined) throw new Error('the warrior lights no tile');
   const [own, foe] = [warrior.tile, enemy.tile].map(tileKey);
-  const health = text('attack.health', { health: damageOf(CATALOGUE, chronicle.units, warrior) });
+  const bar = barOf(enemy, damageOf(CATALOGUE, chronicle.units, warrior));
   const resting: AimDrawn = {
     rings: [own],
     marked: [foe],
@@ -191,18 +211,20 @@ test('a warrior selected beside an enemy marks it with the attack’s ring; the 
   await pointAt(page, enemy.tile);
   await expect.poll(() => attackRead(page)).toEqual([own, foe]);
   const read = await aimDrawn(page);
-  readsTheAttack(read, own, foe, health);
+  readsTheAttack(read, own, foe, bar);
   expect({ ...read, attack: undefined }).toEqual(resting);
 
+  // The path takes the reading's place, and the enemy at its full health wears no bar with it gone.
   await pointAt(page, landing.tile);
   await expect
     .poll(async () => (await aimDrawn(page)).path)
     .toEqual(pathTo(CATALOGUE, chronicle, warrior, landing.tile)?.map(tileKey));
   expect((await aimDrawn(page)).attack).toBeUndefined();
+  expect((await unitMarksOn(page, [enemy.tile]))[0]?.bar).toBeUndefined();
 
   await pointAt(page, enemy.tile);
   await expect.poll(() => attackRead(page)).toEqual([own, foe]);
-  readsTheAttack(await aimDrawn(page), own, foe, health);
+  readsTheAttack(await aimDrawn(page), own, foe, bar);
 
   const off = await besideTiles(page);
   await page.mouse.move(off.x, off.y);
@@ -216,7 +238,7 @@ test('a warrior selected beside an enemy marks it with the attack’s ring; the 
   const onto = await onScreen(page, `tile-${foe}`);
   await page.mouse.move(onto.x, onto.y, { steps: 5 });
   await expect.poll(() => attackRead(page)).toEqual([own, foe]);
-  readsTheAttack(await aimDrawn(page), own, foe, health);
+  readsTheAttack(await aimDrawn(page), own, foe, bar);
   await page.mouse.up();
 
   const attacked = outcome(
@@ -226,6 +248,39 @@ test('a warrior selected beside an enemy marks it with the attack’s ring; the 
   await expect
     .poll(() => aimDrawn(page))
     .toEqual({ ...resting, marked: [], lit: [], path: [], attack: undefined });
+
+  expect(problems).toEqual([]);
+});
+
+test('a warrior beside an enemy its attack would kill reads on the enemy’s health bar all the health it holds with a skull at its foot, and the reading gone, the bar stands at that health with its heart', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const beside = warriorBesideAnEnemy();
+  const { warrior, enemy } = beside;
+  const damage = damageOf(CATALOGUE, beside.chronicle.units, warrior);
+  if (enemy.stats.health <= damage)
+    throw new Error('the warrior kills the enemy at its full health');
+  const chronicle = unitDamaged(
+    beside.chronicle,
+    enemy.tile,
+    enemy.stats.health - damage,
+  ).chronicle;
+  const worn = unitAt(chronicle.units, enemy.tile);
+  if (worn === undefined) throw new Error(`no enemy stands on ${tileKey(enemy.tile)}`);
+  const [own, foe] = [warrior.tile, enemy.tile].map(tileKey);
+
+  await openSaved(page, chronicle);
+
+  await click(page, `tile-${own}`);
+  await pointAt(page, enemy.tile);
+  await expect.poll(() => attackRead(page)).toEqual([own, foe]);
+  readsTheAttack(await aimDrawn(page), own, foe, barOf(worn, damage));
+
+  await pointAt(page, warrior.tile);
+  await expect.poll(() => attackRead(page)).toBeUndefined();
+  expect((await unitMarksOn(page, [enemy.tile]))[0]?.bar).toEqual(barOf(worn, undefined));
 
   expect(problems).toEqual([]);
 });
@@ -243,7 +298,7 @@ test('a warrior selected two tiles from an enemy a step brings in its range mark
   );
   const moved = unitAt(stepped.units, landing.tile);
   if (moved === undefined) throw new Error(`the step leaves no unit on ${from}`);
-  const health = text('attack.health', { health: damageOf(CATALOGUE, stepped.units, moved) });
+  const bar = barOf(enemy, damageOf(CATALOGUE, stepped.units, moved));
   const path = pathTo(CATALOGUE, chronicle, warrior, landing.tile)?.map(tileKey) ?? [];
   const left = String((warrior.movePoints - landing.cost) / MOVE_POINT);
   const resting: AimDrawn = {
@@ -264,7 +319,7 @@ test('a warrior selected two tiles from an enemy a step brings in its range mark
   await pointAt(page, enemy.tile);
   await expect.poll(() => attackRead(page)).toEqual([from, foe]);
   const read = await aimDrawn(page);
-  readsTheAttack(read, from, foe, health, { path, left });
+  readsTheAttack(read, from, foe, bar, { path, left });
   expect({ ...read, path: [], left: undefined, attack: undefined }).toEqual(resting);
 
   await click(page, `tile-${foe}`);

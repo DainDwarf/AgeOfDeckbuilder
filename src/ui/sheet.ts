@@ -48,6 +48,16 @@ export type Sheet = {
   readonly side: number;
 };
 
+/** A canvas of the page that wide and tall, holding nothing, and the context it draws in. */
+export function blankCanvas(width: number, height: number): CanvasRenderingContext2D {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (context === null) throw new Error('no canvas of the page draws in two dimensions');
+  return context;
+}
+
 /** Every file of a sheet queued on a scene's loader under its own name, for `drawSheet` to read. */
 export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files, rasterised }: Sheet): void {
   const at = (file: string): string => `${import.meta.env.BASE_URL}assets/${file}`;
@@ -105,9 +115,8 @@ export function drawSheet(
     return { canvas, x: cutX, y: cutY, width: cutWidth, height: cutHeight };
   };
 
-  const scratch = document.createElement('canvas');
-  const context = scratch.getContext('2d');
-  if (context === null) throw new Error('no canvas of the page draws in two dimensions');
+  const context = blankCanvas(0, 0);
+  const scratch = context.canvas;
   for (const { sheet: from, painting, frame, wash, composite } of tinted) {
     const { canvas, x: cutX, y: cutY, width, height } = paintingIn(from, painting);
     const paint = (): void =>

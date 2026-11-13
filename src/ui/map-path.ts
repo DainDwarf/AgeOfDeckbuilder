@@ -2,13 +2,7 @@ import type Phaser from 'phaser';
 import { type TileCoords, tileKey } from '../rules/map';
 import { css, LOOK } from './look';
 import { sceneCanvas } from './map-fade';
-import {
-  healthRemovedMark,
-  movePointsLeftMark,
-  showHealthRemoved,
-  showMovePointsLeft,
-  unitStandsAt,
-} from './map-marks';
+import { movePointsLeftMark, showMovePointsLeft, unitStandsAt } from './map-marks';
 import { poolOf } from './pool';
 
 /**
@@ -42,24 +36,19 @@ export type PathView = {
    */
   showPath(tiles: readonly TileCoords[], left: number): void;
   /**
-   * A unit's attack from its tile on the unit standing on the other, and the health it would remove,
-   * in place of the path; the layer carries the two tiles' keys.
+   * A unit's attack from its tile on the unit standing on the other, its arrow, in place of the path;
+   * the layer carries the two tiles' keys.
    */
-  showAttack(from: TileCoords, to: TileCoords, health: number): void;
+  showAttack(from: TileCoords, to: TileCoords): void;
   /**
    * A unit's path to the tile it would attack from with the move points it would have left there,
    * and its attack from that tile, as `showPath` and `showAttack` draw each.
    */
-  showStepAndAttack(
-    tiles: readonly TileCoords[],
-    left: number,
-    to: TileCoords,
-    health: number,
-  ): void;
+  showStepAndAttack(tiles: readonly TileCoords[], left: number, to: TileCoords): void;
   /** Neither the path nor the attack. */
   hide(): void;
-  /** The numbers' texts, which the map raises at its own zoom. */
-  readonly numbers: readonly Phaser.GameObjects.Text[];
+  /** The number's text, which the map raises at its own zoom. */
+  readonly number: Phaser.GameObjects.Text;
 };
 
 // A Graphics strokes 2 units wide or less without joins or caps (docs/PHASER.md): the chevron's and
@@ -162,22 +151,20 @@ function createArrow(scene: Phaser.Scene): {
 
 /**
  * A unit's path and its attack on the map's own surface, on this layer: the path's chevrons pooled
- * and its number, the attack's arrow and its number.
+ * and its number, and the attack's arrow.
  */
 export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): PathView {
   paintChevron(scene);
   const left = movePointsLeftMark(scene);
-  const health = healthRemovedMark(scene);
   const arrow = createArrow(scene);
-  // The depth alone keeps the numbers over the chevrons the pool adds after them.
-  on.add([arrow.image, left.root.setDepth(1), health.root.setDepth(1)]);
+  // The depth alone keeps the number over the chevrons the pool adds after it.
+  on.add([arrow.image, left.root.setDepth(1)]);
   const chevrons = poolOf(on, () => scene.add.image(0, 0, CHEVRON_KEY).setName('path-chevron'));
 
   const hide = (): void => {
     chevrons.hide();
     left.root.setVisible(false);
     arrow.image.setVisible(false);
-    health.root.setVisible(false);
     on.setData({ path: [], attack: [] });
   };
   hide();
@@ -199,7 +186,7 @@ export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): P
     on.setData('path', tiles.map(tileKey));
   };
 
-  const drawAttack = (from: TileCoords, to: TileCoords, removed: number): void => {
+  const drawAttack = (from: TileCoords, to: TileCoords): void => {
     const start = unitStandsAt(from);
     const end = unitStandsAt(to);
     const span = Math.hypot(end.x - start.x, end.y - start.y);
@@ -211,7 +198,6 @@ export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): P
       .setPosition((tail.x + point.x) / 2, (tail.y + point.y) / 2)
       .setRotation(Math.atan2(way.y, way.x))
       .setVisible(true);
-    showHealthRemoved(health, to, removed);
     on.setData('attack', [tileKey(from), tileKey(to)]);
   };
 
@@ -221,19 +207,19 @@ export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): P
       drawPath(tiles, points);
     },
 
-    showAttack(from, to, removed): void {
+    showAttack(from, to): void {
       hide();
-      drawAttack(from, to, removed);
+      drawAttack(from, to);
     },
 
-    showStepAndAttack(tiles, points, to, removed): void {
+    showStepAndAttack(tiles, points, to): void {
       hide();
       drawPath(tiles, points);
-      drawAttack(tiles[tiles.length - 1], to, removed);
+      drawAttack(tiles[tiles.length - 1], to);
     },
 
     hide,
 
-    numbers: [left.number, health.number],
+    number: left.number,
   };
 }
