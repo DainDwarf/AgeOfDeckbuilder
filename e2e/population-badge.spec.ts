@@ -5,9 +5,11 @@ import { claimable, cultureThreshold, growthThreshold } from '../src/rules/city'
 import { tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
+import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { CITY_BAR_STOCKS, type CityBarStock } from '../src/ui/city-bar';
 import { LOOK } from '../src/ui/look';
 import {
+  type BarParts,
   budget,
   chronicleOf,
   claimedAt,
@@ -18,6 +20,7 @@ import {
   firstSeed,
   hungry,
   neutralCampaign,
+  onDesignedSpeed,
   openSaved,
   playerCityTile,
   readings,
@@ -58,10 +61,11 @@ function turnOn(chronicle: Chronicle, stock: CityBarStock): number {
   return read.stocks[stock];
 }
 
-test('the player’s city wears a bar of each stock, filled in the stock’s colour by the share of its threshold the stock holds, and paler past it by what ending the turn would add', async ({
+test('the player’s city wears a bar of each stock, filled in the stock’s colour by the share of its threshold the stock holds, and paler past it by what ending the turn would add, which is down while the end of turn plays out', async ({
   page,
 }) => {
   const problems = watch(page);
+  test.setTimeout(budget(1));
   const campaign = neutralCampaign();
   const filling = (chronicle: Chronicle, stock: CityBarStock): boolean => {
     if (reckoned(CATALOGUE, chronicle) === undefined) return false;
@@ -90,25 +94,55 @@ test('the player’s city wears a bar of each stock, filled in the stock’s col
     },
   );
   const { bars } = badgeOn(tileKey(playerCityTile(chronicle)));
-
-  await openSaved(page, chronicle, campaign);
-  const read = await readings(page, Object.values(bars));
-  for (const stock of CITY_BAR_STOCKS) {
-    const threshold = standsAgainst(chronicle, stock);
+  const names = CITY_BAR_STOCKS.map((stock) => bars[stock]);
+  /** The bar of the stock on the chronicle, its stock held of its threshold and that much paler past it. */
+  const barOn = (
+    on: Chronicle,
+    stock: CityBarStock,
+    past: number,
+  ): Record<keyof BarParts, unknown> => {
+    const threshold = standsAgainst(on, stock);
     const colour = LOOK.reading[stock];
-    expect(read(bars[stock]).bar).toEqual({
+    return {
       filled: {
-        share: expect.closeTo(chronicle.resources[stock] / threshold, 6),
+        share: expect.closeTo(Math.min(on.resources[stock] / threshold, 1), 6),
         colour,
         strength: 1,
       },
-      past: {
-        share: expect.closeTo(turnOn(chronicle, stock) / threshold, 6),
-        colour,
-        strength: LOOK.addedByTurn,
-      },
-    });
+      past: { share: expect.closeTo(past / threshold, 6), colour, strength: LOOK.addedByTurn },
+    };
+  };
+  onDesignedSpeed(page);
+
+  await openSaved(page, chronicle, campaign);
+  const read = await readings(page, names);
+  for (const stock of CITY_BAR_STOCKS) {
+    expect(read(bars[stock]).bar).toEqual(barOn(chronicle, stock, turnOn(chronicle, stock)));
   }
+
+  const midway = page.waitForFunction(
+    ({ asked, stood }) => {
+      const scene = window.game?.scene.getScene<ChronicleScene>('ui');
+      if (scene?.playing !== true || JSON.stringify(scene.chronicle.resources) === stood) {
+        return undefined;
+      }
+      return {
+        chronicle: scene.chronicle,
+        shown: asked.map((name) => window.readName?.(name)?.bar),
+      };
+    },
+    { asked: names, stood: JSON.stringify(chronicle.resources) },
+  );
+  await endTurn(page);
+  const seen = await (await midway).jsonValue();
+  if (seen === undefined) throw new Error('waitForFunction resolved on no answer');
+  const addsShort = (stock: CityBarStock): boolean =>
+    seen.chronicle.resources[stock] < standsAgainst(seen.chronicle, stock) &&
+    (reckoned(CATALOGUE, seen.chronicle)?.stocks[stock] ?? 0) > 0;
+  expect(CITY_BAR_STOCKS.some(addsShort)).toBe(true);
+  expect(seen.shown).toEqual(
+    CITY_BAR_STOCKS.map((stock) => ({ value: barOn(seen.chronicle, stock, 0) })),
+  );
 
   expect(problems).toEqual([]);
 });

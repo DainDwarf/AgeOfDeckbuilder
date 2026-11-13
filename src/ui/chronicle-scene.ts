@@ -102,7 +102,7 @@ function samePlace(one: Place, other: Place): boolean {
   }
 }
 
-/** Whether the bar reads its reckoning through the command's play-out: the end of turn's it may not. */
+/** Whether the bars read their reckoning through the command's play-out: the end of turn's they may not. */
 function reckonsThrough(command: Command): boolean {
   switch (command.type) {
     case 'end-turn':
@@ -280,6 +280,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       for (const part of parts) part.render(this.current);
     };
 
+    /** Whether the resource bar and the city's bars read what ending the turn would do. */
+    const reckons = (on: boolean): void => {
+      bar.live(on);
+      view.reckons(on);
+    };
+
     /**
      * The screen standing on the chronicle, every part painted on it, the hand, the button and the
      * bar live.
@@ -289,7 +295,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       paint();
       hand.live(true);
       endTurn.live(true);
-      bar.live(true);
+      reckons(true);
       this.sequence = undefined;
     };
 
@@ -313,7 +319,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       try {
         endTurn.live(false);
         hand.live(false);
-        bar.live(reckoning);
+        reckons(reckoning);
         dismiss();
 
         for (const stage of walked(stages)) {

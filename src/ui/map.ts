@@ -259,6 +259,8 @@ export type MapView = {
   showDiscs(shown: boolean): void;
   /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
   live(on: boolean): void;
+  /** Whether the city's bars read what ending the turn would add, or show the stocks alone. */
+  reckons(on: boolean): void;
   /** Notches of zoom, in above zero, about the pointer. */
   zoom(notches: number): void;
 };
@@ -621,6 +623,9 @@ export function createMapView(
     }
   };
 
+  /** Whether the city's bars read what ending the turn would add. */
+  let reckoning = true;
+
   /**
    * The player's city's bars on its own tile, where the map draws that tile live, on the chronicle it
    * stands on: a card, an income and a growth change what they read, so this follows every render.
@@ -630,7 +635,7 @@ export function createMapView(
     const current = shown;
     const tile = current === undefined ? undefined : cityTileOf(current, 'player');
     if (current === undefined || tile === undefined || !live.has(tileKey(tile))) return;
-    const turn = reckoned(catalogue, current)?.stocks;
+    const turn = reckoning ? reckoned(catalogue, current)?.stocks : undefined;
     for (const stock of CITY_BAR_STOCKS) {
       const bar = cityBarOf(current.resources[stock], thresholdOf(current, stock), turn?.[stock]);
       showCityBar(cityBars[stock], tile, stock, bar);
@@ -1282,6 +1287,11 @@ export function createMapView(
 
   return {
     live: frame.live,
+
+    reckons(on: boolean): void {
+      reckoning = on;
+      paintCityBars();
+    },
 
     zoom: frame.zoomBy,
 
