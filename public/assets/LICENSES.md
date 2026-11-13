@@ -43,3 +43,9 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **What:** the UI typeface, regular and bold, in `fonts/source-sans-3/`.
 - **From:** Adobe, <https://github.com/adobe-fonts/source-sans>, release 3.052R, the files as released.
 - **Licence:** SIL Open Font License 1.1, the text in `fonts/source-sans-3/LICENSE.md`, Reserved Font Name "Source". The licence ships with the files; a modified version may not be called Source; no credit is required.
+
+## game-icons.net
+
+- **What:** two glyphs, white on nothing, in `game-icons/`: Fire by sbed and Flying flag by Lorc.
+- **From:** <https://game-icons.net>, `1x1/sbed/fire` and `1x1/lorc/flying-flag`, the SVG files as downloaded on the day they entered.
+- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" by sbed, <http://opengameart.org/content/95-game-icons>, and "Flying flag" by Lorc, <https://lorcblog.blogspot.com>, from game-icons.net under CC BY 3.0. The files may be modified; this record ships with the build and is their credit until the credits screen reads it.

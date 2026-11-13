@@ -105,6 +105,9 @@ export function otherCityOn(
   return city === faction ? undefined : city;
 }
 
+/** What a prepare lands as at the next enemy phase. */
+export type PreparedAs = 'capture' | 'pillage';
+
 /**
  * What a unit's prepare lands as at the next enemy phase: the capture of a city not its own on that
  * city's tile, a pillage on any other; nothing for a unit that has prepared nothing.
@@ -116,7 +119,7 @@ export function preparedAs(
       | { readonly faction: 'player' }
       | { readonly faction: ScriptedFaction; readonly prepared: boolean }
     ),
-): 'capture' | 'pillage' | undefined {
+): PreparedAs | undefined {
   if (unit.faction === 'player' || !unit.prepared) return undefined;
   switch (otherCityOn(chronicle, unit.tile, unit.faction)) {
     case 'player':

@@ -6,9 +6,6 @@ export type BarReading = Resource | 'idle';
 /** A colour laid over what is under it, at the strength it rests at. */
 export type Wash = { readonly colour: number; readonly strength: number };
 
-/** How strongly a glow rests on the tile it is drawn over: its face, and the line around it. */
-export type Glow = { readonly fill: number; readonly stroke: number };
-
 /** The paper one card face is drawn on. */
 export type Paper = {
   readonly face: number;
@@ -51,9 +48,11 @@ export type Look = {
   readonly pinMark: number;
   readonly thresholdInk: number;
   /** The ink the population badge on the player's city's tile reads in. */
-  readonly civilizationBadgeInk: number;
+  readonly civilizationCityBadgeInk: number;
   /** The ink the population badge on the neutral's city's tile reads in. */
-  readonly neutralBadgeInk: number;
+  readonly neutralCityBadgeInk: number;
+  /** The ink the glyph on a prepared unit's badge reads in, whoever's the unit is. */
+  readonly unitBadgeInk: number;
   readonly settlePhase: number;
   readonly panelFill: number;
   readonly panelEdge: number;
@@ -124,7 +123,6 @@ export type Look = {
   readonly monumentPatch: Wash;
   readonly scrim: Wash;
   readonly consolePanel: Wash;
-  readonly preparedGlow: Glow;
   readonly reading: Readonly<Record<Resource, number>>;
   readonly terrain: Readonly<Record<string, number>>;
   /** The ground each age stands on in the technology tree, by the age's id. */
@@ -159,8 +157,9 @@ export const LOOK: Look = {
   pinEdge: 0x0d1014,
   pinMark: 0xb4453c,
   thresholdInk: 0xf2f6ff,
-  civilizationBadgeInk: 0x0d1014,
-  neutralBadgeInk: 0xd4d7db,
+  civilizationCityBadgeInk: 0x0d1014,
+  neutralCityBadgeInk: 0xd4d7db,
+  unitBadgeInk: 0xf2f6ff,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,
@@ -212,7 +211,6 @@ export const LOOK: Look = {
   monumentPatch: { colour: 0x302418, strength: 0.9 },
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
-  preparedGlow: { fill: 0.4, stroke: 0.9 },
   reading: {
     food: 0x7d9c55,
     production: 0xb0834a,

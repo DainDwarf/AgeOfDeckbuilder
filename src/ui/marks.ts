@@ -1,3 +1,4 @@
+import type { PreparedAs } from '../rules/enemies';
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
 import { grownOf, haloOf } from './fade';
@@ -380,10 +381,28 @@ function haloFrame(picture: UnitPicture): Made {
   });
 }
 
-/** The sheet his arms icons a unit kind is drawn as are drawn into, his canoe, and each kind's painting lined and its halo. */
+/** The glyph a prepared unit's badge wears by what its prepare lands as, white, under the assets folder. */
+const PREPARED_GLYPHS: Readonly<Record<PreparedAs, string>> = {
+  pillage: 'game-icons/fire.svg',
+  capture: 'game-icons/flying-flag.svg',
+};
+
+/** How many pixels a side a prepared glyph is rasterised at: past what it covers at the closest zoom. */
+const PREPARED_GLYPH_PIXELS = 128;
+
+/** The frame of the units sheet the glyph of what a prepare lands as stands in. */
+export function preparedGlyphOf(prepares: PreparedAs): string {
+  return PREPARED_GLYPHS[prepares];
+}
+
+/**
+ * The sheet his arms icons a unit kind is drawn as are drawn into, his canoe, the glyphs of what a
+ * prepare lands as, and each kind's painting lined and its halo.
+ */
 export const UNIT_SHEET: Sheet = {
   key: 'units',
   files: [...Object.values(UNIT_PICTURES).map(({ file }) => file), CANOE],
+  rasterised: { files: Object.values(PREPARED_GLYPHS), side: PREPARED_GLYPH_PIXELS },
   made: [
     ...Object.values(UNIT_PICTURES).map(linedFrame),
     ...Object.values(UNIT_PICTURES).map(haloFrame),

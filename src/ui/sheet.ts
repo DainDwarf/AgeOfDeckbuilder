@@ -34,10 +34,14 @@ export type Made = {
   ): void;
 };
 
+/** Files drawn in lines, each made a square of `side` pixels as it loads. */
+export type Rasterised = { readonly files: readonly string[]; readonly side: number };
+
 /** One sheet of paintings: the key its texture stands under, the files drawn into it, and its side. */
 export type Sheet = {
   readonly key: string;
   readonly files: readonly string[];
+  readonly rasterised?: Rasterised;
   readonly tinted?: readonly Tinted[];
   readonly made?: readonly Made[];
   /** How wide and how tall it is: a power of two, or Phaser makes no mipmaps of it (docs/PHASER.md). */
@@ -45,8 +49,13 @@ export type Sheet = {
 };
 
 /** Every file of a sheet queued on a scene's loader under its own name, for `drawSheet` to read. */
-export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files }: Sheet): void {
-  for (const file of files) load.image(file, `${import.meta.env.BASE_URL}assets/${file}`);
+export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files, rasterised }: Sheet): void {
+  const at = (file: string): string => `${import.meta.env.BASE_URL}assets/${file}`;
+  for (const file of files) load.image(file, at(file));
+  if (rasterised === undefined) return;
+  // Phaser rasterises an SVG once, at the size handed here (`src/loader/filetypes/SVGFile.js:97-139`).
+  const { side } = rasterised;
+  for (const file of rasterised.files) load.svg(file, at(file), { width: side, height: side });
 }
 
 /**
@@ -56,7 +65,7 @@ export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files }: Sheet): 
  */
 export function drawSheet(
   textures: Phaser.Textures.TextureManager,
-  { key, files, tinted = [], made = [], side }: Sheet,
+  { key, files, rasterised, tinted = [], made = [], side }: Sheet,
 ): void {
   const sheet = textures.createCanvas(key, side, side);
   if (sheet === null) throw new Error(`a texture stands under ${key} already`);
@@ -77,7 +86,7 @@ export function drawSheet(
     return at;
   };
 
-  for (const file of files) {
+  for (const file of [...files, ...(rasterised?.files ?? [])]) {
     // A texture the manager does not hold draws as Phaser's missing one and throws nothing (docs/PHASER.md).
     if (!textures.exists(file)) throw new Error(`the texture ${file} could not be loaded`);
     const { width, height } = textures.getFrame(file);

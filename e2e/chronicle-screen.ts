@@ -174,8 +174,8 @@ declare global {
      * the voids left out; and how many of them that tint darkens.
      */
     faceCounts?: (fog: number) => { shown: number; inFog: number };
-    /** The tints of the unit mark standing on the tile of that key, and nothing where none stands. */
-    unitMarkOn?: (key: string) => UnitTints | undefined;
+    /** What the unit mark standing on the tile of that key shows, and nothing where none stands. */
+    unitMarkOn?: (key: string) => UnitMarkShown | undefined;
   }
 }
 
@@ -364,8 +364,18 @@ export type Axes = { x: { x: number; y: number }; y: { x: number; y: number } };
 /** How far a panel stands scrolled, and how far it can. */
 type Scrolled = { offset: number; overflow: number };
 
-/** What a unit's mark is tinted by: its halo and its painting, nothing where one is untinted. */
-export type UnitTints = { halo: number | undefined; painting: number | undefined };
+/**
+ * What a unit's mark shows: the tints of its halo and its painting, nothing where one is untinted,
+ * and its badge, nothing where it wears none.
+ */
+export type UnitMarkShown = {
+  halo: number | undefined;
+  painting: number | undefined;
+  badge: BadgeShown | undefined;
+};
+
+/** A unit's badge: its disc's fill and its rim's colour, the frame its glyph draws, and the glyph's tint. */
+export type BadgeShown = { disc: number; rim: number; glyph: string; ink: number | undefined };
 
 /** Everything the run logged that it should not have; a clean run leaves it empty. */
 export function watch(page: Page): string[] {
@@ -511,21 +521,39 @@ export async function readNames(page: Page): Promise<void> {
     };
 
     // The mark a tile in fog carries is nameless, so a unit's mark is found by standing where the
-    // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
+    // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`;
+    // the badge's disc is the mark's one circle, and its glyph the image drawn next.
     window.unitMarkOn = (key) => {
       const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
       if (face === undefined) return undefined;
       const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
       const mark = marks.find((one) => one.x === face.x && one.y === face.y);
       if (mark === undefined) return undefined;
-      const tintOf = (frame: string): number | undefined => {
-        const image = (mark.list as Phaser.GameObjects.Image[]).find((one) =>
-          one.frame.name.endsWith(frame),
-        );
+      const images = mark.list.filter((one) => one.type === 'Image') as Phaser.GameObjects.Image[];
+      const tintOf = (image: Phaser.GameObjects.Image): number | undefined =>
+        image.isTinted ? image.tint : undefined;
+      const framed = (frame: string): Phaser.GameObjects.Image => {
+        const image = images.find((one) => one.frame.name.endsWith(frame));
         if (image === undefined) throw new Error(`the unit mark on ${key} draws no ${frame}`);
-        return image.isTinted ? image.tint : undefined;
+        return image;
       };
-      return { halo: tintOf('#halo'), painting: tintOf('#lined') };
+      const disc = mark.list.find((one) => one.type === 'Arc') as
+        | Phaser.GameObjects.Arc
+        | undefined;
+      if (disc === undefined) throw new Error(`the unit mark on ${key} holds no badge`);
+      const glyph = mark.list[mark.list.indexOf(disc) + 1] as Phaser.GameObjects.Image;
+      return {
+        halo: tintOf(framed('#halo')),
+        painting: tintOf(framed('#lined')),
+        badge: disc.visible
+          ? {
+              disc: disc.fillColor,
+              rim: disc.strokeColor,
+              glyph: glyph.frame.name,
+              ink: tintOf(glyph),
+            }
+          : undefined,
+      };
     };
 
     /** Where a point of the camera's world sits on the page, and what one unit of it measures there. */
@@ -1495,7 +1523,7 @@ function readerOf(
 
 /**
  * Every name handed read, and the unit mark standing on each tile handed, in one question to the
- * page: the reading of one of the names, and the tints of a tile's mark; nothing on a tile no mark
+ * page: the reading of one of the names, and what a tile's mark shows; nothing on a tile no mark
  * stands on.
  */
 export async function readingsAndUnitMarks(
@@ -1504,7 +1532,7 @@ export async function readingsAndUnitMarks(
   tiles: readonly TileCoords[],
 ): Promise<{
   read: (name: string) => Reading;
-  unitMarkOn: (tile: TileCoords) => UnitTints | undefined;
+  unitMarkOn: (tile: TileCoords) => UnitMarkShown | undefined;
 }> {
   const keys = tiles.map(tileKey);
   const { answers, marks } = await page.evaluate(
@@ -1524,11 +1552,11 @@ export async function readingsAndUnitMarks(
   };
 }
 
-/** The tints of the unit mark standing on each tile handed, in one question to the page; nothing on a tile no mark stands on. */
+/** What the unit mark standing on each tile handed shows, in one question to the page; nothing on a tile no mark stands on. */
 export async function unitMarksOn(
   page: Page,
   tiles: readonly TileCoords[],
-): Promise<(UnitTints | undefined)[]> {
+): Promise<(UnitMarkShown | undefined)[]> {
   const { unitMarkOn } = await readingsAndUnitMarks(page, [], tiles);
   return tiles.map(unitMarkOn);
 }
@@ -2992,7 +3020,7 @@ export type AimDrawn = {
 
 /**
  * In one question: the tiles ringed in white and those ringed in the attack's colour; the tiles lit;
- * the tiles wearing a hexagon, lit or prepared; the path's tiles and what its number reads, while it
+ * the tiles the reach draws a hexagon on; the path's tiles and what its number reads, while it
  * stands; and the attack, while it stands.
  */
 export async function aimDrawn(page: Page): Promise<AimDrawn> {
@@ -3001,8 +3029,14 @@ export async function aimDrawn(page: Page): Promise<AimDrawn> {
     const shown = window.shownIn?.('path');
     const rings = window.ringsShown?.();
     const lit = window.litKeys?.();
-    const under = [...(window.shownIn?.('lit') ?? []), ...(window.shownIn?.('prepared') ?? [])];
-    if (layer === undefined || shown === undefined || rings === undefined || lit === undefined) {
+    const under = window.shownIn?.('lit');
+    if (
+      layer === undefined ||
+      shown === undefined ||
+      rings === undefined ||
+      lit === undefined ||
+      under === undefined
+    ) {
       throw new Error('the map is not on the chronicle screen');
     }
     const placeOf = (object: Phaser.GameObjects.GameObject): OnMap => {

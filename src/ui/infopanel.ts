@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { bonusOf, type Catalogue, damageOf, fullHealth, unitKind } from '../rules/catalogue';
-import { preparedAs } from '../rules/enemies';
+import { type PreparedAs, preparedAs } from '../rules/enemies';
 import { groundCost, movementCost, runsAlong, type TilesBeside } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
@@ -39,7 +39,7 @@ type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Parti
  */
 type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
   readonly damage: number;
-  readonly prepares?: 'capture' | 'pillage';
+  readonly prepares?: PreparedAs;
   readonly hostile?: boolean;
 };
 

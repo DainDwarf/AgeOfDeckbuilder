@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { PreparedAs } from '../rules/enemies';
 import {
   type BuildingTypeId,
   CENTRE,
@@ -22,7 +23,7 @@ import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
-import { css, darkeningOf, type Glow, LOOK, multiplied, type Wash } from './look';
+import { css, darkeningOf, LOOK, multiplied, type Wash } from './look';
 import {
   BUILDING_SHEET,
   type BuildingPaintings,
@@ -52,6 +53,7 @@ import {
   paintingOn,
   paintingsOf,
   pickOf,
+  preparedGlyphOf,
   RIVER_CUT,
   RIVER_SHEET,
   shorePaintingsOf,
@@ -107,8 +109,8 @@ export const CITY_COLOURS: Record<CityFaction, number> = {
 export const CITY_FACTIONS = Object.keys(CITY_COLOURS) as CityFaction[];
 
 const CITY_BADGE_INKS: Record<CityFaction, number> = {
-  player: LOOK.civilizationBadgeInk,
-  neutral: LOOK.neutralBadgeInk,
+  player: LOOK.civilizationCityBadgeInk,
+  neutral: LOOK.neutralCityBadgeInk,
 };
 
 /**
@@ -152,10 +154,21 @@ const HEALTH_REMOVED_RISE = 9;
  * A city's badge: how far right of and below its tile's middle its centre stands, how tall it is,
  * the pad on each side of its number, and how the number reads.
  */
-const BADGE_OFF = 12;
-const BADGE_HEIGHT = 14;
-const BADGE_PAD = 3;
-const BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
+const CITY_BADGE_OFF = 12;
+const CITY_BADGE_HEIGHT = 14;
+const CITY_BADGE_PAD = 3;
+const CITY_BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
+
+/**
+ * A prepared unit's badge: how far right of its tile's middle its centre stands, level with it, how
+ * wide its disc is, and how wide the glyph on it.
+ */
+const UNIT_BADGE_OFF = 10;
+const UNIT_BADGE_SIZE = 11;
+const UNIT_BADGE_GLYPH = 8;
+
+/** The dark rim a city's badge and a prepared unit's wear. */
+const BADGE_RIM: Rim = { colour: LOOK.mapOutline, strength: 1, width: 0.5 };
 
 /**
  * What the map draws a tile's things as: a picture, one polygon, a feature's disc, or a unit's mark,
@@ -175,12 +188,6 @@ export type TileObjects = {
   readonly shore: Phaser.GameObjects.Image;
   readonly feature: Phaser.GameObjects.Image;
   readonly featureDisc: Phaser.GameObjects.Arc;
-};
-
-/** What the map keeps of a unit from its entering to its leaving, shown as the unit stands. */
-export type UnitObjects = {
-  readonly marker: Phaser.GameObjects.Container;
-  readonly hue: Phaser.GameObjects.Polygon;
 };
 
 export function positionOf({ q, r }: TileCoords): { x: number; y: number } {
@@ -728,18 +735,32 @@ function shadeTint(shade: UnitShade): number {
   }
 }
 
-/** A unit's mark with nothing drawn on it yet: his canoe, its halo and its painting, bottom first. */
+/**
+ * A unit's mark with nothing drawn on it yet: his canoe, its halo, its painting, and its badge's
+ * disc and glyph, bottom first.
+ */
 export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   return scene.add.container(0, 0, [
     scene.add.image(0, 0, UNIT_SHEET.key, CANOE),
     scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.image(0, 0, UNIT_SHEET.key),
+    scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
+    scene.add.image(0, 0, UNIT_SHEET.key),
   ]);
+}
+
+/** The badge of a `unitMarker`: its disc and its glyph. */
+export function unitBadgeOf(
+  mark: Phaser.GameObjects.Container,
+): [Phaser.GameObjects.Arc, Phaser.GameObjects.Image] {
+  const [, , , disc, glyph] = mark.list;
+  return [disc as Phaser.GameObjects.Arc, glyph as Phaser.GameObjects.Image];
 }
 
 /**
  * A `unitMarker` made to draw a unit: its kind's painting low on its tile in a halo of its faction's
- * colour, in his canoe while embarked, the three darkened by the shade.
+ * colour, in his canoe while embarked, and the badge of what its prepare lands as where it has
+ * prepared, all of it darkened by the shade.
  */
 export function asUnit(
   mark: Phaser.GameObjects.Container,
@@ -747,10 +768,12 @@ export function asUnit(
   faction: Faction,
   embarked: boolean,
   shade: UnitShade,
+  prepares: PreparedAs | undefined,
 ): Phaser.GameObjects.Container {
   const { painting, halo, scale } = unitPaintingOf(type);
   const tint = shadeTint(shade);
   const [canoe, haloImage, paintingImage] = mark.list as Phaser.GameObjects.Image[];
+  const [disc, glyph] = unitBadgeOf(mark);
   haloImage
     .setTexture(UNIT_SHEET.key, halo)
     .setScale(scale)
@@ -766,6 +789,22 @@ export function asUnit(
     .setScale(scale)
     .setPosition(0, UNIT_DROP)
     .setTint(tint);
+  disc
+    .setPosition(UNIT_BADGE_OFF, 0)
+    .setFillStyle(multiplied(FACTION_COLOURS[faction], tint))
+    .setStrokeStyle(BADGE_RIM.width, multiplied(BADGE_RIM.colour, tint), BADGE_RIM.strength)
+    .setAlpha(1)
+    .setVisible(prepares !== undefined);
+  glyph
+    .setPosition(UNIT_BADGE_OFF, 0)
+    .setTint(multiplied(LOOK.unitBadgeInk, tint))
+    .setAlpha(1)
+    .setVisible(prepares !== undefined);
+  if (prepares !== undefined) {
+    glyph
+      .setTexture(UNIT_SHEET.key, preparedGlyphOf(prepares))
+      .setDisplaySize(UNIT_BADGE_GLYPH, UNIT_BADGE_GLYPH);
+  }
   return mark;
 }
 
@@ -782,11 +821,9 @@ export function unitMark(
   faction: Faction,
   embarked: boolean,
 ): Phaser.GameObjects.Container {
-  const mark = asUnit(unitMarker(scene), type, faction, embarked, 'clear');
+  const mark = asUnit(unitMarker(scene), type, faction, embarked, 'clear', undefined);
   const { centerX, centerY } = paintedBoundsOf(unitFittedBy(mark));
-  for (const image of mark.list as Phaser.GameObjects.Image[]) {
-    image.setPosition(image.x - centerX, image.y - centerY);
-  }
+  for (const part of mark.list as Mark[]) part.setPosition(part.x - centerX, part.y - centerY);
   return mark;
 }
 
@@ -950,7 +987,10 @@ export type PopulationBadge = {
 };
 
 export function populationBadge(scene: Phaser.Scene, whose: CityFaction): PopulationBadge {
-  const number = addText(scene, 0, 0, '', { ...BADGE_STYLE, color: css(CITY_BADGE_INKS[whose]) })
+  const number = addText(scene, 0, 0, '', {
+    ...CITY_BADGE_STYLE,
+    color: css(CITY_BADGE_INKS[whose]),
+  })
     .setOrigin(0.5, 0.5)
     .setVisible(false);
   const pill = scene.add.graphics().setData('fill', CITY_COLOURS[whose]).setVisible(false);
@@ -961,7 +1001,7 @@ export function populationBadge(scene: Phaser.Scene, whose: CityFaction): Popula
  * A city's own tile wearing its population: the number on a pill in that city's colour at the tile's
  * lower-right corner, a disc until the number needs more room, widening about its middle.
  */
-export function showBadge(
+export function showCityBadge(
   badge: PopulationBadge,
   coord: TileCoords,
   whose: CityFaction,
@@ -969,7 +1009,7 @@ export function showBadge(
 ): void {
   const { pill, number } = badge;
   const { x, y } = positionOf(coord);
-  const at = { x: x + BADGE_OFF, y: y + BADGE_OFF };
+  const at = { x: x + CITY_BADGE_OFF, y: y + CITY_BADGE_OFF };
   const key = tileKey(coord);
   number
     .setText(String(population))
@@ -980,10 +1020,10 @@ export function showBadge(
 
   drawPill(
     badge,
-    Math.max(BADGE_HEIGHT, ownBoxOf(number).width + 2 * BADGE_PAD),
-    BADGE_HEIGHT,
+    Math.max(CITY_BADGE_HEIGHT, ownBoxOf(number).width + 2 * CITY_BADGE_PAD),
+    CITY_BADGE_HEIGHT,
     { colour: CITY_COLOURS[whose], strength: 1 },
-    { colour: LOOK.mapOutline, strength: 1, width: 1.5 },
+    BADGE_RIM,
   );
 }
 
@@ -1001,24 +1041,4 @@ export function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
     middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
     middle.y + ((y * TILE_SIZE) / 2) * SQUASH,
   );
-}
-
-/** A hexagon just inside a tile's face, with no glow on it yet. */
-export function unreadGlow(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
-  return scene.add.polygon(0, 0, mapHexagon(TILE_SIZE - 2));
-}
-
-/** An `unreadGlow` made to glow on a tile, whatever it glowed on before. */
-export function asGlow(
-  mark: Phaser.GameObjects.Polygon,
-  coord: TileCoords,
-  colour: number,
-  glow: Glow,
-): Phaser.GameObjects.Polygon {
-  const { x, y } = positionOf(coord);
-  return mark
-    .setPosition(x, y)
-    .setFillStyle(colour, glow.fill)
-    .setStrokeStyle(2, colour, glow.stroke)
-    .setData('tile', tileKey(coord));
 }

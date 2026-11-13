@@ -31,7 +31,7 @@ import {
   ROW_RISE,
   rowOf,
   type TileObjects,
-  type UnitObjects,
+  unitBadgeOf,
   wearing,
 } from './map-marks';
 import { FACE_SHEET, onPatch } from './marks';
@@ -65,10 +65,9 @@ type MapInMotion = {
     | { readonly tile: Tile; shoreOn(coord: TileCoords): string | undefined; paint(): Mark[] }
     | undefined;
   tileObjects(key: string): TileObjects;
-  unitObjects(id: number): UnitObjects | undefined;
-  /** These units of this chronicle painted, and their markers. */
-  paintArrivals(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
-  paintHue(unit: Unit): Phaser.GameObjects.Polygon;
+  markerOf(unit: number): Phaser.GameObjects.Container | undefined;
+  /** The markers of these units painted as the map draws them on this chronicle. */
+  paintMarkers(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
   /** The marks of an improvement on the tile of that key carrying that feature, painted at that point of its row. */
   improvementOn(
     improvement: ImprovementId,
@@ -125,17 +124,13 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     if (flight === token) view.render(chronicle);
   };
 
-  /** What the map keeps of the unit standing on a tile, and nothing where it shows none. */
-  const objectsOn = (coord: TileCoords): UnitObjects | undefined => {
+  /** The marker standing on a tile, and nothing where the map shows none. */
+  const markerOn = (coord: TileCoords): Phaser.GameObjects.Container | undefined => {
     const shown = view.shown();
     const standing = shown === undefined ? undefined : unitAt(shown.units, coord);
-    const own = standing === undefined ? undefined : view.unitObjects(standing.id);
-    return own?.marker.visible === true ? own : undefined;
+    const marker = standing === undefined ? undefined : view.markerOf(standing.id);
+    return marker?.visible === true ? marker : undefined;
   };
-
-  /** The marker standing on a tile, and nothing where the map shows none. */
-  const markerOn = (coord: TileCoords): Phaser.GameObjects.Container | undefined =>
-    objectsOn(coord)?.marker;
 
   /** A unit's marker bumped where it stands, as an attack's target is. */
   const bump = (marker: Phaser.GameObjects.Container, delay: number): Promise<void> =>
@@ -156,31 +151,15 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     duration: number,
   ): Promise<void> => ended(scene.tweens.add({ targets: target, scale: 0, duration, ease: EASE }));
 
-  /** The hue a tile wears for the enemy standing on it, and nothing where the map shows none. */
-  const hueOn = (coord: TileCoords): Phaser.GameObjects.Polygon | undefined => {
-    const hue = objectsOn(coord)?.hue;
-    return hue?.visible === true ? hue : undefined;
-  };
-
-  /** A unit's marker and the hue its tile wears for it: what goes with the unit. */
-  const withHue = (
-    coord: TileCoords,
-    marker: Phaser.GameObjects.Container,
-  ): Phaser.GameObjects.GameObject[] => {
-    const hue = hueOn(coord);
-    return hue === undefined ? [marker] : [marker, hue];
-  };
-
   /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
   const bumped = async (
-    coord: TileCoords,
     marker: Phaser.GameObjects.Container,
     killed: boolean,
     token: symbol,
   ): Promise<void> => {
     await bump(marker, 150);
     if (!killed || flight !== token) return;
-    await shrink(withHue(coord, marker), 200);
+    await shrink(marker, 200);
   };
 
   /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
@@ -209,7 +188,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const taken =
       hit === undefined
         ? Promise.resolve()
-        : bumped(target, hit, unitAt(chronicle.units, target) === undefined, token);
+        : bumped(hit, unitAt(chronicle.units, target) === undefined, token);
 
     return Promise.all([lunge, taken]).then(() => settle(token, chronicle));
   };
@@ -245,7 +224,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     if (arrived.length === 0) return undefined;
 
     const token = takeOff();
-    const entering = view.paintArrivals(chronicle, arrived).map((marker) => marker.setScale(0));
+    const entering = view.paintMarkers(chronicle, arrived).map((marker) => marker.setScale(0));
 
     return ended(scene.tweens.add({ targets: entering, scale: 1, duration: 250, ease: EASE })).then(
       () => settle(token, chronicle),
@@ -284,20 +263,23 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const marker = markerOn(coord);
     if (marker === undefined) return undefined;
     const token = takeOff();
-    return shrink(withHue(coord, marker), 200).then(() => settle(token, chronicle));
+    return shrink(marker, 200).then(() => settle(token, chronicle));
   };
 
-  /** A tile's hue coming as the unit on it prepares, and going as what it prepared lands. */
+  /** The badge of the unit on a tile coming as it prepares, and going as what it prepared lands. */
   const preparedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
     const standing = unitAt(chronicle.units, coord);
-    const worn = hueOn(coord);
+    const marker = markerOn(coord);
+    const badged = marker !== undefined && unitBadgeOf(marker).every((part) => part.visible);
     if (standing !== undefined && preparedAs(chronicle, standing) !== undefined) {
-      if (worn !== undefined) return undefined;
+      if (badged) return undefined;
       const token = takeOff();
-      return fadeIn([view.paintHue(standing)]).then(() => settle(token, chronicle));
+      const [painted] = view.paintMarkers(chronicle, [standing]);
+      return fadeIn(unitBadgeOf(painted)).then(() => settle(token, chronicle));
     }
-    if (worn === undefined) return undefined;
+    if (!badged) return undefined;
     const token = takeOff();
+    const worn = unitBadgeOf(marker);
     return ended(scene.tweens.add({ targets: worn, alpha: 0, duration: 250, ease: EASE })).then(
       () => settle(token, chronicle),
     );

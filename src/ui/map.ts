@@ -47,7 +47,6 @@ import { createMapCamera } from './map-camera';
 import { selectionRims, unitRings } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
-  asGlow,
   asIcon,
   asPatch,
   asPieces,
@@ -63,7 +62,6 @@ import {
   cityDim,
   diamond,
   ditchesOf,
-  FACTION_COLOURS,
   FEATURE_DISC,
   featureMarksOn,
   featureToldOn,
@@ -82,16 +80,15 @@ import {
   rowOf,
   SQUASH,
   shoreOn,
-  showBadge,
+  showCityBadge,
   showThreshold,
   TILE_SIZE,
   type TileObjects,
   thresholdMark,
   tileFace,
-  type UnitObjects,
+  unitBadgeOf,
   unitMarker,
   unitStandsAt,
-  unreadGlow,
   wearing,
 } from './map-marks';
 import { createMapMotion } from './map-motion';
@@ -338,7 +335,7 @@ export function createMapView(
   const built = group(strata.buildings, 'buildings');
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
-  const badges = group(strata.buildings, 'badges');
+  const cityBadgeLayer = group(strata.buildings, 'city-badges');
   const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
@@ -346,7 +343,6 @@ export function createMapView(
     .setName('yield-dim')
     .setVisible(false);
   strata.dim.layer.add(dim);
-  const hues = group(strata.selection, 'prepared');
   const reach = createReach(scene, group(strata.selection, 'lit'), chronicle.tiles);
   const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
@@ -437,10 +433,12 @@ export function createMapView(
     player: populationBadge(scene, 'player'),
     neutral: populationBadge(scene, 'neutral'),
   };
-  for (const whose of CITY_FACTIONS) badges.add([cityBadges[whose].pill, cityBadges[whose].number]);
+  for (const whose of CITY_FACTIONS) {
+    cityBadgeLayer.add([cityBadges[whose].pill, cityBadges[whose].number]);
+  }
 
-  /** What the map keeps of each unit of the chronicle it stands on, by the number it is named by. */
-  const unitObjects = new Map<number, UnitObjects>();
+  /** The marker of each unit of the chronicle the map stands on, by the number it is named by. */
+  const unitMarkers = new Map<number, Phaser.GameObjects.Container>();
   /** The mark drawn on each tile the population stands on while city mode is on, by its tile's key. */
   let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
 
@@ -582,7 +580,7 @@ export function createMapView(
    * Each city's badge on its own tile, where the map draws that tile live, on the chronicle it
    * stands on: a growth, a take and a capture change the number, so this follows every render.
    */
-  const paintBadges = (): void => {
+  const paintCityBadges = (): void => {
     const current = shown;
     if (current === undefined) return;
     for (const whose of CITY_FACTIONS) {
@@ -592,7 +590,7 @@ export function createMapView(
       const tile = cityTileOf(current, whose);
       const rows = cityRows(current, whose);
       if (tile === undefined || rows === undefined || !live.has(tileKey(tile))) continue;
-      showBadge(badge, tile, whose, rows.population);
+      showCityBadge(badge, tile, whose, rows.population);
     }
   };
 
@@ -604,7 +602,7 @@ export function createMapView(
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
     paintThreshold();
-    paintBadges();
+    paintCityBadges();
   };
 
   // The map scene re-rasterises every text it holds at its own factor when the window changes, and
@@ -778,9 +776,9 @@ export function createMapView(
     const standing = unitShown(chronicle.units, drawing);
     if (standing !== undefined) {
       const { stats, faction, embarked } = standing;
-      painted.push(
-        asUnit(fogUnitPool.take(), stats.type, faction, embarked, 'fog').setPosition(x, y),
-      );
+      const prepares = preparedAs(chronicle, standing);
+      const kept = asUnit(fogUnitPool.take(), stats.type, faction, embarked, 'fog', prepares);
+      painted.push(kept.setPosition(x, y));
     }
     return painted;
   };
@@ -1052,53 +1050,49 @@ export function createMapView(
     border.paint(worn);
   };
 
-  /** What the map keeps of a unit, made the first time a render or a motion meets it. */
-  const objectsOf = (unit: Unit): UnitObjects => {
-    const kept = unitObjects.get(unit.id);
+  /** The marker of the unit of that number, and nothing where the map keeps none. */
+  const markerOf = (unit: number): Phaser.GameObjects.Container | undefined =>
+    unitMarkers.get(unit);
+
+  /** A unit's marker, made the first time a render or a motion meets it. */
+  const markerKeptFor = (unit: Unit): Phaser.GameObjects.Container => {
+    const kept = unitMarkers.get(unit.id);
     if (kept !== undefined) return kept;
     const marker = unitMarker(scene).setDepth(UNIT_DEPTH);
-    const hue = unreadGlow(scene);
     marks.add(marker);
-    hues.add(hue);
-    const made = { marker, hue };
-    unitObjects.set(unit.id, made);
-    return made;
+    unitMarkers.set(unit.id, marker);
+    return marker;
   };
-
-  /** The tile a unit has prepared on wearing its faction's colour, a hexagon over its face. */
-  const paintHue = (unit: Unit): Phaser.GameObjects.Polygon =>
-    asPainted(
-      asGlow(objectsOf(unit).hue, unit.tile, FACTION_COLOURS[unit.faction], LOOK.preparedGlow),
-    ).setName(`prepared-${tileKey(unit.tile)}`);
 
   /**
-   * Everything the map keeps of a unit as it draws it on a chronicle, over whatever a motion left: a
-   * unit of the player's with no move points and no action left dimmed, and a tile not drawn live
-   * showing none of it.
+   * A unit's marker as the map draws it on a chronicle, over whatever a motion left: a unit of the
+   * player's with no move points and no action left dimmed, and a tile not drawn live showing none of
+   * it.
    */
-  const paintUnit = (chronicle: Chronicle, seen: Drawing, unit: Unit): UnitObjects => {
-    const own = objectsOf(unit);
-    const { marker, hue } = own;
+  const paintUnit = (
+    chronicle: Chronicle,
+    seen: Drawing,
+    unit: Unit,
+  ): Phaser.GameObjects.Container => {
+    const marker = markerKeptFor(unit);
     const key = tileKey(unit.tile);
     const { x, y } = positionOf(unit.tile);
-    const stands = seen.live.has(key);
     const spent = unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0;
-    stopMotion(scene, [marker, hue]);
-    asPainted(marker).setPosition(x, y).setName(`unit-${key}`).setVisible(stands);
-    asUnit(marker, unit.stats.type, unit.faction, unit.embarked, spent ? 'done' : 'clear');
-    paintHue(unit).setVisible(stands && preparedAs(chronicle, unit) !== undefined);
-    return own;
+    stopMotion(scene, [marker, ...unitBadgeOf(marker)]);
+    asPainted(marker).setPosition(x, y).setName(`unit-${key}`).setVisible(seen.live.has(key));
+    const { stats, faction, embarked } = unit;
+    const shade = spent ? 'done' : 'clear';
+    return asUnit(marker, stats.type, faction, embarked, shade, preparedAs(chronicle, unit));
   };
 
-  /** Every unit of a chronicle written, and what the map kept of the units gone destroyed. */
+  /** Every unit of a chronicle written, and the markers of the units gone destroyed. */
   const paintUnits = (current: Chronicle): void => {
     const standing = new Set(current.units.map((unit) => unit.id));
-    for (const [id, { marker, hue }] of unitObjects) {
+    for (const [id, marker] of unitMarkers) {
       if (standing.has(id)) continue;
-      stopMotion(scene, [marker, hue]);
+      stopMotion(scene, [marker, ...unitBadgeOf(marker)]);
       marker.destroy();
-      hue.destroy();
-      unitObjects.delete(id);
+      unitMarkers.delete(id);
     }
     for (const unit of current.units) paintUnit(current, { drawn, live, charted }, unit);
   };
@@ -1113,7 +1107,7 @@ export function createMapView(
     paintRivers();
     paintBorder();
     paintUnits(current);
-    paintBadges();
+    paintCityBadges();
     paintCityMarks();
     paintYields();
     lightUnit(selectedUnit());
@@ -1141,12 +1135,11 @@ export function createMapView(
       };
     },
     tileObjects: (key) => tileObjects[key],
-    unitObjects: (id) => unitObjects.get(id),
-    paintArrivals: (chronicle, units) => {
+    markerOf,
+    paintMarkers: (chronicle, units) => {
       const seen = drawing(chronicle);
-      return units.map((unit) => paintUnit(chronicle, seen, unit).marker);
+      return units.map((unit) => paintUnit(chronicle, seen, unit));
     },
-    paintHue,
     improvementOn,
     buildingOn,
     patchOn,
@@ -1180,9 +1173,9 @@ export function createMapView(
     selectedUnit,
     tileUnder,
     lightUnit,
-    markerOf: (unit) => unitObjects.get(unit)?.marker,
+    markerOf,
     carry: (unit) => {
-      for (const [id, { marker }] of unitObjects) {
+      for (const [id, marker] of unitMarkers) {
         marker.setDepth(id === unit ? CARRIED_DEPTH : UNIT_DEPTH);
       }
     },

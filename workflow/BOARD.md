@@ -19,7 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A prepared unit's badge** — a unit that has prepared wears a badge on itself, a flame where its prepare lands as a pillage and a flag where it lands as a capture, a unit kept in fog as last seen prepared wearing it darkened, and no tile wears a hexagon for it; `e2e/pillage.spec.ts` passes reading the badge. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`. [board/a-prepared-units-badge.md](board/a-prepared-units-badge.md)
 - **A health bar on units** — a unit on the map shows its health; the health an attack would remove, read as a number over the unit attacked, is looked at again once a bar can show it.
 - **Your units' states** — how a unit of the player's shows what it still holds, its move points and its action, so what still needs a move or an action and what does not reads at a glance; the done dim is looked at again there.
 - **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.
