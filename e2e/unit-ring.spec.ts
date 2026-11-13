@@ -24,14 +24,17 @@ import {
 
 const CAMPAIGN = campaignWith([HEAL]);
 
-/** The unit on the tile of that key selected, ringed and lighting `lit`, nothing inspected. */
-function unitOn(key: string, lit: string[] = []): SelectionShown {
-  return { selected: key, rings: [key], rims: [], lit, card: undefined };
+/** The unit on the tile of that key selected, ringed, lighting and marking `aims`, nothing inspected. */
+function unitOn(
+  key: string,
+  aims: { lit: string[]; marked: string[] } = { lit: [], marked: [] },
+): SelectionShown {
+  return { selected: key, rings: [key], rims: [], ...aims, card: undefined };
 }
 
-/** The tile of that key selected, wearing the rim and lighting nothing, nothing inspected. */
+/** The tile of that key selected, wearing the rim, lighting and marking nothing, nothing inspected. */
 function tileOn(key: string): SelectionShown {
-  return { selected: key, rings: [], rims: [key], lit: [], card: undefined };
+  return { selected: key, rings: [], rims: [key], lit: [], marked: [], card: undefined };
 }
 
 /** Nothing selected and nothing inspected. */
@@ -40,6 +43,7 @@ const NOTHING: SelectionShown = {
   rings: [],
   rims: [],
   lit: [],
+  marked: [],
   card: undefined,
 };
 

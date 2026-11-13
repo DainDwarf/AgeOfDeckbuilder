@@ -25,6 +25,8 @@ export type Look = {
   readonly civilization: number;
   readonly enemy: number;
   readonly neutral: number;
+  /** What the attack's marks are drawn in: the ring on a unit the selected unit can attack, and the arrow to it. */
+  readonly attack: number;
   readonly pileCount: number;
   readonly exhaustTab: number;
   readonly exhaustTabEdge: number;
@@ -122,7 +124,6 @@ export type Look = {
   readonly monumentPatch: Wash;
   readonly scrim: Wash;
   readonly consolePanel: Wash;
-  readonly targetGlow: Glow;
   readonly preparedGlow: Glow;
   readonly reading: Readonly<Record<Resource, number>>;
   readonly terrain: Readonly<Record<string, number>>;
@@ -141,6 +142,7 @@ export const LOOK: Look = {
   civilization: 0xd9a441,
   enemy: 0xb4453c,
   neutral: 0x2b4f7a,
+  attack: 0xb4453c,
   pileCount: 0xd9a441,
   exhaustTab: 0xd4d7db,
   exhaustTabEdge: 0x6f757d,
@@ -210,7 +212,6 @@ export const LOOK: Look = {
   monumentPatch: { colour: 0x302418, strength: 0.9 },
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
-  targetGlow: { fill: 0.4, stroke: 0.9 },
   preparedGlow: { fill: 0.4, stroke: 0.9 },
   reading: {
     food: 0x7d9c55,

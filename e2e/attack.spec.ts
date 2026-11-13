@@ -1,20 +1,28 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { entered } from '../src/rules/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
+import { damageOf, entered } from '../src/rules/catalogue';
+import { apply, byHand, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { type Unit, unitAt } from '../src/rules/units';
+import { pathTo, type Unit, unitAt } from '../src/rules/units';
 import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
+import { text } from '../src/ui/text';
 import {
+  type AimDrawn,
+  aimDrawn,
+  besideTiles,
   budget,
   chronicleOf,
+  click,
   dragTiles,
   enemyBesideCity,
   firstSeed,
+  onScreen,
   openSaved,
   playerCityTile,
   playersOf,
+  pointAt,
+  rested,
   ringedTile,
   settledOn,
   unitMarksOn,
@@ -36,6 +44,28 @@ function warriorBesideAnEnemy(): { chronicle: Chronicle; warrior: Unit; enemy: U
     const [warrior] = playersOf(beset.chronicle);
     return { ...beset, warrior };
   });
+}
+
+/**
+ * The map reads the attack of the unit on one tile on the unit on the other, and no path: the arrow
+ * points from the first to the second and its middle stands between them, and the number reads the
+ * health the attack would remove, standing over the attacked unit's tile.
+ */
+function readsTheAttack(drawn: AimDrawn, from: string, to: string, health: string): void {
+  expect(drawn.path).toEqual([]);
+  const { attack } = drawn;
+  expect(attack?.tiles).toEqual([from, to]);
+  if (attack === undefined) return;
+  expect(attack.health.text).toBe(health);
+  const [attacker, attacked] = attack.faces;
+  expect(attack.health.at.x).toBeCloseTo(attacked.x, 6);
+  expect(attack.health.at.y).toBeLessThan(attacked.y);
+  const span = { x: attacked.x - attacker.x, y: attacked.y - attacker.y };
+  expect(attack.arrow.angle).toBeCloseTo(Math.atan2(span.y, span.x), 6);
+  const off = { x: attack.arrow.at.x - attacker.x, y: attack.arrow.at.y - attacker.y };
+  const along = (off.x * span.x + off.y * span.y) / (span.x ** 2 + span.y ** 2);
+  expect(along).toBeGreaterThan(0);
+  expect(along).toBeLessThan(1);
 }
 
 /** The unit standing on a tile of the chronicle the screen holds, and nothing where none stands. */
@@ -81,5 +111,77 @@ test('a warrior dragged onto an enemy attacks it, and its spent action refuses a
   await dragTiles(page, warrior.tile, enemy.tile);
 
   expect(await chronicleOf(page)).toEqual(attacked);
+  expect(problems).toEqual([]);
+});
+
+test('a warrior selected beside an enemy marks it with the attack’s ring; the pointer on it reads the attack, a lit tile takes the path in its place and gives it back, the reading stays beside the tiles and goes on the warrior’s own tile, a drag over the enemy reads the same, and after the attack nothing is marked or read', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const { chronicle, warrior, enemy } = warriorBesideAnEnemy();
+  const { landings } = byHand(CATALOGUE, chronicle, warrior);
+  const [landing] = landings;
+  if (landing === undefined) throw new Error('the warrior lights no tile');
+  const [own, foe] = [warrior.tile, enemy.tile].map(tileKey);
+  const health = text('attack.health', { health: damageOf(CATALOGUE, chronicle.units, warrior) });
+  const resting: AimDrawn = {
+    rings: [own],
+    marked: [foe],
+    lit: landings.map(({ tile }) => tileKey(tile)).sort(),
+    hexagons: [],
+    path: [],
+    attack: undefined,
+  };
+  /** The attack the map reads, by its two tiles, after a drawn frame. */
+  const attackRead = async (): Promise<string[] | undefined> => {
+    await rested(page);
+    return (await aimDrawn(page)).attack?.tiles;
+  };
+
+  await openSaved(page, chronicle);
+
+  await click(page, `tile-${own}`);
+  await expect.poll(() => aimDrawn(page)).toEqual(resting);
+
+  await pointAt(page, enemy.tile);
+  await expect.poll(attackRead).toEqual([own, foe]);
+  const read = await aimDrawn(page);
+  readsTheAttack(read, own, foe, health);
+  expect({ ...read, attack: undefined }).toEqual(resting);
+
+  await pointAt(page, landing.tile);
+  await expect
+    .poll(async () => (await aimDrawn(page)).path)
+    .toEqual(pathTo(CATALOGUE, chronicle, warrior, landing.tile)?.map(tileKey));
+  expect((await aimDrawn(page)).attack).toBeUndefined();
+
+  await pointAt(page, enemy.tile);
+  await expect.poll(attackRead).toEqual([own, foe]);
+  readsTheAttack(await aimDrawn(page), own, foe, health);
+
+  const off = await besideTiles(page);
+  await page.mouse.move(off.x, off.y);
+  expect(await attackRead()).toEqual([own, foe]);
+
+  await pointAt(page, warrior.tile);
+  await expect.poll(() => aimDrawn(page)).toEqual(resting);
+
+  // Dragged from its own tile onto the enemy, and let go there: the attack.
+  await page.mouse.down();
+  const onto = await onScreen(page, `tile-${foe}`);
+  await page.mouse.move(onto.x, onto.y, { steps: 5 });
+  await expect.poll(attackRead).toEqual([own, foe]);
+  readsTheAttack(await aimDrawn(page), own, foe, health);
+  await page.mouse.up();
+
+  const attacked = outcome(
+    apply(CATALOGUE, chronicle, { type: 'attack', unit: warrior.id, tile: enemy.tile }),
+  );
+  await expect.poll(() => chronicleOf(page)).toEqual(attacked);
+  await expect
+    .poll(() => aimDrawn(page))
+    .toEqual({ ...resting, marked: [], lit: [], path: [], attack: undefined });
+
   expect(problems).toEqual([]);
 });

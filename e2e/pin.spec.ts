@@ -53,7 +53,7 @@ function stackedIn(chronicle: Chronicle, pins: readonly string[]): string[] {
 }
 
 /** Whether each plate wears the pin's marking, read in one question. */
-function marked(page: Page, technologies: readonly string[]): Promise<boolean[]> {
+function pinsWorn(page: Page, technologies: readonly string[]): Promise<boolean[]> {
   return page.evaluate(
     (names) =>
       names.map(
@@ -76,20 +76,20 @@ test('on a campaign that has learned the first age’s technology, every availab
   await plantCampaign(page, campaign);
   await page.goto('/');
   await campaignShown(page);
-  expect(await marked(page, [first, second])).toEqual([true, true]);
+  expect(await pinsWorn(page, [first, second])).toEqual([true, true]);
 
   const offFirst = await pressed(page, `plate-${first}-name`, campaign, (held) =>
     unpinned(held, first),
   );
-  expect(await marked(page, [first, second])).toEqual([false, true]);
+  expect(await pinsWorn(page, [first, second])).toEqual([false, true]);
 
   const offBoth = await pressed(page, `plate-${second}-name`, offFirst, (held) =>
     unpinned(held, second),
   );
-  expect(await marked(page, [first, second])).toEqual([false, false]);
+  expect(await pinsWorn(page, [first, second])).toEqual([false, false]);
 
   await pressed(page, `plate-${first}-name`, offBoth, (held) => pinned(CATALOGUE, held, first));
-  expect(await marked(page, [first, second])).toEqual([true, false]);
+  expect(await pinsWorn(page, [first, second])).toEqual([true, false]);
 
   expect(problems).toEqual([]);
 });

@@ -17,13 +17,13 @@ import {
   dragTiles,
   firstSeed,
   freeFor,
-  litTiles,
   marksIn,
   openSaved,
   playerCityTile,
   playersOf,
   reading,
   ringedTile,
+  selectionShown,
   settledOn,
   unitEntered,
   watch,
@@ -78,7 +78,7 @@ function overTheHills(): { chronicle: Chronicle; archer: Unit; seen: Unit; hidde
   });
 }
 
-test('an archer dragged onto an enemy two tiles off in sight attacks it, and an enemy behind the hills is neither drawn nor glowed nor attacked', async ({
+test('an archer dragged onto an enemy two tiles off in sight attacks it, and an enemy behind the hills is neither drawn nor marked nor attacked', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -100,12 +100,12 @@ test('an archer dragged onto an enemy two tiles off in sight attacks it, and an 
   expect((await reading(page, `tile-${tileKey(hidden.tile)}`)).tint).toBe(LOOK.fog);
   expect(await marksIn(page, 'units')).toBe(drawnUnits);
 
-  // The archer selected glows the enemy in sight, and not the one behind the hills.
+  // The archer selected marks the enemy in sight, and not the one behind the hills.
   await click(page, `tile-${tileKey(archer.tile)}`);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(archer.tile));
-  const lit = await litTiles(page);
-  expect(lit).toContain(tileKey(seen.tile));
-  expect(lit).not.toContain(tileKey(hidden.tile));
+  const { marked } = await selectionShown(page);
+  expect(marked).toContain(tileKey(seen.tile));
+  expect(marked).not.toContain(tileKey(hidden.tile));
 
   // A drag onto the tile behind the hills commands nothing.
   await dragTiles(page, archer.tile, hidden.tile);

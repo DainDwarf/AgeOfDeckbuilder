@@ -25,7 +25,6 @@ import {
   dragSlack,
   drawnFaces,
   firstSeed,
-  marked,
   onScreen,
   onTheBand,
   openSaved,
@@ -35,6 +34,7 @@ import {
   reading,
   readings,
   rested,
+  ringedLitAndInspecting,
   ringedTile,
   riverRows,
   settledOn,
@@ -474,7 +474,7 @@ test('a right press let go on the infopanel inspects nothing new, and a right cl
   await page.mouse.click(west.x, west.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBeDefined();
   await rested(page);
-  const inspected = await marked(page);
+  const inspected = await ringedLitAndInspecting(page);
 
   const quarter = (await dragSlack(page)) / 4;
   const edge = (await reading(page, 'infopanel')).boundsOnScreen.x;
@@ -483,10 +483,12 @@ test('a right press let go on the infopanel inspects nothing new, and a right cl
   await page.mouse.move(edge + quarter, west.y);
   await page.mouse.up({ button: 'right' });
   await answered(page);
-  expect(await marked(page)).toEqual(inspected);
+  expect(await ringedLitAndInspecting(page)).toEqual(inspected);
 
   await page.mouse.click(band.x, band.y, { button: 'right' });
-  await expect.poll(() => marked(page)).toEqual({ ...inspected, inspecting: undefined });
+  await expect
+    .poll(() => ringedLitAndInspecting(page))
+    .toEqual({ ...inspected, inspecting: undefined });
 
   expect(problems).toEqual([]);
 });

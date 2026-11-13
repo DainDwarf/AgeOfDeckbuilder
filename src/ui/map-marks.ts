@@ -145,6 +145,9 @@ const THRESHOLD_GAP = 3;
 const THRESHOLD_PLATE_HEIGHT = 16;
 const THRESHOLD_PLATE_PAD = 4;
 
+/** How far above its tile's middle the health an attack would remove stands, clear of the unit's painting. */
+const HEALTH_REMOVED_RISE = 9;
+
 /**
  * A city's badge: how far right of and below its tile's middle its centre stands, how tall it is,
  * the pad on each side of its number, and how the number reads.
@@ -910,6 +913,13 @@ export function inMovePoints(hundredths: number): string {
   return (hundredths / MOVE_POINT).toString();
 }
 
+/** A plated number reading these words alone on its plate, its middle at that point. */
+function showPlated(mark: PlatedNumber, words: string, at: { x: number; y: number }): void {
+  mark.number.setText(words);
+  drawPlate(mark, ownBoxOf(mark.number).width);
+  mark.root.setPosition(at.x, at.y).setVisible(true);
+}
+
 export function movePointsLeftMark(scene: Phaser.Scene): PlatedNumber {
   return platedNumber(scene, 'path-left');
 }
@@ -919,10 +929,17 @@ export function movePointsLeftMark(scene: Phaser.Scene): PlatedNumber {
  * where a unit's painting stands on the landing.
  */
 export function showMovePointsLeft(mark: PlatedNumber, coord: TileCoords, left: number): void {
-  mark.number.setText(inMovePoints(left));
-  drawPlate(mark, ownBoxOf(mark.number).width);
-  const { x, y } = unitStandsAt(coord);
-  mark.root.setPosition(x, y).setVisible(true);
+  showPlated(mark, inMovePoints(left), unitStandsAt(coord));
+}
+
+export function healthRemovedMark(scene: Phaser.Scene): PlatedNumber {
+  return platedNumber(scene, 'attack-health');
+}
+
+/** The health an attack would remove, on the plate above the middle of the attacked unit's tile. */
+export function showHealthRemoved(mark: PlatedNumber, coord: TileCoords, health: number): void {
+  const { x, y } = positionOf(coord);
+  showPlated(mark, text('attack.health', { health }), { x, y: y - HEALTH_REMOVED_RISE });
 }
 
 /** A city's badge: its pill, its number, and the width the pill is drawn at, none until it is. */

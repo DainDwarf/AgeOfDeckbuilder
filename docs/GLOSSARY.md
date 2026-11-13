@@ -72,7 +72,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **hand** | The cards drawn this turn. | — |
 | **draw** | To take cards from the draw pile into the hand. | pull |
 | **play** | To put a card from the hand into effect, paying its cost. | cast, activate |
-| **aim** | What a card is played at, nothing included; for a selected unit, the tiles it lights and the units it glows. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
+| **aim** | What a card is played at, nothing included; for a selected unit, the tiles it lights and the units it marks. | target (for a card's aim), targeting (for a card's aim), cast at, pointed at, destination |
 | **being aimed** | The state of a selected card or unit while what its aim admits is offered, until it lands or is let go of. | armed, pending, targeting, in flight |
 | **stock** | A city's holding of one resource: what income adds to and every cost is paid out of. | reserve, treasury, pool, supply, balance, bank |
 | **cost** | What a city pays out of its stocks to play something, for example a card. | fee, charge, toll |

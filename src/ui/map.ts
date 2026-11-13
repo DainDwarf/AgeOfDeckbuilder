@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ageOf, type Catalogue } from '../rules/catalogue';
+import { ageOf, type Catalogue, damageOf } from '../rules/catalogue';
 import { byHand, type UnitCommand } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
@@ -198,10 +198,10 @@ export type MapView = {
   carried(press: Press): boolean;
   /**
    * A left click on a drawn tile: the aim's while one stands, else the step or the attack of the unit
-   * lit where it lights or glows that tile, else the tile reported to `onPress`.
+   * lit where it lights that tile or marks the unit on it, else the tile reported to `onPress`.
    */
   click(tile: TileCoords): void;
-  /** Whether the selected unit lights or glows anything: it is being aimed. */
+  /** Whether the selected unit lights or marks anything: it is being aimed. */
   unitBeingAimed(): boolean;
   /**
    * Reports a click on a drawn tile to `clicked`; `commanded` is the step or the attack a click or a
@@ -263,6 +263,21 @@ function pressedOn(tile: TileCoords): PressedTile {
 
 /** A selected tile, and whether the unit drawn on it is what is selected in its place. */
 type MapSelection = { readonly tile: TileCoords; readonly unit: boolean };
+
+/** What the pointer reads of a unit being aimed: its path to one of its landings, or its attack on a unit it marks. */
+type PointerReading =
+  | { readonly kind: 'path'; readonly landing: Landing }
+  | { readonly kind: 'attack'; readonly target: TileCoords };
+
+/** The tile the pointer read it on. */
+function readOn(read: PointerReading): TileCoords {
+  switch (read.kind) {
+    case 'path':
+      return read.landing.tile;
+    case 'attack':
+      return read.target;
+  }
+}
 
 /** What the map draws of a chronicle and what of it it draws live, by tile key, and the snapshots it draws in fog. */
 type Drawing = {
@@ -326,8 +341,7 @@ export function createMapView(
     .setVisible(false);
   strata.dim.layer.add(dim);
   const hues = group(strata.selection, 'prepared');
-  const lighted = group(strata.selection, 'lit');
-  const reach = createReach(scene, lighted, chronicle.tiles);
+  const reach = createReach(scene, group(strata.selection, 'lit'), chronicle.tiles);
   const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
   const pathGroup = group(strata.selection, 'path');
@@ -389,7 +403,6 @@ export function createMapView(
     scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
   );
   const glyphPool = poolOf(glyphs, () => diamond(scene, GLYPH, 0));
-  const litPool = poolOf(lighted, () => unreadGlow(scene));
   const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
   const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
 
@@ -581,7 +594,7 @@ export function createMapView(
   const paintAtZoom = (): void => {
     const resolution = frame.atZoom();
     const numbers = CITY_FACTIONS.map((whose) => cityBadges[whose].number);
-    for (const label of [thresholdOnTile.number, path.number, ...numbers]) {
+    for (const label of [thresholdOnTile.number, ...path.numbers, ...numbers]) {
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
     paintThreshold();
@@ -855,8 +868,24 @@ export function createMapView(
   const selectedUnit = (): TileCoords | undefined => (selection?.unit ? selection.tile : undefined);
 
   /**
+   * Which unit the map is lighting for, as it stood when lit, where its landings lie and which tiles
+   * hold a unit it marks; nothing while none is lit.
+   */
+  let lit:
+    | { readonly standing: Unit; readonly landings: Landing[]; readonly targets: TileCoords[] }
+    | undefined;
+
+  /** A ring from the pool about the unit standing on the tile, in that colour. */
+  const ringAbout = (tile: TileCoords, colour: number): void => {
+    const { x, y } = unitStandsAt(tile);
+    const ring = ringPool.take().setPosition(x, y).setData('tile', tileKey(tile));
+    ring.getAt<Phaser.GameObjects.Image>(0).setTint(colour);
+  };
+
+  /**
    * The selection and the aim as the chronicle the map stands on wears them: the selected unit
-   * ringed, the selected tile's rim where no unit is selected, and each unit the aim rings ringed.
+   * ringed, the selected tile's rim where no unit is selected, each unit the aim rings ringed, and
+   * each unit the lit unit marks ringed in the attack's colour.
    */
   const paintRings = (): void => {
     const onSelection = selectedUnit();
@@ -868,39 +897,54 @@ export function createMapView(
       ...aimRinged.filter((tile) => wearerOn(tile) !== undefined),
     ];
     ringPool.hide();
-    for (const tile of wearers) {
-      const { x, y } = unitStandsAt(tile);
-      ringPool.take().setPosition(x, y).setData('tile', tileKey(tile));
-    }
+    for (const tile of wearers) ringAbout(tile, LOOK.selected);
+    for (const tile of lit?.targets ?? []) ringAbout(tile, LOOK.attack);
   };
 
-  /**
-   * Which unit the map is lighting for, as it stood when lit, where its landings lie and which tiles
-   * hold a unit it can attack; nothing while none is lit.
-   */
-  let lit:
-    | { readonly standing: Unit; readonly landings: Landing[]; readonly targets: TileCoords[] }
-    | undefined;
+  /** What the lit unit's pointer reads, and nothing while it reads nothing. */
+  let pointerReading: PointerReading | undefined;
 
-  /** The landing the lit unit's path is drawn to, and nothing while none is. */
-  let pathEnd: Landing | undefined;
-
-  /** The lit unit's path to one of its landings, or none. */
-  const showPath = (landing: Landing | undefined): void => {
+  /** The lit unit reading this, or nothing: its path drawn to the landing, or its attack drawn on the unit. */
+  const showReading = (read: PointerReading | undefined): void => {
     const current = shown;
-    const tiles =
-      landing === undefined || lit === undefined || current === undefined
-        ? undefined
-        : pathTo(catalogue, current, lit.standing, landing.tile);
-    pathEnd = tiles === undefined ? undefined : landing;
-    if (tiles === undefined || landing === undefined || lit === undefined) path.hide();
-    else path.show(tiles, lit.standing.movePoints - landing.cost);
+    pointerReading = undefined;
+    if (read === undefined || lit === undefined || current === undefined) {
+      path.hide();
+      return;
+    }
+    switch (read.kind) {
+      case 'path': {
+        const tiles = pathTo(catalogue, current, lit.standing, read.landing.tile);
+        if (tiles === undefined) {
+          path.hide();
+          return;
+        }
+        path.showPath(tiles, lit.standing.movePoints - read.landing.cost);
+        break;
+      }
+      case 'attack':
+        path.showAttack(
+          lit.standing.tile,
+          read.target,
+          damageOf(catalogue, current.units, lit.standing),
+        );
+        break;
+    }
+    pointerReading = read;
+  };
+
+  /** What the lit unit reads on a tile: the path where it is lit, the attack where it marks the unit; nothing elsewhere. */
+  const readingOn = (tile: TileCoords): PointerReading | undefined => {
+    const landing = lit?.landings.find((one) => sameTile(one.tile, tile));
+    if (landing !== undefined) return { kind: 'path', landing };
+    if (lit?.targets.some((one) => sameTile(one, tile))) return { kind: 'attack', target: tile };
+    return undefined;
   };
 
   /**
    * What the unit of the player's standing on a tile can do: every tile its move points reach drawn
-   * as one region with its own tile, and every unit it can attack glowed in the enemies' own colour.
-   * Nothing is lit while the city marks stand, and a press commands only a unit lit here.
+   * as one region with its own tile, and every unit it can attack marked with a ring in the attack's
+   * colour. Nothing is lit while the city marks stand, and a press commands only a unit lit here.
    */
   const lightUnit = (tile: TileCoords | undefined): void => {
     const current = shown;
@@ -918,46 +962,41 @@ export function createMapView(
     }
     reach.paint(reached);
 
-    const kept = pathEnd?.tile;
-    // A step moves the unit, and an attack spends the move points it had left, which lights nothing.
+    const kept = pointerReading;
+    // A step moves the unit and an attack spends an action: neither keeps what the pointer read.
     const asBefore =
       was !== undefined &&
       standing !== undefined &&
       was.id === standing.id &&
-      sameTile(was.tile, standing.tile);
-    showPath(
-      kept === undefined || !asBefore
-        ? undefined
-        : lit?.landings.find((landing) => sameTile(landing.tile, kept)),
-    );
-
-    litPool.hide();
-    for (const coord of lit?.targets ?? []) {
-      asGlow(litPool.take(), coord, FACTION_COLOURS.enemy, LOOK.targetGlow);
-    }
+      sameTile(was.tile, standing.tile) &&
+      was.action === standing.action;
+    showReading(kept === undefined || !asBefore ? undefined : readingOn(readOn(kept)));
+    paintRings();
   };
 
   /**
-   * The pointer read once a frame while a unit lights a tile: a lit tile it is on takes the path,
-   * the unit's own tile takes it down, and anywhere else leaves it where it stands.
+   * The pointer read once a frame while a unit lights or marks anything: a lit tile it is on takes
+   * the path, a marked unit the attack, the unit's own tile takes either down, and anywhere else
+   * leaves it where it stands.
    */
-  const followPath = (): void => {
-    if (lit === undefined || lit.landings.length === 0 || presser === undefined) return;
+  const followPointer = (): void => {
+    if (lit === undefined || presser === undefined) return;
+    if (lit.landings.length === 0 && lit.targets.length === 0) return;
     if (thingUnder(scene.game) !== presser) return;
     const pointer = scene.input.activePointer;
     const at = map.at(pointer.x, pointer.y);
     const tile = tileUnder(at.x, at.y);
     if (tile === undefined) return;
     if (sameTile(tile, lit.standing.tile)) {
-      if (pathEnd !== undefined) showPath(undefined);
+      if (pointerReading !== undefined) showReading(undefined);
       return;
     }
-    if (pathEnd !== undefined && sameTile(pathEnd.tile, tile)) return;
-    const landing = lit.landings.find((one) => sameTile(one.tile, tile));
-    if (landing !== undefined) showPath(landing);
+    if (pointerReading !== undefined && sameTile(readOn(pointerReading), tile)) return;
+    const read = readingOn(tile);
+    if (read !== undefined) showReading(read);
   };
   // Outside Phaser's dispatch: a hit test inside it refills the list being walked (docs/PHASER.md).
-  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followPath);
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followPointer);
 
   /**
    * Every border on the chronicle the map stands on, darkened in fog: both cities' around each one's
@@ -993,7 +1032,7 @@ export function createMapView(
     return made;
   };
 
-  /** The tile a unit has prepared on wearing its faction's colour, as the target glow wears it. */
+  /** The tile a unit has prepared on wearing its faction's colour, a hexagon over its face. */
   const paintHue = (unit: Unit): Phaser.GameObjects.Polygon =>
     asPainted(
       asGlow(objectsOf(unit).hue, unit.tile, FACTION_COLOURS[unit.faction], LOOK.preparedGlow),
@@ -1041,7 +1080,6 @@ export function createMapView(
     paintRivers();
     paintBorder();
     paintUnits(current);
-    paintRings();
     paintBadges();
     paintCityMarks();
     paintYields();
@@ -1171,7 +1209,6 @@ export function createMapView(
         const { x, y } = positionOf(tile);
         for (const mark of selectedRim) mark.setPosition(x, y);
       }
-      paintRings();
       paintThreshold();
       paintYields();
       lightUnit(selectedUnit());
@@ -1199,7 +1236,6 @@ export function createMapView(
     showCityMarks(on: boolean): void {
       marking = on;
       grab.dropPopulation();
-      paintRings();
       paintCityMarks();
       paintYields();
       lightUnit(selectedUnit());

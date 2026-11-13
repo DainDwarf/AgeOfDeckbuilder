@@ -33,7 +33,6 @@ import {
   type Judged,
   launchedAs,
   mapFrame,
-  marked,
   namedIn,
   nameOnScreen,
   offCanvas,
@@ -50,6 +49,7 @@ import {
   playerCityTile,
   readings,
   rested,
+  ringedLitAndInspecting,
   ringedTile,
   scrolled,
   selected,
@@ -975,15 +975,15 @@ test('a click on a yield reading, a pile or the infopanel lets a unit being aime
   for (const [on, press] of presses) {
     await page.mouse.click(face.x, face.y);
     await page.mouse.click(face.x, face.y, { button: 'right' });
-    await expect.poll(async () => (await marked(page)).inspecting).toBeDefined();
+    await expect.poll(async () => (await ringedLitAndInspecting(page)).inspecting).toBeDefined();
     await rested(page);
-    const aiming = await marked(page);
+    const aiming = await ringedLitAndInspecting(page);
     expect(aiming.ringed, on).toBe(city);
     expect(aiming.lit, on).toBeGreaterThan(0);
 
     await press();
     await expect
-      .poll(() => marked(page), on)
+      .poll(() => ringedLitAndInspecting(page), on)
       .toEqual({ ringed: undefined, lit: 0, inspecting: aiming.inspecting });
   }
   expect(await shows(page, 'reading-food-well')).toBe(true);
@@ -992,7 +992,7 @@ test('a click on a yield reading, a pile or the infopanel lets a unit being aime
   expect(problems).toEqual([]);
 });
 
-test('a unit that lights and glows nothing stays selected through a click on a pile', async ({
+test('a unit that lights and marks nothing stays selected through a click on a pile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -1009,12 +1009,16 @@ test('a unit that lights and glows nothing stays selected through a click on a p
 
   await openSaved(page, opened);
   await click(page, `tile-${key}`);
-  await expect.poll(async () => (await marked(page)).ringed).toBe(key);
+  await expect.poll(async () => (await ringedLitAndInspecting(page)).ringed).toBe(key);
 
   const pile = await pileTop(page, 'draw-pile');
   await page.mouse.click(pile.x, pile.y);
   await rested(page);
-  expect(await marked(page)).toEqual({ ringed: key, lit: 0, inspecting: undefined });
+  expect(await ringedLitAndInspecting(page)).toEqual({
+    ringed: key,
+    lit: 0,
+    inspecting: undefined,
+  });
   expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);
@@ -1039,13 +1043,13 @@ test('a click on the band or on the bar’s paper drops a selected tile and the 
   ] as const) {
     await page.mouse.click(face.x, face.y);
     await page.mouse.click(face.x, face.y, { button: 'right' });
-    await expect.poll(async () => (await marked(page)).inspecting).toBeDefined();
+    await expect.poll(async () => (await ringedLitAndInspecting(page)).inspecting).toBeDefined();
     await rested(page);
-    expect((await marked(page)).ringed, on).toBe(city);
+    expect((await ringedLitAndInspecting(page)).ringed, on).toBe(city);
 
     await page.mouse.click(at.x, at.y);
     await expect
-      .poll(() => marked(page), on)
+      .poll(() => ringedLitAndInspecting(page), on)
       .toEqual({ ringed: undefined, lit: 0, inspecting: undefined });
   }
 

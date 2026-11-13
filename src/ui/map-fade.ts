@@ -99,8 +99,8 @@ export function selectionRims(scene: Phaser.Scene): () => Phaser.GameObjects.Ima
 }
 
 /**
- * Paints a unit's ring once at four pixels to the unit, and answers the way to make one about no
- * point, shown at a quarter of its painting.
+ * Paints a unit's ring once at four pixels to the unit, in white so a tint gives it its colour, and
+ * answers the way to make one about no point, shown at a quarter of its painting.
  */
 export function unitRings(scene: Phaser.Scene): () => Phaser.GameObjects.Image {
   const texture = sceneCanvas(scene, RING_KEY, 2 * RING_REACH * RIM_PIXELS);
@@ -117,7 +117,7 @@ export function unitRings(scene: Phaser.Scene): () => Phaser.GameObjects.Image {
       2 * Math.PI,
     );
   };
-  paintFaded(context, traced, LOOK.selected, LOOK.selectionRim, RIM_DEPTH * RIM_PIXELS);
+  paintFaded(context, traced, 0xffffff, LOOK.selectionRim, RIM_DEPTH * RIM_PIXELS);
   context.save();
   context.beginPath();
   traced(context);
@@ -125,7 +125,7 @@ export function unitRings(scene: Phaser.Scene): () => Phaser.GameObjects.Image {
   context.beginPath();
   traced(context);
   context.lineWidth = 2 * RIM_PIXELS;
-  context.strokeStyle = css(LOOK.selected);
+  context.strokeStyle = css(0xffffff);
   context.globalAlpha = LOOK.selectionLine;
   context.stroke();
   context.restore();

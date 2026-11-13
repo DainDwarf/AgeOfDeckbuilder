@@ -48,7 +48,7 @@ import {
   firstSeed,
   idsOf,
   inside,
-  litTiles,
+  litFor,
   mapFrame,
   marksIn,
   neutralAge,
@@ -61,6 +61,7 @@ import {
   readings,
   rested,
   restedOnDeal,
+  ringedAndLit,
   ringedTile,
   settledOn,
   shownCard,
@@ -375,8 +376,9 @@ test('a unit of the player’s pressed onto the neutral’s city at peace raises
   const unit = await tileOnScreen(page, from);
   await page.mouse.click(unit.x, unit.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(from));
-  const lit = await litTiles(page);
-  expect(lit).toContain(city);
+  const aimed = { selected: tileKey(from), rings: [tileKey(from)], ...litFor(chronicle, from) };
+  expect(aimed.lit).toContain(city);
+  expect(await ringedAndLit(page)).toEqual(aimed);
 
   const pressed = async (): Promise<void> => {
     await rested(page);
@@ -401,8 +403,7 @@ test('a unit of the player’s pressed onto the neutral’s city at peace raises
   const takenDown = async (): Promise<void> => {
     await expect.poll(() => standing(page, WARNING)).toBe(false);
     expect(await chronicleOf(page)).toEqual(chronicle);
-    expect(await ringedTile(page)).toBe(tileKey(from));
-    expect(await litTiles(page)).toEqual(lit);
+    expect(await ringedAndLit(page)).toEqual(aimed);
   };
 
   await click(page, `${WARNING}-back`);

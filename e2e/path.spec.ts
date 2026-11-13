@@ -18,6 +18,7 @@ import {
   playedOut,
   playerCityTile,
   playersOf,
+  pointAt,
   readings,
   rested,
   ringedTile,
@@ -121,12 +122,6 @@ async function drawnTo(
     expect(along[1]).toBeGreaterThan(along[0]);
     expect(along[1]).toBeLessThan(1);
   }
-}
-
-/** Moves the pointer onto the tile's face, in one move. */
-async function pointAt(page: Page, tile: TileCoords): Promise<void> {
-  const at = await onScreen(page, `tile-${tileKey(tile)}`);
-  await page.mouse.move(at.x, at.y);
 }
 
 /** Which of these tiles of one row stands nearest the point along the row, on the page. */

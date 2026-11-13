@@ -51,8 +51,9 @@ test('what the map draws stands in one order whatever is switched on, a ringed u
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, index, city } = hurtBesideAnEnemy(CAMPAIGN);
+  const { chronicle, index, city, enemy } = hurtBesideAnEnemy(CAMPAIGN);
   const cityKey = tileKey(city);
+  const ringed = [cityKey, tileKey(enemy)].sort();
 
   await openSaved(page, chronicle, CAMPAIGN);
 
@@ -76,11 +77,11 @@ test('what the map draws stands in one order whatever is switched on, a ringed u
 
   await click(page, `tile-${cityKey}`);
   await expect.poll(() => ringedTile(page)).toBe(cityKey);
-  expect(await inOrder(false)).toEqual([cityKey]);
+  expect(await inOrder(false)).toEqual(ringed);
 
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await inOrder(false)).toEqual([cityKey]);
+  expect(await inOrder(false)).toEqual(ringed);
 
   await page.keyboard.press('Tab');
   await expect.poll(() => shows(page, 'yield-dim')).toBe(false);

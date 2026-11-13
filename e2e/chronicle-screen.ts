@@ -164,8 +164,10 @@ declare global {
     readName?: (name: string) => PageReading;
     /** The named Layer's or container's own objects that are shown. */
     shownIn?: (name: string) => Phaser.GameObjects.GameObject[] | undefined;
-    /** The keys of the tiles the map lights for a unit, the reach's landings and the units glowed. */
+    /** The keys of the tiles the map lights for a unit: the reach's landings. */
     litKeys?: () => string[];
+    /** Each ring the map shows: the key of the tile its unit stands on, and the colour it is tinted. */
+    ringsShown?: () => RingShown[];
     /**
      * How many faces the map shows, the marks of its terrain named for their tile, the beaches and
      * the voids left out; and how many of them that tint darkens.
@@ -478,15 +480,25 @@ export async function readNames(page: Page): Promise<void> {
       return parent?.list.filter((child) => isShown(child as Parented));
     };
 
-    // The reach is one layer carrying its landings' keys; a glow carries its own tile's.
+    // The reach is one layer carrying its landings' keys.
     window.litKeys = () => {
       const lit = window.shownIn?.('lit');
       if (lit === undefined) throw new Error('the map is not on the chronicle screen');
       return lit.flatMap((mark) => {
-        const keys = (mark.getData('landings') ?? [mark.getData('tile')]) as (string | undefined)[];
-        if (keys.includes(undefined)) throw new Error(`the lit ${mark.type} names no tile`);
-        return keys as string[];
+        const keys = mark.getData('landings') as string[] | undefined;
+        if (keys === undefined) throw new Error(`the lit ${mark.type} names no tile`);
+        return keys;
       });
+    };
+
+    // A ring is a container carrying its tile's key around one image, which the tint colours.
+    window.ringsShown = () => {
+      const rings = window.shownIn?.('rings') as Phaser.GameObjects.Container[] | undefined;
+      if (rings === undefined) throw new Error('the map is not on the chronicle screen');
+      return rings.map((ring) => ({
+        tile: ring.getData('tile') as string,
+        colour: (ring.list[0] as Phaser.GameObjects.Image).tint,
+      }));
     };
 
     window.faceCounts = (fog) => {
@@ -1128,6 +1140,12 @@ export async function tileOnScreen(page: Page, coord: TileCoords): Promise<OnScr
     y: origin.y + q * (alongQ.y - origin.y) + r * (alongR.y - origin.y),
     unit: origin.unit,
   };
+}
+
+/** Moves the pointer onto the tile's face, in one move. */
+export async function pointAt(page: Page, tile: TileCoords): Promise<void> {
+  const at = await onScreen(page, `tile-${tileKey(tile)}`);
+  await page.mouse.move(at.x, at.y);
 }
 
 /** The tiles beside one along q, east and west: the infopanel stands east of the tile it reads. */
@@ -2717,7 +2735,7 @@ export function ringedTile(page: Page): Promise<string | undefined> {
  * The tile the map rings, how many tiles it lights for a unit, and the infopanel's card with where
  * it stands on the map, if up.
  */
-export function marked(page: Page): Promise<{
+export function ringedLitAndInspecting(page: Page): Promise<{
   ringed: string | undefined;
   lit: number;
   inspecting: { card: string; x: number; y: number } | undefined;
@@ -2739,24 +2757,45 @@ export function marked(page: Page): Promise<{
   });
 }
 
+/** A ring the map shows: the key of the tile its unit stands on, and the colour it is tinted. */
+export type RingShown = { tile: string; colour: number };
+
+/**
+ * The tiles of the rings in the selection's white and of those in the attack's colour, each list by
+ * tile key in key order; a ring in any other colour throws.
+ */
+function ringsByColour(rings: readonly RingShown[]): { rings: string[]; marked: string[] } {
+  const strange = rings.find(({ colour }) => colour !== LOOK.selected && colour !== LOOK.attack);
+  if (strange !== undefined) {
+    throw new Error(`the ring on ${strange.tile} is ${strange.colour.toString(16)}`);
+  }
+  const tilesIn = (colour: number): string[] =>
+    rings
+      .filter((ring) => ring.colour === colour)
+      .map(({ tile }) => tile)
+      .sort();
+  return { rings: tilesIn(LOOK.selected), marked: tilesIn(LOOK.attack) };
+}
+
 /** What the chronicle screen shows of its selection and the inspection, as `selectionShown` reads it. */
 export type SelectionShown = {
   selected: string | undefined;
   rings: string[];
   rims: string[];
   lit: string[];
+  marked: string[];
   card: string | undefined;
 };
 
 /**
- * In one question: the tile selected; the tiles whose units wear their ring; the tiles wearing the
- * selection's rim, the selected one and those a card being aimed lights; the tiles the map lights and
- * glows for a unit, each by tile key, the lists in key order; and the infopanel's card, if up.
+ * In one question: the tile selected; the tiles ringed in white; the tiles wearing the selection's
+ * rim, the selected one and an aimed card's; the tiles lit; the tiles ringed in the attack's colour,
+ * each by tile key, in key order; and the infopanel's card, if up.
  */
-export function selectionShown(page: Page): Promise<SelectionShown> {
-  return page.evaluate(() => {
+export async function selectionShown(page: Page): Promise<SelectionShown> {
+  const { rings, ...shown } = await page.evaluate(() => {
     const selected = window.named?.('selected')?.object;
-    const rings = window.shownIn?.('rings');
+    const rings = window.ringsShown?.();
     const rim = window.shownIn?.('selected');
     const lit = window.litKeys?.();
     const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
@@ -2773,42 +2812,55 @@ export function selectionShown(page: Page): Promise<SelectionShown> {
     const tileOf = (mark: Phaser.GameObjects.GameObject): string => mark.getData('tile') as string;
     return {
       selected: selected.getData('tile') as string | undefined,
-      rings: rings.map(tileOf).sort(),
+      rings,
       rims: [...(rim.length > 0 ? [tileOf(selected)] : []), ...aimed.map(tileOf)].sort(),
       lit: lit.sort(),
       card: panel.visible ? (panel.getData('card') as string) : undefined,
     };
   });
+  return { ...shown, ...ringsByColour(rings) };
 }
 
 /**
- * The tiles whose units wear their ring, and the tiles wearing the selection's rim, the selected one
- * and those a card being aimed lights: each by tile key, in key order.
+ * The tiles whose units wear their ring in the selection's white, and the tiles wearing the
+ * selection's rim, the selected one and those a card being aimed lights: each by tile key, in key
+ * order.
  */
 export async function ringsAndRims(page: Page): Promise<{ rings: string[]; rims: string[] }> {
   const { rings, rims } = await selectionShown(page);
   return { rings, rims };
 }
 
-/** The tiles the map lights and glows for the unit standing on the tile, by tile key, in key order. */
-export function litFor(chronicle: Chronicle, tile: TileCoords): string[] {
+/**
+ * The tiles the map lights for the unit standing on the tile, and the tiles whose units it marks,
+ * each by tile key, in key order.
+ */
+export function litFor(
+  chronicle: Chronicle,
+  tile: TileCoords,
+): { lit: string[]; marked: string[] } {
   const unit = unitAt(chronicle.units, tile);
   if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
   const { landings, targets } = byHand(CATALOGUE, chronicle, unit);
-  return [...landings.map((landing) => landing.tile), ...targets.map((target) => target.tile)]
-    .map(tileKey)
-    .sort();
+  return {
+    lit: landings.map((landing) => tileKey(landing.tile)).sort(),
+    marked: targets.map((target) => tileKey(target.tile)).sort(),
+  };
 }
 
 /**
- * The tile selected, the tiles whose units wear their ring and the tiles the map lights and glows for
- * a unit, each by tile key, the lists in key order: read together, in one question.
+ * The tile selected, the tiles whose units wear their ring in the selection's white, the tiles the
+ * map lights for a unit and the tiles whose units it marks, each by tile key, the lists in key
+ * order: read together, in one question.
  */
-export async function ringedAndLit(
-  page: Page,
-): Promise<{ selected: string | undefined; rings: string[]; lit: string[] }> {
-  const { selected, rings, lit } = await selectionShown(page);
-  return { selected, rings, lit };
+export async function ringedAndLit(page: Page): Promise<{
+  selected: string | undefined;
+  rings: string[];
+  lit: string[];
+  marked: string[];
+}> {
+  const { selected, rings, lit, marked } = await selectionShown(page);
+  return { selected, rings, lit, marked };
 }
 
 /** A group the map draws, by its name, and the stratum it stands on, counted from the ground up. */
@@ -2816,8 +2868,8 @@ export type MapGroup = { name: string; stratum: number };
 
 /**
  * The map's named groups as they were drawn at the last frame, from the ground up, each with the
- * stratum it stands on; the tiles whose units wear their ring, by tile key, in key order; and the
- * name of the group the unit's marker stands in on each of these tiles and of those.
+ * stratum it stands on; the tiles whose units wear a ring of any colour, by tile key, in key order;
+ * and the name of the group the unit's marker stands in on each of these tiles and of those.
  */
 export function mapOrder(
   page: Page,
@@ -2836,9 +2888,9 @@ export function mapOrder(
         child.name === '' || child.type === 'Zone' ? [] : [{ name: child.name, stratum: at }],
       ),
     );
-    const ringed = window.shownIn?.('rings');
+    const ringed = window.ringsShown?.();
     if (ringed === undefined) throw new Error('the map is not on the chronicle screen');
-    const rings = ringed.map((ring) => ring.getData('tile') as string).sort();
+    const rings = ringed.map(({ tile }) => tile).sort();
     const markersIn = Object.fromEntries(
       [...new Set([...asked, ...rings])].map((key) => {
         const marker = window.named?.(`unit-${key}`)?.object;
@@ -2859,15 +2911,6 @@ export function drawnIn(page: Page, group: string): Promise<string[]> {
   }, group);
 }
 
-/** The tiles the map lights for the unit it is lighting for, by tile key, in key order. */
-export function litTiles(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const lit = window.litKeys?.();
-    if (lit === undefined) throw new Error('no chronicle was opened on this page');
-    return lit.sort();
-  });
-}
-
 /** A point on the map's own surface. */
 type OnMap = { x: number; y: number };
 
@@ -2886,18 +2929,18 @@ export type PathDrawn = {
 /** The path the map draws, and nothing while none stands. */
 export function pathDrawn(page: Page): Promise<PathDrawn | undefined> {
   return page.evaluate(() => {
-    // The path is one layer carrying its tiles' keys.
+    // The path is one layer carrying its tiles' keys, and the attack's while it draws the attack.
     const layer = window.named?.('path')?.object;
     const shown = window.shownIn?.('path');
     if (layer === undefined || shown === undefined) {
       throw new Error('the map is not on the chronicle screen');
     }
-    if (shown.length === 0) return undefined;
+    const tiles = layer.getData('path') as string[];
+    if (tiles.length === 0) return undefined;
     const placeOf = (object: Phaser.GameObjects.GameObject): OnMap => {
       const placed = object as Phaser.GameObjects.Image;
       return { x: placed.x, y: placed.y };
     };
-    const tiles = layer.getData('path') as string[];
     const left = shown.find((mark) => mark.name === 'path-left') as Phaser.GameObjects.Container;
     const number = left.list.find((part) => part.type === 'Text') as Phaser.GameObjects.Text;
     return {
@@ -2911,6 +2954,84 @@ export function pathDrawn(page: Page): Promise<PathDrawn | undefined> {
       left: { text: number.text, at: placeOf(left) },
     };
   });
+}
+
+/**
+ * The attack as the map draws it: its two tiles' keys, the attacker's first, and where their faces
+ * stand; where the arrow's middle stands and the way it points, in radians; and what the number
+ * reads and where it stands, all on the map's own surface.
+ */
+export type AttackDrawn = {
+  tiles: string[];
+  faces: OnMap[];
+  arrow: { at: OnMap; angle: number };
+  health: { text: string; at: OnMap };
+};
+
+/** What the map draws for a unit being aimed, as `aimDrawn` reads it. */
+export type AimDrawn = {
+  rings: string[];
+  marked: string[];
+  lit: string[];
+  hexagons: string[];
+  path: string[];
+  attack: AttackDrawn | undefined;
+};
+
+/**
+ * In one question: the tiles ringed in white and those ringed in the attack's colour; the tiles lit;
+ * the tiles wearing a hexagon, lit or prepared; the path's tiles; and the attack, while it stands.
+ */
+export async function aimDrawn(page: Page): Promise<AimDrawn> {
+  const { rings, ...drawn } = await page.evaluate(() => {
+    const layer = window.named?.('path')?.object;
+    const shown = window.shownIn?.('path');
+    const rings = window.ringsShown?.();
+    const lit = window.litKeys?.();
+    const under = [...(window.shownIn?.('lit') ?? []), ...(window.shownIn?.('prepared') ?? [])];
+    if (layer === undefined || shown === undefined || rings === undefined || lit === undefined) {
+      throw new Error('the map is not on the chronicle screen');
+    }
+    const placeOf = (object: Phaser.GameObjects.GameObject): OnMap => {
+      const placed = object as Phaser.GameObjects.Image;
+      return { x: placed.x, y: placed.y };
+    };
+    const tiles = layer.getData('attack') as string[];
+    const arrow = shown.find((mark) => mark.name === 'attack-arrow') as
+      | Phaser.GameObjects.Image
+      | undefined;
+    const health = shown.find((mark) => mark.name === 'attack-health') as
+      | Phaser.GameObjects.Container
+      | undefined;
+    const attack = (): AttackDrawn | undefined => {
+      if (tiles.length === 0) return undefined;
+      if (arrow === undefined || health === undefined) {
+        throw new Error(`the attack on ${tiles[1]} stands without its arrow or its number`);
+      }
+      const number = health.list.find((part) => part.type === 'Text') as Phaser.GameObjects.Text;
+      return {
+        tiles,
+        faces: tiles.map((key) => {
+          const face = window.named?.(`tile-${key}`)?.object;
+          if (face === undefined) throw new Error(`there is no face on ${key}`);
+          return placeOf(face);
+        }),
+        arrow: { at: placeOf(arrow), angle: arrow.rotation },
+        health: { text: number.text, at: placeOf(health) },
+      };
+    };
+    return {
+      rings,
+      lit: lit.sort(),
+      hexagons: under
+        .filter((mark) => mark.type === 'Polygon')
+        .map((mark) => mark.getData('tile') as string)
+        .sort(),
+      path: layer.getData('path') as string[],
+      attack: attack(),
+    };
+  });
+  return { ...drawn, ...ringsByColour(rings) };
 }
 
 /** The tiles the claim marks stand on, by tile key, in key order: none while they stand down. */

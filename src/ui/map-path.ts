@@ -2,7 +2,13 @@ import type Phaser from 'phaser';
 import { type TileCoords, tileKey } from '../rules/map';
 import { css, LOOK } from './look';
 import { sceneCanvas } from './map-fade';
-import { movePointsLeftMark, showMovePointsLeft, unitStandsAt } from './map-marks';
+import {
+  healthRemovedMark,
+  movePointsLeftMark,
+  showHealthRemoved,
+  showMovePointsLeft,
+  unitStandsAt,
+} from './map-marks';
 import { poolOf } from './pool';
 
 /**
@@ -16,40 +22,54 @@ const EDGE = 3;
 /** Where along each step its chevrons stand, from the tile the step leaves. */
 const ALONG = [0.3, 0.7];
 
-/** How many pixels of the chevron's texture make a unit. */
+/** How far from the attacking unit's middle the attack's arrow starts, and how far short of the attacked unit's middle its point stops. */
+const ARROW_START = 11;
+const ARROW_STOP = 12;
+
+/** How many pixels of the chevron's texture and of the arrow's make a unit. */
 const CHEVRON_PIXELS = 8;
 
 const CHEVRON_KEY = 'path-chevron';
+const ARROW_KEY = 'attack-arrow';
+
+/** How tall the chevron's texture and the arrow's are painted, in the map's units, across the way they point. */
+const ACROSS = 2 * (ARM + EDGE / 2);
 
 export type PathView = {
   /**
    * A unit's path over these tiles, from the one it stands on to the landing, and the move points it
-   * would have left at the end; the layer carries the tiles' keys.
+   * would have left at the end, in place of the attack; the layer carries the tiles' keys.
    */
-  show(tiles: readonly TileCoords[], left: number): void;
+  showPath(tiles: readonly TileCoords[], left: number): void;
+  /**
+   * A unit's attack from its tile on the unit standing on the other, and the health it would remove,
+   * in place of the path; the layer carries the two tiles' keys.
+   */
+  showAttack(from: TileCoords, to: TileCoords, health: number): void;
+  /** Neither the path nor the attack. */
   hide(): void;
-  /** The number's text, which the map raises at its own zoom. */
-  readonly number: Phaser.GameObjects.Text;
+  /** The numbers' texts, which the map raises at its own zoom. */
+  readonly numbers: readonly Phaser.GameObjects.Text[];
 };
 
-// A Graphics strokes 2 units wide or less without joins or caps (docs/PHASER.md): the chevron's
-// round ends and round point are a canvas's.
-/** Paints the chevron once, pointing along x with its point on the texture's middle. */
-function paintChevron(scene: Phaser.Scene): void {
-  const span = 2 * (ARM + EDGE / 2) * CHEVRON_PIXELS;
-  const texture = sceneCanvas(scene, CHEVRON_KEY, span);
-  const context = texture.getContext();
-  const middle = texture.width / 2;
-  context.setTransform(CHEVRON_PIXELS, 0, 0, CHEVRON_PIXELS, middle, middle);
+// A Graphics strokes 2 units wide or less without joins or caps (docs/PHASER.md): the chevron's and
+// the arrow's round ends and round joins are a canvas's.
+/**
+ * Strokes what is traced on the context as the path's chevrons are stroked: the map's dark outline
+ * under a line in that colour, round at its ends and joins, in one stroke each.
+ */
+function strokedAsPath(
+  context: CanvasRenderingContext2D,
+  trace: (context: CanvasRenderingContext2D) => void,
+  colour: number,
+): void {
   context.lineCap = 'round';
   context.lineJoin = 'round';
   context.beginPath();
-  context.moveTo(-ARM, -ARM);
-  context.lineTo(0, 0);
-  context.lineTo(-ARM, ARM);
+  trace(context);
   const strokes = [
     { width: EDGE, colour: LOOK.mapOutline, strength: LOOK.pathEdge },
-    { width: LINE, colour: LOOK.selected, strength: LOOK.pathChevron },
+    { width: LINE, colour, strength: LOOK.pathChevron },
   ];
   for (const { width, colour, strength } of strokes) {
     context.lineWidth = width;
@@ -57,21 +77,104 @@ function paintChevron(scene: Phaser.Scene): void {
     context.globalAlpha = strength;
     context.stroke();
   }
+}
+
+/** A chevron's arms, pointing along x, its point at that x on the axis. */
+function tracedChevron(context: CanvasRenderingContext2D, point: number): void {
+  context.moveTo(point - ARM, -ARM);
+  context.lineTo(point, 0);
+  context.lineTo(point - ARM, ARM);
+}
+
+/** Paints the chevron once, pointing along x with its point on the texture's middle. */
+function paintChevron(scene: Phaser.Scene): void {
+  const texture = sceneCanvas(scene, CHEVRON_KEY, ACROSS * CHEVRON_PIXELS);
+  const context = texture.getContext();
+  const middle = texture.width / 2;
+  context.setTransform(CHEVRON_PIXELS, 0, 0, CHEVRON_PIXELS, middle, middle);
+  strokedAsPath(context, (on) => tracedChevron(on, 0), LOOK.selected);
   texture.refresh();
 }
 
-/** A unit's path on the map's own surface, on this layer: its chevrons pooled, and its number. */
+/**
+ * The attack's arrow: an image of a canvas painted again for each length it is asked for, pointing
+ * along x about the texture's middle, a chevron at its point.
+ */
+function createArrow(scene: Phaser.Scene): {
+  readonly image: Phaser.GameObjects.Image;
+  paint(length: number): void;
+} {
+  const texture = sceneCanvas(scene, ARROW_KEY, ACROSS * CHEVRON_PIXELS);
+  const image = scene.add
+    .image(0, 0, ARROW_KEY)
+    .setName('attack-arrow')
+    .setScale(1 / CHEVRON_PIXELS)
+    .setVisible(false);
+  /** The length the canvas holds an arrow of, and none until it holds one. */
+  let painted: number | undefined;
+
+  return {
+    image,
+    paint(length): void {
+      if (length === painted) return;
+      painted = length;
+      // A power of two along both sides, or Phaser makes no mipmaps of it (docs/PHASER.md).
+      const width = 2 ** Math.ceil(Math.log2((length + 2 * EDGE) * CHEVRON_PIXELS));
+      if (width !== texture.width) {
+        texture.setSize(width, texture.height);
+        // The image takes its size from its frame only when it is handed one again.
+        image.setTexture(ARROW_KEY);
+      }
+      const context = texture.getContext();
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.clearRect(0, 0, texture.width, texture.height);
+      context.setTransform(
+        CHEVRON_PIXELS,
+        0,
+        0,
+        CHEVRON_PIXELS,
+        texture.width / 2,
+        texture.height / 2,
+      );
+      strokedAsPath(
+        context,
+        (on) => {
+          on.moveTo(-length / 2, 0);
+          on.lineTo(length / 2, 0);
+          tracedChevron(on, length / 2);
+        },
+        LOOK.attack,
+      );
+      texture.refresh();
+    },
+  };
+}
+
+/**
+ * A unit's path and its attack on the map's own surface, on this layer, one of the two at a time:
+ * the path's chevrons pooled and its number, the attack's arrow and its number.
+ */
 export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): PathView {
   paintChevron(scene);
   const left = movePointsLeftMark(scene);
-  // The depth alone keeps the number over the chevrons the pool adds after it.
-  on.add(left.root.setDepth(1));
+  const health = healthRemovedMark(scene);
+  const arrow = createArrow(scene);
+  // The depth alone keeps the numbers over the chevrons the pool adds after them.
+  on.add([arrow.image, left.root.setDepth(1), health.root.setDepth(1)]);
   const chevrons = poolOf(on, () => scene.add.image(0, 0, CHEVRON_KEY).setName('path-chevron'));
-  on.setVisible(false);
+
+  const hide = (): void => {
+    chevrons.hide();
+    left.root.setVisible(false);
+    arrow.image.setVisible(false);
+    health.root.setVisible(false);
+    on.setData({ path: [], attack: [] });
+  };
+  hide();
 
   return {
-    show(tiles, points): void {
-      chevrons.hide();
+    showPath(tiles, points): void {
+      hide();
       for (let step = 1; step < tiles.length; step++) {
         const from = unitStandsAt(tiles[step - 1]);
         const to = unitStandsAt(tiles[step]);
@@ -85,13 +188,28 @@ export function createPath(scene: Phaser.Scene, on: Phaser.GameObjects.Layer): P
         }
       }
       showMovePointsLeft(left, tiles[tiles.length - 1], points);
-      on.setData('path', tiles.map(tileKey)).setVisible(true);
+      on.setData('path', tiles.map(tileKey));
     },
 
-    hide(): void {
-      on.setData('path', []).setVisible(false);
+    showAttack(from, to, removed): void {
+      hide();
+      const start = unitStandsAt(from);
+      const end = unitStandsAt(to);
+      const span = Math.hypot(end.x - start.x, end.y - start.y);
+      const way = { x: (end.x - start.x) / span, y: (end.y - start.y) / span };
+      const tail = { x: start.x + way.x * ARROW_START, y: start.y + way.y * ARROW_START };
+      const point = { x: end.x - way.x * ARROW_STOP, y: end.y - way.y * ARROW_STOP };
+      arrow.paint(span - ARROW_START - ARROW_STOP);
+      arrow.image
+        .setPosition((tail.x + point.x) / 2, (tail.y + point.y) / 2)
+        .setRotation(Math.atan2(way.y, way.x))
+        .setVisible(true);
+      showHealthRemoved(health, to, removed);
+      on.setData('attack', [tileKey(from), tileKey(to)]);
     },
 
-    number: left.number,
+    hide,
+
+    numbers: [left.number, health.number],
   };
 }

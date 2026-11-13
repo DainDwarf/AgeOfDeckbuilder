@@ -44,7 +44,7 @@ function twoScouts(): { chronicle: Chronicle; city: TileCoords; beside: TileCoor
           (standing, tile) => unitEntered(standing, { type: SCOUT, faction: 'player', tile }),
           settled,
         );
-        const [own, other] = [city, beside].map((tile) => litFor(chronicle, tile));
+        const [own, other] = [city, beside].map((tile) => litFor(chronicle, tile).lit);
         if (own.length > 0 && other.length > 0 && own.join() !== other.join()) {
           return { chronicle, city, beside };
         }
@@ -54,13 +54,13 @@ function twoScouts(): { chronicle: Chronicle; city: TileCoords; beside: TileCoor
   );
 }
 
-/** The tile selected, the unit standing on it ringed and lighting its reach, as the map shows it. */
+/** The tile selected, its unit ringed, lighting its reach and marking what it can attack. */
 function selectedOn(
   chronicle: Chronicle,
   tile: TileCoords,
-): { selected: string; rings: string[]; lit: string[] } {
+): { selected: string; rings: string[]; lit: string[]; marked: string[] } {
   const key = tileKey(tile);
-  return { selected: key, rings: [key], lit: litFor(chronicle, tile) };
+  return { selected: key, rings: [key], ...litFor(chronicle, tile) };
 }
 
 test('a press held on a unit of the player’s rings and lights nothing, and its release rings it and lights its reach together', async ({
@@ -75,7 +75,12 @@ test('a press held on a unit of the player’s rings and lights nothing, and its
   await page.mouse.move(face.x, face.y);
   await page.mouse.down();
   await rested(page);
-  expect(await ringedAndLit(page)).toEqual({ selected: undefined, rings: [], lit: [] });
+  expect(await ringedAndLit(page)).toEqual({
+    selected: undefined,
+    rings: [],
+    lit: [],
+    marked: [],
+  });
 
   await page.mouse.up();
   await expect.poll(() => ringedAndLit(page)).toEqual(selectedOn(chronicle, city));
@@ -127,7 +132,7 @@ test('a unit carried lights its reach from the start of its drag and wears no ri
   await rested(page);
   expect(await ringedAndLit(page)).toEqual({
     ...selectedOn(chronicle, city),
-    lit: litFor(chronicle, beside),
+    ...litFor(chronicle, beside),
   });
 
   await page.mouse.move(off.x, off.y, { steps: 5 });
