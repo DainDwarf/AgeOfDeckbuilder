@@ -134,6 +134,7 @@ type PageReading = {
   reference: { kind: string; id: string } | undefined;
   shows: Answer<boolean>;
   fill: Answer<number | undefined>;
+  bar: Answer<BarParts>;
   tint: Answer<number | undefined>;
   tints: (number | undefined)[];
   place: Answer<{ x: number; y: number }>;
@@ -384,6 +385,12 @@ export type BadgeShown = { disc: number; rim: number; glyph: string; ink: number
  */
 export type BarShown = { held: number; removed: number; glyph: string };
 
+/** A part of a bar: the share of the bar's length it covers, none while it is hidden, and its colour at its strength. */
+export type BarPartShown = { share: number; colour: number; strength: number };
+
+/** What a bar shows: the part filled from its start, its foot or its left, and the part past that. */
+export type BarParts = { filled: BarPartShown; past: BarPartShown };
+
 /** Everything the run logged that it should not have; a clean run leaves it empty. */
 export function watch(page: Page): string[] {
   const problems: string[] = [];
@@ -527,6 +534,19 @@ export async function readNames(page: Page): Promise<void> {
       return { shown: faces.length, inFog: inFog.length };
     };
 
+    // A bar is `barMarker`'s in `src/ui/map-marks.ts`: its track, its ground the bar's whole length,
+    // the part filled from its start and the part past that, laid along its longer side.
+    const barPartsOf = (bar: Phaser.GameObjects.Container): BarParts => {
+      const [, ground, filled, past] = bar.list as Phaser.GameObjects.Rectangle[];
+      const flat = ground.width > ground.height;
+      const shown = (part: Phaser.GameObjects.Rectangle): BarPartShown => ({
+        share: part.visible ? (flat ? part.width / ground.width : part.height / ground.height) : 0,
+        colour: part.fillColor,
+        strength: part.fillAlpha,
+      });
+      return { filled: shown(filled), past: shown(past) };
+    };
+
     // The mark a tile in fog carries is nameless, so a unit's mark is found by standing where the
     // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`;
     // the badge's disc is the mark's one circle, and its glyph the image drawn next.
@@ -549,16 +569,14 @@ export async function readNames(page: Page): Promise<void> {
         | undefined;
       if (disc === undefined) throw new Error(`the unit mark on ${key} holds no badge`);
       const glyph = mark.list[mark.list.indexOf(disc) + 1] as Phaser.GameObjects.Image;
-      // The health bar is the mark's one container: its track, the health lost the bar's whole length,
-      // the health held under the health removed, then its glyph, in `edgedName`'s frame.
+      // The health bar is the mark's one container: the health held under the health removed, then
+      // its glyph, in `edgedName`'s frame.
       const bar = mark.list.find((one) => one.type === 'Container') as
         | Phaser.GameObjects.Container
         | undefined;
       if (bar === undefined) throw new Error(`the unit mark on ${key} holds no health bar`);
-      const [, length, held, removed] = bar.list as Phaser.GameObjects.Rectangle[];
+      const { filled, past } = barPartsOf(bar);
       const foot = bar.list[4] as Phaser.GameObjects.Image;
-      const share = (part: Phaser.GameObjects.Rectangle): number =>
-        part.visible ? part.height / length.height : 0;
       return {
         halo: tintOf(framed('#halo')),
         painting: tintOf(framed('#lined')),
@@ -572,8 +590,8 @@ export async function readNames(page: Page): Promise<void> {
           : undefined,
         bar: bar.visible
           ? {
-              held: share(held) + share(removed),
-              removed: share(removed),
+              held: filled.share + past.share,
+              removed: past.share,
               glyph: foot.frame.name.replace(/#edged$/, ''),
             }
           : undefined,
@@ -669,6 +687,11 @@ export async function readNames(page: Page): Promise<void> {
             (found().object as Partial<Phaser.GameObjects.Shape>).fillColor ??
             (data('fill') as number | undefined),
         ),
+        bar: answer(() => {
+          const bar = found().object as Partial<Phaser.GameObjects.Container>;
+          if (!Array.isArray(bar.list)) throw new Error(`${name} is no bar`);
+          return barPartsOf(bar as Phaser.GameObjects.Container);
+        }),
         tint: answer(() => {
           const tinted = found().object as Partial<Phaser.GameObjects.Components.Tint>;
           if (tinted.isTinted === undefined) throw new Error(`${name} takes no tint`);
@@ -1404,6 +1427,8 @@ export type Reading = {
    * fill answers nothing.
    */
   readonly fill: number | undefined;
+  /** What a bar shows; an object that is no bar throws. */
+  readonly bar: BarParts;
   /** The tint multiplied into an image, nothing where it carries none; an object that takes no tint throws. */
   readonly tint: number | undefined;
   /** The tint of every object of the name that stands shown, nothing for one that carries none. */
@@ -1450,6 +1475,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get fill() {
       return owed(name, answered?.fill);
+    },
+    get bar() {
+      return owed(name, answered?.bar);
     },
     get tint() {
       return owed(name, answered?.tint);

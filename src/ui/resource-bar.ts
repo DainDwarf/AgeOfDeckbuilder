@@ -1,12 +1,13 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { type Reckoning, reckoned } from '../rules/chronicle';
-import { assignWaiting, claimWaiting, cultureThreshold, growthThreshold } from '../rules/city';
+import { assignWaiting, claimWaiting } from '../rules/city';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
+import { thresholdOf } from './city-bar';
 import {
   addText,
   answersPress,
@@ -426,9 +427,8 @@ function readingOf(chronicle: Chronicle, key: BarReading): { count: number; over
     case 'idle':
       return { count: idle(chronicle) };
     case 'food':
-      return { count: chronicle.resources.food, over: growthThreshold(chronicle, 'player') };
     case 'culture':
-      return { count: chronicle.resources.culture, over: cultureThreshold(chronicle, 'player') };
+      return { count: chronicle.resources[key], over: thresholdOf(chronicle, key) };
     case 'production':
     case 'military':
     case 'money':

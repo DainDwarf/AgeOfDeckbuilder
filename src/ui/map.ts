@@ -6,6 +6,7 @@ import {
   broughtInRange,
   byHand,
   outcome,
+  reckoned,
   type UnitCommand,
 } from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
@@ -42,6 +43,7 @@ import { type Faction, type Landing, pathTo, type Unit, unitAt, unitOf } from '.
 import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
+import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf, thresholdOf } from './city-bar';
 import { onResize, type Stratum, thingUnder, whileUp } from './design-space';
 import { type HealthBar, healthBarOf } from './health-bar';
 import { LOOK } from './look';
@@ -69,6 +71,7 @@ import {
   asYield,
   buildingStandsAs,
   CITY_FACTIONS,
+  cityBarMarker,
   cityDim,
   diamond,
   ditchesOf,
@@ -91,6 +94,7 @@ import {
   SQUASH,
   shoreOn,
   showCityBadge,
+  showCityBar,
   showThreshold,
   TILE_SIZE,
   type TileObjects,
@@ -353,7 +357,6 @@ export function createMapView(
   const built = group(strata.buildings, 'buildings');
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
-  const cityBadgeLayer = group(strata.buildings, 'city-badges');
   const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
     .rectangle(0, 0, 1, 1, LOOK.yieldOverlayDim.colour, LOOK.yieldOverlayDim.strength)
@@ -367,6 +370,7 @@ export function createMapView(
   const pathGroup = group(strata.selection, 'path');
   const path = createPath(scene, pathGroup);
   const marks = group(strata.units, 'units');
+  const cityBadgeLayer = group(strata.units, 'city-badges');
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
 
@@ -447,6 +451,11 @@ export function createMapView(
   const thresholdOnTile = thresholdMark(scene);
   thresholds.add(thresholdOnTile.root);
 
+  const cityBars: Record<CityBarStock, Phaser.GameObjects.Container> = {
+    food: cityBarMarker(scene),
+    culture: cityBarMarker(scene),
+  };
+  cityBadgeLayer.add(CITY_BAR_STOCKS.map((stock) => cityBars[stock]));
   const cityBadges: Record<CityFaction, PopulationBadge> = {
     player: populationBadge(scene, 'player'),
     neutral: populationBadge(scene, 'neutral'),
@@ -609,6 +618,22 @@ export function createMapView(
       const rows = cityRows(current, whose);
       if (tile === undefined || rows === undefined || !live.has(tileKey(tile))) continue;
       showCityBadge(badge, tile, whose, rows.population);
+    }
+  };
+
+  /**
+   * The player's city's bars on its own tile, where the map draws that tile live, on the chronicle it
+   * stands on: a card, an income and a growth change what they read, so this follows every render.
+   */
+  const paintCityBars = (): void => {
+    for (const stock of CITY_BAR_STOCKS) cityBars[stock].setVisible(false);
+    const current = shown;
+    const tile = current === undefined ? undefined : cityTileOf(current, 'player');
+    if (current === undefined || tile === undefined || !live.has(tileKey(tile))) return;
+    const turn = reckoned(catalogue, current)?.stocks;
+    for (const stock of CITY_BAR_STOCKS) {
+      const bar = cityBarOf(current.resources[stock], thresholdOf(current, stock), turn?.[stock]);
+      showCityBar(cityBars[stock], tile, stock, bar);
     }
   };
 
@@ -1179,6 +1204,7 @@ export function createMapView(
     paintBorder();
     paintUnits(current);
     paintCityBadges();
+    paintCityBars();
     paintCityMarks();
     paintYields();
     lightUnit(selectedUnit());

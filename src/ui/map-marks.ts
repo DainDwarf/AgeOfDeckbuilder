@@ -22,6 +22,7 @@ import type { MapContent } from '../rules/map-kinds';
 import type { Resource } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
+import type { CityBar, CityBarStock } from './city-bar';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
 import type { HealthBar } from './health-bar';
 import { css, darkeningOf, LOOK, multiplied, type Wash } from './look';
@@ -150,11 +151,7 @@ const THRESHOLD_GAP = 3;
 const THRESHOLD_PLATE_HEIGHT = 16;
 const THRESHOLD_PLATE_PAD = 4;
 
-/**
- * A city's badge: how far right of and below its tile's middle its centre stands, how tall it is,
- * the pad on each side of its number, and how the number reads.
- */
-const CITY_BADGE_OFF = 12;
+/** A city's badge: how tall it is, the pad on each side of its number, and how the number reads. */
 const CITY_BADGE_HEIGHT = 14;
 const CITY_BADGE_PAD = 3;
 const CITY_BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
@@ -170,16 +167,30 @@ const UNIT_BADGE_GLYPH = 8;
 /** The dark rim a city's badge and a prepared unit's wear. */
 const BADGE_RIM: Rim = { colour: LOOK.mapOutline, strength: 1, width: MARK_EDGE };
 
-/**
- * A unit's health bar, upright, its middle level with the painting's: how far left of its tile's
- * middle that stands, how long and how wide the bar is, how round its track's corners are, and how
- * far under the track's end the middle of the glyph at its foot stands.
- */
-const BAR_OFF = 12;
-const BAR_LENGTH = 18;
-const BAR_WIDTH = 2.5;
+/** How a bar lies, filling upward from its foot or rightward from its left, and how long and wide it is. */
+type BarShape = {
+  readonly lie: 'upright' | 'flat';
+  readonly length: number;
+  readonly width: number;
+};
+
+/** How round a bar's track's corners are. */
 const TRACK_ROUND = 1;
+
+/**
+ * A unit's health bar, its middle level with the painting's: its shape, how far left of its tile's
+ * middle it stands, and how far under the track's end the middle of the glyph at its foot stands.
+ */
+const HEALTH_BAR: BarShape = { lie: 'upright', length: 18, width: 2.5 };
+const BAR_OFF = 12;
 const BAR_FOOT = 1.5;
+
+/**
+ * A city's bars, centred across on its tile's middle: their shape, and how far below that middle
+ * each one's middle stands.
+ */
+const CITY_BAR: BarShape = { lie: 'flat', length: 22, width: 3 };
+const CITY_BAR_DROP: Record<CityBarStock, number> = { food: 11, culture: 15 };
 
 /**
  * What the map draws a tile's things as: a picture, one polygon, a feature's disc, or a unit's mark,
@@ -761,21 +772,99 @@ export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   ]);
 }
 
+/** A width and a height laid along a bar and across it. */
+function laidAs(
+  lie: BarShape['lie'],
+  along: number,
+  across: number,
+): { width: number; height: number } {
+  switch (lie) {
+    case 'upright':
+      return { width: across, height: along };
+    case 'flat':
+      return { width: along, height: across };
+  }
+}
+
 /**
- * A unit's health bar with nothing drawn on it yet, about the bar's middle: its track, the health
- * lost the whole bar long, the health held rising from the bar's foot, the health an attack would
- * remove, and the glyph at its foot, bottom first.
+ * A bar with nothing drawn on it yet, about its middle: its track, its ground the whole bar long,
+ * the part filled from its start, the part past that, and whatever stands over them, bottom first.
+ */
+function barMarker(
+  scene: Phaser.Scene,
+  { lie, length, width }: BarShape,
+  over: Phaser.GameObjects.GameObject[] = [],
+): Phaser.GameObjects.Container {
+  const track = laidAs(lie, length + 2 * MARK_EDGE, width + 2 * MARK_EDGE);
+  const whole = laidAs(lie, length, width);
+  const part = (): Phaser.GameObjects.Rectangle =>
+    scene.add.rectangle(0, 0, whole.width, whole.height);
+  return scene.add.container(0, 0, [
+    scene.add.rectangle(0, 0, track.width, track.height).setRounded(TRACK_ROUND),
+    part(),
+    part(),
+    part(),
+    ...over,
+  ]);
+}
+
+/** One part of a bar: its colour at its strength, and how much of the bar's length it covers. */
+type BarPart = Wash & { readonly share: number };
+
+/**
+ * A part of a bar made to cover its share of the bar's length from `from` on, a share counted from
+ * the bar's start, its foot or its left, and hidden where it covers none.
+ */
+function asBarPart(
+  part: Phaser.GameObjects.Rectangle,
+  { lie, length, width }: BarShape,
+  from: number,
+  { colour, strength, share }: BarPart,
+): Phaser.GameObjects.Rectangle {
+  const size = laidAs(lie, share * length, width);
+  const start = from * length - length / 2;
+  part
+    .setFillStyle(colour, strength)
+    .setSize(size.width, size.height)
+    .setVisible(share > 0);
+  switch (lie) {
+    case 'upright':
+      return part.setOrigin(0.5, 1).setPosition(0, -start);
+    case 'flat':
+      return part.setOrigin(0, 0.5).setPosition(start, 0);
+  }
+}
+
+/**
+ * A `barMarker` made to show a bar: its track and its ground in their colours, the part filled from
+ * its start, and the part past it.
+ */
+function asBar(
+  bar: Phaser.GameObjects.Container,
+  shape: BarShape,
+  colours: { readonly track: number; readonly ground: number },
+  filled: BarPart,
+  past: BarPart,
+): Phaser.GameObjects.Container {
+  const [track, ground, fill, part] = bar.list as Phaser.GameObjects.Rectangle[];
+  track.setFillStyle(colours.track);
+  ground.setFillStyle(colours.ground);
+  asBarPart(fill, shape, 0, filled);
+  asBarPart(part, shape, filled.share, past);
+  return bar;
+}
+
+/**
+ * A unit's health bar with nothing drawn on it yet: the health lost the whole bar long, the health
+ * held rising from the bar's foot, the health an attack would remove over it, and the glyph at its
+ * foot.
  */
 function healthBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
-  const foot = BAR_LENGTH / 2;
-  const track = { width: BAR_WIDTH + 2 * MARK_EDGE, length: BAR_LENGTH + 2 * MARK_EDGE };
-  return scene.add.container(-BAR_OFF, UNIT_DROP, [
-    scene.add.rectangle(0, 0, track.width, track.length).setRounded(TRACK_ROUND),
-    scene.add.rectangle(0, 0, BAR_WIDTH, BAR_LENGTH),
-    scene.add.rectangle(0, foot, BAR_WIDTH, BAR_LENGTH).setOrigin(0.5, 1),
-    scene.add.rectangle(0, 0, BAR_WIDTH, BAR_LENGTH).setOrigin(0.5, 0),
-    scene.add.image(0, foot + MARK_EDGE + BAR_FOOT, UNIT_SHEET.key),
-  ]);
+  const foot = HEALTH_BAR.length / 2 + MARK_EDGE + BAR_FOOT;
+  return barMarker(scene, HEALTH_BAR, [scene.add.image(0, foot, UNIT_SHEET.key)]).setPosition(
+    -BAR_OFF,
+    UNIT_DROP,
+  );
 }
 
 /** The badge of a `unitMarker`: its disc and its glyph. */
@@ -812,19 +901,16 @@ export function asUnitHealthBar(
     .setVisible(bar !== undefined);
   if (bar === undefined) return worn;
   const tint = shadeTint(shade);
-  const [track, lost, held, removed] = worn.list as Phaser.GameObjects.Rectangle[];
-  const kept = (bar.held - bar.removed) * BAR_LENGTH;
-  track.setFillStyle(multiplied(LOOK.mapOutline, tint));
-  lost.setFillStyle(multiplied(LOOK.healthLost, tint));
-  held
-    .setFillStyle(multiplied(LOOK.health, tint))
-    .setSize(BAR_WIDTH, kept)
-    .setVisible(kept > 0);
-  removed
-    .setFillStyle(multiplied(LOOK.attack, tint))
-    .setSize(BAR_WIDTH, bar.removed * BAR_LENGTH)
-    .setY(BAR_LENGTH / 2 - bar.held * BAR_LENGTH)
-    .setVisible(bar.removed > 0);
+  asBar(
+    worn,
+    HEALTH_BAR,
+    {
+      track: multiplied(LOOK.mapOutline, tint),
+      ground: multiplied(LOOK.healthLost, tint),
+    },
+    { colour: multiplied(LOOK.health, tint), strength: 1, share: bar.held - bar.removed },
+    { colour: multiplied(LOOK.attack, tint), strength: 1, share: bar.removed },
+  );
   const { frame, scale } = barGlyphOf(bar.kills);
   worn
     .getAt<Phaser.GameObjects.Image>(4)
@@ -1066,8 +1152,9 @@ export function populationBadge(scene: Phaser.Scene, whose: CityFaction): Popula
 }
 
 /**
- * A city's own tile wearing its population: the number on a pill in that city's colour at the tile's
- * lower-right corner, a disc until the number needs more room, widening about its middle.
+ * A city's own tile wearing its population: the number on a pill in that city's colour at the right
+ * end of the bars the player's city wears, level with their middle, a disc until the number needs
+ * more room, widening to its right.
  */
 export function showCityBadge(
   badge: PopulationBadge,
@@ -1076,23 +1163,53 @@ export function showCityBadge(
   population: number,
 ): void {
   const { pill, number } = badge;
-  const { x, y } = positionOf(coord);
-  const at = { x: x + CITY_BADGE_OFF, y: y + CITY_BADGE_OFF };
   const key = tileKey(coord);
-  number
-    .setText(String(population))
-    .setPosition(at.x, at.y)
-    .setName(`population-${key}-number`)
-    .setVisible(true);
+  number.setText(String(population)).setName(`population-${key}-number`).setVisible(true);
+  const width = Math.max(CITY_BADGE_HEIGHT, ownBoxOf(number).width + 2 * CITY_BADGE_PAD);
+  const { x, y } = positionOf(coord);
+  const at = {
+    x: x + CITY_BAR.length / 2 + width / 2,
+    y: y + (CITY_BAR_DROP.food + CITY_BAR_DROP.culture) / 2,
+  };
+  number.setPosition(at.x, at.y);
   pill.setPosition(at.x, at.y).setName(`population-${key}`).setVisible(true);
 
   drawPill(
     badge,
-    Math.max(CITY_BADGE_HEIGHT, ownBoxOf(number).width + 2 * CITY_BADGE_PAD),
+    width,
     CITY_BADGE_HEIGHT,
     { colour: CITY_COLOURS[whose], strength: 1 },
     BADGE_RIM,
   );
+}
+
+/** A city's bar with nothing drawn on it yet, hidden. */
+export function cityBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return barMarker(scene, CITY_BAR).setVisible(false);
+}
+
+/**
+ * The player's city's bar of a stock standing on its tile, below the middle and centred across it,
+ * showing the bar it is handed in that resource's colour, what the turn would add paler.
+ */
+export function showCityBar(
+  mark: Phaser.GameObjects.Container,
+  coord: TileCoords,
+  stock: CityBarStock,
+  { held, added }: CityBar,
+): void {
+  const colour = LOOK.reading[stock];
+  const { x, y } = positionOf(coord);
+  asBar(
+    mark,
+    CITY_BAR,
+    { track: LOOK.mapOutline, ground: LOOK.thresholdNotMet },
+    { colour, strength: 1, share: held },
+    { colour, strength: LOOK.addedByTurn, share: added },
+  )
+    .setPosition(x, y + CITY_BAR_DROP[stock])
+    .setName(`city-bar-${stock}-${tileKey(coord)}`)
+    .setVisible(true);
 }
 
 /** The scrim over a held tile with nobody on it and all it carries. */

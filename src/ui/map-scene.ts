@@ -4,13 +4,14 @@ import { followFactor, type Stratum, stratumOf } from './design-space';
 /** The map's strata, in the order they stand, all painted by its one camera. */
 export type MapStrata = {
   readonly terrain: Stratum;
-  /** The buildings, the discs and a city's badge. */
+  /** The buildings and the discs. */
   readonly buildings: Stratum;
   readonly cityMarks: Stratum;
   /** The yield overlay's dim. */
   readonly dim: Stratum;
   /** The marks of the selection and the aim. */
   readonly selection: Stratum;
+  /** The units, and over them a city's bars and its badge. */
   readonly units: Stratum;
   /** The yield glyphs and the culture threshold. */
   readonly yields: Stratum;

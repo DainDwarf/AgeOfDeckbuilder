@@ -62,6 +62,13 @@ export type Look = {
   /** The heart at a health bar's foot, and the skull an attack that would kill sets in its place. */
   readonly heart: number;
   readonly skull: number;
+  /** The rest of a city's bar past the stock, the grey of a threshold not yet met. */
+  readonly thresholdNotMet: number;
+  /**
+   * The strength the part of a city's bar ending the turn would add rests at, in its resource's
+   * colour over the grey of a threshold not yet met.
+   */
+  readonly addedByTurn: number;
   readonly settlePhase: number;
   readonly panelFill: number;
   readonly panelEdge: number;
@@ -178,6 +185,8 @@ export const LOOK: Look = {
   healthLost: 0x3a4049,
   heart: 0xe0564a,
   skull: 0xf2f6ff,
+  thresholdNotMet: 0x3a4049,
+  addedByTurn: 0.45,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,
