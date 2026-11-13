@@ -19,6 +19,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Your units' states** — how a unit of the player's shows what it still holds, its move points and its action, so what still needs a move or an action and what does not reads at a glance; the done dim is looked at again there.
+- **Your units' states** — a unit of the player's is dimmed exactly when it can do nothing on the map: no tile in its reach, no unit in sight its attack reaches without declaring war, and, a worker, no action left; no unit is dimmed on the settle phase; the dim, the pointer's following and the drag ask one question, the war its parameter; the look's one map dim is three entries; `npm run check`, `npm test`, `npm run lint` and `npx playwright test e2e/move.spec.ts` pass. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/your-units-states.md](board/your-units-states.md)
 - **The city badge** — a city's badge on his building says what population is, and tries a progress bar for the food growth and one for the culture threshold; its place too, the badge lying with the buildings where the unit on the city's tile covers part of it.
 - **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.
