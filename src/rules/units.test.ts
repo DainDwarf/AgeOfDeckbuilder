@@ -1,6 +1,14 @@
 import { expect, test } from 'vitest';
 import { bonusCarried, bonusOf, unitKind } from './catalogue';
-import { apply, broughtInRange, byHand, type Command, declaresWar, outcome } from './chronicle';
+import {
+  anythingByHand,
+  apply,
+  broughtInRange,
+  byHand,
+  type Command,
+  declaresWar,
+  outcome,
+} from './chronicle';
 import { warDeclared } from './city';
 import {
   actionOf,
@@ -480,17 +488,18 @@ test('of the landings a step brings a unit in range from, it attacks from the ch
   expect(from(open, aslant)).toBe('2,-1');
 });
 
+/** The chronicle's one unit of the player's. */
+function playerOf(chronicle: Chronicle): Unit {
+  const unit = chronicle.units.find(({ faction }) => faction === 'player');
+  if (unit === undefined) throw new Error('no unit of the player’s stands');
+  return unit;
+}
+
 test('a step that declares war brings a unit in range only where no other landing does, and the war is declared once', () => {
   const target = { q: 2, r: 0 };
   const attacker = standing('player', CITY);
   const open = withUnits(besideTheNeutral(), [attacker, standing('enemy', target)]);
   const lined = withUnits(onTheLine(attacker), [neutralStanding(target)]);
-  /** The chronicle's one unit of the player's. */
-  const playerOf = (chronicle: Chronicle): Unit => {
-    const unit = chronicle.units.find(({ faction }) => faction === 'player');
-    if (unit === undefined) throw new Error('no unit of the player’s stands');
-    return unit;
-  };
   const attackOf = (chronicle: Chronicle): Command => attackOn(playerOf(chronicle).id, target);
   /** Where the chronicle's one unit of the player's attacks the target from. */
   const landingOf = (chronicle: Chronicle): TileCoords | undefined =>
@@ -510,6 +519,47 @@ test('a step that declares war brings a unit in range only where no other landin
     'damaged',
   ]);
   expect(declaresWar(CATALOGUE, lined, attackOf(lined))).toBe(true);
+});
+
+/** Whether the chronicle's one unit of the player's has anything to do by hand, the war counted and not. */
+function anythingOf(chronicle: Chronicle): { warCounted: boolean; warNotCounted: boolean } {
+  const unit = playerOf(chronicle);
+  return {
+    warCounted: anythingByHand(CATALOGUE, chronicle, unit, true),
+    warNotCounted: anythingByHand(CATALOGUE, chronicle, unit, false),
+  };
+}
+
+const NOTHING = { warCounted: false, warNotCounted: false };
+const SOMETHING = { warCounted: true, warNotCounted: true };
+
+test('a unit with no tile in its reach and no unit in its attack’s reach has nothing to do by hand, and a landing or a unit in its attack’s reach gives it something', () => {
+  const spent = standing('player', CITY, {}, 0);
+  const on = (units: Standing[]): Chronicle => cityOf(['urban'], { tiles: field(3), units });
+
+  expect(anythingOf(on([spent]))).toEqual(NOTHING);
+  expect(anythingOf(on([spent, standing('enemy', { q: 1, r: 0 })]))).toEqual(SOMETHING);
+  expect(anythingOf(on([standing('player', CITY)]))).toEqual(SOMETHING);
+});
+
+test('a unit of the neutral’s at peace in a unit’s attack’s reach gives it something to do by hand only where the war is counted, and a hostile one either way', () => {
+  const atPeace = withUnits(besideTheNeutral(), [
+    standing('player', CITY, {}, 0),
+    neutralStanding(NEUTRAL_TILE),
+  ]);
+
+  expect(anythingOf(atPeace)).toEqual({ warCounted: true, warNotCounted: false });
+  expect(anythingOf(warDeclared(atPeace).chronicle)).toEqual(SOMETHING);
+});
+
+test('a unit on a tile out of sight in a unit’s attack’s reach gives it nothing to do by hand, and the same unit seen gives it something', () => {
+  const tiles = madeOf(field(3), 'hills', [{ q: 1, r: 0 }]);
+  const units = [standing('player', CITY, { range: 2 }, 0), standing('enemy', { q: 2, r: 0 })];
+
+  expect(anythingOf(cityOf(['urban'], { tiles, units }))).toEqual(NOTHING);
+  expect(
+    anythingOf(cityOf(['urban'], { tiles, units: [...units, worker({ q: 2, r: 1 })] })),
+  ).toEqual(SOMETHING);
 });
 
 test('a chronicle with units on the map survives JSON', () => {

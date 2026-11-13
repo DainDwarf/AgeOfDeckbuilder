@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import { ageOf, type Catalogue, damageOf, fullHealth } from '../rules/catalogue';
-import { apply, broughtInRange, byHand, outcome, type UnitCommand } from '../rules/chronicle';
+import {
+  anythingByHand,
+  apply,
+  broughtInRange,
+  byHand,
+  outcome,
+  type UnitCommand,
+} from '../rules/chronicle';
 import { claimable, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
 import {
@@ -28,6 +35,7 @@ import {
   cityRows,
   cityTileOf,
   holderOf,
+  onSettlePhase,
   type Snapshot,
 } from '../rules/state';
 import { type Faction, type Landing, pathTo, type Unit, unitAt, unitOf } from '../rules/units';
@@ -348,7 +356,7 @@ export function createMapView(
   const cityBadgeLayer = group(strata.buildings, 'city-badges');
   const cityMarks = group(strata.cityMarks, 'city-marks');
   const dim = scene.add
-    .rectangle(0, 0, 1, 1, LOOK.mapOutline, LOOK.mapDim.strength)
+    .rectangle(0, 0, 1, 1, LOOK.yieldOverlayDim.colour, LOOK.yieldOverlayDim.strength)
     .setOrigin(0, 0)
     .setName('yield-dim')
     .setVisible(false);
@@ -883,11 +891,16 @@ export function createMapView(
   const selectedUnit = (): TileCoords | undefined => (selection?.unit ? selection.tile : undefined);
 
   /**
-   * Which unit the map is lighting for, as it stood when lit, where its landings lie and the units it
-   * marks; nothing while none is lit.
+   * Which unit the map is lighting for, as it stood when lit, where its landings lie, the units it
+   * marks, and whether it is being aimed; nothing while none is lit.
    */
   let lit:
-    | { readonly standing: Unit; readonly landings: Landing[]; readonly targets: Marked[] }
+    | {
+        readonly standing: Unit;
+        readonly landings: Landing[];
+        readonly targets: Marked[];
+        readonly aimed: boolean;
+      }
     | undefined;
 
   /** A ring from the pool about the unit standing on the tile, in that colour. */
@@ -932,13 +945,23 @@ export function createMapView(
     damage: number | undefined,
   ): HealthBar | undefined => healthBarOf(stats.health, fullHealth(catalogue, stats), damage);
 
-  /** What a live unit's marker is darkened by: the dim of a unit of the player's with no move points and no action left. */
-  const shadeOf = (unit: Unit): UnitShade =>
-    unit.faction === 'player' && unit.movePoints <= 0 && unit.action <= 0 ? 'done' : 'clear';
+  /** What a live unit's marker is darkened by on a chronicle: the dim of a unit of the player's that can do nothing on the map. */
+  const shadeOf = (chronicle: Chronicle, unit: Unit): UnitShade => {
+    if (unit.faction !== 'player' || onSettlePhase(chronicle)) return 'clear';
+    if (unit.stats.worker && unit.action > 0) return 'clear';
+    return anythingByHand(catalogue, chronicle, unit, false) ? 'clear' : 'dimmed';
+  };
 
-  /** The health bar of a unit's marker painted as the unit wears it, the rest of the marker left as it stands. */
-  const paintBar = (marker: Phaser.GameObjects.Container, unit: Unit): void => {
-    asUnitHealthBar(marker, barOf(unit, damageReadOn(unit)), shadeOf(unit));
+  /**
+   * The health bar of a unit's marker painted as the unit wears it on a chronicle, the rest of the
+   * marker left as it stands.
+   */
+  const paintBar = (
+    marker: Phaser.GameObjects.Container,
+    chronicle: Chronicle,
+    unit: Unit,
+  ): void => {
+    asUnitHealthBar(marker, barOf(unit, damageReadOn(unit)), shadeOf(chronicle, unit));
   };
 
   /**
@@ -946,10 +969,11 @@ export function createMapView(
    * where no unit is named or the map keeps no marker of it.
    */
   const paintBarOf = (unit: number | undefined): void => {
-    const marker = unit === undefined ? undefined : unitMarkers.get(unit);
-    const standing =
-      unit === undefined || shown === undefined ? undefined : unitOf(shown.units, unit);
-    if (marker !== undefined && standing !== undefined) paintBar(marker, standing);
+    const current = shown;
+    if (unit === undefined || current === undefined) return;
+    const marker = unitMarkers.get(unit);
+    const standing = unitOf(current.units, unit);
+    if (marker !== undefined && standing !== undefined) paintBar(marker, current, standing);
   };
 
   /**
@@ -1036,6 +1060,7 @@ export function createMapView(
             landing,
           })),
         ],
+        aimed: anythingByHand(catalogue, current, standing, true),
       };
       reached = { own: standing.tile, landings: landings.map((landing) => landing.tile) };
     }
@@ -1054,13 +1079,12 @@ export function createMapView(
   };
 
   /**
-   * The pointer read once a frame while a unit lights or marks anything: a lit tile it is on takes
-   * the path, a marked unit the attack, the unit's own tile takes either down, and anywhere else
-   * leaves it where it stands.
+   * The pointer read once a frame while a unit is being aimed: a lit tile it is on takes the path, a
+   * marked unit the attack, the unit's own tile takes either down, and anywhere else leaves it where
+   * it stands.
    */
   const followPointer = (): void => {
-    if (lit === undefined || presser === undefined) return;
-    if (lit.landings.length === 0 && lit.targets.length === 0) return;
+    if (lit === undefined || !lit.aimed || presser === undefined) return;
     if (thingUnder(scene.game) !== presser) return;
     const pointer = scene.input.activePointer;
     const at = map.at(pointer.x, pointer.y);
@@ -1129,7 +1153,7 @@ export function createMapView(
     const { stats, faction, embarked } = unit;
     const prepares = preparedAs(chronicle, unit);
     const bar = barOf(unit, damageReadOn(unit));
-    return asUnit(marker, stats.type, faction, embarked, shadeOf(unit), prepares, bar);
+    return asUnit(marker, stats.type, faction, embarked, shadeOf(chronicle, unit), prepares, bar);
   };
 
   /** Every unit of a chronicle written, and the markers of the units gone destroyed. */
@@ -1380,7 +1404,7 @@ export function createMapView(
     },
 
     unitBeingAimed(): boolean {
-      return lit !== undefined && (lit.landings.length > 0 || lit.targets.length > 0);
+      return lit?.aimed === true;
     },
   };
 }

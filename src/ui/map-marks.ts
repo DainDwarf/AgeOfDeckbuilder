@@ -731,8 +731,8 @@ export function improvementMark(
   ]);
 }
 
-/** What a unit's mark is darkened by: nothing, the fog, or the dim of a unit whose turn is done. */
-export type UnitShade = 'clear' | 'fog' | 'done';
+/** What a unit's mark is darkened by: nothing, the fog, or the dim of a unit of the player's. */
+export type UnitShade = 'clear' | 'fog' | 'dimmed';
 
 /** The tint a shade multiplies a unit's images by, and the colours of its shapes. */
 function shadeTint(shade: UnitShade): number {
@@ -741,8 +741,8 @@ function shadeTint(shade: UnitShade): number {
       return 0xffffff;
     case 'fog':
       return LOOK.fog;
-    case 'done':
-      return darkeningOf(LOOK.mapDim);
+    case 'dimmed':
+      return darkeningOf(LOOK.unitDim);
   }
 }
 
@@ -1098,7 +1098,7 @@ export function showCityBadge(
 /** The scrim over a held tile with nobody on it and all it carries. */
 export function cityDim(scene: Phaser.Scene): Phaser.GameObjects.Polygon {
   return scene.add
-    .polygon(0, 0, mapHexagon(TILE_SIZE), LOOK.mapOutline, LOOK.mapDim.strength)
+    .polygon(0, 0, mapHexagon(TILE_SIZE), LOOK.cityModeDim.colour, LOOK.cityModeDim.strength)
     .setName('city-dim');
 }
 

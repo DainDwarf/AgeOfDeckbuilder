@@ -163,7 +163,7 @@ test('a warrior dragged onto an enemy attacks it, the enemy wearing its health b
   expect(struck.movePoints).toBe(0);
   // Nothing left to spend: the warrior stands dimmed, and the enemy it struck never is; the enemy
   // wears its health bar at the health the attack left it.
-  const dim = darkeningOf(LOOK.mapDim);
+  const dim = darkeningOf(LOOK.unitDim);
   const hurt = unitAt(attacked.units, enemy.tile);
   if (hurt === undefined) throw new Error(`the attack kills the enemy on ${tileKey(enemy.tile)}`);
   await expect

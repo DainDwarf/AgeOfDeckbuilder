@@ -1264,6 +1264,24 @@ export function byHand(
   };
 }
 
+/**
+ * Whether a unit has anything to do by hand: a landing, or a unit its attack reaches, an attack that
+ * would declare war counting only where `warCounted` asks for it.
+ */
+export function anythingByHand(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+  warCounted: boolean,
+): boolean {
+  const { landings, targets } = byHand(catalogue, chronicle, unit);
+  if (landings.length > 0) return true;
+  return targets.some(
+    ({ tile }) =>
+      warCounted || !declaresWar(catalogue, chronicle, { type: 'attack', unit: unit.id, tile }),
+  );
+}
+
 /** A unit a step brings within an attacker's range, and the landing the attack comes from. */
 export type BroughtInRange = { readonly target: Unit; readonly landing: Landing };
 

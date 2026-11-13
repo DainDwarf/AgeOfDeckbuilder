@@ -69,8 +69,8 @@ type MapInMotion = {
   markerOf(unit: number): Phaser.GameObjects.Container | undefined;
   /** The markers of these units painted as the map draws them on this chronicle. */
   paintMarkers(chronicle: Chronicle, units: readonly Unit[]): Phaser.GameObjects.Container[];
-  /** The health bar of a marker painted as the map draws this unit's, the rest of the marker left as it stands. */
-  paintHealthBar(marker: Phaser.GameObjects.Container, unit: Unit): void;
+  /** The health bar of a marker painted as the map draws this unit's on this chronicle, the rest of the marker left as it stands. */
+  paintHealthBar(marker: Phaser.GameObjects.Container, chronicle: Chronicle, unit: Unit): void;
   /** The marks of an improvement on the tile of that key carrying that feature, painted at that point of its row. */
   improvementOn(
     improvement: ImprovementId,
@@ -176,7 +176,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     if (standing === undefined) return Promise.resolve();
     const bar = unitHealthBarOf(marker);
     const worn = bar.visible;
-    view.paintHealthBar(marker, standing);
+    view.paintHealthBar(marker, chronicle, standing);
     if (!worn && bar.visible) return fadeIn([bar]);
     if (worn && !bar.visible) return fadeOut([bar.setVisible(true)]);
     return Promise.resolve();

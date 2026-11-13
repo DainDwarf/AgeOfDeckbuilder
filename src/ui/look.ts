@@ -115,7 +115,12 @@ export type Look = {
   readonly takenPastNothing: number;
   readonly affordableCard: Paper;
   readonly unaffordableCard: Paper;
-  readonly mapDim: Wash;
+  /** The dim the yield overlay lays over the map under its glyphs. */
+  readonly yieldOverlayDim: Wash;
+  /** The dim city mode lays over a held tile nobody stands on. */
+  readonly cityModeDim: Wash;
+  /** The strength a dimmed unit of the player's is darkened by. */
+  readonly unitDim: number;
   /** The disc a feature's icon stands on, and the rim around it. */
   readonly featureDisc: Wash;
   readonly featureDiscRim: Wash;
@@ -214,7 +219,9 @@ export const LOOK: Look = {
   takenPastNothing: 0xc0392b,
   affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
   unaffordableCard: { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 },
-  mapDim: { colour: 0x0d1014, strength: 0.6 },
+  yieldOverlayDim: { colour: 0x0d1014, strength: 0.6 },
+  cityModeDim: { colour: 0x0d1014, strength: 0.6 },
+  unitDim: 0.6,
   featureDisc: { colour: 0x0d1014, strength: 0.72 },
   featureDiscRim: { colour: 0xece2cc, strength: 0.55 },
   improvementDisc: 0.94,
@@ -270,11 +277,8 @@ export function multiplied(colour: number, tint: number): number {
   return (channel(16) << 16) | (channel(8) << 8) | channel(0);
 }
 
-/**
- * The tint that darkens a painting by as much as the wash laid over it darkens what lies under it,
- * the wash's own colour left out.
- */
-export function darkeningOf({ strength }: Wash): number {
+/** The tint that darkens a painting by as much as a wash of that strength darkens what lies under it. */
+export function darkeningOf(strength: number): number {
   const channel = Math.round(0xff * (1 - strength));
   return (channel << 16) | (channel << 8) | channel;
 }
