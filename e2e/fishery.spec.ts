@@ -25,7 +25,6 @@ import {
   playedOut,
   readings,
   shownCard,
-  shows,
   upkeepRow,
   watch,
 } from './chronicle-screen';
@@ -90,8 +89,7 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
 
   await openSaved(page, built, CAMPAIGN);
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(glyphsOf(built, drawnFaces(built)));
+  await expect.poll(() => glyphs(page)).toEqual(glyphsOf(built, drawnFaces(built)));
 
   const seen = await readings(page, [`tile-${tileKey(beside)}`, `tile-${tileKey(tile)}`]);
   const coast = seen(`tile-${tileKey(beside)}`).onScreen;

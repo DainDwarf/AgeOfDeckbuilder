@@ -28,6 +28,7 @@ import { asGlyph, glyphMark, glyphOf } from './glyphs';
 import type { HealthBar } from './health-bar';
 import { css, darkeningOf, LOOK, multiplied, type Tone, type Wash } from './look';
 import {
+  BUILDING_PATCH,
   BUILDING_SHEET,
   type BuildingPaintings,
   type BuildingPiece,
@@ -45,6 +46,7 @@ import {
   FEATURE_SHEET_KEY,
   featureDressOf,
   featureIconOf,
+  GLYPH_SHEET,
   HERD_COPIES,
   ICON_WIDTH,
   improvementLookOf,
@@ -52,7 +54,6 @@ import {
   liesOf,
   MARK_EDGE,
   PAINTING,
-  PATCH,
   PONDS,
   paintIn,
   paintingOn,
@@ -65,6 +66,7 @@ import {
   UNIT_SHEET,
   unitPaintingOf,
   VOIDS,
+  YIELD_PATCH,
 } from './marks';
 import { type Pool, poolOf } from './pool';
 import { text } from './text';
@@ -133,8 +135,13 @@ export const ROW_RISE = 15;
 const HERD_WIDTH = 8;
 const HERD_SPREAD = { x: 16, y: 5 };
 
-/** A point of yield's glyph, a side of its square. */
-const YIELD_GLYPH = 6;
+/**
+ * A tile's yield glyphs: a side of a glyph's square, how many of them a row holds, and how far the
+ * patch under them reaches past them on every side.
+ */
+const YIELD_GLYPH = 8;
+const YIELD_ROW = 4;
+const YIELD_PATCH_ROOM = 6;
 
 /** The mark of an assigned tile, a side of its glyph's square, and how far below the tile's middle it stands. */
 const ASSIGNED_GLYPH = 12;
@@ -155,9 +162,8 @@ const THRESHOLD_GAP = 3;
 const THRESHOLD_PLATE_HEIGHT = 16;
 const THRESHOLD_PLATE_PAD = 4;
 
-/** On the plate of the yield an aimed card would give: the gap after its sign, and between two glyphs. */
+/** On the plate of the yield an aimed card would give: the gap after its sign. */
 const SIGN_GAP = 2;
-const GIVEN_GLYPH_GAP = 1.5;
 
 /** A city's badge: how tall it is, the pad on each side of its number, and how the number reads. */
 const CITY_BADGE_HEIGHT = 14;
@@ -386,13 +392,16 @@ export function terrainMark(scene: Phaser.Scene, terrain: Terrain): Phaser.GameO
 }
 
 // The scale is set here and `asPainted` resets it to one: a patch is painted before it is placed.
-/** An image of the buildings sheet made to draw the patch about its own middle, darkened on a tile in fog. */
-export function asPatch(image: Phaser.GameObjects.Image, inFog: boolean): Phaser.GameObjects.Image {
+/** An image of the buildings sheet made to draw a building's patch about its own middle, darkened on a tile in fog. */
+export function asBuildingPatch(
+  image: Phaser.GameObjects.Image,
+  inFog: boolean,
+): Phaser.GameObjects.Image {
   return asDarkened(
     image
-      .setTexture(BUILDING_SHEET.key, PATCH.frame)
+      .setTexture(BUILDING_SHEET.key, BUILDING_PATCH.frame)
       .setOrigin(0.5, 0.5)
-      .setScale(PATCH.scale)
+      .setScale(BUILDING_PATCH.scale)
       .setFlipX(false),
     inFog,
   );
@@ -440,7 +449,8 @@ export function asPieces(
   while (on.length < count) on.add(on.scene.add.image(0, 0, BUILDING_SHEET.key));
   (on.list as Phaser.GameObjects.Image[]).forEach((image, at) => {
     if (at >= count) image.setVisible(false);
-    else if (at < under) asPatch(image, inFog).setPosition(0, 0).setAlpha(1).setVisible(true);
+    else if (at < under)
+      asBuildingPatch(image, inFog).setPosition(0, 0).setAlpha(1).setVisible(true);
     else asPiece(image, pieces[at - under], pick, inFog);
   });
   return on;
@@ -1010,12 +1020,41 @@ export function unitMark(
   return mark;
 }
 
-/** A `glyphMark` made to draw a point of yield: its resource's glyph. */
-export function asYield(
-  mark: Phaser.GameObjects.Container,
-  resource: Resource,
-): Phaser.GameObjects.Container {
-  return asGlyph(mark, resource, YIELD_GLYPH).setName(`yield-${resource}`);
+/** The patch under a tile's yield glyphs, at no size until it is shown. */
+export function yieldPatch(scene: Phaser.Scene): Phaser.GameObjects.Image {
+  return scene.add.image(0, 0, GLYPH_SHEET.key, YIELD_PATCH.frame);
+}
+
+/**
+ * A tile's yield glyphs from their pool, one to each point in the order handed, touching and four to
+ * a row, each row centred across on the tile's middle and the rows together on it; and its patch from
+ * its own pool, fitted to them.
+ */
+export function showTileYield(
+  glyphs: Pool<Phaser.GameObjects.Container>,
+  patches: Pool<Phaser.GameObjects.Image>,
+  coord: TileCoords,
+  owed: readonly Resource[],
+): void {
+  const { x, y } = positionOf(coord);
+  const rows = Math.ceil(owed.length / YIELD_ROW);
+  owed.forEach((resource, index) => {
+    const row = Math.floor(index / YIELD_ROW);
+    const inRow = Math.min(YIELD_ROW, owed.length - row * YIELD_ROW);
+    asGlyph(glyphs.take(), resource, YIELD_GLYPH)
+      .setName(`yield-${resource}`)
+      .setPosition(
+        x + ((index % YIELD_ROW) - (inRow - 1) / 2) * YIELD_GLYPH,
+        y + (row - (rows - 1) / 2) * YIELD_GLYPH,
+      );
+  });
+  const across = Math.min(owed.length, YIELD_ROW) * YIELD_GLYPH;
+  // The size is a scale, which a take sets back to one.
+  patches
+    .take()
+    .setDisplaySize(across + 2 * YIELD_PATCH_ROOM, rows * YIELD_GLYPH + 2 * YIELD_PATCH_ROOM)
+    .setPosition(x, y)
+    .setName(`yield-patch-${tileKey(coord)}`);
 }
 
 /** The mark of an assigned tile: population's glyph. */
@@ -1134,12 +1173,11 @@ export function showGiven(
     Array<Resource>(yields[resource] ?? 0).fill(resource),
   );
   const sign = ownBoxOf(number).width;
-  const width =
-    sign + SIGN_GAP + owed.length * THRESHOLD_GLYPH + (owed.length - 1) * GIVEN_GLYPH_GAP;
+  const width = sign + SIGN_GAP + owed.length * THRESHOLD_GLYPH;
   number.setX((sign - width) / 2);
   glyphs.hide();
   owed.forEach((resource, at) => {
-    const left = sign + SIGN_GAP + at * (THRESHOLD_GLYPH + GIVEN_GLYPH_GAP) - width / 2;
+    const left = sign + SIGN_GAP + at * THRESHOLD_GLYPH - width / 2;
     asGlyph(glyphs.take(), resource, THRESHOLD_GLYPH).setX(left + THRESHOLD_GLYPH / 2);
   });
   drawPlate(plate, width);

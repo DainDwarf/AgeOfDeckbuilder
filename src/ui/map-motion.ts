@@ -35,7 +35,7 @@ import {
   unitHealthBarOf,
   wearing,
 } from './map-marks';
-import { FACE_SHEET, onPatch } from './marks';
+import { FACE_SHEET, onBuildingPatch } from './marks';
 
 /** The paintings a change brings beside its tile, painted, and the ones it takes away. */
 type Swap = { readonly coming: readonly Mark[]; readonly going: readonly Mark[] };
@@ -83,7 +83,7 @@ type MapInMotion = {
   /** A building painted standing on its tile, its patch left out. */
   buildingOn(building: BuildingTypeId, coord: TileCoords, inFog: boolean): Mark;
   /** The patch a building's paintings lie on, painted on that tile. */
-  patchOn(coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image;
+  buildingPatchOn(coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image;
   /** The disc and the icon the tile of that key keeps for a feature, painted at that point of its row. */
   featureOn(key: string, feature: FeatureId, x: number, y: number, inFog: boolean): Mark[];
   /** What lies on a tile's ground, painted. */
@@ -437,11 +437,11 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       { ids: to.improvements, xs: is.improvements },
     );
     const patched = (building: BuildingTypeId | undefined): 'patch'[] =>
-      building !== undefined && onPatch(building) ? ['patch'] : [];
+      building !== undefined && onBuildingPatch(building) ? ['patch'] : [];
     compare(
       view.built,
       () => [`building-patch-${key}`],
-      () => [view.patchOn(coord, inFog)],
+      () => [view.buildingPatchOn(coord, inFog)],
       y,
       { ids: patched(from.building), xs: [x] },
       { ids: patched(to.building), xs: [x] },

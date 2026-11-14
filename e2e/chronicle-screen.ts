@@ -1818,11 +1818,39 @@ export function noGlyphs(): Glyphs {
   return Object.fromEntries(RESOURCES.map((resource) => [resource, 0])) as Glyphs;
 }
 
+/**
+ * What the map shows of the yield, or what a set of tiles is owed: how many glyphs of each resource,
+ * and the tiles wearing a patch under theirs, by tile key, in key order.
+ */
+export type YieldShown = { glyphs: Glyphs; patched: string[] };
+
+/** What the map shows of the yield, in one question to the page. */
+export async function yieldShown(page: Page): Promise<YieldShown> {
+  const names = RESOURCES.map((resource) => `yield-${resource}`);
+  const { answers, patches } = await page.evaluate(
+    (targets) => ({
+      answers: targets.map((target) => window.readName?.(target)),
+      patches: window.shownIn?.('yield-patches')?.map(({ name }) => name),
+    }),
+    names,
+  );
+  if (patches === undefined) throw new Error('there are no yield patches on the map');
+  const read = readerOf(names, answers);
+  const glyphs = noGlyphs();
+  for (const resource of RESOURCES) glyphs[resource] = read(`yield-${resource}`).count;
+  return { glyphs, patched: patches.map((name) => name.replace(/^yield-patch-/, '')).sort() };
+}
+
+/** Which readings the bar has latched down, in the order the bar reads them, in one question to the page. */
+export async function latched(page: Page): Promise<Resource[]> {
+  const well = (resource: Resource): string => `reading-${resource}-well`;
+  const read = await readings(page, RESOURCES.map(well));
+  return RESOURCES.filter((resource) => read(well(resource)).shows);
+}
+
 /** How many yield glyphs of each resource stand on the map. */
 export async function glyphs(page: Page): Promise<Glyphs> {
-  const shown = noGlyphs();
-  for (const resource of RESOURCES) shown[resource] = await counted(page, `yield-${resource}`);
-  return shown;
+  return (await yieldShown(page)).glyphs;
 }
 
 /**
@@ -1842,13 +1870,31 @@ export function glyphsOf(
   faces: readonly Tile[],
   counted: (face: Tile) => boolean = () => true,
 ): Glyphs {
-  const owed = noGlyphs();
+  return yieldOwed(chronicle, faces, (face) => (counted(face) ? RESOURCES : [])).glyphs;
+}
+
+/**
+ * What the faces of the chronicle's map are owed of the resources `asked` names for each, every face
+ * it draws read beside them: a glyph for every point, and a patch on every face owed one.
+ */
+export function yieldOwed(
+  chronicle: Chronicle,
+  faces: readonly Tile[],
+  asked: (face: Tile) => readonly Resource[],
+): YieldShown {
+  const glyphs = noGlyphs();
+  const patched: string[] = [];
   const beside = tilesBeside(faces);
-  for (const face of faces.filter(counted)) {
+  for (const face of faces) {
     const yields = tileYield(CATALOGUE, chronicle, face, beside);
-    for (const resource of RESOURCES) owed[resource] += yields[resource] ?? 0;
+    let owed = false;
+    for (const resource of asked(face)) {
+      glyphs[resource] += yields[resource] ?? 0;
+      owed ||= (yields[resource] ?? 0) > 0;
+    }
+    if (owed) patched.push(tileKey(face));
   }
-  return owed;
+  return { glyphs, patched: patched.sort() };
 }
 
 /** How far the named panel stands scrolled, the browse unless another is named, and how far it can. */

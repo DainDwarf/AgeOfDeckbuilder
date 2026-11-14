@@ -1,21 +1,27 @@
 import { expect, type Page, test } from '@playwright/test';
-import { tileKey } from '../src/rules/map';
+import { CATALOGUE } from '../src/content/catalogue';
+import { claimable } from '../src/rules/city';
+import { sameTile, type Tile, type TileCoords, tileKey } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
+import type { Chronicle } from '../src/rules/state';
 import {
   chronicleOf,
   click,
   drawnFaces,
   endTurn,
-  type Glyphs,
-  glyphs,
-  glyphsOf,
+  latched,
   noGlyphs,
   openSaved,
   rested,
   settledOn,
   shows,
   standing,
+  thresholdShown,
+  tileOnScreen,
   watch,
+  type YieldShown,
+  yieldOwed,
+  yieldShown,
 } from './chronicle-screen';
 
 /** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
@@ -24,67 +30,55 @@ async function answered(page: Page): Promise<void> {
   await rested(page);
 }
 
-/** How many glyphs each resource is owed: one for every point the tiles the map draws yield of it. */
-async function owed(page: Page): Promise<Glyphs> {
-  const chronicle = await chronicleOf(page);
-  return glyphsOf(chronicle, drawnFaces(chronicle));
-}
+/** What the map shows of the yield with nothing on the overlay: no glyph, and no patch. */
+const NOTHING: YieldShown = { glyphs: noGlyphs(), patched: [] };
 
 /** What the overlay would show with these resources on it, and nothing of every other. */
-async function only(page: Page, ...resources: Resource[]): Promise<Glyphs> {
-  const all = await owed(page);
-  const shown = noGlyphs();
-  for (const resource of resources) shown[resource] = all[resource];
-  return shown;
+async function only(page: Page, ...resources: Resource[]): Promise<YieldShown> {
+  const chronicle = await chronicleOf(page);
+  return yieldOwed(chronicle, drawnFaces(chronicle), () => resources);
 }
 
 /**
  * What the map shows with these resources on the overlay while city mode is on: every tile inside
- * the border shows its whole yield, and every other tile the map draws what the overlay is asked for.
+ * the border shows its whole yield, every other tile the map draws what the overlay is asked for,
+ * and the tile wearing the culture threshold, where one is named, nothing.
  */
-async function withCityMode(page: Page, ...resources: Resource[]): Promise<Glyphs> {
-  const chronicle = await chronicleOf(page);
+function withCityMode(
+  chronicle: Chronicle,
+  resources: readonly Resource[],
+  threshold?: TileCoords,
+): YieldShown {
   const held = new Set(chronicle.held.map(tileKey));
-  const faces = drawnFaces(chronicle);
-  const inside = glyphsOf(chronicle, faces, (face) => held.has(tileKey(face)));
-  const outside = glyphsOf(chronicle, faces, (face) => !held.has(tileKey(face)));
-  const shown = noGlyphs();
-  for (const resource of RESOURCES) {
-    shown[resource] = inside[resource] + (resources.includes(resource) ? outside[resource] : 0);
-  }
-  return shown;
+  const asked = (face: Tile): readonly Resource[] => {
+    if (threshold !== undefined && sameTile(face, threshold)) return [];
+    return held.has(tileKey(face)) ? RESOURCES : resources;
+  };
+  return yieldOwed(chronicle, drawnFaces(chronicle), asked);
 }
 
-/** Which readings the bar has latched down, in the order the bar reads them. */
-async function latched(page: Page): Promise<Resource[]> {
-  const down: Resource[] = [];
-  for (const resource of RESOURCES) {
-    if (await shows(page, `reading-${resource}-well`)) down.push(resource);
-  }
-  return down;
-}
-
-test('the yield key shows what every tile yields, and clears it again', async ({ page }) => {
+test('the yield key shows what every tile yields, each tile’s glyphs on a patch, and clears it again', async ({
+  page,
+}) => {
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
-  expect(await glyphs(page)).toEqual(noGlyphs());
-  expect(await shows(page, 'yield-dim')).toBe(false);
+  expect(await yieldShown(page)).toEqual(NOTHING);
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(await owed(page));
-  expect(await latched(page)).toEqual([...RESOURCES]);
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
+  const every = await only(page, ...RESOURCES);
+  expect(every.patched.length).toBeGreaterThan(0);
+  expect(await yieldShown(page)).toEqual(every);
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
-  expect(await glyphs(page)).toEqual(noGlyphs());
-  expect(await latched(page)).toEqual([]);
+  await expect.poll(() => latched(page)).toEqual([]);
+  expect(await yieldShown(page)).toEqual(NOTHING);
 
   expect(problems).toEqual([]);
 });
 
-test('a press on a reading shows that resource alone, and a second press takes it away', async ({
+test('a press on a reading shows that resource alone, on the tiles yielding it, and a second press takes it away', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -92,22 +86,22 @@ test('a press on a reading shows that resource alone, and a second press takes i
   await openSaved(page, settledOn(1));
 
   await click(page, 'reading-food');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(await only(page, 'food'));
-  expect(await latched(page)).toEqual(['food']);
+  await expect.poll(() => latched(page)).toEqual(['food']);
+  const food = await only(page, 'food');
+  expect(food.patched).not.toEqual((await only(page, ...RESOURCES)).patched);
+  expect(await yieldShown(page)).toEqual(food);
 
   await click(page, 'reading-production');
   await expect.poll(() => latched(page)).toEqual(['food', 'production']);
-  expect(await glyphs(page)).toEqual(await only(page, 'food', 'production'));
+  expect(await yieldShown(page)).toEqual(await only(page, 'food', 'production'));
 
   await click(page, 'reading-food');
   await expect.poll(() => latched(page)).toEqual(['production']);
-  expect(await glyphs(page)).toEqual(await only(page, 'production'));
-  expect(await shows(page, 'yield-dim')).toBe(true);
+  expect(await yieldShown(page)).toEqual(await only(page, 'production'));
 
   await click(page, 'reading-production');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
-  expect(await glyphs(page)).toEqual(noGlyphs());
+  await expect.poll(() => latched(page)).toEqual([]);
+  expect(await yieldShown(page)).toEqual(NOTHING);
 
   expect(problems).toEqual([]);
 });
@@ -123,8 +117,8 @@ test('the yield key clears an overlay a reading raised, and fills one from nothi
   await expect.poll(() => latched(page)).toEqual(['science']);
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
-  expect(await glyphs(page)).toEqual(noGlyphs());
+  await expect.poll(() => latched(page)).toEqual([]);
+  expect(await yieldShown(page)).toEqual(NOTHING);
 
   await page.keyboard.press('Tab');
   await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
@@ -140,50 +134,67 @@ test('the overlay is a display, not a mode: city mode and the back key leave it 
   await openSaved(page, settledOn(1));
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  const shown = await glyphs(page);
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
+  const shown = await yieldShown(page);
 
   await page.keyboard.press('c');
   await expect.poll(() => shows(page, 'city-chip')).toBe(true);
-  expect(await shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(shown);
+  expect(await latched(page)).toEqual([...RESOURCES]);
+  expect(await yieldShown(page)).toEqual(shown);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => shows(page, 'city-chip')).toBe(false);
-  expect(await shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(shown);
+  expect(await latched(page)).toEqual([...RESOURCES]);
+  expect(await yieldShown(page)).toEqual(shown);
 
   await page.keyboard.press('Escape');
   await answered(page);
-  expect(await shows(page, 'yield-dim')).toBe(true);
+  expect(await latched(page)).toEqual([...RESOURCES]);
+  expect(await yieldShown(page)).toEqual(shown);
 
   expect(problems).toEqual([]);
 });
 
-test('a tile inside the border shows its whole yield while city mode stands with the overlay', async ({
+test('a tile inside the border shows its whole yield on its patch while city mode stands, with the overlay or without it, and the tile wearing the culture threshold shows neither', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
-
-  await click(page, 'reading-food');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(await only(page, 'food'));
+  const chronicle = await chronicleOf(page);
 
   await page.keyboard.press('c');
   await expect.poll(() => shows(page, 'city-chip')).toBe(true);
-  expect(await shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(await withCityMode(page, 'food'));
+  const inside = withCityMode(chronicle, []);
+  expect(await yieldShown(page)).toEqual(inside);
+
+  await click(page, 'reading-food');
+  await expect.poll(() => latched(page)).toEqual(['food']);
+  const withFood = withCityMode(chronicle, ['food']);
+  expect(withFood).not.toEqual(inside);
+  expect(await yieldShown(page)).toEqual(withFood);
+
+  const near = claimable(CATALOGUE, chronicle, 'player').find((tile) =>
+    withFood.patched.includes(tileKey(tile)),
+  );
+  if (near === undefined) throw new Error('no tile the city may claim shows a glyph');
+  const at = await tileOnScreen(page, near);
+  await page.mouse.click(at.x, at.y);
+  await expect.poll(() => thresholdShown(page)).toBeDefined();
+  expect(await yieldShown(page)).toEqual(withCityMode(chronicle, ['food'], near));
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => thresholdShown(page)).toBeUndefined();
+  expect(await yieldShown(page)).toEqual(withFood);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => shows(page, 'city-chip')).toBe(false);
-  expect(await glyphs(page)).toEqual(await only(page, 'food'));
+  expect(await yieldShown(page)).toEqual(await only(page, 'food'));
 
   expect(problems).toEqual([]);
 });
 
-test('the overlay stands on the turn the map stands on, with no glyph left over', async ({
+test('the overlay stands on the turn the map stands on, with no glyph and no patch left over', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -191,12 +202,12 @@ test('the overlay stands on the turn the map stands on, with no glyph left over'
   await openSaved(page, settledOn(1));
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
 
   await endTurn(page);
   await answered(page);
 
-  expect(await glyphs(page)).toEqual(await owed(page));
+  expect(await yieldShown(page)).toEqual(await only(page, ...RESOURCES));
 
   expect(problems).toEqual([]);
 });
@@ -211,13 +222,14 @@ test('a window standing over the chronicle screen takes the yield key', async ({
 
   await page.keyboard.press('Tab');
   await answered(page);
-  expect(await shows(page, 'yield-dim')).toBe(false);
+  expect(await latched(page)).toEqual([]);
+  expect(await yieldShown(page)).toEqual(NOTHING);
   expect(await standing(page, 'menu')).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
 
   expect(problems).toEqual([]);
 });

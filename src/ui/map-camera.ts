@@ -105,11 +105,10 @@ export type MapCamera = {
   live(on: boolean): void;
 };
 
-/** The frame cut over the terrain stratum, with the dim laid across it; `zoomed` follows a zoom. */
+/** The frame cut over the terrain stratum; `zoomed` follows a zoom. */
 export function createMapCamera(
   scene: Phaser.Scene,
   map: Stratum,
-  dim: Phaser.GameObjects.Rectangle,
   tiles: readonly Tile[],
   zoomed: () => void,
 ): MapCamera {
@@ -148,7 +147,6 @@ export function createMapCamera(
     for (const catcher of catchers) {
       catcher.setPosition(centre.x - span.x / 2, centre.y - span.y / 2).setSize(span.x, span.y);
     }
-    dim.setPosition(centre.x - span.x / 2, centre.y - span.y / 2).setSize(span.x, span.y);
   };
   onResize(scene, place);
 

@@ -629,7 +629,6 @@ test('city mode shows what every tile inside the border yields, and nothing of a
   const { inside, drawn } = await yielded(page);
   expect(inside).not.toEqual(drawn);
   expect(await glyphs(page)).toEqual(inside);
-  expect(await shows(page, 'yield-dim')).toBe(false);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);

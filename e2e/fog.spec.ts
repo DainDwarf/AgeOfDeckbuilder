@@ -54,7 +54,6 @@ import {
   SCOUT,
   settledOn,
   shownCard,
-  shows,
   standing,
   stoppedTurn,
   TRAPPING,
@@ -402,8 +401,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
 
   // The overlay glyphs the tiles the map draws, each from the faces it draws.
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
-  expect(await glyphs(page)).toEqual(glyphsOf(stood, drawnFaces(stood)));
+  await expect.poll(() => glyphs(page)).toEqual(glyphsOf(stood, drawnFaces(stood)));
 
   // The click selects the unit the tile in fog keeps, and the inspection opens on its card as it
   // was last seen: its health as kept, and Hostile as the neutral stands now.

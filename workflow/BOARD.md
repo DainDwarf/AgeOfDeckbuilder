@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The yield overlay** — the overlay lays no dim over the map, and every tile's yield glyphs stand 8 units a side and touching, four to a row, on a soft dark patch fitted to them, over the units; the plate of the yield an aimed card would give sets its glyphs touching; `e2e/yields.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/MAP-SCREEN.md`. [board/the-yield-overlay.md](board/the-yield-overlay.md)
 - **City mode's worked and unworked tiles** — the population's glyph as the mark of a worked tile and the dim of a held tile nobody works, decided together, with the canoe and the unit that cover the mark.
 - **The resource bar in glyphs** — the resource bar reads each stock as its glyph and its number with no word, the meta screens' influence reading too, and a tooltip names what the word named.
 - **The infopanel in glyphs** — the unit card reads its stats as glyphs and its states as the signs the map's badge wears, and the terrain card's movement cost wears move's glyph.

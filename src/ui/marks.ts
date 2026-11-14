@@ -378,12 +378,50 @@ export function glyphFileOf(symbol: CastSymbol): string {
 /** How many pixels a side a glyph is rasterised at: past what it covers at the closest zoom. */
 export const GLYPH_PIXELS = 128;
 
+/**
+ * A patch that wide and tall from its top-left corner: an ellipse in the wash at its strength out to
+ * six tenths of its radius, then falling evenly to nothing at its rim.
+ */
+function paintPatch(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  { colour, strength }: Wash,
+): void {
+  const rgba = (alpha: number): string =>
+    `rgba(${(colour >> 16) & 0xff}, ${(colour >> 8) & 0xff}, ${colour & 0xff}, ${alpha})`;
+  context.translate(width / 2, height / 2);
+  context.scale(1, height / width);
+  const wash = context.createRadialGradient(0, 0, 0, 0, 0, width / 2);
+  wash.addColorStop(0, rgba(strength));
+  wash.addColorStop(0.6, rgba(strength));
+  wash.addColorStop(1, rgba(0));
+  context.fillStyle = wash;
+  context.beginPath();
+  context.arc(0, 0, width / 2, 0, 2 * Math.PI);
+  context.fill();
+}
+
+/** The frame of the glyphs sheet the patch under a tile's yield glyphs is drawn from, and its side in pixels. */
+export const YIELD_PATCH = { frame: 'yield-patch', side: 128 };
+
 // Every (symbol, square) outline asked for in play is packed into this one sheet, and a full one throws mid-play.
-/** The sheet every symbol's glyph is drawn into, white; the outlines are painted into it as they are asked for. */
+/**
+ * The sheet every symbol's glyph is drawn into, white, and the yield glyphs' patch; the outlines are
+ * painted into it as they are asked for.
+ */
 export const GLYPH_SHEET: Sheet = {
   key: 'glyphs',
   files: [],
   rasterised: { files: Object.values(GLYPH_FILES), side: GLYPH_PIXELS },
+  made: [
+    {
+      frame: YIELD_PATCH.frame,
+      width: YIELD_PATCH.side,
+      height: YIELD_PATCH.side,
+      paint: (context) => paintPatch(context, YIELD_PATCH.side, YIELD_PATCH.side, LOOK.yieldPatch),
+    },
+  ],
   side: 2048,
 };
 
@@ -454,36 +492,18 @@ export function paintIn(frame: string): Box | undefined {
   return Object.hasOwn(PAINT, frame) ? PAINT[frame] : undefined;
 }
 
-/** How wide and how tall the patch lies, in the map's units, and how many pixels of its frame each is. */
-const PATCH_SIZE = { width: 42, height: 30 };
-const PATCH_PIXELS = 6;
+/** How wide and how tall a building's patch lies, in the map's units, and how many pixels of its frame each is. */
+const BUILDING_PATCH_SIZE = { width: 42, height: 30 };
+const BUILDING_PATCH_PIXELS = 6;
 
-/** The patch's frame in the buildings sheet, and the scale that draws it at its size. */
-export const PATCH = { frame: 'patch', scale: 1 / PATCH_PIXELS };
+/** How wide and how tall a building's patch's frame is, in its pixels. */
+const BUILDING_PATCH_WIDTH = BUILDING_PATCH_SIZE.width * BUILDING_PATCH_PIXELS;
+const BUILDING_PATCH_HEIGHT = BUILDING_PATCH_SIZE.height * BUILDING_PATCH_PIXELS;
 
-/**
- * The patch: an ellipse at the patch's strength out to six tenths of its radius, then falling evenly
- * to nothing at its rim.
- */
-function paintPatch(context: CanvasRenderingContext2D): void {
-  const width = PATCH_SIZE.width * PATCH_PIXELS;
-  const height = PATCH_SIZE.height * PATCH_PIXELS;
-  const { colour, strength } = LOOK.monumentPatch;
-  const rgba = (alpha: number): string =>
-    `rgba(${(colour >> 16) & 0xff}, ${(colour >> 8) & 0xff}, ${colour & 0xff}, ${alpha})`;
-  context.translate(width / 2, height / 2);
-  context.scale(1, height / width);
-  const wash = context.createRadialGradient(0, 0, 0, 0, 0, width / 2);
-  wash.addColorStop(0, rgba(strength));
-  wash.addColorStop(0.6, rgba(strength));
-  wash.addColorStop(1, rgba(0));
-  context.fillStyle = wash;
-  context.beginPath();
-  context.arc(0, 0, width / 2, 0, 2 * Math.PI);
-  context.fill();
-}
+/** A building's patch's frame in the buildings sheet, and the scale that draws it at its size. */
+export const BUILDING_PATCH = { frame: 'building-patch', scale: 1 / BUILDING_PATCH_PIXELS };
 
-/** The sheet every painting a building is drawn with, and the patch, are drawn into. */
+/** The sheet every painting a building is drawn with, and a building's patch, are drawn into. */
 export const BUILDING_SHEET: Sheet = {
   key: 'buildings',
   files: [
@@ -495,10 +515,11 @@ export const BUILDING_SHEET: Sheet = {
   ],
   made: [
     {
-      frame: PATCH.frame,
-      width: PATCH_SIZE.width * PATCH_PIXELS,
-      height: PATCH_SIZE.height * PATCH_PIXELS,
-      paint: paintPatch,
+      frame: BUILDING_PATCH.frame,
+      width: BUILDING_PATCH_WIDTH,
+      height: BUILDING_PATCH_HEIGHT,
+      paint: (context) =>
+        paintPatch(context, BUILDING_PATCH_WIDTH, BUILDING_PATCH_HEIGHT, LOOK.monumentPatch),
     },
   ],
   side: 2048,
@@ -856,8 +877,8 @@ export function buildingPaintingsOf(building: string): BuildingPaintings {
   return drawn(BUILDING_PAINTINGS, building, 'no painting is drawn for the building');
 }
 
-/** Whether a building's paintings lie on the patch. */
-export function onPatch(building: string): boolean {
+/** Whether a building's paintings lie on its patch. */
+export function onBuildingPatch(building: string): boolean {
   return buildingPaintingsOf(building).patch;
 }
 

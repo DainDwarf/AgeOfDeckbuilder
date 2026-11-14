@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { tileKey } from '../src/rules/map';
+import { RESOURCES } from '../src/rules/resources';
 import {
   aimed,
   campaignWith,
@@ -8,6 +9,7 @@ import {
   drawnIn,
   HEAL,
   hurtBesideAnEnemy,
+  latched,
   type MapGroup,
   mapOrder,
   onScreen,
@@ -32,7 +34,6 @@ const ORDER = [
   'features',
   'improvements',
   'city-marks',
-  'yield-dim',
   'lit',
   'rings',
   'selected',
@@ -40,6 +41,7 @@ const ORDER = [
   'path',
   'units',
   'city-badges',
+  'yield-patches',
   'yields',
   'thresholds',
   'infopanel',
@@ -79,17 +81,17 @@ test('what the map draws stands in one order whatever is switched on, a ringed u
   expect(await inOrder(false)).toEqual(ringed);
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
   expect(await inOrder(false)).toEqual(ringed);
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(false);
+  await expect.poll(() => latched(page)).toEqual([]);
   await page.keyboard.press('c');
   await expect.poll(() => shows(page, 'city-chip')).toBe(true);
   expect(await inOrder(false)).toEqual([]);
 
   await page.keyboard.press('Tab');
-  await expect.poll(() => shows(page, 'yield-dim')).toBe(true);
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
   await dragOut(page, index);
   await aimed(page);
   expect(await inOrder(true)).toContain(cityKey);

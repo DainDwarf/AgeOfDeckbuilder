@@ -129,8 +129,8 @@ export type Look = {
   readonly takenPastNothing: number;
   readonly affordableCard: Paper;
   readonly unaffordableCard: Paper;
-  /** The dim the yield overlay lays over the map under its glyphs. */
-  readonly yieldOverlayDim: Wash;
+  /** The dark under a tile's yield glyphs, at its strength over its middle. */
+  readonly yieldPatch: Wash;
   /** The dim city mode lays over a held tile nobody stands on. */
   readonly cityModeDim: Wash;
   /** The strength a dimmed unit of the player's is darkened by. */
@@ -237,7 +237,7 @@ export const LOOK: Look = {
   takenPastNothing: 0xc0392b,
   affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
   unaffordableCard: { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 },
-  yieldOverlayDim: { colour: 0x0d1014, strength: 0.6 },
+  yieldPatch: { colour: 0x0d1014, strength: 0.7 },
   cityModeDim: { colour: 0x0d1014, strength: 0.6 },
   unitDim: 0.6,
   featureDisc: { colour: 0x0d1014, strength: 0.72 },

@@ -60,8 +60,8 @@ import { createMapCamera } from './map-camera';
 import { selectionRims, unitRings } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
+  asBuildingPatch,
   asIcon,
-  asPatch,
   asPieces,
   asRowDisc,
   assignedAt,
@@ -70,7 +70,6 @@ import {
   asUnit,
   asUnitHealthBar,
   asVoid,
-  asYield,
   buildingStandsAs,
   CITY_FACTIONS,
   cityBarMarker,
@@ -99,6 +98,7 @@ import {
   showCityBar,
   showGiven,
   showThreshold,
+  showTileYield,
   TILE_SIZE,
   type TileObjects,
   thresholdMark,
@@ -108,6 +108,7 @@ import {
   unitMotionTargets,
   unitStandsAt,
   wearing,
+  yieldPatch,
 } from './map-marks';
 import { createMapMotion } from './map-motion';
 import { createPath } from './map-path';
@@ -126,15 +127,12 @@ import {
   FEATURE_SHEET_KEY,
   featureIconOf,
   ICON_WIDTH,
-  onPatch,
+  onBuildingPatch,
   paintingOn,
   RIVER_SHEET,
 } from './marks';
 import { asPainted, poolOf, rootedPoolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';
-
-/** How far apart the glyphs of a tile stand. */
-const GLYPH_PITCH = 8;
 
 /** How far over its tile's row a face crossfading in stands, short of the row in front. */
 const CROSSFADE_RISE = 0.5;
@@ -151,9 +149,6 @@ const PIECES_RISE = 0.5;
  */
 const UNIT_DEPTH = 1;
 const CARRIED_DEPTH = 2;
-
-/** How many glyphs a row of them holds before the next row starts. */
-const GLYPH_ROW = 3;
 
 /** What a tile inside the border shows of itself while city mode is on: every resource it yields. */
 const EVERY_RESOURCE: ReadonlySet<Resource> = new Set(RESOURCES);
@@ -250,8 +245,8 @@ export type MapView = {
   /** The face the map draws of a tile, and nothing at all for a tile it draws none of. */
   drawnAs(tile: TileCoords): Drawn | undefined;
   /**
-   * Shows what every tile yields of these resources, a glyph for each point of it, over a dimmed
-   * map; an empty set takes the overlay down.
+   * Shows what every tile yields of these resources, a glyph for each point of it on the tile's
+   * patch; an empty set takes the overlay down.
    */
   showYields(shown: ReadonlySet<Resource>): void;
   /**
@@ -367,12 +362,6 @@ export function createMapView(
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
   const cityMarks = group(strata.cityMarks, 'city-marks');
-  const dim = scene.add
-    .rectangle(0, 0, 1, 1, LOOK.yieldOverlayDim.colour, LOOK.yieldOverlayDim.strength)
-    .setOrigin(0, 0)
-    .setName('yield-dim')
-    .setVisible(false);
-  strata.dim.layer.add(dim);
   const reach = createReach(scene, group(strata.selection, 'lit'), chronicle.tiles);
   const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
@@ -380,6 +369,7 @@ export function createMapView(
   const path = createPath(scene, pathGroup);
   const marks = group(strata.units, 'units');
   const cityBadgeLayer = group(strata.units, 'city-badges');
+  const yieldPatches = group(strata.yields, 'yield-patches');
   const glyphs = group(strata.yields, 'yields');
   const thresholds = group(strata.yields, 'thresholds');
 
@@ -423,7 +413,7 @@ export function createMapView(
   const ditchPool = poolOf(ditches, () =>
     scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
   );
-  const patchPool = poolOf(built, () => scene.add.image(0, 0, BUILDING_SHEET.key));
+  const buildingPatchPool = poolOf(built, () => scene.add.image(0, 0, BUILDING_SHEET.key));
   const piecesPool = poolOf(built, () => scene.add.container(0, 0));
   const improvementDiscPool = poolOf(improvements, () => rowDisc(scene));
   // The depth alone keeps an icon over its disc: both pools add to one layer in no order of pairs.
@@ -436,6 +426,7 @@ export function createMapView(
     scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
   );
   const glyphPool = poolOf(glyphs, () => glyphMark(scene));
+  const yieldPatchPool = poolOf(yieldPatches, () => yieldPatch(scene));
   const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
   const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
 
@@ -486,7 +477,7 @@ export function createMapView(
   let aimClicked: ((tile: TileCoords) => void) | undefined;
   let rescale: (() => void) | undefined;
 
-  const frame = createMapCamera(scene, map, dim, chronicle.tiles, () => {
+  const frame = createMapCamera(scene, map, chronicle.tiles, () => {
     paintAtZoom();
     rescale?.();
   });
@@ -592,13 +583,13 @@ export function createMapView(
   };
 
   /**
-   * The glyphs of every tile the map draws: none on the tile wearing the culture threshold, what it
-   * yields of every resource on a tile inside the border while city mode is on, and what the overlay
-   * is asked for on any other. A building changes what its tile yields, so a render repaints them.
+   * The glyphs of every tile the map draws on their patches: none on the tile wearing the culture
+   * threshold, every resource on a tile inside the border while city mode is on, and what the overlay
+   * is asked for on any other.
    */
   const paintYields = (): void => {
     glyphPool.hide();
-    dim.setVisible(showing.size > 0);
+    yieldPatchPool.hide();
     if (shown === undefined) return;
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
@@ -614,18 +605,7 @@ export function createMapView(
         if (!asked.has(resource)) continue;
         for (let left = yields[resource] ?? 0; left > 0; left--) owed.push(resource);
       }
-      if (owed.length === 0) continue;
-
-      const { x, y } = positionOf(tile);
-      const rows = Math.ceil(owed.length / GLYPH_ROW);
-      owed.forEach((resource, index) => {
-        const row = Math.floor(index / GLYPH_ROW);
-        const inRow = Math.min(GLYPH_ROW, owed.length - row * GLYPH_ROW);
-        asYield(glyphPool.take(), resource).setPosition(
-          x + ((index % GLYPH_ROW) - (inRow - 1) / 2) * GLYPH_PITCH,
-          y + (row - (rows - 1) / 2) * GLYPH_PITCH,
-        );
-      });
+      if (owed.length > 0) showTileYield(glyphPool, yieldPatchPool, tile, owed);
     }
   };
 
@@ -778,9 +758,9 @@ export function createMapView(
   };
 
   /** The patch a building's paintings lie on, from the pool, under them on that tile, darkened in fog. */
-  const patchOn = (coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image => {
+  const buildingPatchOn = (coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image => {
     const { x, y } = positionOf(coord);
-    return asPatch(patchPool.take(), inFog)
+    return asBuildingPatch(buildingPatchPool.take(), inFog)
       .setPosition(x, y)
       .setDepth(coord.r)
       .setName(`building-patch-${tileKey(coord)}`);
@@ -859,7 +839,7 @@ export function createMapView(
       );
     });
     if (face.building !== undefined) {
-      if (onPatch(face.building)) painted.push(patchOn(tile, inFog));
+      if (onBuildingPatch(face.building)) painted.push(buildingPatchOn(tile, inFog));
       painted.push(buildingOn(face.building, tile, inFog));
     }
     if (!inFog) return painted;
@@ -885,7 +865,7 @@ export function createMapView(
     crossfadePool.hide();
     lyingPool.hide();
     ditchPool.hide();
-    patchPool.hide();
+    buildingPatchPool.hide();
     piecesPool.hide();
     improvementDiscPool.hide();
     improvementIconPool.hide();
@@ -1310,7 +1290,7 @@ export function createMapView(
     paintHealthBar: paintBar,
     improvementOn,
     buildingOn,
-    patchOn,
+    buildingPatchOn,
     featureOn,
     lyingOn,
     ditchesOn,
