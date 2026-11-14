@@ -20,9 +20,12 @@ import {
   distance,
   type FeatureId,
   movementCost,
+  neighbours,
   runsAlong,
+  sameTile,
   type Tile,
   type TileCoords,
+  type TilesBeside,
   tileAt,
   tileKey,
 } from './map';
@@ -35,7 +38,7 @@ import {
   refuse,
   terrainKind,
 } from './map-kinds';
-import { RESOURCES, type Resources } from './resources';
+import { RESOURCES, type Resources, summed } from './resources';
 import {
   change,
   changeOn,
@@ -65,6 +68,7 @@ import {
   type TileBlock,
 } from './state';
 import { refreshedMovePoints, spentAction, standsOn, type Unit, unitAt } from './units';
+import { worthOf, type YieldPart, yieldParts } from './yields';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
 export const CARD_KINDS = [
@@ -746,6 +750,58 @@ export function placesImprovement(improvement: string): Aim & { readonly aim: 't
     ),
     places: true,
   };
+}
+
+/** What a play gives one tile, and whether one of the same kind gave it that already. */
+export type GivenTo = {
+  readonly tile: TileCoords;
+  readonly yields: Partial<Resources>;
+  readonly already: boolean;
+};
+
+/**
+ * A card aimed at a tile tried there, paid for or not: the chronicle its effect leaves, and what the
+ * play gives, read off the tile it leaves: there, the parts of what is newly on it; beside, the part
+ * the new building's kind gives each tile `beside` reads; nothing to a tile given nothing.
+ */
+export function triedAt(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  aim: Aim & { readonly aim: 'tile' },
+  at: TileCoords,
+  beside: TilesBeside,
+): { readonly chronicle: Chronicle; readonly gives: GivenTo[] } {
+  const played = aim.effect(catalogue, chronicle, at).chronicle;
+  const was = tileAt(chronicle.tiles, at);
+  const left = tileAt(played.tiles, at);
+  if (was === undefined || left === undefined) return { chronicle: played, gives: [] };
+  const building = left.building === was.building ? undefined : left.building;
+  const placed = left.improvements.filter((improvement) => !was.improvements.includes(improvement));
+  const after: TilesBeside = (coord) => (sameTile(coord, at) ? left : beside(coord));
+
+  const gives: GivenTo[] = [];
+  const give = (tile: TileCoords, parts: readonly YieldPart[], already: boolean): void => {
+    const yields = summed(parts.map((part) => part.yields));
+    if (worthOf(yields) !== 0) gives.push({ tile: { q: tile.q, r: tile.r }, yields, already });
+  };
+  give(
+    at,
+    yieldParts(catalogue, played, left, after).filter(
+      (part) =>
+        (part.kind === 'building' && part.building === building) ||
+        (part.kind === 'improvement' && placed.includes(part.improvement)),
+    ),
+    false,
+  );
+  const fromBuilding = (part: YieldPart): boolean =>
+    part.kind === 'beside' && part.building === building;
+  for (const coord of building === undefined ? [] : neighbours(at)) {
+    const face = beside(coord);
+    if (face === undefined) continue;
+    const already = yieldParts(catalogue, chronicle, face, beside).some(fromBuilding);
+    give(coord, yieldParts(catalogue, played, face, after).filter(fromBuilding), already);
+  }
+  return { chronicle: played, gives };
 }
 
 /**

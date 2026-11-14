@@ -1,3 +1,4 @@
+import { triedAt } from '../rules/cards';
 import {
   ageOf,
   type Catalogue,
@@ -209,7 +210,7 @@ export const NEUTRAL_GUARD: UnitScript = {
 
 /**
  * The neutral's worker, at peace and hostile alike: going for the tile its city holds where one of
- * its cards adds the most to the yield and playing it there, else resting as the guard does; of no
+ * its cards gives that tile the most and playing it there, else resting as the guard does; of no
  * city it stands where it is.
  */
 export const NEUTRAL_WORKER: UnitScript = {
@@ -233,8 +234,8 @@ export const NEUTRAL_WORKER: UnitScript = {
 
 /**
  * What a worker of the neutral's builds, and nothing where it can build nothing: the free tile its
- * city holds and the card the neutral can pay for that adds the most to the tile's yield there, of
- * those whose build, its population laid anew, takes no income below nothing or lower while it is.
+ * city holds and the card the neutral can pay for that gives that tile the most, of those whose
+ * build, its population laid anew, takes no income below nothing or lower while it is.
  */
 function buildOf(
   catalogue: Catalogue,
@@ -260,7 +261,6 @@ function buildOf(
       ...chronicle,
       units: chronicle.units.map((unit) => (unit.id === worker.id ? { ...unit, tile: at } : unit)),
     };
-    const before = tileYield(catalogue, chronicle, tile, beside);
     const away = distance(at, neutral.city);
     for (const card of cards) {
       const aim = workerAim(cardOf(catalogue, card));
@@ -271,14 +271,10 @@ function buildOf(
       ) {
         continue;
       }
-      const after = aim.effect(catalogue, there, at).chronicle;
-      const relaid = tileAt(after.tiles, at);
-      if (relaid === undefined || takenBelowNothing(was, laidIncome(after))) continue;
-      const yields = tileYield(catalogue, after, relaid, tilesBeside(after.tiles));
-      const added = {
-        food: (yields.food ?? 0) - (before.food ?? 0),
-        worth: worthOf(yields) - worthOf(before),
-      };
+      const tried = triedAt(catalogue, there, aim, at, beside);
+      if (takenBelowNothing(was, laidIncome(tried.chronicle))) continue;
+      const yields = tried.gives.find((given) => tileKey(given.tile) === tileKey(at))?.yields ?? {};
+      const added = { food: yields.food ?? 0, worth: worthOf(yields) };
       const better =
         added.food > most.food ||
         (added.food === most.food &&

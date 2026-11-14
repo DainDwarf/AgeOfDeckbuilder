@@ -221,7 +221,7 @@ export const ENCAMPED = 3;
 /** How far apart from every camp standing the fixture's encampment places its camp. */
 const CAMPS_APART = 3;
 
-/** The fixture's building that gives to the tiles beside it. */
+/** The fixture's building that gives to the tiles beside it, and the card that builds it. */
 export const WELL = 'PH_Well';
 
 /** What `WELL` gives each plain tile beside it, and its own. */
@@ -585,6 +585,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Warrior: { kind: 'unit', cost: { military: 2 }, ...enters('PH_Warrior') },
     PH_Farm: { kind: 'building', cost: { production: 3 }, ...builds('PH_Farm') },
     [SHRINE]: { kind: 'building', cost: {}, ...builds(SHRINE) },
+    [WELL]: { kind: 'building', cost: { production: 3 }, ...builds(WELL) },
     PH_March: {
       kind: 'instant',
       cost: {},

@@ -1033,7 +1033,7 @@ function builtBy(content: Catalogue, chronicle: Chronicle): string[] {
   });
 }
 
-test('the neutral’s worker plays, on the tile its city holds where it adds the most to the yield, the card adding it: the most food first, the most of everything together of equals, the tile nearest its city of those, the first in tile order, and the first card named', () => {
+test('the neutral’s worker plays, on the tile its city holds where one of its cards gives that tile the most, that card: the most food first, the most of everything together of equals, the tile nearest its city of those, the first in tile order, and the first card named', () => {
   const hills = madeOf(plains(3), 'hills', [{ q: 1, r: -1 }]);
   const game = plains(3).map((tile) =>
     tileKey(tile) === '2,0' ? { ...tile, terrain: 'forest', feature: 'PH_Game' } : tile,

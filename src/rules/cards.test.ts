@@ -6,6 +6,7 @@ import {
   embarks,
   featurePlaced,
   featureRemoved,
+  type GivenTo,
   improvementPlaced,
   made,
   playedThrough,
@@ -15,6 +16,7 @@ import {
   terraformed,
   throughRefusal,
   throughWorker,
+  triedAt,
 } from './cards';
 import {
   type AimedCard,
@@ -24,8 +26,10 @@ import {
   cardOf,
   catalogued,
   civilizationOf,
+  costOf,
   type Strike,
   unitKind,
+  workerAim,
 } from './catalogue';
 import {
   admitted,
@@ -77,6 +81,7 @@ import {
   NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
+  onlyStocks,
   opening,
   plains,
   pointsOf,
@@ -93,6 +98,8 @@ import {
   TITHE_RISE,
   UPHEAVAL,
   unitNamed,
+  WELL,
+  WELL_GIVES,
   WORKER_STATS,
   withTile,
   withUnits,
@@ -108,9 +115,10 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
+  tilesBeside,
 } from './map';
-import { buildingKind, terrainKind } from './map-kinds';
-import { RESOURCES, type Resources } from './resources';
+import { buildingKind, improvementKind, terrainKind } from './map-kinds';
+import { RESOURCES, type Resources, summed } from './resources';
 import { followed, idInHand, plays, walked } from './stages';
 import {
   type CardId,
@@ -119,6 +127,7 @@ import {
   keysDealt,
   playable,
   type TileBlock,
+  unaffordable,
   withCityRows,
 } from './state';
 import { relationsOf, standsOn } from './units';
@@ -2511,4 +2520,43 @@ test('a tile several embarked units could disembark onto is refused through a un
 
   expect(unitNamed(played, 2)).toMatchObject({ tile: bank, embarked: false });
   expect(unitNamed(played, 3)).toEqual(unitNamed(ticked, 3));
+});
+
+/** What the card played through the worker on the tile would give, tile by tile. */
+function givenBy(chronicle: Chronicle, card: CardId, at: TileCoords): GivenTo[] {
+  const aim = workerAim(cardOf(CATALOGUE, card));
+  if (aim === undefined) throw new Error(`${card} is played through no worker`);
+  return triedAt(CATALOGUE, chronicle, aim, at, tilesBeside(chronicle.tiles)).gives;
+}
+
+test('a card played at a tile would give that tile what it places there, and each tile beside what its building’s kind gives there, already where one of that kind gives it, never what it replaces, the city able to pay for it or not', () => {
+  const site = { q: 1, r: 0 };
+  const well = { q: 1, r: -1 };
+  const hills = { q: 1, r: 1 };
+  const farmed = { q: 2, r: 0 };
+  const ground = madeOf(madeOf(field(3), 'forest', [{ q: 0, r: 1 }]), 'hills', [hills]);
+  const city = cityOf(['urban', 'plain', 'plain'], {
+    ...NO_GROWTH,
+    tiles: builtOn(builtOn(ground, WELL, [well]), TILLAGE, [farmed]),
+    units: [worker(site), worker(hills), worker(farmed)],
+  });
+  const paid = { ...city, resources: onlyStocks({ production: 99 }) };
+
+  // The well gives plains alone, and never a tile carrying a well.
+  expect(unaffordable(city, costOf(CATALOGUE, WELL)).length).toBeGreaterThan(0);
+  expect(givenBy(city, WELL, site)).toEqual([
+    {
+      tile: site,
+      yields: summed([buildingKind(CATALOGUE, WELL).yields, WELL_GIVES.yields]),
+      already: false,
+    },
+    { tile: farmed, yields: WELL_GIVES.yields, already: false },
+    { tile: { q: 2, r: -1 }, yields: WELL_GIVES.yields, already: true },
+  ]);
+  expect(givenBy(paid, WELL, site)).toEqual(givenBy(city, WELL, site));
+  expect(givenBy(city, 'PH_Mine', hills)).toEqual([
+    { tile: hills, yields: improvementKind(CATALOGUE, 'PH_Mine').yields, already: false },
+  ]);
+  expect(buildingKind(CATALOGUE, SILO).yields).toEqual({});
+  expect(givenBy(city, SILO, farmed)).toEqual([]);
 });
