@@ -30,6 +30,7 @@ import {
   positionOf,
   ROW_RISE,
   rowOf,
+  type TileDark,
   type TileObjects,
   unitBadgeOf,
   unitHealthBarOf,
@@ -53,6 +54,8 @@ type MapInMotion = {
   live(): ReadonlySet<string>;
   /** What the map draws live of this chronicle, by tile key. */
   liveOn(chronicle: Chronicle): ReadonlySet<string>;
+  /** What darkens a tile's paintings on the chronicle the map stands on. */
+  darkOf(tile: TileCoords): TileDark;
   /** The face the map draws of a tile on the chronicle it stands on. */
   drawnOf(tile: Tile): { readonly tile: Tile } | undefined;
   /**
@@ -78,18 +81,18 @@ type MapInMotion = {
     key: string,
     x: number,
     y: number,
-    inFog: boolean,
+    dark: TileDark,
   ): Mark[];
   /** A building painted standing on its tile, its patch left out. */
-  buildingOn(building: BuildingTypeId, coord: TileCoords, inFog: boolean): Mark;
+  buildingOn(building: BuildingTypeId, coord: TileCoords, dark: TileDark): Mark;
   /** The patch a building's paintings lie on, painted on that tile. */
-  buildingPatchOn(coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image;
+  buildingPatchOn(coord: TileCoords, dark: TileDark): Phaser.GameObjects.Image;
   /** The disc and the icon the tile of that key keeps for a feature, painted at that point of its row. */
-  featureOn(key: string, feature: FeatureId, x: number, y: number, inFog: boolean): Mark[];
+  featureOn(key: string, feature: FeatureId, x: number, y: number, dark: TileDark): Mark[];
   /** What lies on a tile's ground, painted. */
-  lyingOn(laid: readonly Lying[], inFog: boolean): Mark[];
+  lyingOn(laid: readonly Lying[], dark: TileDark): Mark[];
   /** The ditches run into a tile, painted. */
-  ditchesOn(laid: readonly Lying<Phaser.GameObjects.Container>[], inFog: boolean): Mark[];
+  ditchesOn(laid: readonly Lying<Phaser.GameObjects.Container>[], dark: TileDark): Mark[];
   /** A face from the pool the terrain crossfades on, standing in that tile's row. */
   crossfade(tile: TileCoords): Phaser.GameObjects.Image;
   /** A face from that pool a beach fades in on, standing over the face it lies on. */
@@ -341,7 +344,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     ended(scene.tweens.add({ targets: worn, alpha: 0, duration: 250, ease: EASE }));
 
   /**
-   * The motion between two faces of one tile, and nothing where they are alike, in the fog the map
+   * The motion between two faces of one tile, and nothing where they are alike, in the dark the map
    * stands on. The painting crossfades from the start, with the beach the new face wears; the marks
    * gone shrink, then those staying slide to their slots on the new face, then those come scale up.
    */
@@ -353,7 +356,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     rivers: readonly River[],
   ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
-    const inFog = !view.live().has(key);
+    const dark = view.darkOf(coord);
     const { x, y } = positionOf(coord);
     const was = rowOf(from, x);
     const is = rowOf(to, x);
@@ -385,7 +388,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     compare(
       view.features,
       () => Object.values(featureMarksOn(key)),
-      (id, slot, markY) => view.featureOn(key, id, slot, markY, inFog),
+      (id, slot, markY) => view.featureOn(key, id, slot, markY, dark),
       y - ROW_RISE,
       { ids: one(featureToldOn(from)), xs: [was.feature] },
       { ids: one(featureToldOn(to)), xs: [is.feature] },
@@ -393,7 +396,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     compare(
       view.lying,
       (id) => lyingOf(id, coord).map(({ name }) => name),
-      (id) => view.lyingOn(lyingOf(id, coord), inFog),
+      (id) => view.lyingOn(lyingOf(id, coord), dark),
       y,
       { ids: one(featureToldOn(from)), xs: [x] },
       { ids: one(featureToldOn(to)), xs: [x] },
@@ -402,7 +405,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       on: Phaser.GameObjects.Layer,
       before: readonly Lying<T>[],
       after: readonly Lying<T>[],
-      paint: (laid: readonly Lying<T>[], inFog: boolean) => readonly Mark[],
+      paint: (laid: readonly Lying<T>[], dark: TileDark) => readonly Mark[],
     ): void =>
       compare(
         on,
@@ -410,7 +413,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         (name) =>
           paint(
             after.filter((laid) => laid.name === name),
-            inFog,
+            dark,
           ),
         y,
         { ids: before.map(({ name }) => name), xs: before.map(() => x) },
@@ -431,7 +434,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     compare(
       view.improvements,
       (id) => Object.values(improvementMarksOn(id, from.feature, key).names),
-      (id, slot, markY) => view.improvementOn(id, to.feature, key, slot, markY, inFog),
+      (id, slot, markY) => view.improvementOn(id, to.feature, key, slot, markY, dark),
       y - ROW_RISE,
       { ids: from.improvements, xs: was.improvements },
       { ids: to.improvements, xs: is.improvements },
@@ -441,7 +444,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     compare(
       view.built,
       () => [`building-patch-${key}`],
-      () => [view.buildingPatchOn(coord, inFog)],
+      () => [view.buildingPatchOn(coord, dark)],
       y,
       { ids: patched(from.building), xs: [x] },
       { ids: patched(to.building), xs: [x] },
@@ -449,7 +452,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     compare(
       view.built,
       () => [buildingStandsAs(key)],
-      (id) => [view.buildingOn(id, coord, inFog)],
+      (id) => [view.buildingOn(id, coord, dark)],
       y,
       { ids: one(from.building), xs: [x] },
       { ids: one(to.building), xs: [x] },
@@ -461,11 +464,11 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     return async (token) => {
       let crossing = Promise.resolve();
       if (crossfades) {
-        const face = asTerrain(view.crossfade(coord), to, coord, inFog).setPosition(x, y);
+        const face = asTerrain(view.crossfade(coord), to, coord, dark).setPosition(x, y);
         crossing = fadeIn(
           shore === undefined
             ? [face]
-            : [face, wearing(view.shoreOver(face), FACE_SHEET.key, shore, inFog).setPosition(x, y)],
+            : [face, wearing(view.shoreOver(face), FACE_SHEET.key, shore, dark).setPosition(x, y)],
         );
       }
       const drawn = drawnMarks.map((mark) => ({
@@ -506,14 +509,13 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
 
   /**
    * The beaches of the tiles the map draws beside a changed one whose painting the change moves, and
-   * nothing where it moves none, each new painting over its tile's face in the fog it stands in.
+   * nothing where it moves none, each new painting over its tile's face in the dark it stands in.
    */
   const shoresBeside = (
     coord: TileCoords,
     shoreOn: (coord: TileCoords) => string | undefined,
   ): (() => Promise<void>) | undefined => {
     const shown = view.shown();
-    const live = view.live();
     const moved = neighbours(coord).flatMap((beside) => {
       const stood = shown === undefined ? undefined : tileAt(shown.tiles, beside);
       if (stood === undefined || view.drawnOf(stood) === undefined) return [];
@@ -529,8 +531,8 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       coming: moved.flatMap(({ beside, face, painting }) => {
         if (painting === undefined) return [];
         const { x, y } = positionOf(beside);
-        const inFog = !live.has(tileKey(beside));
-        return [wearing(view.shoreOver(face), FACE_SHEET.key, painting, inFog).setPosition(x, y)];
+        const dark = view.darkOf(beside);
+        return [wearing(view.shoreOver(face), FACE_SHEET.key, painting, dark).setPosition(x, y)];
       }),
       going: moved.flatMap(({ kept }) => (kept === undefined ? [] : [kept])),
     }));

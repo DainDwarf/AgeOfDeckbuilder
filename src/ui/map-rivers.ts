@@ -12,7 +12,7 @@ import {
   water,
 } from '../rules/map';
 import type { MapContent } from '../rules/map-kinds';
-import { asDarkened, cornerAt, SQUASH, TILE_SIZE } from './map-marks';
+import { asDarkened, cornerAt, fogDark, SQUASH, TILE_SIZE } from './map-marks';
 import {
   mouthPaintingsOf,
   PAINTING,
@@ -122,7 +122,7 @@ function onCorner(
   held: { readonly x: number; readonly y: number },
 ): Phaser.GameObjects.Image {
   const { x, y } = cornerAt(corner);
-  return asDarkened(image, inFog)
+  return asDarkened(image, fogDark(inFog))
     .setFrame(painting)
     .setOrigin(0.5 + held.x / PAINTING.width, (PAINTING.middle + held.y) / PAINTING.height)
     .setPosition(x, y)
@@ -160,7 +160,7 @@ export function asPressedStraight(
   const at = cornerAt(corner);
   const arm = ARMS[arrived];
   const before = cornerAt({ x: corner.x + arm.x, y: corner.y + arm.y });
-  asDarkened(container.getAt<Phaser.GameObjects.Image>(0), inFog)
+  asDarkened(container.getAt<Phaser.GameObjects.Image>(0), fogDark(inFog))
     .setFrame(STRAIGHT_RIVER)
     .setOrigin(1, PAINTING.middle / PAINTING.height)
     .setPosition(0, 0)

@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **City mode's worked and unworked tiles** — in city mode a tile one population is assigned to wears population's glyph on a dark disc over the unit standing there, a held tile nobody is assigned to is darkened in its painting as a tile in fog is, a tile's yield glyphs are pale wherever the tile is not giving its yield at income, every unit is faded and the player's city wears neither its bars nor its badge; `e2e/city-mode.spec.ts` reads all five on the game's content, and the pages say so. Doc-impact: `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/worked-tiles.md](board/worked-tiles.md)
 - **The resource bar in glyphs** — the resource bar reads each stock as its glyph and its number with no word, the meta screens' influence reading too, and a tooltip names what the word named.
 - **The infopanel in glyphs** — the unit card reads its stats as glyphs and its states as the signs the map's badge wears, and the terrain card's movement cost wears move's glyph.
 - **Glyphs in a card's text** — population and influence marked in a text as a resource is, and a unit's stat where it reads better, the entries gone through one by one with the user.

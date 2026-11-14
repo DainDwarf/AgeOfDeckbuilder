@@ -75,21 +75,32 @@ type ClaimCommand = { readonly type: 'claim'; readonly tile: TileCoords };
 export type CityCommand = AssignCommand | ReassignCommand | ClaimCommand;
 
 /**
- * Income of the faction's city: an assigned tile nobody occupies yields, the city's own tile no
- * exception, tile by tile in tile order; and then the city pays its upkeep out of what they left.
+ * Income of the faction's city: every tile giving it its yield yields, tile by tile in tile order;
+ * and then the city pays its upkeep out of what they left.
  */
 export function income(catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction): Landed {
-  const city = cityRows(chronicle, whose);
-  if (city === undefined) return unchanged(chronicle);
-  const assigned = new Set(city.assigned.map(tileKey));
-  const relations = relationsOf(chronicle);
+  if (cityRows(chronicle, whose) === undefined) return unchanged(chronicle);
+  const giving = givingYield(chronicle, whose);
   let yielding = unchanged(chronicle);
   for (const { q, r } of chronicle.tiles) {
-    if (!assigned.has(tileKey({ q, r }))) continue;
-    if (occupied(chronicle.units, { q, r }, whose, relations)) continue;
+    if (!giving({ q, r })) continue;
     yielding = followed(yielding, (left) => yielded(catalogue, left, whose, { q, r }));
   }
   return followed(yielding, (left) => shocked(left, whose, upkeepOf(catalogue, left, whose)));
+}
+
+/**
+ * Whether a tile gives its yield to the faction's city at income on the chronicle: one population of
+ * that city is assigned to it, the city's own tile no exception, and nobody occupies it.
+ */
+export function givingYield(
+  chronicle: Chronicle,
+  whose: CityFaction,
+): (tile: TileCoords) => boolean {
+  const assigned = new Set((cityRows(chronicle, whose)?.assigned ?? []).map(tileKey));
+  const relations = relationsOf(chronicle);
+  return (tile) =>
+    assigned.has(tileKey(tile)) && !occupied(chronicle.units, tile, whose, relations);
 }
 
 /** The faction's city's upkeep: what the buildings on the tiles it holds declare, summed. */

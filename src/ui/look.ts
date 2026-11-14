@@ -87,6 +87,8 @@ export type Look = {
   readonly mapOutline: number;
   /** The tint every painting and mark of a tile in fog is multiplied by. */
   readonly fog: number;
+  /** The tint city mode multiplies every painting of a held tile nobody is assigned to by. */
+  readonly unassigned: number;
   /** The strength a city's border band rests at where it meets the line. */
   readonly borderBand: number;
   /** The strength a unit's halo rests at on its painting's outline. */
@@ -131,8 +133,10 @@ export type Look = {
   readonly unaffordableCard: Paper;
   /** The dark under a tile's yield glyphs, at its strength over its middle. */
   readonly yieldPatch: Wash;
-  /** The dim city mode lays over a held tile nobody stands on. */
-  readonly cityModeDim: Wash;
+  /** The strength every unit is drawn at while city mode is on. */
+  readonly unitsInCityMode: number;
+  /** The strength city mode draws the yield glyphs of a tile not giving its yield at income at. */
+  readonly yieldNotGiven: number;
   /** The strength a dimmed unit of the player's is darkened by. */
   readonly unitDim: number;
   /** The disc a feature's icon stands on, and the rim around it. */
@@ -207,6 +211,7 @@ export const LOOK: Look = {
   page: 0x0d1117,
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,
+  unassigned: 0x4d4d4d,
   borderBand: 0.6,
   unitHalo: 0.9,
   built: 0xcfc6b4,
@@ -238,7 +243,8 @@ export const LOOK: Look = {
   affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
   unaffordableCard: { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 },
   yieldPatch: { colour: 0x0d1014, strength: 0.7 },
-  cityModeDim: { colour: 0x0d1014, strength: 0.6 },
+  unitsInCityMode: 0.5,
+  yieldNotGiven: 0.5,
   unitDim: 0.6,
   featureDisc: { colour: 0x0d1014, strength: 0.72 },
   featureDiscRim: { colour: 0xece2cc, strength: 0.55 },

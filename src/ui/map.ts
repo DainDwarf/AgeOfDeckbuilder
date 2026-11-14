@@ -10,7 +10,7 @@ import {
   reckoned,
   type UnitCommand,
 } from '../rules/chronicle';
-import { claimable, type ReassignCommand } from '../rules/city';
+import { claimable, givingYield, type ReassignCommand } from '../rules/city';
 import { preparedAs } from '../rules/enemies';
 import {
   type BuildingTypeId,
@@ -37,6 +37,7 @@ import {
   cityRows,
   cityTileOf,
   holderOf,
+  holds,
   onSettlePhase,
   type Snapshot,
 } from '../rules/state';
@@ -73,7 +74,6 @@ import {
   buildingStandsAs,
   CITY_FACTIONS,
   cityBarMarker,
-  cityDim,
   ditchesOf,
   FEATURE_DISC,
   featureMarksOn,
@@ -100,6 +100,7 @@ import {
   showThreshold,
   showTileYield,
   TILE_SIZE,
+  type TileDark,
   type TileObjects,
   thresholdMark,
   tileFace,
@@ -250,9 +251,9 @@ export type MapView = {
    */
   showYields(shown: ReadonlySet<Resource>): void;
   /**
-   * Marks the tiles the population stands on, dims the held ones with nobody on them, marks the ones
-   * the city may claim, and shows what every tile inside the border yields, whatever the overlay is
-   * showing: what the map shows while city mode is on.
+   * What the map shows while city mode is on: its marks and its dark on the tiles, every yield inside
+   * the border, the glyphs of a tile giving nothing at income paler, the units faded, and the
+   * player's city without its bars and its badge.
    */
   showCityMarks(on: boolean): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
@@ -361,16 +362,19 @@ export function createMapView(
   const built = group(strata.buildings, 'buildings');
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
-  const cityMarks = group(strata.cityMarks, 'city-marks');
   const reach = createReach(scene, group(strata.selection, 'lit'), chronicle.tiles);
   const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
   const pathGroup = group(strata.selection, 'path');
   const path = createPath(scene, pathGroup);
   const marks = group(strata.units, 'units');
+  // A Layer's alpha fades each child apart (`LayerWebGLRenderer.js:96`), one part showing through
+  // another; its filter camera's alpha fades what it composites whole (`renderNodes/Camera.js:312`).
+  marks.enableFilters().filterCamera.setAlpha(LOOK.unitsInCityMode);
   const cityBadgeLayer = group(strata.units, 'city-badges');
   const yieldPatches = group(strata.yields, 'yield-patches');
   const glyphs = group(strata.yields, 'yields');
+  const assignedLayer = group(strata.yields, 'assigned-marks');
   const thresholds = group(strata.yields, 'thresholds');
 
   /** What each tile of the disc keeps, by its key. */
@@ -427,8 +431,7 @@ export function createMapView(
   );
   const glyphPool = poolOf(glyphs, () => glyphMark(scene));
   const yieldPatchPool = poolOf(yieldPatches, () => yieldPatch(scene));
-  const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
-  const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
+  const assignedPool = poolOf(assignedLayer, () => assignedMark(scene));
 
   /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
   let riversWorn = new Map<string, { readonly piece: RiverPiece; readonly painted: Mark[] }>();
@@ -480,6 +483,13 @@ export function createMapView(
   const frame = createMapCamera(scene, map, chronicle.tiles, () => {
     paintAtZoom();
     rescale?.();
+  });
+
+  // A Layer's filter camera takes the scroll and the zoom of the camera drawing it and not its place
+  // (`Filters.js:536-554`), and lays its sheet down at its own (`renderNodes/Camera.js:143-150`):
+  // copied ahead of every draw (`Systems.js:380-382`), wherever the frame was cut.
+  whileUp(scene, scene.events, Phaser.Scenes.Events.PRE_RENDER, () => {
+    marks.filterCamera.setPosition(map.camera.x, map.camera.y);
   });
 
   /** The resources the yield overlay is showing; empty while it is off. */
@@ -585,7 +595,7 @@ export function createMapView(
   /**
    * The glyphs of every tile the map draws on their patches: none on the tile wearing the culture
    * threshold, every resource on a tile inside the border while city mode is on, and what the overlay
-   * is asked for on any other.
+   * is asked for on any other; paler in city mode on a tile not giving its yield at income.
    */
   const paintYields = (): void => {
     glyphPool.hide();
@@ -594,6 +604,7 @@ export function createMapView(
 
     const inside = new Set(marking ? shown.held.map(tileKey) : []);
     const faces = facesIn({ drawn, live, charted }, shown.tiles);
+    const giving = givingYield(shown, 'player');
     for (const tile of shown.tiles) {
       if (threshold !== undefined && sameTile(tile, threshold.tile)) continue;
       const face = drawnOf(tile);
@@ -605,7 +616,9 @@ export function createMapView(
         if (!asked.has(resource)) continue;
         for (let left = yields[resource] ?? 0; left > 0; left--) owed.push(resource);
       }
-      if (owed.length > 0) showTileYield(glyphPool, yieldPatchPool, tile, owed);
+      if (owed.length === 0) continue;
+      const pale = marking && !giving(tile);
+      showTileYield(glyphPool, yieldPatchPool, tile, owed, pale ? LOOK.yieldNotGiven : 1);
     }
   };
 
@@ -628,7 +641,8 @@ export function createMapView(
 
   /**
    * Each city's badge on its own tile, where the map draws that tile live, on the chronicle it
-   * stands on: a growth, a take and a capture change the number, so this follows every render.
+   * stands on, the player's city's none in city mode: a growth, a take and a capture change the
+   * number, so this follows every render.
    */
   const paintCityBadges = (): void => {
     const current = shown;
@@ -637,6 +651,7 @@ export function createMapView(
       const badge = cityBadges[whose];
       badge.pill.setVisible(false);
       badge.number.setVisible(false);
+      if (marking && whose === 'player') continue;
       const tile = cityTileOf(current, whose);
       const rows = cityRows(current, whose);
       if (tile === undefined || rows === undefined || !live.has(tileKey(tile))) continue;
@@ -649,13 +664,14 @@ export function createMapView(
 
   /**
    * The player's city's bars on its own tile, where the map draws that tile live, on the chronicle it
-   * stands on: a card, an income and a growth change what they read, so this follows every render.
+   * stands on, and none in city mode: a card, an income and a growth change what they read, so this
+   * follows every render.
    */
   const paintCityBars = (): void => {
     for (const stock of CITY_BAR_STOCKS) cityBars[stock].setVisible(false);
     const current = shown;
     const tile = current === undefined ? undefined : cityTileOf(current, 'player');
-    if (current === undefined || tile === undefined || !live.has(tileKey(tile))) return;
+    if (marking || current === undefined || tile === undefined || !live.has(tileKey(tile))) return;
     const turn = reckoning ? reckoned(catalogue, current)?.stocks : undefined;
     for (const stock of CITY_BAR_STOCKS) {
       const bar = cityBarOf(current.resources[stock], thresholdOf(current, stock), turn?.[stock]);
@@ -680,29 +696,33 @@ export function createMapView(
   onResize(scene, paintAtZoom);
 
   /**
-   * City mode's tiles: a mark under every tile the population stands on, a scrim over every held
-   * tile with nobody on it, and the claim marks on every tile the city may claim. An assign and a
-   * claim change them, so a render repaints them.
+   * City mode's marks: one on every tile the population stands on, and the claim marks on every tile
+   * the city may claim. An assign and a claim change them, so a render repaints them.
    */
   const paintCityMarks = (): void => {
     assignedPool.hide();
-    cityDimPool.hide();
     assignedMarks = new Map();
     if (!marking || shown === undefined) {
       claimMarks.paint(undefined);
       return;
     }
 
-    for (const coord of shown.held) {
-      if (!assignedTo(shown, coord)) {
-        const { x, y } = positionOf(coord);
-        cityDimPool.take().setPosition(x, y);
-        continue;
-      }
+    for (const coord of shown.assigned) {
       const at = assignedAt(coord);
       assignedMarks.set(tileKey(coord), assignedPool.take().setPosition(at.x, at.y));
     }
     claimMarks.paint({ held: shown.held, claimable: claimable(catalogue, shown, 'player') });
+  };
+
+  /**
+   * What darkens a tile's paintings on a chronicle the map draws so: the fog off sight, and in sight
+   * city mode's dark on a tile the player's city holds that nobody is assigned to.
+   */
+  const darkOn = (chronicle: Chronicle, seen: Drawing, tile: TileCoords): TileDark => {
+    if (!seen.live.has(tileKey(tile))) return 'fog';
+    return marking && holds(chronicle, tile) && !assignedTo(chronicle, tile)
+      ? 'unassigned'
+      : 'clear';
   };
 
   /**
@@ -715,27 +735,27 @@ export function createMapView(
     key: string,
     x: number,
     y: number,
-    inFog: boolean,
+    dark: TileDark,
   ): Mark[] => {
     const marks = improvementMarksOn(improvement, feature, key);
     return [
-      asRowDisc(improvementDiscPool.take(), IMPROVEMENT_DISC, inFog)
+      asRowDisc(improvementDiscPool.take(), IMPROVEMENT_DISC, dark)
         .setPosition(x, y)
         .setName(marks.names.disc),
-      asIcon(improvementIconPool.take(), marks.icon, marks.width, inFog)
+      asIcon(improvementIconPool.take(), marks.icon, marks.width, dark)
         .setPosition(x, y)
         .setName(marks.names.icon),
     ];
   };
 
   /**
-   * A building standing on its tile, darkened in fog: its pieces from the pool, the front one named
-   * for the tile and each behind it for its place.
+   * A building standing on its tile, darkened by its tile's dark: its pieces from the pool, the front
+   * one named for the tile and each behind it for its place.
    */
   const buildingOn = (
     building: BuildingTypeId,
     coord: TileCoords,
-    inFog: boolean,
+    dark: TileDark,
   ): Phaser.GameObjects.Container => {
     const key = tileKey(coord);
     const { x, y } = positionOf(coord);
@@ -745,7 +765,7 @@ export function createMapView(
       paintings,
       false,
       (files) => paintingOn(files, coord),
-      inFog,
+      dark,
     );
     const front = paintings.pieces.length - 1;
     paintings.pieces.forEach((_, at) => {
@@ -757,10 +777,10 @@ export function createMapView(
       .setName(buildingStandsAs(key));
   };
 
-  /** The patch a building's paintings lie on, from the pool, under them on that tile, darkened in fog. */
-  const buildingPatchOn = (coord: TileCoords, inFog: boolean): Phaser.GameObjects.Image => {
+  /** The patch a building's paintings lie on, from the pool, under them on that tile, darkened by its dark. */
+  const buildingPatchOn = (coord: TileCoords, dark: TileDark): Phaser.GameObjects.Image => {
     const { x, y } = positionOf(coord);
-    return asBuildingPatch(buildingPatchPool.take(), inFog)
+    return asBuildingPatch(buildingPatchPool.take(), dark)
       .setPosition(x, y)
       .setDepth(coord.r)
       .setName(`building-patch-${tileKey(coord)}`);
@@ -772,29 +792,29 @@ export function createMapView(
     feature: FeatureId,
     x: number,
     y: number,
-    inFog: boolean,
+    dark: TileDark,
   ): Mark[] => {
     const own = tileObjects[key];
     return [
-      asRowDisc(asPainted(own.featureDisc), FEATURE_DISC, inFog).setPosition(x, y),
-      asIcon(asPainted(own.feature), featureIconOf(feature), ICON_WIDTH, inFog).setPosition(x, y),
+      asRowDisc(asPainted(own.featureDisc), FEATURE_DISC, dark).setPosition(x, y),
+      asIcon(asPainted(own.feature), featureIconOf(feature), ICON_WIDTH, dark).setPosition(x, y),
     ];
   };
 
   /** What lies on a tile's ground, painted from the pool. */
-  const lyingOn = (laid: readonly Lying[], inFog: boolean): Mark[] =>
-    laid.map(({ paint }) => paint(lyingPool.take(), inFog));
+  const lyingOn = (laid: readonly Lying[], dark: TileDark): Mark[] =>
+    laid.map(({ paint }) => paint(lyingPool.take(), dark));
 
   /** The ditches run into a tile, painted from their pool. */
   const ditchesOn = (
     laid: readonly Lying<Phaser.GameObjects.Container>[],
-    inFog: boolean,
-  ): Mark[] => laid.map(({ paint }) => paint(ditchPool.take(), inFog));
+    dark: TileDark,
+  ): Mark[] => laid.map(({ paint }) => paint(ditchPool.take(), dark));
 
   /**
    * Every layer of one tile as the map draws it on a chronicle, the faces drawn there beside it, and
-   * every object painted for it, whole, over whatever a motion left, darkened in fog. The units of a
-   * live tile are hung by the render; a tile in fog carries its unit with it.
+   * every object painted for it, whole, over whatever a motion left, darkened by its dark. The units
+   * of a live tile are hung by the render; a tile in fog carries its unit with it.
    */
   const paintTile = (
     chronicle: Chronicle,
@@ -810,22 +830,22 @@ export function createMapView(
     const painted: Mark[] = [];
 
     const { x, y } = positionOf(tile);
-    const inFog = !seen.live.has(key);
-    painted.push(asTerrain(asPainted(own.face), face, tile, inFog));
+    const dark = darkOn(chronicle, seen, tile);
+    painted.push(asTerrain(asPainted(own.face), face, tile, dark));
     const shore = shoreOn(catalogue, faces, tile);
     if (shore !== undefined) {
-      painted.push(wearing(asPainted(own.shore), FACE_SHEET.key, shore, inFog));
+      painted.push(wearing(asPainted(own.shore), FACE_SHEET.key, shore, dark));
     }
     const row = rowOf(face, x);
     const told = featureToldOn(face);
     if (told !== undefined) {
       painted.push(
-        ...lyingOn(lyingOf(told, tile), inFog),
-        ...featureOn(key, told, row.feature, y - ROW_RISE, inFog),
+        ...lyingOn(lyingOf(told, tile), dark),
+        ...featureOn(key, told, row.feature, y - ROW_RISE, dark),
       );
     }
-    painted.push(...lyingOn(improvementLyingOf(face, tile), inFog));
-    painted.push(...ditchesOn(ditchesOf(face, tile, chronicle.rivers), inFog));
+    painted.push(...lyingOn(improvementLyingOf(face, tile), dark));
+    painted.push(...ditchesOn(ditchesOf(face, tile, chronicle.rivers), dark));
     face.improvements.forEach((improvement, index) => {
       painted.push(
         ...improvementOn(
@@ -834,15 +854,15 @@ export function createMapView(
           key,
           row.improvements[index],
           y - ROW_RISE,
-          inFog,
+          dark,
         ),
       );
     });
     if (face.building !== undefined) {
-      if (onBuildingPatch(face.building)) painted.push(buildingPatchOn(tile, inFog));
-      painted.push(buildingOn(face.building, tile, inFog));
+      if (onBuildingPatch(face.building)) painted.push(buildingPatchOn(tile, dark));
+      painted.push(buildingOn(face.building, tile, dark));
     }
-    if (!inFog) return painted;
+    if (seen.live.has(key)) return painted;
     const standing = unitShown(chronicle.units, drawing);
     if (standing !== undefined) {
       const { stats, faction, embarked } = standing;
@@ -1269,6 +1289,8 @@ export function createMapView(
     shown: () => shown,
     live: () => live,
     liveOn: (chronicle) => drawing(chronicle).live,
+    darkOf: (tile) =>
+      shown === undefined ? 'clear' : darkOn(shown, { drawn, live, charted }, tile),
     drawnOf,
     faceOn: (chronicle, tile) => {
       const seen = drawing(chronicle);
@@ -1415,6 +1437,10 @@ export function createMapView(
     showCityMarks(on: boolean): void {
       marking = on;
       grab.dropPopulation();
+      marks.setFiltersForceComposite(on);
+      paintTiles();
+      paintCityBadges();
+      paintCityBars();
       paintCityMarks();
       paintYields();
       lightUnit(selectedUnit());

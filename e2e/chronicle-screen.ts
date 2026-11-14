@@ -137,6 +137,7 @@ type PageReading = {
   bar: Answer<BarParts>;
   tint: Answer<number | undefined>;
   tints: (number | undefined)[];
+  strengths: number[];
   place: Answer<{ x: number; y: number }>;
   axes: Answer<Axes>;
   scale: Answer<number>;
@@ -707,6 +708,9 @@ export async function readNames(page: Page): Promise<void> {
           const tinted = object as Partial<Phaser.GameObjects.Components.Tint>;
           return tinted.isTinted === true ? tinted.tint : undefined;
         }),
+        strengths: shownOf(all).map(
+          ({ object }) => (object as Partial<Phaser.GameObjects.Components.Alpha>).alpha ?? 1,
+        ),
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
@@ -1439,6 +1443,8 @@ export type Reading = {
   readonly tint: number | undefined;
   /** The tint of every object of the name that stands shown, nothing for one that carries none. */
   readonly tints: readonly (number | undefined)[];
+  /** The strength every object of the name that stands shown is drawn at, its own alpha. */
+  readonly strengths: readonly number[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
   readonly axes: Axes;
@@ -1491,6 +1497,10 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     get tints() {
       if (answered === undefined) throw new Error('no chronicle was opened on this page');
       return answered.tints;
+    },
+    get strengths() {
+      if (answered === undefined) throw new Error('no chronicle was opened on this page');
+      return answered.strengths;
     },
     get place() {
       return owed(name, answered?.place);
@@ -1824,9 +1834,14 @@ export function noGlyphs(): Glyphs {
  */
 export type YieldShown = { glyphs: Glyphs; patched: string[] };
 
+/** The name every yield glyph of a resource stands under. */
+export function glyphName(resource: Resource): string {
+  return `yield-${resource}`;
+}
+
 /** What the map shows of the yield, in one question to the page. */
 export async function yieldShown(page: Page): Promise<YieldShown> {
-  const names = RESOURCES.map((resource) => `yield-${resource}`);
+  const names = RESOURCES.map(glyphName);
   const { answers, patches } = await page.evaluate(
     (targets) => ({
       answers: targets.map((target) => window.readName?.(target)),
@@ -1837,7 +1852,7 @@ export async function yieldShown(page: Page): Promise<YieldShown> {
   if (patches === undefined) throw new Error('there are no yield patches on the map');
   const read = readerOf(names, answers);
   const glyphs = noGlyphs();
-  for (const resource of RESOURCES) glyphs[resource] = read(`yield-${resource}`).count;
+  for (const resource of RESOURCES) glyphs[resource] = read(glyphName(resource)).count;
   return { glyphs, patched: patches.map((name) => name.replace(/^yield-patch-/, '')).sort() };
 }
 
@@ -1851,6 +1866,33 @@ export async function latched(page: Page): Promise<Resource[]> {
 /** How many yield glyphs of each resource stand on the map. */
 export async function glyphs(page: Page): Promise<Glyphs> {
   return (await yieldShown(page)).glyphs;
+}
+
+/**
+ * How many yield glyphs of each resource stand on the map at their full strength, and how many at the
+ * strength of a tile not giving its yield at income, read off the readings of each resource's
+ * `glyphName`; any other strength throws.
+ */
+export function glyphsByStrength(read: (name: string) => Reading): { full: Glyphs; pale: Glyphs } {
+  const [full, pale] = [noGlyphs(), noGlyphs()];
+  for (const resource of RESOURCES) {
+    for (const strength of read(glyphName(resource)).strengths) {
+      if (strength === 1) full[resource] += 1;
+      else if (strength === LOOK.yieldNotGiven) pale[resource] += 1;
+      else throw new Error(`a glyph of ${resource} stands at ${strength}`);
+    }
+  }
+  return { full, pale };
+}
+
+/** The strength the map draws its units at: their group's own, by the strength of the sheet it composites them on where it does. */
+export function unitsStrength(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const units = window.named?.('units')?.object as Phaser.GameObjects.Layer | undefined;
+    if (units === undefined) throw new Error('there are no units on the chronicle screen');
+    const sheet = units.willRenderFilters() ? units.filterCamera.alpha : 1;
+    return units.alpha * sheet;
+  });
 }
 
 /**

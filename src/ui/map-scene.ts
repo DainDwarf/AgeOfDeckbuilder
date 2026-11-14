@@ -6,14 +6,13 @@ export type MapStrata = {
   readonly terrain: Stratum;
   /** The buildings and the discs. */
   readonly buildings: Stratum;
-  readonly cityMarks: Stratum;
   /** The marks of the selection and the aim. */
   readonly selection: Stratum;
   /** The units, and over them a city's bars and its badge. */
   readonly units: Stratum;
   /**
-   * The yield glyphs on their patches, and over them the culture threshold and what an aimed card
-   * would give.
+   * The yield glyphs on their patches, over them the marks of the assigned tiles, and over those the
+   * culture threshold and what an aimed card would give.
    */
   readonly yields: Stratum;
   readonly infopanel: Stratum;
@@ -40,7 +39,6 @@ export class MapScene extends Phaser.Scene {
     this.strata = {
       terrain: stratum(),
       buildings: stratum(),
-      cityMarks: stratum(),
       selection: stratum(),
       units: stratum(),
       yields: stratum(),

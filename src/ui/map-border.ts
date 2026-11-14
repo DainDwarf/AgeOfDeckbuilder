@@ -11,7 +11,15 @@ import {
 } from './border-loops';
 import { LOOK } from './look';
 import { paintFaded, sceneCanvas, tracedPolygon } from './map-fade';
-import { cornerAt, darkened, FACTION_COLOURS, hexagonOn, positionOf, TILE_SIZE } from './map-marks';
+import {
+  cornerAt,
+  darkened,
+  FACTION_COLOURS,
+  fogDark,
+  hexagonOn,
+  positionOf,
+  TILE_SIZE,
+} from './map-marks';
 
 /** How wide a border's line is, and how deep its band fades inside it. */
 const LINE = 1.5;
@@ -237,7 +245,7 @@ export function createBorder(
           worn[whose].filter(({ inFog }) => inFog).map(({ tile }) => tileKey(tile)),
         );
         const colourOf = (stretch: Stretch): number =>
-          darkened(FACTION_COLOURS[whose], fogged.has(tileKey(stretch.tile)));
+          darkened(FACTION_COLOURS[whose], fogDark(fogged.has(tileKey(stretch.tile))));
         const loops = loopsOf(
           whose,
           worn[whose].map(({ tile }) => tile),
@@ -247,7 +255,7 @@ export function createBorder(
           loops,
           [false, true].map((inFog) => ({
             tiles: worn[whose].filter((drawn) => drawn.inFog === inFog).map(({ tile }) => tile),
-            colour: darkened(FACTION_COLOURS[whose], inFog),
+            colour: darkened(FACTION_COLOURS[whose], fogDark(inFog)),
           })),
         );
         paintLine(lines[whose], loops.flat(), LINE, colourOf, 1);

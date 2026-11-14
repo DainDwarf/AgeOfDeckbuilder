@@ -2,10 +2,12 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { gained } from '../src/rules/cards';
 import { apply, type Command, outcome } from '../src/rules/chronicle';
-import { claimable, tileCost, tileRefusal } from '../src/rules/city';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { claimable, givingYield, tileCost, tileRefusal } from '../src/rules/city';
+import { type Tile, type TileCoords, tileKey } from '../src/rules/map';
+import { RESOURCES } from '../src/rules/resources';
 import { charted } from '../src/rules/sight';
-import type { Chronicle } from '../src/rules/state';
+import { assignedTo, type Chronicle } from '../src/rules/state';
+import { unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
 import { refused } from '../src/ui/refusal-lines';
 import { text } from '../src/ui/text';
@@ -20,10 +22,14 @@ import {
   counted,
   dragTiles,
   drawnFaces,
+  enemyEnteredOn,
   enter,
   type Glyphs,
+  glyphName,
   glyphs,
+  glyphsByStrength,
   glyphsOf,
+  latched,
   launchedAs,
   marksIn,
   nearestUncharted,
@@ -31,6 +37,9 @@ import {
   openSaved,
   playedOut,
   playerCityTile,
+  type Reading,
+  readings,
+  readingsAndUnitMarks,
   refusalLines,
   rested,
   ringedTile,
@@ -40,6 +49,8 @@ import {
   standing,
   thresholdShown,
   tileOnScreen,
+  unitMarksOn,
+  unitsStrength,
   watch,
   wellFill,
   workerStepped,
@@ -82,18 +93,68 @@ function applied(chronicle: Chronicle, command: Command): Chronicle {
   return left;
 }
 
-/** Bare turn 1 with the culture threshold of a claim gained, and charted as a command is. */
-function culturePaid(): Chronicle {
-  const bare = bareTurn();
+/** Bare turn 1, or the turn handed, with the culture threshold of a claim gained, and charted as a command is. */
+function culturePaid(bare = bareTurn()): Chronicle {
   const culture = threshold(bare, firstClaim(bare));
   return charted(CATALOGUE, gained(bare, { culture }).chronicle);
 }
 
 /** Culture paid with the first tile the city may claim claimed: nobody stands on it. */
-function oneClaimed(): { chronicle: Chronicle; claimed: TileCoords } {
-  const paid = culturePaid();
+function oneClaimed(bare = bareTurn()): { chronicle: Chronicle; claimed: TileCoords } {
+  const paid = culturePaid(bare);
   const claimed = firstClaim(paid);
   return { chronicle: applied(paid, { type: 'claim', tile: claimed }), claimed };
+}
+
+/** The tiles the city holds that nobody is assigned to, by the rules, by tile key, in key order. */
+function unassignedHeld(chronicle: Chronicle): string[] {
+  return chronicle.held
+    .filter((tile) => !assignedTo(chronicle, tile))
+    .map(tileKey)
+    .sort();
+}
+
+/** The name a tile's painting stands under. */
+function faceName(tile: TileCoords): string {
+  return `tile-${tileKey(tile)}`;
+}
+
+/**
+ * The tiles the city holds whose painting wears city mode's dark, read off the readings of their
+ * faces, by tile key, in key order.
+ */
+function darkIn(read: (name: string) => Reading, chronicle: Chronicle): string[] {
+  return chronicle.held
+    .filter((tile) => read(faceName(tile)).tint === LOOK.unassigned)
+    .map(tileKey)
+    .sort();
+}
+
+/** The tiles the city holds whose painting wears city mode's dark, in one question to the page. */
+async function darkHeld(page: Page, chronicle: Chronicle): Promise<string[]> {
+  return darkIn(await readings(page, chronicle.held.map(faceName)), chronicle);
+}
+
+/** The names the city's food bar, its culture bar and its badge stand under on its tile. */
+function cityWearing(city: TileCoords): string[] {
+  const key = tileKey(city);
+  return [`city-bar-food-${key}`, `city-bar-culture-${key}`, `population-${key}`];
+}
+
+/** What the faces the map draws of the chronicle are owed, split by whether the tile gives its yield at income. */
+function owedByIncome(
+  chronicle: Chronicle,
+  counted: (face: Tile) => boolean,
+): {
+  full: Glyphs;
+  pale: Glyphs;
+} {
+  const faces = drawnFaces(chronicle);
+  const giving = givingYield(chronicle, 'player');
+  return {
+    full: glyphsOf(chronicle, faces, (face) => counted(face) && giving(face)),
+    pale: glyphsOf(chronicle, faces, (face) => counted(face) && !giving(face)),
+  };
 }
 
 /** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
@@ -389,7 +450,7 @@ test('city mode marks every tile the population stands on, and a second click on
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
   expect(await counted(page, 'assigned')).toBe(bare.assigned.length);
-  expect(await counted(page, 'city-dim')).toBe(bare.held.length - bare.assigned.length);
+  expect(await darkHeld(page, bare)).toEqual(unassignedHeld(bare));
 
   const city = await tileOnScreen(page, own);
   await page.mouse.click(city.x, city.y);
@@ -402,13 +463,13 @@ test('city mode marks every tile the population stands on, and a second click on
   await page.mouse.click(city.x, city.y);
   await playedOut(page);
   expect(await counted(page, 'assigned')).toBe(unassigned.assigned.length);
-  expect(await counted(page, 'city-dim')).toBe(unassigned.held.length - unassigned.assigned.length);
+  expect(await darkHeld(page, unassigned)).toEqual(unassignedHeld(unassigned));
   await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
 
   await page.mouse.click(city.x, city.y);
   await playedOut(page);
   expect(await counted(page, 'assigned')).toBe(bare.assigned.length);
-  expect(await counted(page, 'city-dim')).toBe(bare.held.length - bare.assigned.length);
+  expect(await darkHeld(page, bare)).toEqual(unassignedHeld(bare));
   expect(await inCityMode(page)).toBe(true);
 
   await page.keyboard.press('Escape');
@@ -438,7 +499,7 @@ test('a drag in city mode carries the population onto the tile the city holds an
   await dragTiles(page, own, claimed);
   await expect.poll(() => chronicleOf(page)).toEqual(carried);
   expect(await counted(page, 'assigned')).toBe(carried.assigned.length);
-  expect(await counted(page, 'city-dim')).toBe(carried.held.length - carried.assigned.length);
+  expect(await darkHeld(page, carried)).toEqual(unassignedHeld(carried));
   // The tile it landed on takes the ring, so the next press on it is the city's next act there.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(claimed));
 
@@ -633,6 +694,102 @@ test('city mode shows what every tile inside the border yields, and nothing of a
   await page.keyboard.press('Escape');
   await expect.poll(() => inCityMode(page)).toBe(false);
   expect(await glyphs(page)).toEqual(noGlyphs());
+
+  expect(problems).toEqual([]);
+});
+
+test('city mode marks the assigned tile, darkens the held tiles nobody is assigned to and no unit on them, pales the glyphs of every tile not giving its yield at income, fades every unit and takes the city’s bars and badge off, and leaving it puts each back', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle: claimedOn, claimed } = oneClaimed(settledOn(1, ['first-worker']));
+  const own = playerCityTile(claimedOn);
+  const chronicle = applied(claimedOn, { type: 'reassign', from: own, to: claimed });
+  const every = owedByIncome(chronicle, () => true);
+  // The worker stands on the city's own tile, which nobody is assigned to once the population is carried off it.
+  expect(unitAt(chronicle.units, own)).toBeDefined();
+  expect(unassignedHeld(chronicle)).toContain(tileKey(own));
+  expect(every.full).not.toEqual(noGlyphs());
+  expect(every.pale).not.toEqual(noGlyphs());
+
+  await openSaved(page, chronicle);
+  await page.keyboard.press('Tab');
+  await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
+  const [worker] = await unitMarksOn(page, [own]);
+
+  const wearing = cityWearing(own);
+  const names = [
+    'assigned',
+    ...chronicle.held.map(faceName),
+    ...RESOURCES.map(glyphName),
+    ...wearing,
+  ];
+  /** Everything city mode changes, read as it stands. */
+  const worn = async () => {
+    const { read, unitMarkOn } = await readingsAndUnitMarks(page, names, [own]);
+    return {
+      assigned: read('assigned').count,
+      dark: darkIn(read, chronicle),
+      worker: unitMarkOn(own),
+      glyphs: glyphsByStrength(read),
+      units: await unitsStrength(page),
+      city: wearing.map((name) => read(name).shows),
+    };
+  };
+  const out = {
+    assigned: 0,
+    dark: [],
+    worker,
+    glyphs: { full: glyphsOf(chronicle, drawnFaces(chronicle)), pale: noGlyphs() },
+    units: 1,
+    city: [true, true, true],
+  };
+  expect(await worn()).toEqual(out);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  expect(await worn()).toEqual({
+    assigned: chronicle.assigned.length,
+    dark: unassignedHeld(chronicle),
+    worker,
+    glyphs: every,
+    units: LOOK.unitsInCityMode,
+    city: [false, false, false],
+  });
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+  expect(await worn()).toEqual(out);
+
+  expect(problems).toEqual([]);
+});
+
+test('in city mode an assigned tile an enemy occupies keeps its mark and its painting, and its glyphs stand paler', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const bare = bareTurn();
+  const own = playerCityTile(bare);
+  const beset = enemyEnteredOn(bare, own);
+  if (beset === undefined) throw new Error(`turn ${bare.turn} enters no enemy on the city's tile`);
+  const { chronicle } = beset;
+  const held = new Set(chronicle.held.map(tileKey));
+  const inside = owedByIncome(chronicle, (face) => held.has(tileKey(face)));
+  expect(chronicle.assigned.map(tileKey)).toContain(tileKey(own));
+  expect(givingYield(chronicle, 'player')(own)).toBe(false);
+
+  await openSaved(page, chronicle);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const names = ['assigned', ...chronicle.held.map(faceName), ...RESOURCES.map(glyphName)];
+  const read = await readings(page, names);
+  expect(read('assigned').count).toBe(chronicle.assigned.length);
+  expect(darkIn(read, chronicle)).toEqual(unassignedHeld(chronicle));
+  expect(unassignedHeld(chronicle)).not.toContain(tileKey(own));
+  expect(glyphsByStrength(read)).toEqual(inside);
+  expect(inside.full).toEqual(noGlyphs());
+  expect(inside.pale).not.toEqual(noGlyphs());
 
   expect(problems).toEqual([]);
 });
