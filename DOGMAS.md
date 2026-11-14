@@ -51,7 +51,7 @@ How an age is authored:
 - **A card name is content, not vocabulary.** Prose cites a card by its verbatim name; code reaches it only through its text key, never a re-typed literal.
 - **A goal's sentence is the plain deed with its numbers**, never a state with its exceptions; naming two things, the count comes first.
 - **Card text is the shortest phrasing that is unambiguous.** Then shorten it again.
-- **A player-facing entry ends in no period**, the ending screen's excepted, and an answer addresses the player and reads its cost in its text.
+- **A player-facing entry ends in no period**, the ending screen's and a window's own sentences excepted, and an answer addresses the player and reads its cost in its text.
 - **A count never stands in a sentence's subject.** A player-facing sentence takes a singular subject so one entry serves every number, and a reference is never pluralised.
 - **UI tooltips are glanceable one-liners** — what it is, where it comes from. They name no specific card or scenario and explain no mechanic; the codex is for learning, tooltips are for players who already know.
 - **Explanatory text stays generic.** Onboarding copy describes systems, never the specific content the player is about to meet.

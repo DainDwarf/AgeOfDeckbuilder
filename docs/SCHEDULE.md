@@ -14,7 +14,7 @@ On a due turn, and no sooner, the Events phase deals one event, seeded and weigh
 
 **An event carries lore**: a short fiction, a sentence or three, saying what is happening to the player's city, since an answer read alone makes no sense. A capture that deals rewards carries one too, and the capstone one for each time its window is raised. Lore is fiction and not rules: it decides nothing, what an answer does is on its card, and the glossary does not bind it, so it says tribe where the rules say population.
 
-The schedule escalates in what lands, never in how often or in what it draws: every event weighs the same on every turn, and an event dealt late is harsher than one dealt early, whichever answer is chosen.
+The schedule escalates in what lands, never in how often or in what it draws: every event weighs the same on every turn, and an event that escalates lands harsher late than early, whichever answer is chosen.
 
 Events are not announced: the player learns each one when it lands. The capstone is the exception in what, never in when: the player knows the trial from the chronicle's opening and learns its turn when it lands. A card may show the turn of the next landing: the turn the next event is due on, or the capstone's where it lands first, read as an event's and never saying which. The turn is shown from the card's play until it comes, and a card that would show it is refused while one is shown. What lands is still learned when it lands.
 
