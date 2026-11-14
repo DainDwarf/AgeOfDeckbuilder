@@ -84,7 +84,7 @@ function warriorAStepFromAnEnemy(): {
 }
 
 /** The glyph at a health bar's foot, as `docs/LOOK.md` names it: a heart, and a skull where the attack read would kill. */
-const GLYPHS = { heart: 'game-icons/hearts.svg', skull: 'game-icons/death-skull.svg' };
+const GLYPHS = { heart: 'material-design-icons/heart.svg', skull: 'game-icons/death-skull.svg' };
 
 /**
  * The health bar a unit wears as the rules read it, with the attack of that damage read on it or

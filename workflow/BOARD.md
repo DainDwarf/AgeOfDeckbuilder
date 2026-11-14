@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The cast** — the twenty glyphs of the cast stand under `public/assets/`, five in `game-icons/` and fifteen in `material-design-icons/` filled white with the Pictogrammers' licence and the Apache 2.0 text beside them, each with its author in `public/assets/LICENSES.md`; the health bar's heart and a capture's badge wear the cast's, Skoll's Hearts and Lorc's Flying flag gone with their credits; and `docs/LOOK.md` names the cast. Doc-impact: `docs/LOOK.md`, `docs/ASSET-SOURCES.md`. [board/the-cast.md](board/the-cast.md)
 - **One glyph renderer** — every diamond the screens draw becomes its glyph through one renderer, at the diamond's size and in its colour, on the map, the cards, the infopanel, the bars, the plates, the tree, the collection and the ending, and the design pages that say diamond say glyph.
 - **The yield overlay** — the overlay reworked with the glyphs over the map: its dim, whether the dim lies over the selection's marks, and whether the yield glyphs stand over the path and the units.
 - **City mode's worked and unworked tiles** — the population's glyph as the mark of a worked tile and the dim of a held tile nobody works, decided together, with the canoe and the unit that cover the mark.

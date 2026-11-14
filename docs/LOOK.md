@@ -11,6 +11,33 @@ Everything drawn is one of two families, and each has one job.
 
 A painted world under flat symbols is the convention of the genre, and the two families do not read as two styles because they never do the same job.
 
+## The cast ✅
+
+Each symbol wears one glyph, and a meaning wears that one sign wherever it is read: health's heart at the foot of a health bar and on a unit's card, the flame and the flag on a prepared unit's badge and on its card's state line, move's arrows for a terrain's movement cost, population's sign for the idle count and for a worked tile.
+
+| Symbol | Its sign | From |
+| --- | --- | --- |
+| Food | an apple | Material Design Icons, `food-apple` |
+| Production | a hammer | Material Design Icons, `hammer` |
+| Military | two crossed swords | Material Design Icons, `sword-cross` |
+| Money | two coins | game-icons.net, Delapouite's Two coins |
+| Science | a lit bulb | Material Design Icons, `lightbulb-on` |
+| Culture | two joined notes | Material Design Icons, `music` |
+| Population | a head and shoulders | Material Design Icons, `account` |
+| Influence | a star | Material Design Icons, `star` |
+| Health | a heart | Material Design Icons, `heart` |
+| Damage | a sword | Material Design Icons, `sword` |
+| Bonus | two chevrons pointing up | Material Design Icons, `chevron-double-up` |
+| Range | a ring under a cross, a sight's | Material Design Icons, `target` |
+| Move | four arrows from one point | Material Design Icons, `arrow-all` |
+| Action | a fist | game-icons.net, Skoll's Fist |
+| Sight | an eye | Material Design Icons, `eye` |
+| Embarked | an anchor | Material Design Icons, `anchor` |
+| Pillaging | a flame | game-icons.net, sbed's Fire |
+| Capturing | a flag | Material Design Icons, `flag-variant` |
+| Hostile | two crossed axes | game-icons.net, Lorc's Crossed axes |
+| An attack that would kill | a skull | game-icons.net, sbed's Death skull |
+
 ## The map ✅
 
 **The terrain** is his painted hexes, drawn on his lattice: his hexes are painted for rows three quarters of a tile's width apart where a regular hexagon's rows are 0.866 of it, so the map draws its rows that much closer and every hexagon it draws squashed by the same amount, the rules' geometry untouched. His art rises above its hex into the row behind, and a tile's face is drawn behind the row in front of it. A terrain with several paintings spreads them over its tiles, each tile's painting picked by its place on the disc, so a face never changes under the player's eye and one seed always deals one picture.
@@ -71,5 +98,5 @@ Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's
 
 - **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, his painted objects, his resource icons and his arms and armour icons, and the ancient objects he sent by mail. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
-- **Material Design Icons**, the Pictogrammers' set, Apache 2.0, a glyph that came to the set under terms of its own keeping them: each glyph's terms are read on its own page as it enters, its author is named in the licence record, and the licence ships beside the files.
+- **Material Design Icons**, the Pictogrammers' set, Apache 2.0 for every icon but those of its Brand / Logos category, which the game takes none of: each glyph's categories are read on its own page as it enters, its author is named in the licence record, a file the game changed says so, and the licence ships beside the files.
 - **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.

@@ -404,7 +404,7 @@ function haloFrame(picture: UnitPicture): Made {
 /** The glyph a prepared unit's badge wears by what its prepare lands as, white, under the assets folder. */
 const PREPARED_GLYPHS: Readonly<Record<PreparedAs, string>> = {
   pillage: 'game-icons/fire.svg',
-  capture: 'game-icons/flying-flag.svg',
+  capture: 'material-design-icons/flag-variant.svg',
 };
 
 /** How many pixels a side a glyph is rasterised at: past what it covers at the closest zoom. */
@@ -418,7 +418,7 @@ export function preparedGlyphOf(prepares: PreparedAs): string {
 /** A glyph standing at a health bar's foot: its file, white, how many units across its square is drawn, and its colour. */
 type BarGlyph = { readonly file: string; readonly across: number; readonly colour: number };
 
-const HEART: BarGlyph = { file: 'game-icons/hearts.svg', across: 6, colour: LOOK.heart };
+const HEART: BarGlyph = { file: 'material-design-icons/heart.svg', across: 6, colour: LOOK.heart };
 const SKULL: BarGlyph = { file: 'game-icons/death-skull.svg', across: 8, colour: LOOK.skull };
 
 /** How wide every dark edge on a unit's marks is, the painting's dark line excepted, in the map's units. */

@@ -78,7 +78,7 @@ function farmBesetInFog(campaign: Campaign): { chronicle: Chronicle; farm: TileC
 /** The glyph a badge wears for what a prepare lands as, as `docs/LOOK.md` names it: a flame, a flag. */
 const GLYPHS: Record<PreparedAs, string> = {
   pillage: 'game-icons/fire.svg',
-  capture: 'game-icons/flying-flag.svg',
+  capture: 'material-design-icons/flag-variant.svg',
 };
 
 /** What the prepare of the unit standing on the tile lands as, as the rules read it. */

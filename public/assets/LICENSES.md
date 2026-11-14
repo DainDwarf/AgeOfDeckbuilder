@@ -46,6 +46,12 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 
 ## game-icons.net
 
-- **What:** four glyphs, white on nothing, in `game-icons/`: Fire by sbed, Flying flag by Lorc, Hearts by Skoll and Death skull by sbed.
-- **From:** <https://game-icons.net>, `1x1/sbed/fire`, `1x1/lorc/flying-flag`, `1x1/skoll/hearts` and `1x1/sbed/death-skull`, the SVG files as downloaded on the day they entered.
-- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" by sbed, <http://opengameart.org/content/95-game-icons>, "Flying flag" by Lorc, <https://lorcblog.blogspot.com>, "Hearts" by Skoll, and "Death skull" by sbed, <http://opengameart.org/content/95-game-icons>, from game-icons.net under CC BY 3.0. The files may be modified; this record ships with the build and is their credit until the credits screen reads it.
+- **What:** five glyphs, white on nothing, in `game-icons/`: Fire by sbed, Death skull by sbed, Two coins by Delapouite, Fist by Skoll and Crossed axes by Lorc.
+- **From:** <https://game-icons.net>, `1x1/sbed/fire`, `1x1/sbed/death-skull`, `1x1/delapouite/two-coins`, `1x1/skoll/fist` and `1x1/lorc/crossed-axes`, the SVG files as downloaded on the day they entered.
+- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" and "Death skull" by sbed, <http://opengameart.org/content/95-game-icons>, "Two coins" by Delapouite, <https://delapouite.com>, "Fist" by Skoll, and "Crossed axes" by Lorc, <https://lorcblog.blogspot.com>, from game-icons.net under CC BY 3.0. The files may be modified; this record ships with the build and is their credit until the credits screen reads it.
+
+## Material Design Icons
+
+- **What:** fifteen glyphs, white on nothing, in `material-design-icons/`, the Pictogrammers' licence and the Apache 2.0 text beside them: `food-apple`, `lightbulb-on`, `music`, `sword`, `chevron-double-up`, `arrow-all` and `flag-variant` by Austin Andrews; `hammer`, `account`, `star`, `heart`, `eye` and `anchor` by Google; `sword-cross` by Michael Richins; `target` by Doug C. Hardester.
+- **From:** the Pictogrammers, <https://pictogrammers.com/library/mdi/>, the `@mdi/svg` package, version 7.4.47. Each file is changed in one thing, its path filled white, and a comment in the file says so.
+- **Licence:** Apache 2.0, <https://www.apache.org/licenses/LICENSE-2.0>, for every icon but those of the set's Brand / Logos category, as <https://pictogrammers.com/docs/general/license/> has it; none of the fifteen is in that category, each glyph's page read on 2026-11-14. The licence's text ships beside the files and a changed file says it was changed; no credit is required.
