@@ -19,4 +19,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A building's reach drawn** — a building that gives to the tiles beside it shows which, when its tile is selected and when its card is aimed.
+- **The yield an aimed card would give** — while a card is being aimed and the pointer is on a tile its aim admits, where its play would place a building or an improvement, that tile and each tile beside it the building would give to wear a plate reading a plus sign and one glyph to each point of yield given, fainter where one of the building's kind already gives, and gone when the pointer leaves the tile; the rules answer what the play would give, tile by tile, and the neutral's worker asks them the same question; `e2e/aimed-yield.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`. [board/the-yield-an-aimed-card-would-give.md](board/the-yield-an-aimed-card-would-give.md)
