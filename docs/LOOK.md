@@ -1,6 +1,6 @@
 # The look
 
-> The game's look: the one hand every picture is painted in, how the map, the pieces on it and the cards wear it, and the terms of the packs it comes from. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. How the chronicle screen is worked is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s; what the map is made of is [`MAP.md`](MAP.md)'s; [`../DOGMAS.md`](../DOGMAS.md) holds the rules every asset enters by.
+> The game's look: the one hand every picture is painted in, how the map, the pieces on it and the cards wear it, and the terms of the packs it comes from. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. How the chronicle screen is worked is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s, and its map [`MAP-SCREEN.md`](MAP-SCREEN.md)'s; what the map is made of is [`MAP.md`](MAP.md)'s; [`../DOGMAS.md`](../DOGMAS.md) holds the rules every asset enters by.
 
 ## Two families ✅
 

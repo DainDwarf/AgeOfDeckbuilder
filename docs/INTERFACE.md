@@ -1,6 +1,6 @@
 # Interface
 
-> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the address, a failed boot, a refused save, the debug console, the window, the three presses, what a press lands on, the aim and the drag, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s, and to one only the meta has, [`META-SCREENS.md`](META-SCREENS.md)'s.
+> How any screen is worked: the menu and what it lists, the keys and how they are rebound, the address, a failed boot, a refused save, the debug console, the window, the three presses, what a press lands on, the aim and the drag, a card's names and its label, and what stands over what. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. What a press does to a thing only a chronicle has is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md)'s and [`MAP-SCREEN.md`](MAP-SCREEN.md)'s, and to one only the meta has, [`META-SCREENS.md`](META-SCREENS.md)'s.
 
 ## The menu ✅
 

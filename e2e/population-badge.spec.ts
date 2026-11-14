@@ -44,7 +44,7 @@ function badgeOn(key: string): {
   return { pill, number: `${pill}-number`, bars };
 }
 
-/** The threshold the player's city's stock stands against, as `docs/CHRONICLE-SCREEN.md` names it. */
+/** The threshold the player's city's stock stands against, as `docs/MAP-SCREEN.md` names it. */
 function standsAgainst(chronicle: Chronicle, stock: CityBarStock): number {
   switch (stock) {
     case 'food':

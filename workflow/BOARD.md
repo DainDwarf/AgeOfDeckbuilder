@@ -19,5 +19,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The chronicle screen page cut at its seams** — on `docs/CHRONICLE-SCREEN.md` "The map" is half the page and its selection paragraph holds seven subjects.
 - **The Phaser page re-sectioned** — `docs/PHASER.md`'s "Scenes and stacking" and "Rendering under WebGL" have become catch-alls, so a tween, a Text or a clock fact is found only by search.

@@ -1,6 +1,6 @@
 # Chronicle
 
-> The rules a chronicle is played by. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. The map they are played on is [`MAP.md`](MAP.md); the other factions on it are [`FACTIONS.md`](FACTIONS.md)'s and the schedule they live through [`SCHEDULE.md`](SCHEDULE.md)'s; the screen that shows them is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md).
+> The rules a chronicle is played by. A design page, under [`DESIGN.md`](DESIGN.md)'s legend. The map they are played on is [`MAP.md`](MAP.md); the other factions on it are [`FACTIONS.md`](FACTIONS.md)'s and the schedule they live through [`SCHEDULE.md`](SCHEDULE.md)'s; the screen that shows them is [`CHRONICLE-SCREEN.md`](CHRONICLE-SCREEN.md), and the map on it [`MAP-SCREEN.md`](MAP-SCREEN.md).
 
 ## The settle phase ✅
 
