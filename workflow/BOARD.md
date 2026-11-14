@@ -18,7 +18,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **One glyph renderer** — every diamond the screens draw becomes its glyph through one renderer, at the diamond's size and in its colour, on the map, the cards, the infopanel, the bars, the plates, the tree, the collection and the ending, and the design pages that say diamond say glyph.
+- **One glyph renderer** — nothing under `src/ui/` draws a turned square: every symbol the screens draw, on the map, the cards, the infopanel, the bars, the deck panel, the plates, the tree, the collection and the ending, is its cast glyph through one renderer, its square the diamond's corner to corner, in the colours picked on the cast's page over a dark outline half a unit wide; the heart, the skull and a badge's glyph are drawn through it too; a cost the city cannot pay is marked by its red number alone; and the design pages that said diamond say the symbol's glyph. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`, `docs/META-SCREENS.md`, `docs/CHRONICLE-SCREEN.md`. [board/one-glyph-renderer.md](board/one-glyph-renderer.md)
 - **The yield overlay** — the overlay reworked with the glyphs over the map: its dim, whether the dim lies over the selection's marks, and whether the yield glyphs stand over the path and the units.
 - **City mode's worked and unworked tiles** — the population's glyph as the mark of a worked tile and the dim of a held tile nobody works, decided together, with the canoe and the unit that cover the mark.
 - **The resource bar in glyphs** — the resource bar reads each stock as its glyph and its number with no word, the meta screens' influence reading too, and a tooltip names what the word named.
