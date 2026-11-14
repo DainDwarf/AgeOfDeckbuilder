@@ -1000,8 +1000,8 @@ export function unitMark(
   return mark;
 }
 
-// A stroked diamond is a square turned: a stroked polygon comes out open (docs/PHASER.md, under
-// WebGL). One drawn with no outline, as the card face draws its own, meets none of it.
+// A stroked diamond is a square turned: a stroked polygon comes out open (docs/PHASER.md). One
+// drawn with no outline, as the card face draws its own, meets none of it.
 /** A diamond the map outlines: `span` corner to corner, in the colour given. */
 export function diamond(
   scene: Phaser.Scene,

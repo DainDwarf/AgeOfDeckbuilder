@@ -189,7 +189,7 @@ export function standLarge(
   },
 ): StandingLarge {
   const scrim = createScrim(overlay, () => takeDownNewest())
-    // Over the window beneath, whose pieces join this stratum later (docs/PHASER.md, Scenes and stacking).
+    // Over the window beneath, whose pieces join this stratum later (docs/PHASER.md).
     .setDepth(1);
   overlay.strata.scrim.layer.add(scrim);
   const stack = createStack(overlay, catalogue, beneath.footBubble);

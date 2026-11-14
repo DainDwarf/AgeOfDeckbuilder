@@ -116,7 +116,7 @@ export function createPiles(
   const putCarrierAway = (): void => {
     if (carried === undefined) return;
     stopMotion(scene, carrier);
-    // A Layer's `add` leaves its child in the Container (docs/PHASER.md, Scenes and stacking).
+    // A Layer's `add` leaves its child in the Container (docs/PHASER.md).
     carrier.remove(carried.root);
     on.resting.layer.add(carried.root.setVisible(false));
     shuffledBack.setVisible(false);

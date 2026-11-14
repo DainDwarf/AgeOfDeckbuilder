@@ -18,5 +18,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
-
-- **The Phaser page re-sectioned** — `docs/PHASER.md`'s "Scenes and stacking" and "Rendering under WebGL" have become catch-alls, so a tween, a Text or a clock fact is found only by search.
