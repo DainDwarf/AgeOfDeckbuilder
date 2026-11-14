@@ -13,7 +13,7 @@ export type MapStrata = {
   readonly selection: Stratum;
   /** The units, and over them a city's bars and its badge. */
   readonly units: Stratum;
-  /** The yield glyphs and the culture threshold. */
+  /** The yield glyphs, and over them the culture threshold and what an aimed card would give. */
   readonly yields: Stratum;
   readonly infopanel: Stratum;
   readonly note: Stratum;

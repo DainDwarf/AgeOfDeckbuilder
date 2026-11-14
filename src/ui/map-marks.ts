@@ -19,7 +19,7 @@ import {
   water,
 } from '../rules/map';
 import type { MapContent } from '../rules/map-kinds';
-import type { Resource } from '../rules/resources';
+import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import type { CityBar, CityBarStock } from './city-bar';
@@ -66,6 +66,7 @@ import {
   unitPaintingOf,
   VOIDS,
 } from './marks';
+import { type Pool, poolOf } from './pool';
 import { text } from './text';
 
 export const TILE_SIZE = 24;
@@ -150,6 +151,10 @@ const THRESHOLD_GLYPH = 8;
 const THRESHOLD_GAP = 3;
 const THRESHOLD_PLATE_HEIGHT = 16;
 const THRESHOLD_PLATE_PAD = 4;
+
+/** On the plate of the yield an aimed card would give: the gap after its sign, and between two glyphs. */
+const SIGN_GAP = 2;
+const GIVEN_GLYPH_GAP = 1.5;
 
 /** A city's badge: how tall it is, the pad on each side of its number, and how the number reads. */
 const CITY_BADGE_HEIGHT = 14;
@@ -1111,6 +1116,46 @@ export function showThreshold(mark: ThresholdMark, coord: TileCoords, cost: Cost
   drawPlate(mark, width);
   const { x, y } = positionOf(coord);
   root.setPosition(x, y).setVisible(true);
+}
+
+/** What a tile would be given by the card being aimed: the plus sign and its glyphs on their plate. */
+export type GivenPlate = PlatedNumber & { readonly glyphs: Pool<Phaser.GameObjects.Rectangle> };
+
+export function givenPlate(scene: Phaser.Scene): GivenPlate {
+  const plate = platedNumber(scene, 'aimed-yield');
+  plate.number.setText(text('aim.yield'));
+  return { ...plate, glyphs: poolOf(plate.root, () => diamond(scene, THRESHOLD_GLYPH, 0)) };
+}
+
+/** What a tile would be given, on its middle: one diamond to each point, in the resource bar's order. */
+export function showGiven(
+  plate: GivenPlate,
+  coord: TileCoords,
+  yields: Partial<Resources>,
+  already: boolean,
+): void {
+  const { root, number, glyphs } = plate;
+  const owed = RESOURCES.flatMap((resource) =>
+    Array<Resource>(yields[resource] ?? 0).fill(resource),
+  );
+  const sign = ownBoxOf(number).width;
+  const width =
+    sign + SIGN_GAP + owed.length * THRESHOLD_GLYPH + (owed.length - 1) * GIVEN_GLYPH_GAP;
+  number.setX((sign - width) / 2);
+  glyphs.hide();
+  owed.forEach((resource, at) => {
+    const left = sign + SIGN_GAP + at * (THRESHOLD_GLYPH + GIVEN_GLYPH_GAP) - width / 2;
+    glyphs
+      .take()
+      .setFillStyle(LOOK.reading[resource])
+      .setX(left + THRESHOLD_GLYPH / 2);
+  });
+  drawPlate(plate, width);
+  const { x, y } = positionOf(coord);
+  root
+    .setPosition(x, y)
+    .setAlpha(already ? LOOK.givenAlready : 1)
+    .setVisible(true);
 }
 
 /** A count of hundredths as the move points it is worth: what every card reads one by. */

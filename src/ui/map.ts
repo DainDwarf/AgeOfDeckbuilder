@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { GivenTo } from '../rules/cards';
 import { ageOf, type Catalogue, damageOf, fullHealth } from '../rules/catalogue';
 import {
   anythingByHand,
@@ -78,6 +79,7 @@ import {
   FEATURE_DISC,
   featureMarksOn,
   featureToldOn,
+  givenPlate,
   IMPROVEMENT_DISC,
   improvementLyingOf,
   improvementMarksOn,
@@ -95,6 +97,7 @@ import {
   shoreOn,
   showCityBadge,
   showCityBar,
+  showGiven,
   showThreshold,
   TILE_SIZE,
   type TileObjects,
@@ -127,7 +130,7 @@ import {
   paintingOn,
   RIVER_SHEET,
 } from './marks';
-import { asPainted, poolOf } from './pool';
+import { asPainted, poolOf, rootedPoolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';
 
 /** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
@@ -180,18 +183,23 @@ export type Drawn = {
   readonly snapshot?: Snapshot;
 };
 
-/** What a card being aimed admits as the map shows it: the tiles it lights, and the tiles whose units it rings. */
+/**
+ * What a card being aimed admits as the map shows it: the tiles it lights, the tiles whose units it
+ * rings, and what its play at a tile it lights would give, read on the faces the map draws.
+ */
 export type AimShown = {
   readonly tiles: readonly TileCoords[];
   readonly units: readonly TileCoords[];
+  readonly gives: (tile: TileCoords, faces: TilesBeside) => readonly GivenTo[];
 };
 
 export type MapView = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Lights the tiles it is given and rings the units, those the map draws, aims at their tiles, and
-   * answers the way to let the aim go, which `released` follows.
+   * Lights the tiles it is given and rings the units, those the map draws, aims at their tiles,
+   * plates what the lit tile the pointer is on would give, and answers the way to let the aim go,
+   * which `released` follows.
    */
   aimTile(
     admitted: AimShown,
@@ -452,6 +460,7 @@ export function createMapView(
 
   const thresholdOnTile = thresholdMark(scene);
   thresholds.add(thresholdOnTile.root);
+  const givenPool = rootedPoolOf(thresholds, () => givenPlate(scene));
 
   const cityBars: Record<CityBarStock, Phaser.GameObjects.Container> = {
     food: cityBarMarker(scene),
@@ -491,6 +500,21 @@ export function createMapView(
 
   /** The tile wearing the culture threshold and what it asks for; nothing while no tile wears one. */
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
+
+  /**
+   * The card being aimed as the pointer reads it: the catcher its aim runs on, the tiles it rims,
+   * and what its play at one would give; nothing while no card is aimed.
+   */
+  let aiming:
+    | {
+        readonly catcher: Phaser.GameObjects.Zone;
+        readonly rimmed: readonly TileCoords[];
+        readonly gives: AimShown['gives'];
+      }
+    | undefined;
+
+  /** The lit tile the pointer is on and what the play there would give; nothing while it is on none. */
+  let plated: { readonly tile: TileCoords; readonly gives: readonly GivenTo[] } | undefined;
 
   /**
    * The ground every aim runs on: its own catcher, a group for its rims on the selection's stratum
@@ -561,6 +585,13 @@ export function createMapView(
     return best <= TILE_SIZE ? nearest : undefined;
   };
 
+  /** The drawn tile the pointer stands over, and nothing where it stands over none. */
+  const pointerTile = (): TileCoords | undefined => {
+    const pointer = scene.input.activePointer;
+    const at = map.at(pointer.x, pointer.y);
+    return tileUnder(at.x, at.y);
+  };
+
   /**
    * The glyphs of every tile the map draws: none on the tile wearing the culture threshold, what it
    * yields of every resource on a tile inside the border while city mode is on, and what the overlay
@@ -603,6 +634,17 @@ export function createMapView(
   const paintThreshold = (): void => {
     thresholdOnTile.root.setVisible(false);
     if (threshold !== undefined) showThreshold(thresholdOnTile, threshold.tile, threshold.cost);
+  };
+
+  /** A plate on each tile the play under the pointer would give to, its sign at the map's zoom. */
+  const paintPlates = (): void => {
+    givenPool.hide();
+    const resolution = frame.atZoom();
+    for (const { tile, yields, already } of plated?.gives ?? []) {
+      const plate = givenPool.take();
+      if (plate.number.style.resolution !== resolution) plate.number.setResolution(resolution);
+      showGiven(plate, tile, yields, already);
+    }
   };
 
   /**
@@ -650,6 +692,7 @@ export function createMapView(
       if (label.style.resolution !== resolution) label.setResolution(resolution);
     }
     paintThreshold();
+    paintPlates();
     paintCityBadges();
   };
 
@@ -1116,9 +1159,7 @@ export function createMapView(
   const followPointer = (): void => {
     if (lit === undefined || !lit.aimed || presser === undefined) return;
     if (thingUnder(scene.game) !== presser) return;
-    const pointer = scene.input.activePointer;
-    const at = map.at(pointer.x, pointer.y);
-    const tile = tileUnder(at.x, at.y);
+    const tile = pointerTile();
     if (tile === undefined) return;
     if (sameTile(tile, lit.standing.tile)) {
       if (pointerReading !== undefined) showReading(undefined);
@@ -1128,8 +1169,32 @@ export function createMapView(
     const read = readingOn(tile);
     if (read !== undefined) showReading(read);
   };
+
+  /**
+   * The pointer read once a frame while a card is being aimed: a lit tile it is on wears what the
+   * play there would give, and anywhere else, the plates go.
+   */
+  const followAim = (): void => {
+    if (aiming === undefined) return;
+    const tile = thingUnder(scene.game) === aiming.catcher ? pointerTile() : undefined;
+    const on =
+      tile === undefined ? undefined : aiming.rimmed.find((coord) => sameTile(coord, tile));
+    const was = plated?.tile;
+    if (on === was || (on !== undefined && was !== undefined && sameTile(on, was))) return;
+    platesOn(on);
+  };
+
+  /** The plates of what the card being aimed would give at the tile, on the faces the map draws now. */
+  const platesOn = (tile: TileCoords | undefined): void => {
+    plated =
+      tile === undefined || aiming === undefined || shown === undefined
+        ? undefined
+        : { tile, gives: aiming.gives(tile, facesIn({ drawn, live, charted }, shown.tiles)) };
+    paintPlates();
+  };
   // Outside Phaser's dispatch: a hit test inside it refills the list being walked (docs/PHASER.md).
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followPointer);
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followAim);
 
   /**
    * Every border on the chronicle the map stands on, darkened in fog: both cities' around each one's
@@ -1213,6 +1278,7 @@ export function createMapView(
     paintCityMarks();
     paintYields();
     lightUnit(selectedUnit());
+    platesOn(plated?.tile);
   };
 
   const motion = createMapMotion(scene, {
@@ -1395,17 +1461,20 @@ export function createMapView(
       const { catcher, rims, close } = openAim();
       const drawnOnes = (tiles: readonly TileCoords[]): TileCoords[] =>
         tiles.filter((coord) => drawn.has(tileKey(coord)));
-      const lit = drawnOnes(admitted.tiles);
-      for (const coord of lit) {
+      const rimmed = drawnOnes(admitted.tiles);
+      for (const coord of rimmed) {
         const { x, y } = positionOf(coord);
         rims.add(scene.add.container(x, y, selectionMarks()).setData('tile', tileKey(coord)));
       }
       const ringing = drawnOnes(admitted.units);
       aimRinged = ringing;
       paintRings();
+      const read = { catcher, rimmed, gives: admitted.gives };
+      aiming = read;
+      platesOn(undefined);
 
       const click = (tile: TileCoords): void => {
-        if ([...lit, ...ringing].some((coord) => sameTile(coord, tile))) chosen(tile);
+        if ([...rimmed, ...ringing].some((coord) => sameTile(coord, tile))) chosen(tile);
         else refused(pressedOn(tile));
       };
       aimClicked = click;
@@ -1420,6 +1489,10 @@ export function createMapView(
           aimRinged = [];
           paintRings();
         }
+        if (aiming === read) {
+          aiming = undefined;
+          platesOn(undefined);
+        }
         released();
       };
     },
@@ -1428,9 +1501,7 @@ export function createMapView(
       on: Phaser.GameObjects.GameObject | undefined,
     ): { readonly tile: TileCoords | undefined } | undefined {
       if (!(on instanceof Phaser.GameObjects.Zone) || !frame.catches(on)) return undefined;
-      const pointer = scene.input.activePointer;
-      const at = map.at(pointer.x, pointer.y);
-      return { tile: tileUnder(at.x, at.y) };
+      return { tile: pointerTile() };
     },
 
     carried: frame.carried,

@@ -69,6 +69,11 @@ export type Look = {
    * colour over the grey of a threshold not yet met.
    */
   readonly addedByTurn: number;
+  /**
+   * The strength the plate of the yield a card being aimed would give stands at on a tile one of the
+   * building's kind already gives to.
+   */
+  readonly givenAlready: number;
   readonly settlePhase: number;
   readonly panelFill: number;
   readonly panelEdge: number;
@@ -187,6 +192,7 @@ export const LOOK: Look = {
   skull: 0xf2f6ff,
   thresholdNotMet: 0x3a4049,
   addedByTurn: 0.45,
+  givenAlready: 0.45,
   settlePhase: 0x9fbb3a,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,

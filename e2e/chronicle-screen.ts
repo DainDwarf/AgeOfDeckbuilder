@@ -2492,6 +2492,54 @@ export function paidOnDeer(
   return paidOnGround(card, (opened) => onDeer(opened, improvements), campaign);
 }
 
+/** The card that builds the Fishery, and the building it builds. */
+export const FISHERY = 'fishery';
+
+/**
+ * Turn 2 of the first seed whose turn 1 holds Embark, two tiles beside the city and each other made
+ * coast, the first claimed and a worker embarked onto it, the Fishery drawn and paid for, on what
+ * `ground` makes of it: its tile, and the coast beside it outside the border.
+ */
+export function fisheryAdmitted(
+  campaign: Campaign,
+  ground: (paid: Chronicle, tile: TileCoords, beside: TileCoords) => Chronicle | undefined = (
+    paid,
+  ) => paid,
+): Paid & { readonly beside: TileCoords } {
+  const { terrains, givesBeside } = buildingKind(CATALOGUE, FISHERY);
+  if (givesBeside === undefined) throw new Error(`${FISHERY} gives nothing beside it`);
+  const [shore] = terrains;
+  return firstSeed(`opens turn 1 on ${EMBARK} in hand with ground to make coast`, (seed) => {
+    const opened = settledOn(seed, [], campaign);
+    const city = playerCityTile(opened);
+    if (!idsOf(opened.hand).includes(EMBARK) || unitAt(opened.units, city) !== undefined) {
+      return undefined;
+    }
+    for (const tile of neighbours(city)) {
+      for (const beside of neighbours(city).filter((other) => distance(other, tile) === 1)) {
+        const wet = followed(terraformed(CATALOGUE, opened, tile, shore), (left) =>
+          terraformed(CATALOGUE, left, beside, givesBeside.terrain),
+        ).chronicle;
+        if (tileAt(wet.tiles, tile)?.terrain !== shore) continue;
+        if (tileAt(wet.tiles, beside)?.terrain !== givesBeside.terrain) continue;
+        const claimed = claimedAt(wet, tile);
+        if (claimed === undefined) continue;
+        const manned = unitEntered(claimed, { type: WORKER, faction: 'player', tile: city });
+        const embarking = paidFor(manned, EMBARK);
+        if (!admits(embarking.chronicle, embarking.index, tile)) continue;
+        const embarked = playedOn(embarking.chronicle, embarking.index, tile);
+        const next = endedTurn(addedToDrawPileTop(CATALOGUE, embarked, FISHERY).chronicle);
+        if (next.ending !== undefined) continue;
+        const paid = paidFor(next, FISHERY);
+        const grounded = ground(paid.chronicle, tile, beside);
+        if (grounded === undefined || !admits(grounded, paid.index, tile)) continue;
+        return { chronicle: grounded, index: paid.index, tile, beside };
+      }
+    }
+    return undefined;
+  });
+}
+
 /** The kind of the first row of the table the chronicle's age's camp opens with. */
 export function campKind(chronicle: Chronicle): string {
   const [first] = ageOf(CATALOGUE, chronicle.age).camp.opening;

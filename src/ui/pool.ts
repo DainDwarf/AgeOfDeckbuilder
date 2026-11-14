@@ -19,7 +19,7 @@ export function asPainted<T extends Retained>(object: T): T {
 }
 
 /** The objects of one kind a layer or a container keeps, as many as a paint has ever wanted at once. */
-type Pool<T> = {
+export type Pool<T> = {
   /** Every object stopped where it stands and hidden, the next `take` starting over. */
   hide(): void;
   /** The next object as a paint finds it; its shape, colour, name and place are its last use's. */
@@ -32,23 +32,25 @@ type Stand = {
   add(object: Phaser.GameObjects.GameObject): unknown;
 };
 
-function pool<T extends Retained | Phaser.GameObjects.Zone>(
+function pool<T>(
   on: Stand,
   make: () => T,
-  shown: (object: T) => T,
+  rootOf: (made: T) => Retained | Phaser.GameObjects.Zone,
+  shown: (made: T) => T,
 ): Pool<T> {
   const made: T[] = [];
   let taken = 0;
   return {
     hide(): void {
-      stopMotion(on.scene, made);
-      for (const object of made) object.setVisible(false);
+      const roots = made.map(rootOf);
+      stopMotion(on.scene, roots);
+      for (const root of roots) root.setVisible(false);
       taken = 0;
     },
     take(): T {
       if (taken === made.length) {
         const object = make();
-        on.add(object);
+        on.add(rootOf(object));
         made.push(object);
       }
       taken += 1;
@@ -58,7 +60,7 @@ function pool<T extends Retained | Phaser.GameObjects.Zone>(
 }
 
 export function poolOf<T extends Retained>(on: Stand, make: () => T): Pool<T> {
-  return pool<T>(on, make, asPainted);
+  return pool<T>(on, make, (object) => object, asPainted);
 }
 
 /** A Zone has no strength to reset, and draws nothing a motion could have left. */
@@ -66,5 +68,26 @@ export function zonePoolOf(
   on: Stand,
   make: () => Phaser.GameObjects.Zone,
 ): Pool<Phaser.GameObjects.Zone> {
-  return pool(on, make, (zone) => zone.setVisible(true));
+  return pool(
+    on,
+    make,
+    (zone) => zone,
+    (zone) => zone.setVisible(true),
+  );
+}
+
+/** Marks of several parts in one container each, kept, hidden and shown by that container. */
+export function rootedPoolOf<T extends { readonly root: Phaser.GameObjects.Container }>(
+  on: Stand,
+  make: () => T,
+): Pool<T> {
+  return pool<T>(
+    on,
+    make,
+    (mark) => mark.root,
+    (mark) => {
+      asPainted(mark.root);
+      return mark;
+    },
+  );
 }

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import type { Choices, Payment } from '../rules/campaign';
-import { entersOn, playedThrough, refuses, throughRefusal } from '../rules/cards';
+import { entersOn, playedThrough, refuses, throughRefusal, triedAt } from '../rules/cards';
 import { costOf, type Entering, entered } from '../rules/catalogue';
 import {
   admitted,
@@ -515,20 +515,30 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         /** Whether the aim at the tile is coming down for the aim at the unit it is played through. */
         let picking = false;
 
+        /** What the card's play at a tile would give, tile by tile; nothing for a card aimed at a unit. */
+        const gives: AimShown['gives'] = (tile, faces) => {
+          switch (card.aim) {
+            case 'tile':
+              return triedAt(CATALOGUE, this.current, card, tile, faces).gives;
+            case 'unit':
+              return [];
+          }
+        };
+
         /** What the card's aim admits, as the map shows what it is aimed at: a tile, or a unit. */
         const shownAs = (admits: TileCoords[]): AimShown => {
           switch (card.aim) {
             case 'tile':
-              return { tiles: admits, units: [] };
+              return { tiles: admits, units: [], gives };
             case 'unit':
-              return { tiles: [], units: admits };
+              return { tiles: [], units: admits, gives };
           }
         };
 
         /** The aim at a unit, among those the card at this tile could be played through. */
         const throughOne = (played: TileCoords, at: Tile, units: readonly Unit[]): (() => void) =>
           view.aimTile(
-            { tiles: [played], units: units.map((unit) => unit.tile) },
+            { tiles: [played], units: units.map((unit) => unit.tile), gives },
             (tile) => {
               const block = throughRefusal(CATALOGUE, this.current, card, at, tile);
               if (block !== undefined) {

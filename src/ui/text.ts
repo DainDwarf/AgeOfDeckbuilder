@@ -348,6 +348,7 @@ const TEXT = {
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
   'aim.hand': 'Play {card} at a card of the hand',
+  'aim.yield': '+',
   'refusal.food': 'Costs {cost} food',
   'refusal.production': 'Costs {cost} production',
   'refusal.military': 'Costs {cost} military',
