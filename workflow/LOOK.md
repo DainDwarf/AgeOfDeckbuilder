@@ -40,6 +40,7 @@ Nine lines, what each intake reads beyond its line:
 
 ## The glyphs
 
+- The pages that still say "diamond" where `docs/LOOK.md` _Symbols_ says glyph, this rung's doc-impact: `docs/META-SCREENS.md` (the navbar's influence, a plate's reward, a card's price), `docs/INTERFACE.md` (the influence at a card's foot) and `docs/CHRONICLE-SCREEN.md` (the ending's influence rows).
 - **One diamond for every resource glyph**: the map draws its three turned squares through one helper; the card face's and the infopanel's cost glyphs and the resource bar's chip each hand-roll their own. The day the glyphs become icons, one renderer of a resource's glyph takes all six, and the WebGL-stroke trap goes with the turned square.
 - **City mode's worked and unworked tiles**: a held tile nobody works wears a 60% black hexagon, a worked one the population's grey-purple diamond below its middle; both decided with the glyphs. In city mode the diamond (`ASSIGNED_DROP` 16) lies under the middle of an embarked unit's canoe (16 below the tile's middle) on a worked coast tile, and a unit's lower 7 units cover it; read at the look check.
 - **The yield overlay's dim** is reviewed with the glyphs over it, not before. The overlay's rework is this rung's, the user's call (2026-11-12): the map's order is fixed for the plain draw, the dim one sheet under the marks of the selection and under every unit, so the overlay shows them all bright until then; whether the dim should lie over the selection's marks is a switch on https://claude.ai/artifact/UEf3G3p5DXUByA1SDXNBmH.

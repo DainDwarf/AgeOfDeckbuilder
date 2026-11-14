@@ -7,7 +7,7 @@ Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in
 ## Art
 
 - [Kenney](https://kenney.nl/assets) — the deepest free supply, everything CC0. Strong on flat vector, UI and board-game packs; thinner on hex-strategy pixel art, though hex packs exist.
-- [OpenGameArt](https://opengameart.org) — community archive, mixed quality and licences. Filter by licence before browsing. The hunting ground for hex terrain tilesets and unit sprites.
+- [OpenGameArt](https://opengameart.org) — community archive, mixed quality and licences. Filter by licence before browsing.
 - [itch.io free game assets](https://itch.io/game-assets/free) — many small pixel-art packs by individual artists. Licences vary per pack; several forbid redistributing the raw files.
 - [Game-icons.net](https://game-icons.net) — several thousand flat monochrome icons, CC BY 3.0. Resource chips and card symbols.
 
@@ -23,5 +23,5 @@ Licence shorthand: **CC0** needs nothing; **CC BY** needs the author credited in
 
 ## Fonts
 
-- [Google Fonts](https://fonts.google.com) — OFL faces, including pixel faces such as Press Start 2P and Silkscreen.
+- [Google Fonts](https://fonts.google.com) — OFL faces.
 - [Adobe's Source fonts](https://github.com/adobe-fonts) — OFL; the built files, WOFF2 among them, sit on each repository's `release` branch beside the licence.

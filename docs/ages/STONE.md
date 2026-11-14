@@ -32,8 +32,6 @@ Its fall to the player deals three trophies, each several copies of one card, an
 
 ## The technologies 🔧
 
-A goal is a focus themed on its technology: it is read from the technology's fiction and asks for more than a chronicle played as usual gives.
-
 - **Herbalism** needs Settlement. Its goal counts a deed: the kinds of terrain Gather is played on, each read as the tile stands when the card is played, a Gather that gains nothing counted like any other. It unlocks the card **Heal** and pays influence.
 - **Agriculture** needs Settlement. Its goal reads the chronicle as it stands: the plain tiles inside the border, the player's city's own tile counted when it stands on plain. It unlocks the card **Farm** and pays influence.
 - **Trapping** needs Settlement. Its goal counts a deed: the times Hunt is played, each a deer or a cattle removed from its tile. It unlocks the card **Trapping** and pays influence.
@@ -77,7 +75,7 @@ A goal is a focus themed on its technology: it is read from the technology's fic
 
 ## The events 🔧
 
-The temperate region's schedule is its own: its deals come closer together than the band's and its capstone later. It deals A rival band and The herd as the band knew them, Wildfire with a third answer of the age's own, and Departure, this age's for good, culture being its answer's price; Lean season is the band's alone. The age's own events are the settled city's problems: what the river, the sky, the crowd, the herds and the neutral's peace can do to it, and a fortunate one. The camp's and the neutral's rewards are trophies, and so is a site's find that pays once; an event may deal a challenge. The archipelago's schedule is its own: it deals what the temperate's deals, on the temperate's tempo, and names the same trials.
+The temperate region's schedule is its own: its deals come closer together than the band's and its capstone later. It deals A rival band and The herd as the band knew them, Wildfire with a third answer of the age's own, and Departure, the age's own, culture being its answer's price; Lean season is the band's alone. The age's own events are the settled city's problems: what the river, the sky, the crowd, the herds and the neutral's peace can do to it, and a fortunate one. The camp's and the neutral's rewards are trophies, and so is a site's find that pays once; an event may deal a challenge. The archipelago's schedule is its own: it deals what the temperate's deals, on the temperate's tempo, and names the same trials.
 
 - **Wildfire.** The band's event, dealt with a third answer between its two. _Burn the forest_: the challenge **Embers** is added to the discard pile; played by nothing, at the end of every turn it stays in the hand it burns one forest tile into plain, drawn near the player's city, the feature and what stands on the forest going with it and the population working the tile staying on it, nothing once none stands; it gains influence on victory. Wildfire is food now against the forest over time for influence against production now.
 - **Departure.** _Let them go_: one population leaves the player's city, its last no exception. _Keep them_: culture paid, more the larger the player's city. The event is dearer the larger that city: the population that leaves dearer to grow back, the one kept dearer in culture. Departure is culture against population.
