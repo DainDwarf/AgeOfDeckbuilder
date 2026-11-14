@@ -8,7 +8,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **The glyphs** — the resource glyphs and every icon the game reads, drawn through one glyph renderer from licensed glyphs in the locked style, on the cards, the yield overlay, the resource bar, the infopanel and the meta screens alike.
 - **The cards and the windows** — the face, the deal window with answers as text, buildings and improvements shown as cards, a minimize button on the scrim's windows, and the fits accepted until now.
 - **The chrome** — bar, panels, buttons, plates, piles, menu, and the cursor pass.
 - **The meta screens** — the launch screen with its region stills, the tree with its ages' grounds, the Stone ground among them, the collection, the ending.
@@ -18,3 +17,12 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
+
+- **The cast** — every glyph this version's symbols need, the six resources, population, influence, a unit's seven stats and its states, picked on one casting page from game-icons.net and Material Design Icons, read at the map's smallest size first, each file entering with its licence record.
+- **One glyph renderer** — every diamond the screens draw becomes its glyph through one renderer, at the diamond's size and in its colour, on the map, the cards, the infopanel, the bars, the plates, the tree, the collection and the ending, and the design pages that say diamond say glyph.
+- **The yield overlay** — the overlay reworked with the glyphs over the map: its dim, whether the dim lies over the selection's marks, and whether the yield glyphs stand over the path and the units.
+- **City mode's worked and unworked tiles** — the population's glyph as the mark of a worked tile and the dim of a held tile nobody works, decided together, with the canoe and the unit that cover the mark.
+- **The resource bar in glyphs** — the resource bar reads each stock as its glyph and its number with no word, the meta screens' influence reading too, and a tooltip names what the word named.
+- **The infopanel in glyphs** — the unit card reads its stats as glyphs and its states as the signs the map's badge wears, and the terrain card's movement cost wears move's glyph.
+- **Glyphs in a card's text** — population and influence marked in a text as a resource is, and a unit's stat where it reads better, the entries gone through one by one with the user.
+- **Faction signs, a test** — a sign for each faction tried on the units and the borders, where colour alone tells whose a thing is; taken, it lands, and not taken, the line is deleted and its readings go to the palette's pool.
