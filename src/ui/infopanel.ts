@@ -11,6 +11,7 @@ import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf, SMALLEST_TYPE } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
+import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Drawn, TileFace } from './map';
 import {
@@ -541,10 +542,8 @@ function buildFace(
       const centre = lineTop + line / 2;
       let x = right - span;
       for (const { resource, value } of chips.slice(first, first + taken)) {
-        // A diamond is a square turned, never a polygon: see the trap over `diamond` in `map-marks.ts`.
-        const chip = scene.add
-          .rectangle(x + 0.25 * em, centre, 0.5 * em, 0.5 * em, LOOK.reading[resource])
-          .setAngle(45)
+        const chip = glyphOf(scene, resource, Math.SQRT2 * 0.5 * em)
+          .setPosition(x + 0.25 * em, centre)
           .setName(`panel-${chipping.kind}-${resource}`);
         value.setPosition(x + 0.7 * em, centre);
         contents.push(chip, value);

@@ -24,15 +24,16 @@ import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import type { CityBar, CityBarStock } from './city-bar';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
+import { asGlyph, glyphMark, glyphOf } from './glyphs';
 import type { HealthBar } from './health-bar';
-import { css, darkeningOf, LOOK, multiplied, type Wash } from './look';
+import { css, darkeningOf, LOOK, multiplied, type Tone, type Wash } from './look';
 import {
   BUILDING_SHEET,
   type BuildingPaintings,
   type BuildingPiece,
-  barGlyphOf,
   buildingPaintingsOf,
   CANOE,
+  type CastSymbol,
   clearingsOf,
   clearsItsTile,
   DISC_PITCH,
@@ -57,7 +58,6 @@ import {
   paintingOn,
   paintingsOf,
   pickOf,
-  preparedGlyphOf,
   RIVER_CUT,
   RIVER_SHEET,
   shorePaintingsOf,
@@ -133,7 +133,10 @@ export const ROW_RISE = 15;
 const HERD_WIDTH = 8;
 const HERD_SPREAD = { x: 16, y: 5 };
 
-/** The mark of an assigned tile, corner to corner, and how far below the tile's middle it stands. */
+/** A point of yield's glyph, a side of its square. */
+const YIELD_GLYPH = 6;
+
+/** The mark of an assigned tile, a side of its glyph's square, and how far below the tile's middle it stands. */
 const ASSIGNED_GLYPH = 12;
 const ASSIGNED_DROP = 16;
 
@@ -163,7 +166,7 @@ const CITY_BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bo
 
 /**
  * A prepared unit's badge: how far right of its tile's middle its centre stands, level with it, how
- * wide its disc is, and how wide the glyph on it.
+ * wide its disc is, and a side of the square of the glyph on it.
  */
 const UNIT_BADGE_OFF = 10;
 const UNIT_BADGE_SIZE = 11;
@@ -189,6 +192,15 @@ const TRACK_ROUND = 1;
 const HEALTH_BAR: BarShape = { lie: 'upright', length: 18, width: 2.5 };
 const BAR_OFF = 12;
 const BAR_FOOT = 1.5;
+
+/**
+ * The glyph standing at a health bar's foot, and a side of its square: the skull where the attack
+ * read on it would kill, the heart anywhere else.
+ */
+type BarGlyph = { readonly symbol: CastSymbol; readonly square: number };
+
+const HEART: BarGlyph = { symbol: 'health', square: 6 };
+const SKULL: BarGlyph = { symbol: 'killed', square: 8 };
 
 /**
  * A city's bars, centred across on its tile's middle: their shape, and how far below that middle
@@ -772,7 +784,7 @@ export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
     scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
-    scene.add.image(0, 0, UNIT_SHEET.key),
+    glyphMark(scene),
     healthBarMarker(scene),
   ]);
 }
@@ -866,7 +878,7 @@ function asBar(
  */
 function healthBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   const foot = HEALTH_BAR.length / 2 + MARK_EDGE + BAR_FOOT;
-  return barMarker(scene, HEALTH_BAR, [scene.add.image(0, foot, UNIT_SHEET.key)]).setPosition(
+  return barMarker(scene, HEALTH_BAR, [glyphMark(scene).setPosition(0, foot)]).setPosition(
     -BAR_OFF,
     UNIT_DROP,
   );
@@ -875,9 +887,9 @@ function healthBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
 /** The badge of a `unitMarker`: its disc and its glyph. */
 export function unitBadgeOf(
   mark: Phaser.GameObjects.Container,
-): [Phaser.GameObjects.Arc, Phaser.GameObjects.Image] {
+): [Phaser.GameObjects.Arc, Phaser.GameObjects.Container] {
   const [, , , disc, glyph] = mark.list;
-  return [disc as Phaser.GameObjects.Arc, glyph as Phaser.GameObjects.Image];
+  return [disc as Phaser.GameObjects.Arc, glyph as Phaser.GameObjects.Container];
 }
 
 /** The health bar of a `unitMarker`, its parts in one container. */
@@ -916,13 +928,14 @@ export function asUnitHealthBar(
     { colour: multiplied(LOOK.health, tint), strength: 1, share: bar.held - bar.removed },
     { colour: multiplied(LOOK.attack, tint), strength: 1, share: bar.removed },
   );
-  const { frame, scale } = barGlyphOf(bar.kills);
-  worn
-    .getAt<Phaser.GameObjects.Image>(4)
-    .setTexture(UNIT_SHEET.key, frame)
-    .setScale(scale)
-    .setTint(tint);
+  const { symbol, square } = bar.kills ? SKULL : HEART;
+  asGlyph(worn.getAt<Phaser.GameObjects.Container>(4), symbol, square, { tone: shadeTone(tint) });
   return worn;
+}
+
+/** What a unit's colours go through under the tint its shade multiplies them by. */
+function shadeTone(tint: number): Tone {
+  return (colour) => multiplied(colour, tint);
 }
 
 /**
@@ -966,13 +979,10 @@ export function asUnit(
     .setVisible(prepares !== undefined);
   glyph
     .setPosition(UNIT_BADGE_OFF, 0)
-    .setTint(multiplied(LOOK.unitBadgeInk, tint))
     .setAlpha(1)
     .setVisible(prepares !== undefined);
   if (prepares !== undefined) {
-    glyph
-      .setTexture(UNIT_SHEET.key, preparedGlyphOf(prepares))
-      .setDisplaySize(UNIT_BADGE_GLYPH, UNIT_BADGE_GLYPH);
+    asGlyph(glyph, prepares, UNIT_BADGE_GLYPH, { tone: shadeTone(tint), outlined: false });
   }
   asUnitHealthBar(mark, bar, shade);
   return mark;
@@ -1000,32 +1010,17 @@ export function unitMark(
   return mark;
 }
 
-// A stroked diamond is a square turned: a stroked polygon comes out open (docs/PHASER.md). One
-// drawn with no outline, as the card face draws its own, meets none of it.
-/** A diamond the map outlines: `span` corner to corner, in the colour given. */
-export function diamond(
-  scene: Phaser.Scene,
-  span: number,
-  colour: number,
-): Phaser.GameObjects.Rectangle {
-  const side = span / Math.SQRT2;
-  return scene.add
-    .rectangle(0, 0, side, side, colour)
-    .setStrokeStyle(1, LOOK.mapOutline)
-    .setAngle(45);
-}
-
-/** A diamond made to draw a point of yield, in the colour its resource is known by. */
+/** A `glyphMark` made to draw a point of yield: its resource's glyph. */
 export function asYield(
-  mark: Phaser.GameObjects.Rectangle,
+  mark: Phaser.GameObjects.Container,
   resource: Resource,
-): Phaser.GameObjects.Rectangle {
-  return mark.setFillStyle(LOOK.reading[resource]).setName(`yield-${resource}`);
+): Phaser.GameObjects.Container {
+  return asGlyph(mark, resource, YIELD_GLYPH).setName(`yield-${resource}`);
 }
 
-/** The mark of an assigned tile: a diamond in the colour population is known by. */
-export function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Rectangle {
-  return diamond(scene, ASSIGNED_GLYPH, LOOK.population).setName('assigned');
+/** The mark of an assigned tile: population's glyph. */
+export function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return glyphOf(scene, 'population', ASSIGNED_GLYPH).setName('assigned');
 }
 
 /** A rim round a pill: how wide it is, and its colour at its strength. */
@@ -1065,8 +1060,8 @@ export type PlatedNumber = {
   width: number | undefined;
 };
 
-/** What a claim asks for: its number and its resource's own diamond on their plate. */
-type ThresholdMark = PlatedNumber & { readonly glyph: Phaser.GameObjects.Rectangle };
+/** What a claim asks for: its number and its resource's own glyph on their plate. */
+type ThresholdMark = PlatedNumber & { readonly glyph: Phaser.GameObjects.Container };
 
 /** The plate and its number in a container of that name, hidden, with what else stands on it over them. */
 function platedNumber(
@@ -1096,19 +1091,19 @@ function drawPlate(mark: PlatedNumber, inner: number): void {
 }
 
 export function thresholdMark(scene: Phaser.Scene): ThresholdMark {
-  const glyph = diamond(scene, THRESHOLD_GLYPH, 0);
+  const glyph = glyphMark(scene);
   return { ...platedNumber(scene, 'threshold', [glyph]), glyph };
 }
 
 /**
  * What a claim asks for standing on its tile: the threshold as a minus and its number, its
- * resource's own diamond beside it, the pair centred on the tile's middle on the plate, widening
+ * resource's own glyph beside it, the pair centred on the tile's middle on the plate, widening
  * about its middle with the number.
  */
 export function showThreshold(mark: ThresholdMark, coord: TileCoords, cost: Cost): void {
   const { root, number, glyph } = mark;
   number.setText(text('threshold.culture', { culture: cost.amount }));
-  glyph.setFillStyle(LOOK.reading[cost.resource]);
+  asGlyph(glyph, cost.resource, THRESHOLD_GLYPH);
   const own = ownBoxOf(number).width;
   const width = own + THRESHOLD_GAP + THRESHOLD_GLYPH;
   number.setX((own - width) / 2);
@@ -1119,15 +1114,15 @@ export function showThreshold(mark: ThresholdMark, coord: TileCoords, cost: Cost
 }
 
 /** What a tile would be given by the card being aimed: the plus sign and its glyphs on their plate. */
-export type GivenPlate = PlatedNumber & { readonly glyphs: Pool<Phaser.GameObjects.Rectangle> };
+export type GivenPlate = PlatedNumber & { readonly glyphs: Pool<Phaser.GameObjects.Container> };
 
 export function givenPlate(scene: Phaser.Scene): GivenPlate {
   const plate = platedNumber(scene, 'aimed-yield');
   plate.number.setText(text('aim.yield'));
-  return { ...plate, glyphs: poolOf(plate.root, () => diamond(scene, THRESHOLD_GLYPH, 0)) };
+  return { ...plate, glyphs: poolOf(plate.root, () => glyphMark(scene)) };
 }
 
-/** What a tile would be given, on its middle: one diamond to each point, in the resource bar's order. */
+/** What a tile would be given, on its middle: one glyph to each point, in the resource bar's order. */
 export function showGiven(
   plate: GivenPlate,
   coord: TileCoords,
@@ -1145,10 +1140,7 @@ export function showGiven(
   glyphs.hide();
   owed.forEach((resource, at) => {
     const left = sign + SIGN_GAP + at * (THRESHOLD_GLYPH + GIVEN_GLYPH_GAP) - width / 2;
-    glyphs
-      .take()
-      .setFillStyle(LOOK.reading[resource])
-      .setX(left + THRESHOLD_GLYPH / 2);
+    asGlyph(glyphs.take(), resource, THRESHOLD_GLYPH).setX(left + THRESHOLD_GLYPH / 2);
   });
   drawPlate(plate, width);
   const { x, y } = positionOf(coord);

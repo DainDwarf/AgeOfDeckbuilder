@@ -7,6 +7,7 @@ import { unitDamaged } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { type Landing, pathTo, type Unit, unitAt } from '../src/rules/units';
 import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
+import { glyphFileOf } from '../src/ui/marks';
 import {
   type AimDrawn,
   aimDrawn,
@@ -83,9 +84,6 @@ function warriorAStepFromAnEnemy(): {
   });
 }
 
-/** The glyph at a health bar's foot, as `docs/LOOK.md` names it: a heart, and a skull where the attack read would kill. */
-const GLYPHS = { heart: 'material-design-icons/heart.svg', skull: 'game-icons/death-skull.svg' };
-
 /**
  * The health bar a unit wears as the rules read it, with the attack of that damage read on it or
  * none: the health it holds and the health the attack would remove, the smaller of the damage and
@@ -97,7 +95,7 @@ function barOf(unit: Unit, damage: number | undefined): Record<keyof BarShown, u
   return {
     held: expect.closeTo(health / full, 6),
     removed: expect.closeTo(Math.min(damage ?? 0, health) / full, 6),
-    glyph: damage !== undefined && damage >= health ? GLYPHS.skull : GLYPHS.heart,
+    glyph: glyphFileOf(damage !== undefined && damage >= health ? 'killed' : 'health'),
   };
 }
 

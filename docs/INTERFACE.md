@@ -76,7 +76,7 @@ Two verbs cover it all. **Select** is the tile or the unit the map rings, the ca
 
 **A card's kind label answers the rest.** The pointer resting on the label at a card face's foot raises the one bubble of the surface the face stands on, beside the label, reading in one line what the kind is; the pointer leaving the label takes it down. Every card face answers so — in the hand, on the discard pile, in a browse, on the deal and capstone windows, on a pile of the launch screen, on a stack and on a pile of the collection screen, in a civilization's browse, shown large and small alike — and the label answers no press of its own: a click on it is the card's.
 
-**A card that gains influence wears it at its foot**, a diamond in the influence's colour and the number at the foot's right, beside the kind label, on every face the label stands on; a card gaining none wears nothing there. The pointer resting on it raises the influence reading's tooltip, as the bar's reading does.
+**A card that gains influence wears it at its foot**, influence's glyph and the number at the foot's right, beside the kind label, on every face the label stands on; a card gaining none wears nothing there. The pointer resting on it raises the influence reading's tooltip, as the bar's reading does.
 
 ## What stands over what ✅
 

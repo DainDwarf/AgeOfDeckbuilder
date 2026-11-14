@@ -63,7 +63,7 @@ export type NameOf = (reference: Reference) => string;
 export type Metrics = {
   /** How far a line may run before the next word starts a new one. */
   readonly width: number;
-  /** One glyph, corner to corner. */
+  /** One glyph, a side of its square. */
   readonly glyph: number;
   /** How far a glyph stands off what adjoins it. */
   readonly bearing: number;

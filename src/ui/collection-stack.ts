@@ -12,7 +12,7 @@ import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK, overPage, type Tone, unworn } from './look';
 import type { Filled, Held } from './panel';
-import { chipAt } from './resource-bar';
+import { chipAt, READING_GLYPH } from './resource-bar';
 import { type Answers, answersOf, type Laying } from './stack';
 import { text } from './text';
 
@@ -292,9 +292,10 @@ export function priceButtonOf(
   const chip = chipAt(
     scene,
     { x: ownBoxOf(priced).x - CHIP_TO_PRICE, y: line.middle },
-    buy === undefined ? LOOK.greyedInk : LOOK.influence,
+    'influence',
+    buy === undefined ? { colour: LOOK.greyedInk } : {},
   ).setName(`${name}-price-chip`);
-  const buyLeft = chip.getBounds().left - BUY_PAD;
+  const buyLeft = chip.x - READING_GLYPH / 2 - BUY_PAD;
   const button: Box = {
     x: buyLeft,
     y: line.top,

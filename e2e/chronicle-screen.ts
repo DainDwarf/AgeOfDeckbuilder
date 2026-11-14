@@ -177,6 +177,8 @@ declare global {
     faceCounts?: (fog: number) => { shown: number; inFog: number };
     /** What the unit mark standing on the tile of that key shows, and nothing where none stands. */
     unitMarkOn?: (key: string) => UnitMarkShown | undefined;
+    /** The image a `glyphMark` draws its glyph in, its outline left out. */
+    glyphIn?: (mark: Phaser.GameObjects.GameObject) => Phaser.GameObjects.Image;
   }
 }
 
@@ -547,9 +549,13 @@ export async function readNames(page: Page): Promise<void> {
       return { filled: shown(filled), past: shown(past) };
     };
 
-    // The mark a tile in fog carries is nameless, so a unit's mark is found by standing where the
-    // tile's face does. The frames' endings are `linedName`'s and `haloName`'s in `src/ui/marks.ts`;
-    // the badge's disc is the mark's one circle, and its glyph the image drawn next.
+    // A `glyphMark` (`src/ui/glyphs.ts`) holds its outline, then the glyph itself.
+    window.glyphIn = (mark) =>
+      (mark as Phaser.GameObjects.Container).list[1] as Phaser.GameObjects.Image;
+
+    // A tile in fog carries a nameless mark, found by standing where the tile's face does. Its frames
+    // end as `linedName`'s and `haloName`'s in `src/ui/marks.ts`; the badge's disc is its one circle,
+    // its glyph the `glyphMark` after it.
     window.unitMarkOn = (key) => {
       const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
       if (face === undefined) return undefined;
@@ -568,15 +574,15 @@ export async function readNames(page: Page): Promise<void> {
         | Phaser.GameObjects.Arc
         | undefined;
       if (disc === undefined) throw new Error(`the unit mark on ${key} holds no badge`);
-      const glyph = mark.list[mark.list.indexOf(disc) + 1] as Phaser.GameObjects.Image;
-      // The health bar is the mark's one container: the health held under the health removed, then
-      // its glyph, in `edgedName`'s frame.
-      const bar = mark.list.find((one) => one.type === 'Container') as
-        | Phaser.GameObjects.Container
-        | undefined;
-      if (bar === undefined) throw new Error(`the unit mark on ${key} holds no health bar`);
+      const glyphIn = window.glyphIn;
+      if (glyphIn === undefined) throw new Error('the page reads no glyph');
+      const glyph = glyphIn(mark.list[mark.list.indexOf(disc) + 1]);
+      // The health bar is the mark's last container: the health held under the health removed, then
+      // the `glyphMark` at its foot.
+      const bar = mark.list.at(-1) as Phaser.GameObjects.Container | undefined;
+      if (bar?.type !== 'Container') throw new Error(`the unit mark on ${key} holds no health bar`);
       const { filled, past } = barPartsOf(bar);
-      const foot = bar.list[4] as Phaser.GameObjects.Image;
+      const foot = glyphIn(bar.list[4]);
       return {
         halo: tintOf(framed('#halo')),
         painting: tintOf(framed('#lined')),
@@ -592,7 +598,7 @@ export async function readNames(page: Page): Promise<void> {
           ? {
               held: filled.share + past.share,
               removed: past.share,
-              glyph: foot.frame.name.replace(/#edged$/, ''),
+              glyph: foot.frame.name,
             }
           : undefined,
       };

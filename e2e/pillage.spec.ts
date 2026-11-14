@@ -11,6 +11,7 @@ import { followed } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { LOOK, multiplied } from '../src/ui/look';
+import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
   type BadgeShown,
@@ -75,12 +76,6 @@ function farmBesetInFog(campaign: Campaign): { chronicle: Chronicle; farm: TileC
   return { chronicle: chartedAt(CATALOGUE, prepared, farm), farm };
 }
 
-/** The glyph a badge wears for what a prepare lands as, as `docs/LOOK.md` names it: a flame, a flag. */
-const GLYPHS: Record<PreparedAs, string> = {
-  pillage: 'game-icons/fire.svg',
-  capture: 'material-design-icons/flag-variant.svg',
-};
-
 /** What the prepare of the unit standing on the tile lands as, as the rules read it. */
 function preparesOn(chronicle: Chronicle, tile: TileCoords): PreparedAs | undefined {
   const unit = unitAt(chronicle.units, tile);
@@ -93,7 +88,7 @@ function enemyBadge(prepares: PreparedAs | undefined, shade = 0xffffff): BadgeSh
   return {
     disc: multiplied(LOOK.enemy, shade),
     rim: multiplied(LOOK.mapOutline, shade),
-    glyph: GLYPHS[prepares],
+    glyph: glyphFileOf(prepares),
     ink: multiplied(LOOK.unitBadgeInk, shade),
   };
 }

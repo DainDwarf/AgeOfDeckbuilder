@@ -13,6 +13,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
+import { asGlyph, glyphMark } from './glyphs';
 import { css, LOOK, type Paper, type Tone, unworn } from './look';
 import { poolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
@@ -259,7 +260,7 @@ export function createCardFace(
   })
     .setOrigin(1, 0.5)
     .setName('influence-label');
-  const diamond = scene.add.rectangle(0, kindMiddle, 0.55 * em, 0.55 * em).setAngle(45);
+  const gained = glyphMark(scene).setY(kindMiddle);
 
   const span = (2 / 3) * size;
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
@@ -314,19 +315,14 @@ export function createCardFace(
     .setName('aim-point')
     .setVisible(false);
 
-  root.add([art, name, kind, diamond, influence, rules, ring, point]);
+  root.add([art, name, kind, gained, influence, rules, ring, point]);
 
   // A long name runs over the costs, and stands over them.
   const underName = {
     scene,
     add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(name)),
   };
-  const chips = poolOf(underName, () =>
-    scene.add.rectangle(0, middle, 0.8 * em, 0.8 * em).setAngle(45),
-  );
-  const chipRings = poolOf(underName, () =>
-    scene.add.rectangle(0, middle, 1.15 * em, 1.15 * em).setAngle(45),
-  );
+  const chips = poolOf(underName, () => glyphMark(scene).setY(middle));
   const amounts = poolOf(underName, () =>
     addText(scene, 0, middle, '', {
       fontFamily: UI_FONT,
@@ -334,9 +330,7 @@ export function createCardFace(
       fontStyle: 'bold',
     }).setOrigin(0, 0.5),
   );
-  const glyphs = poolOf(root, () =>
-    scene.add.rectangle(0, 0, span / Math.SQRT2, span / Math.SQRT2).setAngle(45),
-  );
+  const glyphs = poolOf(root, () => glyphMark(scene));
   const layNameZones = presses === undefined ? undefined : nameZonesOf(root, presses);
   const footZones =
     presses?.footOver === undefined
@@ -366,21 +360,11 @@ export function createCardFace(
     });
 
     chips.hide();
-    chipRings.hide();
     amounts.hide();
     let x = left;
     for (const { resource, amount } of next.costs) {
       const marked = refused.unaffordable.includes(resource);
-      chips
-        .take()
-        .setX(x + 0.4 * em)
-        .setFillStyle(toned(LOOK.reading[resource]));
-      if (marked) {
-        chipRings
-          .take()
-          .setX(x + 0.4 * em)
-          .setStrokeStyle(0.12 * em, toned(LOOK.unaffordableMark));
-      }
+      asGlyph(chips.take(), resource, Math.SQRT2 * 0.8 * em, { tone: toned }).setX(x + 0.4 * em);
       const value = inked(amounts.take(), toned(marked ? LOOK.unaffordableMark : paint.ink))
         .setX(x + 1.3 * em)
         .setText(String(amount));
@@ -392,11 +376,13 @@ export function createCardFace(
 
     const gains = next.influence !== 0;
     influence.setVisible(gains);
-    diamond.setVisible(gains);
+    gained.setVisible(gains);
     if (gains) {
       inked(influence, toned(paint.ink)).setText(String(next.influence));
-      diamond.setX(influence.x - influence.width - 0.3 * em).setFillStyle(toned(LOOK.influence));
-      gainsLeft = diamond.x - 0.4 * em;
+      asGlyph(gained, 'influence', Math.SQRT2 * 0.55 * em, { tone: toned }).setX(
+        influence.x - influence.width - 0.3 * em,
+      );
+      gainsLeft = gained.x - 0.4 * em;
     }
 
     inked(rules, toned(paint.ink)).setText(next.rules);
@@ -405,10 +391,10 @@ export function createCardFace(
     const runTop = ownRules.y;
     glyphs.hide();
     for (const glyph of run.glyphs) {
-      glyphs
-        .take()
-        .setPosition(glyph.x, runTop + (glyph.line + 0.5) * lineHeight)
-        .setFillStyle(toned(LOOK.reading[glyph.resource]));
+      asGlyph(glyphs.take(), glyph.resource, span, { tone: toned }).setPosition(
+        glyph.x,
+        runTop + (glyph.line + 0.5) * lineHeight,
+      );
     }
 
     names = run.names.map((named) => ({

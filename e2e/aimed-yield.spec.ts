@@ -19,6 +19,7 @@ import { followed, unchanged } from '../src/rules/stages';
 import { type Chronicle, playable } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
+import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
   admits,
@@ -46,16 +47,23 @@ import {
 
 /**
  * A plate of the yield an aimed card would give, as the map draws it: its tile's key, its sign, the
- * colours of its glyphs in the order drawn, and the strength it stands at.
+ * file each of its glyphs is drawn from and its colour, in the order drawn, and the strength it
+ * stands at.
  */
-type PlateShown = { tile: string; sign: string; glyphs: number[]; strength: number };
+type PlateShown = {
+  tile: string;
+  sign: string;
+  glyphs: { file: string; colour: number }[];
+  strength: number;
+};
 
 /** The plates of the yield an aimed card would give standing on the map, in tile key order. */
 function platesShown(page: Page): Promise<PlateShown[]> {
   return page.evaluate(() => {
     const plates = window.shownIn?.('thresholds');
     const marks = window.shownIn?.('terrain');
-    if (plates === undefined || marks === undefined) {
+    const glyphIn = window.glyphIn;
+    if (plates === undefined || marks === undefined || glyphIn === undefined) {
       throw new Error('the map is not on the chronicle screen');
     }
     const faces = marks.filter((mark) =>
@@ -70,12 +78,15 @@ function platesShown(page: Page): Promise<PlateShown[]> {
           throw new Error(`a plate stands on no face at ${plate.x},${plate.y}`);
         const sign = plate.list.find((part) => part.type === 'Text') as Phaser.GameObjects.Text;
         const glyphs = plate.list.filter(
-          (part) => part.type === 'Rectangle' && (part as Phaser.GameObjects.Rectangle).visible,
-        ) as Phaser.GameObjects.Rectangle[];
+          (part) => part.type === 'Container' && (part as Phaser.GameObjects.Container).visible,
+        ) as Phaser.GameObjects.Container[];
         return {
           tile: face.name.slice('tile-'.length),
           sign: sign.text,
-          glyphs: glyphs.map((glyph) => glyph.fillColor),
+          glyphs: glyphs.map((glyph) => ({
+            file: glyphIn(glyph).frame.name,
+            colour: glyphIn(glyph).tint,
+          })),
           strength: plate.alpha,
         };
       })
@@ -97,7 +108,10 @@ function platesOf(gives: readonly GivenTo[]): PlateShown[] {
       tile: tileKey(tile),
       sign: text('aim.yield'),
       glyphs: RESOURCES.flatMap((resource) =>
-        Array<number>(yields[resource] ?? 0).fill(LOOK.reading[resource]),
+        Array<{ file: string; colour: number }>(yields[resource] ?? 0).fill({
+          file: glyphFileOf(resource),
+          colour: LOOK.reading[resource],
+        }),
       ),
       strength: already ? LOOK.givenAlready : 1,
     }))

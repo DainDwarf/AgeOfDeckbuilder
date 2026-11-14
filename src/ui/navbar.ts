@@ -122,7 +122,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
   const tooltip = createTooltip(scene, bubbles);
   const influence = createReading(scene, tooltip, {
     name: 'influence',
-    colour: LOOK.influence,
+    symbol: 'influence',
     word: text('label.influence'),
     tip: text('tooltip.influence'),
   });

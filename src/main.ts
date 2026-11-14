@@ -20,7 +20,14 @@ import { readMouseKeys } from './ui/keys';
 import { LaunchScreen } from './ui/launch-screen';
 import { css, LOOK } from './ui/look';
 import { MapScene } from './ui/map-scene';
-import { BUILDING_SHEET, FACE_SHEET, featureSheet, RIVER_SHEET, UNIT_SHEET } from './ui/marks';
+import {
+  BUILDING_SHEET,
+  FACE_SHEET,
+  featureSheet,
+  GLYPH_SHEET,
+  RIVER_SHEET,
+  UNIT_SHEET,
+} from './ui/marks';
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
@@ -83,7 +90,14 @@ class LoadScene extends Phaser.Scene {
   preload(): void {
     // The features sheet last: its tinted paintings, the river's cut and the deer in his net are
     // drawn off the others'.
-    this.sheets = [FACE_SHEET, RIVER_SHEET, BUILDING_SHEET, UNIT_SHEET, featureSheet(CATALOGUE)];
+    this.sheets = [
+      FACE_SHEET,
+      RIVER_SHEET,
+      BUILDING_SHEET,
+      UNIT_SHEET,
+      GLYPH_SHEET,
+      featureSheet(CATALOGUE),
+    ];
     for (const sheet of this.sheets) queueSheet(this.load, sheet);
   }
 

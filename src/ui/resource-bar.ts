@@ -21,7 +21,9 @@ import {
   type Stratum,
   UI_FONT,
 } from './design-space';
+import { type GlyphPaint, glyphOf } from './glyphs';
 import { type BarReading, css, LOOK } from './look';
+import type { CastSymbol } from './marks';
 import { menuRoom } from './menu';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
@@ -51,9 +53,9 @@ function managesCity(key: BarReading): key is (typeof CITY_READINGS)[number] {
   return CITY_READINGS.some((reading) => reading === key);
 }
 
-/** A reading as a bar draws one: the diamond, the word, the value, and the zone its tooltip is raised from. */
+/** A reading as a bar draws one: the glyph, the word, the value, and the zone its tooltip is raised from. */
 export type Reading = {
-  readonly chip: Phaser.GameObjects.Rectangle;
+  readonly chip: Phaser.GameObjects.Container;
   readonly word: Phaser.GameObjects.Text;
   readonly value: Phaser.GameObjects.Text;
   readonly hover: Phaser.GameObjects.Zone;
@@ -317,26 +319,32 @@ export function placeWell(
   right.setPosition(x + width - 1, y).setSize(1, height);
 }
 
-function chipColour(key: BarReading): number {
+/** The symbol whose glyph a reading wears. */
+function chipSymbol(key: BarReading): CastSymbol {
   switch (key) {
     case 'idle':
-      return LOOK.population;
+      return 'population';
     case 'food':
     case 'production':
     case 'military':
     case 'money':
     case 'science':
     case 'culture':
-      return LOOK.reading[key];
+      return key;
   }
 }
 
+/** A reading's glyph, a side of its square. */
+export const READING_GLYPH = 10 * Math.SQRT2;
+
+/** A reading's glyph standing at that point. */
 export function chipAt(
   scene: Phaser.Scene,
   { x, y }: { x: number; y: number },
-  colour: number,
-): Phaser.GameObjects.Rectangle {
-  return scene.add.rectangle(x, y, 10, 10, colour).setAngle(45);
+  symbol: CastSymbol,
+  paint?: GlyphPaint,
+): Phaser.GameObjects.Container {
+  return glyphOf(scene, symbol, READING_GLYPH, paint).setPosition(x, y);
 }
 
 /**
@@ -346,9 +354,9 @@ export function chipAt(
 export function createReading(
   scene: Phaser.Scene,
   tooltip: Tooltip,
-  shown: { name: string; colour: number; word: string; tip: string },
+  shown: { name: string; symbol: CastSymbol; word: string; tip: string },
 ): Reading {
-  const chip = chipAt(scene, { x: 0, y: 0 }, shown.colour);
+  const chip = chipAt(scene, { x: 0, y: 0 }, shown.symbol);
   const word = addText(scene, 0, 0, shown.word, WORD_STYLE).setOrigin(0, 0.5);
   const value = addText(scene, 0, 0, '', VALUE_STYLE)
     .setOrigin(0, 0.5)
@@ -376,7 +384,7 @@ function createEntry(
 ): Entry {
   const reading = createReading(scene, tooltip, {
     name: key,
-    colour: chipColour(key),
+    symbol: chipSymbol(key),
     word: text(`label.${key}`),
     tip: text(`tooltip.${key}`),
   });

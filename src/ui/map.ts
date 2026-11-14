@@ -46,6 +46,7 @@ import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf, thresholdOf } from './city-bar';
 import { onResize, type Stratum, thingUnder, whileUp } from './design-space';
+import { glyphMark } from './glyphs';
 import { type HealthBar, healthBarOf } from './health-bar';
 import { LOOK } from './look';
 import {
@@ -74,7 +75,6 @@ import {
   CITY_FACTIONS,
   cityBarMarker,
   cityDim,
-  diamond,
   ditchesOf,
   FEATURE_DISC,
   featureMarksOn,
@@ -133,8 +133,7 @@ import {
 import { asPainted, poolOf, rootedPoolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';
 
-/** One glyph, corner to corner, and how far apart the glyphs of a tile stand. */
-const GLYPH = 6;
+/** How far apart the glyphs of a tile stand. */
 const GLYPH_PITCH = 8;
 
 /** How far over its tile's row a face crossfading in stands, short of the row in front. */
@@ -436,7 +435,7 @@ export function createMapView(
   const straightPool = poolOf(rivers, () =>
     scene.add.container(0, 0, [scene.add.image(0, 0, RIVER_SHEET.key)]),
   );
-  const glyphPool = poolOf(glyphs, () => diamond(scene, GLYPH, 0));
+  const glyphPool = poolOf(glyphs, () => glyphMark(scene));
   const assignedPool = poolOf(cityMarks, () => assignedMark(scene));
   const cityDimPool = poolOf(cityMarks, () => cityDim(scene));
 
@@ -478,7 +477,7 @@ export function createMapView(
   /** The marker of each unit of the chronicle the map stands on, by the number it is named by. */
   const unitMarkers = new Map<number, Phaser.GameObjects.Container>();
   /** The mark drawn on each tile the population stands on while city mode is on, by its tile's key. */
-  let assignedMarks = new Map<string, Phaser.GameObjects.Rectangle>();
+  let assignedMarks = new Map<string, Phaser.GameObjects.Container>();
 
   let presser: Phaser.GameObjects.Zone | undefined;
   /** What a left click on a drawn tile is while no aim stands. */

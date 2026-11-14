@@ -62,6 +62,8 @@ export type Look = {
   /** The heart at a health bar's foot, and the skull an attack that would kill sets in its place. */
   readonly heart: number;
   readonly skull: number;
+  /** The dark outline every glyph is drawn over. */
+  readonly glyphOutline: number;
   /** The rest of a city's bar past the stock, the grey of a threshold not yet met. */
   readonly thresholdNotMet: number;
   /**
@@ -188,8 +190,9 @@ export const LOOK: Look = {
   unitBadgeInk: 0xf2f6ff,
   health: 0x7fd14f,
   healthLost: 0x3a4049,
-  heart: 0xe0564a,
+  heart: 0xef4739,
   skull: 0xf2f6ff,
+  glyphOutline: 0x0d1014,
   thresholdNotMet: 0x3a4049,
   addedByTurn: 0.45,
   givenAlready: 0.45,
@@ -207,7 +210,7 @@ export const LOOK: Look = {
   borderBand: 0.6,
   unitHalo: 0.9,
   built: 0xcfc6b4,
-  population: 0x6b6b7d,
+  population: 0xf092b5,
   wellFill: 0xb4b9c0,
   wellLight: 0xeef0f3,
   influence: 0xd9a441,
@@ -247,11 +250,11 @@ export const LOOK: Look = {
   scrim: { colour: 0x0d1014, strength: 0.82 },
   consolePanel: { colour: 0x0d1014, strength: 0.9 },
   reading: {
-    food: 0x7d9c55,
-    production: 0xb0834a,
+    food: 0x9ac464,
+    production: 0xd37b09,
     military: 0xb05252,
-    money: 0xa08a1e,
-    science: 0x5f8fc0,
+    money: 0xefd039,
+    science: 0x5093d8,
     culture: 0x9a6fb8,
   },
   terrain: {

@@ -12,6 +12,7 @@ import {
   onLetGoOffCanvas,
   UI_FONT,
 } from './design-space';
+import { glyphOf } from './glyphs';
 import { onHeldKeys } from './keys';
 import { css, LOOK } from './look';
 import { groundColourOf } from './marks';
@@ -46,9 +47,9 @@ const AGE_STYLE = {
 /** The gutter between a plate's labels and what they label. */
 const LABEL_GAP = 8;
 
-/** The influence's diamond, and how far the number stands off the start of its line. */
-const DIAMOND = 8;
-const DIAMOND_TO_NUMBER = 14;
+/** The influence's glyph, a side of its square, and how far the number stands off the start of its line. */
+const INFLUENCE_GLYPH = 8 * Math.SQRT2;
+const GLYPH_TO_NUMBER = 14;
 
 const LINK_WEIGHT = 2;
 const FAINT_LINK = 0.45;
@@ -337,8 +338,8 @@ export function createTree(
         case 'influence': {
           const middle = lineMiddle(under + at);
           face.add([
-            scene.add.rectangle(values + 5, middle, DIAMOND, DIAMOND, LOOK.influence).setAngle(45),
-            addText(scene, values + DIAMOND_TO_NUMBER, middle, String(line.amount), TEXT_STYLE)
+            glyphOf(scene, 'influence', INFLUENCE_GLYPH).setPosition(values + 5, middle),
+            addText(scene, values + GLYPH_TO_NUMBER, middle, String(line.amount), TEXT_STYLE)
               .setOrigin(0, 0.5)
               .setName(named),
           ]);

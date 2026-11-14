@@ -1,9 +1,10 @@
 import type { PreparedAs } from '../rules/enemies';
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
+import type { Resource } from '../rules/resources';
 import { grownOf, haloOf } from './fade';
-import { css, LOOK, type Wash } from './look';
-import { blankCanvas, type Made, type Sheet } from './sheet';
+import { LOOK, type Wash } from './look';
+import { aroundPicture, type Made, roomFor, type Sheet, type Square, washed } from './sheet';
 
 /** What a feature's tile wears beside its icon: a herd of its animal, his pond, or its painting tinted. */
 export type FeatureDress =
@@ -286,23 +287,11 @@ function pixelsToTheUnit(size: number): number {
   return ARMS_PIXELS / (UNIT_WIDTH * size);
 }
 
-/**
- * The room a frame painted off a square picture keeps round it on every side to reach that many units
- * past it, in the picture's pixels, that many of them to the unit.
- */
-function roomFor(reach: number, pixels: number): number {
-  return Math.ceil(reach * pixels) + 1;
-}
+const UNIT_SHEET_KEY = 'units';
 
-/**
- * A square picture of the units sheet: its file, how many pixels a side it is, and how many of them
- * make one of the map's units where it is drawn.
- */
-type Square = { readonly file: string; readonly side: number; readonly pixels: number };
-
-/** His arms icon a unit kind is drawn as, as the square it is drawn from. */
+/** His arms icon a unit kind is drawn as, as the square of the units sheet it is drawn from. */
 function armsSquare({ file, size }: UnitPicture): Square {
-  return { file, side: ARMS_PIXELS, pixels: pixelsToTheUnit(size) };
+  return { sheet: UNIT_SHEET_KEY, file, side: ARMS_PIXELS, pixels: pixelsToTheUnit(size) };
 }
 
 /** The frame of the units sheet a unit kind's painting stands in, the dark line round it. */
@@ -315,82 +304,23 @@ function haloName(file: string): string {
   return `${file}#halo`;
 }
 
-/**
- * A frame a square picture is painted off, the picture in its middle with room round it to reach that
- * many units past it: `paint` is handed a canvas of the frame's size, the picture's alpha on it, how
- * many pixels a unit is, and the way to draw the picture onto it.
- */
-function aroundIcon(
-  { file, side: pictured, pixels }: Square,
-  frame: string,
-  reach: number,
-  paint: (
-    on: CanvasRenderingContext2D,
-    alpha: Uint8ClampedArray,
-    pixels: number,
-    icon: () => void,
-  ) => void,
-): Made {
-  const room = roomFor(reach, pixels);
-  const side = pictured + 2 * room;
-  return {
-    frame,
-    width: side,
-    height: side,
-    paint: (context, paintingIn) => {
-      const from = paintingIn(UNIT_SHEET.key, file);
-      const on = blankCanvas(side, side);
-      const icon = (): void =>
-        on.drawImage(
-          from.canvas,
-          from.x,
-          from.y,
-          from.width,
-          from.height,
-          room,
-          room,
-          from.width,
-          from.height,
-        );
-      icon();
-      const { data } = on.getImageData(0, 0, side, side);
-      const alpha = Uint8ClampedArray.from({ length: side * side }, (_, at) => data[4 * at + 3]);
-      paint(on, alpha, pixels, icon);
-      context.drawImage(on.canvas, 0, 0);
-    },
-  };
-}
-
-/** Every pixel of a canvas painted in a colour, as strong as `strengths` says, out of one. */
-function washed(on: CanvasRenderingContext2D, colour: number, strengths: Float64Array): void {
-  const { width, height } = on.canvas;
-  const image = on.createImageData(width, height);
-  strengths.forEach((strength, at) => {
-    image.data[4 * at] = (colour >> 16) & 0xff;
-    image.data[4 * at + 1] = (colour >> 8) & 0xff;
-    image.data[4 * at + 2] = colour & 0xff;
-    image.data[4 * at + 3] = Math.round(0xff * strength);
-  });
-  on.putImageData(image, 0, 0);
-}
-
 /** A unit kind's painting over the dark line round it: his outline grown by the line, in the map's outline colour. */
 function linedFrame(picture: UnitPicture): Made {
-  return aroundIcon(
+  return aroundPicture(
     armsSquare(picture),
     linedName(picture.file),
     DARK_LINE,
-    (on, alpha, pixels, icon) => {
+    (on, alpha, pixels, painting) => {
       const { width, height } = on.canvas;
       washed(on, LOOK.mapOutline, grownOf(alpha, width, height, DARK_LINE * pixels));
-      icon();
+      painting();
     },
   );
 }
 
 /** A unit kind's halo, in white: the fade out from his outline, painted once for every faction's tint. */
 function haloFrame(picture: UnitPicture): Made {
-  return aroundIcon(
+  return aroundPicture(
     armsSquare(picture),
     haloName(picture.file),
     2.5 * HALO_DEPTH,
@@ -401,77 +331,60 @@ function haloFrame(picture: UnitPicture): Made {
   );
 }
 
-/** The glyph a prepared unit's badge wears by what its prepare lands as, white, under the assets folder. */
-const PREPARED_GLYPHS: Readonly<Record<PreparedAs, string>> = {
+/** How wide the dark edge round a bar's track and round a badge's disc is, in the map's units. */
+export const MARK_EDGE = 0.5;
+
+/**
+ * The sheet his arms icons a unit kind is drawn as are drawn into, his canoe, and each kind's painting
+ * lined and its halo.
+ */
+export const UNIT_SHEET: Sheet = {
+  key: UNIT_SHEET_KEY,
+  files: [...Object.values(UNIT_PICTURES).map(({ file }) => file), CANOE],
+  made: [
+    ...Object.values(UNIT_PICTURES).map(linedFrame),
+    ...Object.values(UNIT_PICTURES).map(haloFrame),
+  ],
+  side: 1024,
+};
+
+/**
+ * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, an
+ * attack that would kill, or what a prepare lands as.
+ */
+export type CastSymbol = Resource | 'population' | 'influence' | 'health' | 'killed' | PreparedAs;
+
+/** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
+const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
+  food: 'material-design-icons/food-apple.svg',
+  production: 'material-design-icons/hammer.svg',
+  military: 'material-design-icons/sword-cross.svg',
+  money: 'game-icons/two-coins.svg',
+  science: 'material-design-icons/lightbulb-on.svg',
+  culture: 'material-design-icons/music.svg',
+  population: 'material-design-icons/account.svg',
+  influence: 'material-design-icons/star.svg',
+  health: 'material-design-icons/heart.svg',
+  killed: 'game-icons/death-skull.svg',
   pillage: 'game-icons/fire.svg',
   capture: 'material-design-icons/flag-variant.svg',
 };
 
+/** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */
+export function glyphFileOf(symbol: CastSymbol): string {
+  return GLYPH_FILES[symbol];
+}
+
 /** How many pixels a side a glyph is rasterised at: past what it covers at the closest zoom. */
-const GLYPH_PIXELS = 128;
+export const GLYPH_PIXELS = 128;
 
-/** The frame of the units sheet the glyph of what a prepare lands as stands in. */
-export function preparedGlyphOf(prepares: PreparedAs): string {
-  return PREPARED_GLYPHS[prepares];
-}
-
-/** A glyph standing at a health bar's foot: its file, white, how many units across its square is drawn, and its colour. */
-type BarGlyph = { readonly file: string; readonly across: number; readonly colour: number };
-
-const HEART: BarGlyph = { file: 'material-design-icons/heart.svg', across: 6, colour: LOOK.heart };
-const SKULL: BarGlyph = { file: 'game-icons/death-skull.svg', across: 8, colour: LOOK.skull };
-
-/** How wide every dark edge on a unit's marks is, the painting's dark line excepted, in the map's units. */
-export const MARK_EDGE = 0.5;
-
-/** The frame of the units sheet a glyph at a health bar's foot stands in, in its colour and its dark edge. */
-function edgedName(file: string): string {
-  return `${file}#edged`;
-}
-
-/** A glyph at a health bar's foot in its colour over its dark edge: its outline grown by the edge, in the map's outline colour. */
-function edgedFrame({ file, across, colour }: BarGlyph): Made {
-  const square = { file, side: GLYPH_PIXELS, pixels: GLYPH_PIXELS / across };
-  return aroundIcon(square, edgedName(file), MARK_EDGE, (on, alpha, pixels) => {
-    const { width, height } = on.canvas;
-    const glyph = blankCanvas(width, height);
-    glyph.drawImage(on.canvas, 0, 0);
-    glyph.globalCompositeOperation = 'source-in';
-    glyph.fillStyle = css(colour);
-    glyph.fillRect(0, 0, width, height);
-    washed(on, LOOK.mapOutline, grownOf(alpha, width, height, MARK_EDGE * pixels));
-    on.drawImage(glyph.canvas, 0, 0);
-  });
-}
-
-/**
- * The glyph standing at a health bar's foot, the skull where the attack read on it would kill and the
- * heart anywhere else: its frame of the units sheet, and the scale that draws it at its size about
- * its middle.
- */
-export function barGlyphOf(kills: boolean): { readonly frame: string; readonly scale: number } {
-  const { file, across } = kills ? SKULL : HEART;
-  return { frame: edgedName(file), scale: across / GLYPH_PIXELS };
-}
-
-/**
- * The sheet his arms icons a unit kind is drawn as are drawn into, his canoe, the glyphs of what a
- * prepare lands as and of a health bar's foot, each kind's painting lined and its halo, and each
- * glyph of a health bar's foot edged.
- */
-export const UNIT_SHEET: Sheet = {
-  key: 'units',
-  files: [...Object.values(UNIT_PICTURES).map(({ file }) => file), CANOE],
-  rasterised: {
-    files: [...Object.values(PREPARED_GLYPHS), HEART.file, SKULL.file],
-    side: GLYPH_PIXELS,
-  },
-  made: [
-    ...Object.values(UNIT_PICTURES).map(linedFrame),
-    ...Object.values(UNIT_PICTURES).map(haloFrame),
-    ...[HEART, SKULL].map(edgedFrame),
-  ],
-  side: 1024,
+// Every (symbol, square) outline asked for in play is packed into this one sheet, and a full one throws mid-play.
+/** The sheet every symbol's glyph is drawn into, white; the outlines are painted into it as they are asked for. */
+export const GLYPH_SHEET: Sheet = {
+  key: 'glyphs',
+  files: [],
+  rasterised: { files: Object.values(GLYPH_FILES), side: GLYPH_PIXELS },
+  side: 2048,
 };
 
 /** How a unit kind is drawn: its painting lined and its halo, frames of the units sheet, each drawn at `scale` about its middle. */

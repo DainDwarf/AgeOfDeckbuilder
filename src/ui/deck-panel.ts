@@ -18,6 +18,7 @@ import {
 } from './collection-stack';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face, kindLabel } from './face';
+import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Filled, Held } from './panel';
 import { type Answers, answersOf, type Inspecting, type Laying } from './stack';
@@ -103,9 +104,7 @@ function rowOf(
   let at = ROW_PAD;
   for (const { resource, amount } of face.costs) {
     costs.push(
-      scene.add
-        .rectangle(at + CHIP_MARGIN + CHIP / 2, middle, CHIP, CHIP, LOOK.reading[resource])
-        .setAngle(45),
+      glyphOf(scene, resource, Math.SQRT2 * CHIP).setPosition(at + CHIP_MARGIN + CHIP / 2, middle),
     );
     at += CHIP + 2 * CHIP_MARGIN + COST_GAP;
     const value = addText(scene, at, middle, String(amount), COST_STYLE).setOrigin(0, 0.5);

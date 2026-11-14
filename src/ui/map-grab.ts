@@ -19,7 +19,7 @@ type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
 );
 
 /** The mark a press takes hold of: a unit's, or a population's. */
-type GrabMark = Phaser.GameObjects.Container | Phaser.GameObjects.Rectangle;
+type GrabMark = Phaser.GameObjects.Container;
 
 /** What a press reads and lights of the map, which keeps all of it. */
 type MapUnderPress = {
@@ -37,7 +37,7 @@ type MapUnderPress = {
   /** The unit of that number drawn over every other unit, and every unit among the others on none. */
   carry(unit: number | undefined): void;
   /** The mark drawn on a tile the population stands on, and nothing where none is. */
-  assignedMarkOn(tile: TileCoords): Phaser.GameObjects.Rectangle | undefined;
+  assignedMarkOn(tile: TileCoords): Phaser.GameObjects.Container | undefined;
 };
 
 /** What the left presses on the map have hold of. */

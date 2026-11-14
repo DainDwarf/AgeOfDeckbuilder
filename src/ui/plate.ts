@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import type { Name } from './card-face';
 import { addText, answersPress, onClick, onHover, ownBoxOf, UI_FONT } from './design-space';
+import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Raiser } from './small-card';
 import { referenceName } from './text';
@@ -8,7 +9,7 @@ import { layOutRun, type Run } from './text-run';
 
 const INK = css(LOOK.ink);
 const TEXT_SIZE = 14;
-/** A glyph a run marks, corner to corner. */
+/** A glyph a run marks, a side of its square. */
 const GLYPH = (2 / 3) * TEXT_SIZE;
 export const NAME_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 export const TEXT_STYLE = { fontFamily: UI_FONT, fontSize: `${TEXT_SIZE}px`, color: INK };
@@ -102,17 +103,11 @@ export function drawRun(
   const { x: start } = ownBoxOf(label);
   const centreOf = (at: number): number => start + run.widths[at] / 2;
   for (const glyph of run.glyphs) {
-    const side = GLYPH / Math.SQRT2;
     face.add(
-      scene.add
-        .rectangle(
-          centreOf(glyph.line) + glyph.x,
-          middleOf(glyph.line),
-          side,
-          side,
-          LOOK.reading[glyph.resource],
-        )
-        .setAngle(45),
+      glyphOf(scene, glyph.resource, GLYPH).setPosition(
+        centreOf(glyph.line) + glyph.x,
+        middleOf(glyph.line),
+      ),
     );
   }
   const names: Name[] = [];

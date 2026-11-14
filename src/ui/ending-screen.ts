@@ -223,8 +223,8 @@ function ledgerOf(
   const pitch = 34;
   const left = (DESIGN_WIDTH - width) / 2;
   const right = left + width;
-  const diamond = (x: number, y: number): Phaser.GameObjects.Rectangle =>
-    chipAt(scene, { x, y }, LOOK.influence);
+  const glyph = (x: number, y: number): Phaser.GameObjects.Container =>
+    chipAt(scene, { x, y }, 'influence');
   const parts: Part[] = [];
   let y = top + pitch / 2;
   rows.forEach((row, at) => {
@@ -237,7 +237,7 @@ function ledgerOf(
       const number = addText(scene, right, y, String(influence), ink)
         .setOrigin(1, 0.5)
         .setName(`ending-row-${at}-influence`);
-      parts.push(diamond(number.x - number.width - 18, y), number);
+      parts.push(glyph(number.x - number.width - 18, y), number);
     }
     if (row.unpaid) {
       parts.push(
@@ -259,7 +259,7 @@ function ledgerOf(
     .setOrigin(0, 0.5)
     .setName('ending-total-label');
   parts.push(
-    diamond(left + 7, y),
+    glyph(left + 7, y),
     total,
     addText(scene, right, y, String(on.payment.influence), style(true))
       .setOrigin(1, 0.5)
