@@ -26,6 +26,7 @@ import {
   tileKey,
   tilesBeside,
 } from '../rules/map';
+import { neutralBuilding } from '../rules/map-kinds';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { inSight, unitShown } from '../rules/sight';
 import type { Stage } from '../rules/stages';
@@ -34,6 +35,7 @@ import {
   type Chronicle,
   type CityFaction,
   type Cost,
+  cityOn,
   cityRows,
   cityTileOf,
   holderOf,
@@ -668,8 +670,8 @@ export function createMapView(
 
   /**
    * The faction sign on the chronicle the map stands on, shown where the signs are on, darkened in
-   * fog: on each city's own tile where the map draws it and its face keeps the city's own building,
-   * and on every face it draws carrying the age's camp.
+   * fog: on every face the map draws of a city's own tile, as it stands or as its snapshot last saw
+   * it, and on every face it draws carrying the age's camp.
    */
   const paintTileSigns = (): void => {
     tileSignPool.hide();
@@ -679,16 +681,28 @@ export function createMapView(
     const signOn = (tile: TileCoords, faction: Faction): void => {
       showTileSign(tileSignPool.take(), tile, faction, fogDark(!live.has(tileKey(tile))), signed);
     };
-    for (const whose of CITY_FACTIONS) {
-      const coord = cityTileOf(current, whose);
-      const tile = coord === undefined ? undefined : tileAt(current.tiles, coord);
-      const face = tile === undefined ? undefined : drawnOf(tile);
-      if (tile === undefined || face === undefined) continue;
-      if (face.tile.building === tile.building) signOn(tile, whose);
-    }
-    const { building: camp } = ageOf(catalogue, current.age).camp;
+    const age = ageOf(catalogue, current.age);
+    const ownBuilding = (whose: CityFaction): string => {
+      switch (whose) {
+        case 'player':
+          return current.citySection.building;
+        case 'neutral':
+          return neutralBuilding(catalogue, age, `the age ${current.age}`);
+      }
+    };
+    /** The city whose own tile a face shows: a snapshot's where it keeps that city's own building. */
+    const cityShown = (tile: Tile, { snapshot }: Drawn): CityFaction | undefined => {
+      if (snapshot === undefined) return cityOn(current, tile);
+      const { holder } = snapshot;
+      if (holder === undefined || snapshot.tile.building !== ownBuilding(holder)) return undefined;
+      return holder;
+    };
     for (const tile of current.tiles) {
-      if (drawnOf(tile)?.tile.building === camp) signOn(tile, 'enemy');
+      const face = drawnOf(tile);
+      if (face === undefined) continue;
+      const city = cityShown(tile, face);
+      if (city !== undefined) signOn(tile, city);
+      else if (face.tile.building === age.camp.building) signOn(tile, 'enemy');
     }
   };
 

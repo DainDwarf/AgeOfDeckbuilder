@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { neutralOf, neutralScriptOf, unitKind } from '../src/rules/catalogue';
+import { built } from '../src/rules/cards';
+import { ageOf, neutralOf, neutralScriptOf, unitKind } from '../src/rules/catalogue';
 import { anythingByHand } from '../src/rules/chronicle';
-import { type TileCoords, tileKey } from '../src/rules/map';
+import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { type Faction, unitAt } from '../src/rules/units';
@@ -63,7 +64,12 @@ type Signed = { readonly tiles: TileCoords[]; readonly worn: SignsShown[] };
  * a warrior of the player's beside it, and the neutral's city charted out of sight, in fog; the
  * warrior's tile, and what the signs on wear.
  */
-function signedOnes(): { chronicle: Chronicle; warrior: TileCoords; signed: Signed } {
+function signedOnes(): {
+  chronicle: Chronicle;
+  warrior: TileCoords;
+  city: TileCoords;
+  signed: Signed;
+} {
   const neutral = neutralOf(CATALOGUE, neutralAge());
   const kind = neutral.ratio.find((row) => !unitKind(CATALOGUE, row.kind).worker)?.kind;
   if (kind === undefined) throw new Error('the neutral fights with no kind');
@@ -95,6 +101,7 @@ function signedOnes(): { chronicle: Chronicle; warrior: TileCoords; signed: Sign
   return {
     chronicle,
     warrior,
+    city,
     signed: {
       tiles: [own, warrior, enemy, camp, city],
       worn: [
@@ -157,6 +164,24 @@ test('opened with nothing kept, nothing wears a sign; a press on the row over th
   expect(await signsOn(page, signed.tiles)).toEqual(signed.worn);
   await intoGraphics(page);
   expect(await textOf(page, `${ROW}-label`)).toBe(text('graphics.on'));
+
+  expect(problems).toEqual([]);
+});
+
+test('the neutral’s city taken by the enemies while its tile is in fog keeps the neutral’s sign as last seen', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, city, signed } = signedOnes();
+  const { building: camp } = ageOf(CATALOGUE, chronicle.age).camp;
+  const fallen = built(CATALOGUE, chronicle, city, camp, 'enemies').chronicle;
+  expect(fallen.neutral).toBeUndefined();
+  expect(tileAt(fallen.tiles, city)?.building).toBe(camp);
+  expect(inSight(CATALOGUE, fallen).has(tileKey(city))).toBe(false);
+  await plantEntry(page, FACTION_SIGNS_ENTRY, serialiseFactionSigns(true));
+
+  await openSaved(page, fallen, CAMPAIGN);
+  expect(await signsOn(page, [city])).toEqual([signed.worn[signed.tiles.indexOf(city)]]);
 
   expect(problems).toEqual([]);
 });
