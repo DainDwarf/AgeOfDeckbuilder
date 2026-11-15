@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { GivenTo } from '../rules/cards';
-import { ageOf, type Catalogue, damageOf, fullHealth } from '../rules/catalogue';
+import { ageOf, type Catalogue, captureOf, damageOf, fullHealth } from '../rules/catalogue';
 import {
   anythingByHand,
   apply,
@@ -68,6 +68,7 @@ import {
   asIcon,
   asPieces,
   asRowDisc,
+  asSitePointer,
   assignedAt,
   assignedMark,
   asTerrain,
@@ -78,7 +79,6 @@ import {
   CITY_FACTIONS,
   cityBarMarker,
   ditchesOf,
-  FEATURE_DISC,
   featureMarksOn,
   featureToldOn,
   fogDark,
@@ -104,6 +104,7 @@ import {
   showThreshold,
   showTileSign,
   showTileYield,
+  sitePointerMarker,
   TILE_SIZE,
   type TileDark,
   type TileObjects,
@@ -131,6 +132,7 @@ import {
   BUILDING_SHEET,
   buildingPaintingsOf,
   FACE_SHEET,
+  FEATURE_DISC,
   FEATURE_SHEET_KEY,
   featureIconOf,
   ICON_WIDTH,
@@ -370,6 +372,7 @@ export function createMapView(
   const built = group(strata.buildings, 'buildings');
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
+  const sitePointers = group(strata.buildings, 'site-pointers');
   const reach = createReach(scene, group(strata.selection, 'lit'), chronicle.tiles);
   const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
@@ -432,6 +435,7 @@ export function createMapView(
   const improvementIconPool = poolOf(improvements, () =>
     scene.add.image(0, 0, FEATURE_SHEET_KEY).setDepth(1),
   );
+  const sitePointerPool = poolOf(sitePointers, () => sitePointerMarker(scene));
   const fogUnitPool = poolOf(marks, () => unitMarker(scene));
   const riverPool = poolOf(rivers, () => scene.add.image(0, 0, RIVER_SHEET.key));
   const straightPool = poolOf(rivers, () =>
@@ -833,6 +837,14 @@ export function createMapView(
       .setName(`building-patch-${tileKey(coord)}`);
   };
 
+  /** Whether a face's building is one of the sites of the chronicle's age. */
+  const isSite = (chronicle: Chronicle, building: BuildingTypeId | undefined): boolean =>
+    building !== undefined && captureOf(catalogue, chronicle.age, building)?.takes === 'site';
+
+  /** A site's pointer from the pool, standing over that tile's row, darkened by its dark. */
+  const sitePointerOn = (coord: TileCoords, dark: TileDark): Phaser.GameObjects.Container =>
+    asSitePointer(sitePointerPool.take(), coord, dark);
+
   /** The disc and the icon a tile keeps painted for a feature, standing at that point of its row. */
   const featureOn = (
     key: string,
@@ -909,6 +921,7 @@ export function createMapView(
       if (onBuildingPatch(face.building)) painted.push(buildingPatchOn(tile, dark));
       painted.push(buildingOn(face.building, tile, dark));
     }
+    if (isSite(chronicle, face.building)) painted.push(sitePointerOn(tile, dark));
     if (seen.live.has(key)) return painted;
     const standing = unitShown(chronicle.units, drawing);
     if (standing !== undefined) {
@@ -945,6 +958,7 @@ export function createMapView(
     piecesPool.hide();
     improvementDiscPool.hide();
     improvementIconPool.hide();
+    sitePointerPool.hide();
     fogUnitPool.hide();
     for (const [key, own] of Object.entries(tileObjects)) own.void.setVisible(!drawn.has(key));
     if (shown === undefined) return;
@@ -1343,6 +1357,7 @@ export function createMapView(
     ditches,
     features,
     improvements,
+    sitePointers,
     built,
     shown: () => shown,
     live: () => live,
@@ -1371,6 +1386,8 @@ export function createMapView(
     improvementOn,
     buildingOn,
     buildingPatchOn,
+    isSite,
+    sitePointerOn,
     featureOn,
     lyingOn,
     ditchesOn,
@@ -1517,6 +1534,7 @@ export function createMapView(
     showDiscs(on: boolean): void {
       features.setVisible(on);
       improvements.setVisible(on);
+      sitePointers.setVisible(on);
     },
 
     aimTile(

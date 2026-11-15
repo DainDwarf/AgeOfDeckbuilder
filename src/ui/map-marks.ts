@@ -40,9 +40,11 @@ import {
   DISC_PITCH,
   DISC_RADIUS,
   DISC_RIM,
+  type DiscLook,
   type DiscPicture,
   discFeatureOf,
   FACE_SHEET,
+  FEATURE_DISC,
   FEATURE_SHEET_KEY,
   featureDressOf,
   featureIconOf,
@@ -61,6 +63,7 @@ import {
   pickOf,
   RIVER_CUT,
   RIVER_SHEET,
+  SITE_POINTER,
   shorePaintingsOf,
   tintedName,
   UNIT_SHEET,
@@ -176,6 +179,10 @@ const CITY_BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bo
 
 /** A side of the square of the glyph on the faction sign a city's own tile and a camp's wear. */
 const TILE_SIGN_GLYPH = 10;
+
+/** How far above its tile's middle a site's pointer's middle stands, and a side of the square of the sign on it. */
+const POINTER_RISE = 34;
+const SITE_SIGN_GLYPH = 13;
 
 /**
  * A prepared unit's badge: how far right of its tile's middle its centre stands, level with it, how
@@ -323,6 +330,11 @@ export function fogDark(inFog: boolean): TileDark {
 export function darkened(colour: number, dark: TileDark): number {
   const tint = darkTint(dark);
   return tint === undefined ? colour : multiplied(colour, tint);
+}
+
+/** What a glyph's colours go through on a tile: `darkened` by the tile's dark. */
+function darkTone(dark: TileDark): Tone {
+  return (colour) => darkened(colour, dark);
 }
 
 // A Shape carries no tint (docs/PHASER.md): a shape is darkened through its colours, by `darkened`.
@@ -569,12 +581,6 @@ export function asIcon(
 export function featureMark(scene: Phaser.Scene, feature: FeatureId): Phaser.GameObjects.Image {
   return scene.add.image(0, 0, FEATURE_SHEET_KEY, featureIconOf(feature));
 }
-
-/** What a disc of a tile's row is painted in: its fill, and its rim. */
-export type DiscLook = { readonly fill: Wash; readonly rim: Wash };
-
-/** The disc a feature's icon stands on: dark, with a pale rim. */
-export const FEATURE_DISC: DiscLook = { fill: LOOK.featureDisc, rim: LOOK.featureDiscRim };
 
 /** The disc an improvement's icon stands on: pale, in the stone everything worked is, with a dark rim. */
 export const IMPROVEMENT_DISC: DiscLook = {
@@ -1357,15 +1363,41 @@ export function showTileSign(
   disc
     .setFillStyle(darkened(FACTION_COLOURS[faction], dark))
     .setStrokeStyle(BADGE_RIM.width, darkened(BADGE_RIM.colour, dark), BADGE_RIM.strength);
-  asGlyph(glyph, faction, TILE_SIGN_GLYPH, {
-    tone: (colour) => darkened(colour, dark),
-    outlined: false,
-  });
+  asGlyph(glyph, faction, TILE_SIGN_GLYPH, { tone: darkTone(dark), outlined: false });
   const { x, y } = positionOf(coord);
   mark
     .setPosition(x - CITY_BAR.length / 2 - CITY_BADGE_HEIGHT / 2, y + CITY_BADGE_DROP)
     .setName(`faction-sign-${tileKey(coord)}`)
     .setVisible(signed);
+}
+
+/** The name a site's pointer stands under on the tile of that key. */
+export function sitePointerAs(key: string): string {
+  return `site-pointer-${key}`;
+}
+
+/** A site's pointer with nothing drawn on it yet: the pointer, then the site's sign. */
+export function sitePointerMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return scene.add.container(0, 0, [
+    scene.add.image(0, 0, GLYPH_SHEET.key, SITE_POINTER.frame).setScale(1 / SITE_POINTER.pixels),
+    glyphMark(scene),
+  ]);
+}
+
+/**
+ * A site's tile wearing its pointer above its row, centred across on the tile's middle, and the
+ * site's sign on it bare, darkened by its tile's dark.
+ */
+export function asSitePointer(
+  mark: Phaser.GameObjects.Container,
+  coord: TileCoords,
+  dark: TileDark,
+): Phaser.GameObjects.Container {
+  const [pointer, sign] = mark.list as [Phaser.GameObjects.Image, Phaser.GameObjects.Container];
+  asDarkened(pointer, dark);
+  asGlyph(sign, 'site', SITE_SIGN_GLYPH, { tone: darkTone(dark), outlined: false });
+  const { x, y } = positionOf(coord);
+  return mark.setPosition(x, y - POINTER_RISE).setName(sitePointerAs(tileKey(coord)));
 }
 
 /** A city's bar with nothing drawn on it yet, hidden. */

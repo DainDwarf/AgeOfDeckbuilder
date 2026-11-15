@@ -62,6 +62,8 @@ export type Look = {
   readonly neutralSignInk: number;
   /** The ink the enemies' faction sign reads in, on the enemies' colour. */
   readonly enemySignInk: number;
+  /** The ink a site's sign reads in, on its pointer. */
+  readonly siteSignInk: number;
   /** The health a unit holds on its health bar, and the rest of the bar, the health it lost. */
   readonly health: number;
   readonly healthLost: number;
@@ -201,6 +203,7 @@ export const LOOK: Look = {
   civilizationSignInk: 0x0d1014,
   neutralSignInk: 0xf2f6ff,
   enemySignInk: 0xf2f6ff,
+  siteSignInk: 0xece2cc,
   health: 0x7fd14f,
   healthLost: 0x3a4049,
   heart: 0xef4739,

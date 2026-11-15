@@ -5,7 +5,6 @@ import {
   type FeatureId,
   type ImprovementId,
   neighbours,
-  type River,
   type Tile,
   type TileCoords,
   tileAt,
@@ -30,6 +29,7 @@ import {
   positionOf,
   ROW_RISE,
   rowOf,
+  sitePointerAs,
   type TileDark,
   type TileObjects,
   unitBadgeOf,
@@ -47,6 +47,7 @@ type MapInMotion = {
   readonly ditches: Phaser.GameObjects.Layer;
   readonly features: Phaser.GameObjects.Layer;
   readonly improvements: Phaser.GameObjects.Layer;
+  readonly sitePointers: Phaser.GameObjects.Layer;
   readonly built: Phaser.GameObjects.Layer;
   /** The chronicle the map stands on. */
   shown(): Chronicle | undefined;
@@ -87,6 +88,10 @@ type MapInMotion = {
   buildingOn(building: BuildingTypeId, coord: TileCoords, dark: TileDark): Mark;
   /** The patch a building's paintings lie on, painted on that tile. */
   buildingPatchOn(coord: TileCoords, dark: TileDark): Phaser.GameObjects.Image;
+  /** Whether a face's building is one of the sites of this chronicle's age. */
+  isSite(chronicle: Chronicle, building: BuildingTypeId | undefined): boolean;
+  /** A site's pointer painted over that tile's row. */
+  sitePointerOn(coord: TileCoords, dark: TileDark): Mark;
   /** The disc and the icon the tile of that key keeps for a feature, painted at that point of its row. */
   featureOn(key: string, feature: FeatureId, x: number, y: number, dark: TileDark): Mark[];
   /** What lies on a tile's ground, painted. */
@@ -353,7 +358,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     from: Tile,
     to: Tile,
     shore: string | undefined,
-    rivers: readonly River[],
+    chronicle: Chronicle,
   ): ((token: symbol) => Promise<void>) | undefined => {
     const key = tileKey(coord);
     const dark = view.darkOf(coord);
@@ -427,8 +432,8 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     );
     compareLaid(
       view.ditches,
-      ditchesOf(from, coord, rivers),
-      ditchesOf(to, coord, rivers),
+      ditchesOf(from, coord, chronicle.rivers),
+      ditchesOf(to, coord, chronicle.rivers),
       view.ditchesOn,
     );
     compare(
@@ -456,6 +461,16 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       y,
       { ids: one(from.building), xs: [x] },
       { ids: one(to.building), xs: [x] },
+    );
+    const wearsPointer = (building: BuildingTypeId | undefined): 'pointer'[] =>
+      view.isSite(chronicle, building) ? ['pointer'] : [];
+    compare(
+      view.sitePointers,
+      () => [sitePointerAs(key)],
+      () => [view.sitePointerOn(coord, dark)],
+      y,
+      { ids: wearsPointer(from.building), xs: [x] },
+      { ids: wearsPointer(to.building), xs: [x] },
     );
 
     const crossfades = facePaintingOn(from, coord).painting !== facePaintingOn(to, coord).painting;
@@ -555,7 +570,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     const motion =
       from === undefined
         ? () => fadeIn(to.paint())
-        : between(coord, from.tile, to.tile, to.shoreOn(coord), chronicle.rivers);
+        : between(coord, from.tile, to.tile, to.shoreOn(coord), chronicle);
     const shores = shoresBeside(coord, to.shoreOn);
     const riversAt = view.riversAt(chronicle, coord);
     const rivers = riversAt === undefined ? undefined : swapped(riversAt);

@@ -33,6 +33,7 @@ const ORDER = [
   'buildings',
   'features',
   'improvements',
+  'site-pointers',
   'lit',
   'rings',
   'selected',

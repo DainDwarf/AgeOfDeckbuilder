@@ -4,7 +4,7 @@ import { featureKind, improvementKind, type MapContent } from '../rules/map-kind
 import type { Resource } from '../rules/resources';
 import type { Faction } from '../rules/units';
 import { grownOf, haloOf } from './fade';
-import { LOOK, type Wash } from './look';
+import { css, LOOK, type Wash } from './look';
 import { aroundPicture, type Made, roomFor, type Sheet, type Square, washed } from './sheet';
 
 /** What a feature's tile wears beside its icon: a herd of its animal, his pond, or its painting tinted. */
@@ -36,6 +36,12 @@ export const ICON_WIDTH = 14;
 /** The disc under an icon of a tile's row, and its rim, in the map's units. */
 export const DISC_RADIUS = 9;
 export const DISC_RIM = 1;
+
+/** What a disc of a tile's row is painted in: its fill, and its rim. */
+export type DiscLook = { readonly fill: Wash; readonly rim: Wash };
+
+/** The disc a feature's icon stands on: dark, with a pale rim. */
+export const FEATURE_DISC: DiscLook = { fill: LOOK.featureDisc, rim: LOOK.featureDiscRim };
 
 /** How far apart two discs of a tile's row stand, centre to centre, a unit between them, in the map's units. */
 export const DISC_PITCH = 2 * DISC_RADIUS + 1;
@@ -351,7 +357,7 @@ export const UNIT_SHEET: Sheet = {
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, an
- * attack that would kill, what a prepare lands as, or a faction.
+ * attack that would kill, what a prepare lands as, a faction, or a site.
  */
 export type CastSymbol =
   | Resource
@@ -360,7 +366,8 @@ export type CastSymbol =
   | 'health'
   | 'killed'
   | PreparedAs
-  | Faction;
+  | Faction
+  | 'site';
 
 /** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
 const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
@@ -379,6 +386,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   player: 'material-design-icons/crown.svg',
   neutral: 'material-design-icons/scale-balance.svg',
   enemy: 'material-design-icons/axe-battle.svg',
+  site: 'material-design-icons/star-four-points.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */
@@ -416,10 +424,55 @@ function paintPatch(
 /** The frame of the glyphs sheet the patch under a tile's yield glyphs is drawn from, and its side in pixels. */
 export const YIELD_PATCH = { frame: 'yield-patch', side: 128 };
 
+/**
+ * A site's pointer: how far either side of the disc's lowest point its rim leaves the disc, in
+ * radians, and how far under the disc its tip stands.
+ */
+const POINTER_LEAVES = 0.62;
+const POINTER_TIP = 5;
+
+/** How many pixels of the pointer's frame make a unit. */
+const POINTER_PIXELS = 8;
+
+/**
+ * The frame of the glyphs sheet a site's pointer is drawn from, its middle on the frame's: its name,
+ * its size in pixels, room left past the rim on every side, and how many of them make a unit.
+ */
+export const SITE_POINTER = {
+  frame: 'site-pointer',
+  width: 2 * roomFor(DISC_RADIUS + DISC_RIM / 2, POINTER_PIXELS),
+  height: 2 * roomFor(DISC_RADIUS + POINTER_TIP + DISC_RIM / 2, POINTER_PIXELS),
+  pixels: POINTER_PIXELS,
+};
+
+/**
+ * A site's pointer from the frame's top-left corner: the feature's disc, its dark with its pale rim,
+ * drawn out under itself into a point, the corners its rim turns rounded.
+ */
+function paintPointer(context: CanvasRenderingContext2D): void {
+  const { width, height, pixels } = SITE_POINTER;
+  const lowest = Math.PI / 2;
+  context.translate(width / 2, height / 2);
+  context.scale(pixels, pixels);
+  context.beginPath();
+  context.arc(0, 0, DISC_RADIUS, lowest + POINTER_LEAVES, lowest - POINTER_LEAVES);
+  context.lineTo(0, DISC_RADIUS + POINTER_TIP);
+  context.closePath();
+  const { fill, rim } = FEATURE_DISC;
+  context.globalAlpha = fill.strength;
+  context.fillStyle = css(fill.colour);
+  context.fill();
+  context.globalAlpha = rim.strength;
+  context.strokeStyle = css(rim.colour);
+  context.lineWidth = DISC_RIM;
+  context.lineJoin = 'round';
+  context.stroke();
+}
+
 // Every (symbol, square) outline asked for in play is packed into this one sheet, and a full one throws mid-play.
 /**
- * The sheet every symbol's glyph is drawn into, white, and the yield glyphs' patch; the outlines are
- * painted into it as they are asked for.
+ * The sheet every symbol's glyph is drawn into, white, the yield glyphs' patch and a site's pointer;
+ * the outlines are painted into it as they are asked for.
  */
 export const GLYPH_SHEET: Sheet = {
   key: 'glyphs',
@@ -431,6 +484,12 @@ export const GLYPH_SHEET: Sheet = {
       width: YIELD_PATCH.side,
       height: YIELD_PATCH.side,
       paint: (context) => paintPatch(context, YIELD_PATCH.side, YIELD_PATCH.side, LOOK.yieldPatch),
+    },
+    {
+      frame: SITE_POINTER.frame,
+      width: SITE_POINTER.width,
+      height: SITE_POINTER.height,
+      paint: paintPointer,
     },
   ],
   side: 2048,

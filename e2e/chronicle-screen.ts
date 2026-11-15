@@ -182,6 +182,8 @@ declare global {
     unitSignIn?: (mark: Phaser.GameObjects.Container) => DiscShown | undefined;
     /** The faction sign the tile of that key shows, a city's or a camp's, and nothing where it shows none. */
     tileSignOn?: (key: string) => DiscShown | undefined;
+    /** The site's pointer the tile of that key shows, and nothing where it shows none. */
+    sitePointerShownOn?: (key: string) => PointerShown | undefined;
     /** The image a `glyphMark` draws its glyph in, its outline left out. */
     glyphIn?: (mark: Phaser.GameObjects.GameObject) => Phaser.GameObjects.Image;
   }
@@ -389,6 +391,12 @@ export type UnitMarkShown = {
  * colour, the frame its glyph draws, and the glyph's tint.
  */
 export type DiscShown = { disc: number; rim: number; glyph: string; ink: number | undefined };
+
+/**
+ * A site's pointer a tile wears: the tint multiplied into the pointer, nothing where it carries none,
+ * the frame its sign draws, and the sign's tint.
+ */
+export type PointerShown = { tint: number | undefined; glyph: string; ink: number | undefined };
 
 /**
  * A unit's health bar: the health it shows held and the health it shows an attack would remove, each
@@ -599,6 +607,23 @@ export async function readNames(page: Page): Promise<void> {
         | Phaser.GameObjects.Container
         | undefined;
       return sign === undefined ? undefined : discShown(sign.list[0] as Phaser.GameObjects.Arc);
+    };
+
+    // A site's pointer is `sitePointerMarker`'s in `src/ui/map-marks.ts`: the pointer's image, then
+    // the `glyphMark` of the sign on it.
+    window.sitePointerShownOn = (key) => {
+      const mark = window.named?.(`site-pointer-${key}`)?.object as
+        | Phaser.GameObjects.Container
+        | undefined;
+      if (mark === undefined || !isShown(mark as Parented)) return undefined;
+      const [pointer, sign] = mark.list;
+      const glyph = window.glyphIn?.(sign);
+      if (glyph === undefined) throw new Error('the page reads no glyph');
+      return {
+        tint: tintOf(pointer as Phaser.GameObjects.Image),
+        glyph: glyph.frame.name,
+        ink: tintOf(glyph),
+      };
     };
 
     // A tile in fog carries a nameless mark, found by standing where the tile's face does. Its frames
@@ -1665,6 +1690,17 @@ export function signsOn(page: Page, tiles: readonly TileCoords[]): Promise<Signs
         tile: window.tileSignOn?.(key),
         unit: window.unitMarkOn?.(key)?.sign,
       })),
+    tiles.map(tileKey),
+  );
+}
+
+/** The site's pointer each tile handed shows, in one question to the page; nothing on a tile showing none. */
+export function sitePointersOn(
+  page: Page,
+  tiles: readonly TileCoords[],
+): Promise<(PointerShown | undefined)[]> {
+  return page.evaluate(
+    (keys) => keys.map((key) => window.sitePointerShownOn?.(key)),
     tiles.map(tileKey),
   );
 }

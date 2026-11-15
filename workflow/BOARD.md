@@ -17,5 +17,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Sound and music** — last, so a version closed early still looks whole.
 
 ## Lines
-
-- **A disc for the sites** — Every site the map draws wears its pointer with the site's sign on it, in sight and darkened in fog, a camp wears none, the Icons button hides it with the discs, and a captured site loses it; `e2e/site-pointer.spec.ts` proves it. Doc-impact: `docs/LOOK.md`, `docs/MAP-SCREEN.md`. [board/site-pointer.md](board/site-pointer.md)

@@ -34,6 +34,8 @@ function colourOf(symbol: CastSymbol): number {
       return LOOK.neutralSignInk;
     case 'enemy':
       return LOOK.enemySignInk;
+    case 'site':
+      return LOOK.siteSignInk;
   }
 }
 
