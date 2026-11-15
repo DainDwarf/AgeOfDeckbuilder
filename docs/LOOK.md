@@ -102,7 +102,7 @@ A glyph stands in a square and is as large as that square's side. It is drawn in
 
 ## The cards 🔧
 
-A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its unit's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols. A card face is one size wherever it stands, and a card shown large is the one other.
+A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its unit's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols. A card face is one size wherever it stands, and a card shown large is the one other. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face.
 
 ## The type ✅
 
