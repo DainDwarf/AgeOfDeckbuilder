@@ -18,4 +18,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Faction signs, a test** — a sign for each faction tried on the units and the borders, where colour alone tells whose a thing is; taken, it lands, and not taken, the line is deleted and its readings go to the palette's pool.
+- **Faction signs** — With Faction signs turned on in Settings → Graphics, every unit, every city and every camp the map draws wears its faction's sign and a unit's card on the infopanel does; with it off, which is how the game first opens, nothing wears one; the press takes at once and is kept in the browser; `e2e/faction-signs.spec.ts` proves it. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`. [board/faction-signs.md](board/faction-signs.md)
