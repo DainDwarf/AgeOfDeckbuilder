@@ -18,7 +18,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The resource bar in glyphs** — the resource bar reads each stock as its glyph and its number with no word, the meta screens' influence reading too, and a tooltip names what the word named.
-- **The infopanel in glyphs** — the unit card reads its stats as glyphs and its states as the signs the map's badge wears, and the terrain card's movement cost wears move's glyph.
-- **Glyphs in a card's text** — population and influence marked in a text as a resource is, and a unit's stat where it reads better, the entries gone through one by one with the user.
 - **Faction signs, a test** — a sign for each faction tried on the units and the borders, where colour alone tells whose a thing is; taken, it lands, and not taken, the line is deleted and its readings go to the palette's pool.
