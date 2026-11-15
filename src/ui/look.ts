@@ -56,6 +56,12 @@ export type Look = {
   readonly neutralCityBadgeInk: number;
   /** The ink the glyph on a prepared unit's badge reads in, whoever's the unit is. */
   readonly unitBadgeInk: number;
+  /** The ink the player's faction sign reads in, on the civilization's colour. */
+  readonly civilizationSignInk: number;
+  /** The ink the neutral's faction sign reads in, on the neutral's colour. */
+  readonly neutralSignInk: number;
+  /** The ink the enemies' faction sign reads in, on the enemies' colour. */
+  readonly enemySignInk: number;
   /** The health a unit holds on its health bar, and the rest of the bar, the health it lost. */
   readonly health: number;
   readonly healthLost: number;
@@ -192,6 +198,9 @@ export const LOOK: Look = {
   civilizationCityBadgeInk: 0x0d1014,
   neutralCityBadgeInk: 0xd4d7db,
   unitBadgeInk: 0xf2f6ff,
+  civilizationSignInk: 0x0d1014,
+  neutralSignInk: 0xf2f6ff,
+  enemySignInk: 0xf2f6ff,
   health: 0x7fd14f,
   healthLost: 0x3a4049,
   heart: 0xef4739,

@@ -178,6 +178,10 @@ declare global {
     faceCounts?: (fog: number) => { shown: number; inFog: number };
     /** What the unit mark standing on the tile of that key shows, and nothing where none stands. */
     unitMarkOn?: (key: string) => UnitMarkShown | undefined;
+    /** The faction sign a unit's mark shows, and nothing where it shows none. */
+    unitSignIn?: (mark: Phaser.GameObjects.Container) => DiscShown | undefined;
+    /** The faction sign the tile of that key shows, a city's or a camp's, and nothing where it shows none. */
+    tileSignOn?: (key: string) => DiscShown | undefined;
     /** The image a `glyphMark` draws its glyph in, its outline left out. */
     glyphIn?: (mark: Phaser.GameObjects.GameObject) => Phaser.GameObjects.Image;
   }
@@ -370,17 +374,21 @@ type Scrolled = { offset: number; overflow: number };
 
 /**
  * What a unit's mark shows: the tints of its halo and its painting, nothing where one is untinted,
- * its badge and its health bar, nothing where it wears none.
+ * its faction's sign, its badge and its health bar, nothing where it wears none.
  */
 export type UnitMarkShown = {
   halo: number | undefined;
   painting: number | undefined;
-  badge: BadgeShown | undefined;
+  sign: DiscShown | undefined;
+  badge: DiscShown | undefined;
   bar: BarShown | undefined;
 };
 
-/** A unit's badge: its disc's fill and its rim's colour, the frame its glyph draws, and the glyph's tint. */
-export type BadgeShown = { disc: number; rim: number; glyph: string; ink: number | undefined };
+/**
+ * A disc a unit's mark or a tile wears, a faction's sign or a unit's badge: its fill and its rim's
+ * colour, the frame its glyph draws, and the glyph's tint.
+ */
+export type DiscShown = { disc: number; rim: number; glyph: string; ink: number | undefined };
 
 /**
  * A unit's health bar: the health it shows held and the health it shows an attack would remove, each
@@ -554,9 +562,47 @@ export async function readNames(page: Page): Promise<void> {
     window.glyphIn = (mark) =>
       (mark as Phaser.GameObjects.Container).list[1] as Phaser.GameObjects.Image;
 
+    const tintOf = (image: Phaser.GameObjects.Image): number | undefined =>
+      image.isTinted ? image.tint : undefined;
+
+    // A disc stands before the `glyphMark` on it in the container holding both.
+    const discShown = (disc: Phaser.GameObjects.Arc): DiscShown | undefined => {
+      if (!isShown(disc as Parented)) return undefined;
+      const holder = disc.parentContainer;
+      const glyph = window.glyphIn?.(holder.list[holder.list.indexOf(disc) + 1]);
+      if (glyph === undefined) throw new Error('the page reads no glyph');
+      return {
+        disc: disc.fillColor,
+        rim: disc.strokeColor,
+        glyph: glyph.frame.name,
+        ink: tintOf(glyph),
+      };
+    };
+
+    /** The circles a unit's mark holds: its faction sign's disc, then its badge's. */
+    const unitDiscsOf = (
+      mark: Phaser.GameObjects.Container,
+    ): { sign: Phaser.GameObjects.Arc; badge: Phaser.GameObjects.Arc } => {
+      const [sign, badge] = mark.list.filter(
+        (one) => one.type === 'Arc',
+      ) as Phaser.GameObjects.Arc[];
+      if (sign === undefined || badge === undefined) {
+        throw new Error('a unit mark holds no sign and badge');
+      }
+      return { sign, badge };
+    };
+
+    window.unitSignIn = (mark) => discShown(unitDiscsOf(mark).sign);
+
+    window.tileSignOn = (key) => {
+      const sign = window.named?.(`faction-sign-${key}`)?.object as
+        | Phaser.GameObjects.Container
+        | undefined;
+      return sign === undefined ? undefined : discShown(sign.list[0] as Phaser.GameObjects.Arc);
+    };
+
     // A tile in fog carries a nameless mark, found by standing where the tile's face does. Its frames
-    // end as `linedName`'s and `haloName`'s in `src/ui/marks.ts`; the badge's disc is its one circle,
-    // its glyph the `glyphMark` after it.
+    // end as `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
     window.unitMarkOn = (key) => {
       const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
       if (face === undefined) return undefined;
@@ -564,20 +610,14 @@ export async function readNames(page: Page): Promise<void> {
       const mark = marks.find((one) => one.x === face.x && one.y === face.y);
       if (mark === undefined) return undefined;
       const images = mark.list.filter((one) => one.type === 'Image') as Phaser.GameObjects.Image[];
-      const tintOf = (image: Phaser.GameObjects.Image): number | undefined =>
-        image.isTinted ? image.tint : undefined;
       const framed = (frame: string): Phaser.GameObjects.Image => {
         const image = images.find((one) => one.frame.name.endsWith(frame));
         if (image === undefined) throw new Error(`the unit mark on ${key} draws no ${frame}`);
         return image;
       };
-      const disc = mark.list.find((one) => one.type === 'Arc') as
-        | Phaser.GameObjects.Arc
-        | undefined;
-      if (disc === undefined) throw new Error(`the unit mark on ${key} holds no badge`);
+      const { sign, badge } = unitDiscsOf(mark);
       const glyphIn = window.glyphIn;
       if (glyphIn === undefined) throw new Error('the page reads no glyph');
-      const glyph = glyphIn(mark.list[mark.list.indexOf(disc) + 1]);
       // The health bar is the mark's last container: the health held under the health removed, then
       // the `glyphMark` at its foot.
       const bar = mark.list.at(-1) as Phaser.GameObjects.Container | undefined;
@@ -587,14 +627,8 @@ export async function readNames(page: Page): Promise<void> {
       return {
         halo: tintOf(framed('#halo')),
         painting: tintOf(framed('#lined')),
-        badge: disc.visible
-          ? {
-              disc: disc.fillColor,
-              rim: disc.strokeColor,
-              glyph: glyph.frame.name,
-              ink: tintOf(glyph),
-            }
-          : undefined,
+        sign: discShown(sign),
+        badge: discShown(badge),
         bar: bar.visible
           ? {
               held: filled.share + past.share,
@@ -1618,6 +1652,34 @@ export async function readingsAndUnitMarks(
       return marks[at] ?? undefined;
     },
   };
+}
+
+/** The faction signs a tile shows: its own, a city's or a camp's, and its unit's; nothing for one it shows none of. */
+export type SignsShown = { tile: DiscShown | undefined; unit: DiscShown | undefined };
+
+/** The faction signs each tile handed shows, in one question to the page. */
+export function signsOn(page: Page, tiles: readonly TileCoords[]): Promise<SignsShown[]> {
+  return page.evaluate(
+    (keys) =>
+      keys.map((key) => ({
+        tile: window.tileSignOn?.(key),
+        unit: window.unitMarkOn?.(key)?.sign,
+      })),
+    tiles.map(tileKey),
+  );
+}
+
+/** The faction sign the head of the infopanel's unit card shows, and nothing where it shows none. */
+export function panelHeadSign(page: Page): Promise<DiscShown | undefined> {
+  return page.evaluate(() => {
+    const name = window.named?.('panel-name')?.object;
+    if (name === undefined) throw new Error('the infopanel reads no card');
+    // The head's mark is drawn just before the name (`buildFace` in `src/ui/infopanel.ts`).
+    const face = name.parentContainer;
+    return window.unitSignIn?.(
+      face.list[face.list.indexOf(name) - 1] as Phaser.GameObjects.Container,
+    );
+  });
 }
 
 /** What the unit mark standing on each tile handed shows, in one question to the page; nothing on a tile no mark stands on. */
@@ -3385,6 +3447,21 @@ export async function intoSettings(page: Page): Promise<void> {
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await click(page, 'menu-settings');
   await expect.poll(() => standing(page, 'settings')).toBe(true);
+}
+
+/** From the chronicle screen into Graphics, the way the player walks there. */
+export async function intoGraphics(page: Page): Promise<void> {
+  await intoSettings(page);
+  await click(page, 'settings-graphics');
+  await expect.poll(() => standing(page, 'graphics')).toBe(true);
+}
+
+/** The infopanel raised on the tile by a right click, its first card the unit's. */
+export async function inspected(page: Page, tile: TileCoords): Promise<void> {
+  await rested(page);
+  const at = await onScreen(page, `tile-${tileKey(tile)}`);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('unit');
 }
 
 /**

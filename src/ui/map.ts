@@ -47,6 +47,7 @@ import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf, thresholdOf } from './city-bar';
 import { onResize, type Stratum, thingUnder, whileUp } from './design-space';
+import { factionSigns } from './faction-signs';
 import { glyphMark } from './glyphs';
 import { type HealthBar, healthBarOf } from './health-bar';
 import { LOOK } from './look';
@@ -78,6 +79,7 @@ import {
   FEATURE_DISC,
   featureMarksOn,
   featureToldOn,
+  fogDark,
   givenPlate,
   IMPROVEMENT_DISC,
   improvementLyingOf,
@@ -98,12 +100,14 @@ import {
   showCityBar,
   showGiven,
   showThreshold,
+  showTileSign,
   showTileYield,
   TILE_SIZE,
   type TileDark,
   type TileObjects,
   thresholdMark,
   tileFace,
+  tileSignMarker,
   type UnitShade,
   unitMarker,
   unitMotionTargets,
@@ -258,6 +262,8 @@ export type MapView = {
   showCityMarks(on: boolean): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
   showVeils(veils: Veils): void;
+  /** Draws the map again with the faction signs as the Graphics window's row leaves them. */
+  showSigns(): void;
   /** Shows or hides the discs of every tile's row, the features' and the improvements', with what they wear. */
   showDiscs(shown: boolean): void;
   /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
@@ -467,6 +473,7 @@ export function createMapView(
   for (const whose of CITY_FACTIONS) {
     cityBadgeLayer.add([cityBadges[whose].pill, cityBadges[whose].number]);
   }
+  const tileSignPool = poolOf(cityBadgeLayer, () => tileSignMarker(scene));
 
   /** The marker of each unit of the chronicle the map stands on, by the number it is named by. */
   const unitMarkers = new Map<number, Phaser.GameObjects.Container>();
@@ -656,6 +663,32 @@ export function createMapView(
       const rows = cityRows(current, whose);
       if (tile === undefined || rows === undefined || !live.has(tileKey(tile))) continue;
       showCityBadge(badge, tile, whose, rows.population);
+    }
+  };
+
+  /**
+   * The faction sign on the chronicle the map stands on, shown where the signs are on, darkened in
+   * fog: on each city's own tile where the map draws it and its face keeps the city's own building,
+   * and on every face it draws carrying the age's camp.
+   */
+  const paintTileSigns = (): void => {
+    tileSignPool.hide();
+    const current = shown;
+    if (current === undefined) return;
+    const signed = factionSigns();
+    const signOn = (tile: TileCoords, faction: Faction): void => {
+      showTileSign(tileSignPool.take(), tile, faction, fogDark(!live.has(tileKey(tile))), signed);
+    };
+    for (const whose of CITY_FACTIONS) {
+      const coord = cityTileOf(current, whose);
+      const tile = coord === undefined ? undefined : tileAt(current.tiles, coord);
+      const face = tile === undefined ? undefined : drawnOf(tile);
+      if (tile === undefined || face === undefined) continue;
+      if (face.tile.building === tile.building) signOn(tile, whose);
+    }
+    const { building: camp } = ageOf(catalogue, current.age).camp;
+    for (const tile of current.tiles) {
+      if (drawnOf(tile)?.tile.building === camp) signOn(tile, 'enemy');
     }
   };
 
@@ -868,7 +901,16 @@ export function createMapView(
       const { stats, faction, embarked } = standing;
       const prepares = preparedAs(chronicle, standing);
       const bar = barOf(standing, undefined);
-      const kept = asUnit(fogUnitPool.take(), stats.type, faction, embarked, 'fog', prepares, bar);
+      const kept = asUnit(
+        fogUnitPool.take(),
+        stats.type,
+        faction,
+        embarked,
+        'fog',
+        prepares,
+        bar,
+        factionSigns(),
+      );
       painted.push(kept.setPosition(x, y));
     }
     return painted;
@@ -1247,7 +1289,8 @@ export function createMapView(
     const { stats, faction, embarked } = unit;
     const prepares = preparedAs(chronicle, unit);
     const bar = barOf(unit, damageReadOn(unit));
-    return asUnit(marker, stats.type, faction, embarked, shadeOf(chronicle, unit), prepares, bar);
+    const shade = shadeOf(chronicle, unit);
+    return asUnit(marker, stats.type, faction, embarked, shade, prepares, bar, factionSigns());
   };
 
   /** Every unit of a chronicle written, and the markers of the units gone destroyed. */
@@ -1273,6 +1316,7 @@ export function createMapView(
     paintBorder();
     paintUnits(current);
     paintCityBadges();
+    paintTileSigns();
     paintCityBars();
     paintCityMarks();
     paintYields();
@@ -1448,6 +1492,10 @@ export function createMapView(
 
     showVeils(next: Veils): void {
       veils = next;
+      if (shown !== undefined) render(shown);
+    },
+
+    showSigns(): void {
       if (shown !== undefined) render(shown);
     },
 

@@ -28,6 +28,12 @@ function colourOf(symbol: CastSymbol): number {
     case 'pillage':
     case 'capture':
       return LOOK.unitBadgeInk;
+    case 'player':
+      return LOOK.civilizationSignInk;
+    case 'neutral':
+      return LOOK.neutralSignInk;
+    case 'enemy':
+      return LOOK.enemySignInk;
   }
 }
 

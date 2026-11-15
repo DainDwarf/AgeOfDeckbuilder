@@ -2,6 +2,7 @@ import type { PreparedAs } from '../rules/enemies';
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
 import type { Resource } from '../rules/resources';
+import type { Faction } from '../rules/units';
 import { grownOf, haloOf } from './fade';
 import { LOOK, type Wash } from './look';
 import { aroundPicture, type Made, roomFor, type Sheet, type Square, washed } from './sheet';
@@ -350,9 +351,16 @@ export const UNIT_SHEET: Sheet = {
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, an
- * attack that would kill, or what a prepare lands as.
+ * attack that would kill, what a prepare lands as, or a faction.
  */
-export type CastSymbol = Resource | 'population' | 'influence' | 'health' | 'killed' | PreparedAs;
+export type CastSymbol =
+  | Resource
+  | 'population'
+  | 'influence'
+  | 'health'
+  | 'killed'
+  | PreparedAs
+  | Faction;
 
 /** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
 const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
@@ -368,6 +376,9 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   killed: 'game-icons/death-skull.svg',
   pillage: 'game-icons/fire.svg',
   capture: 'material-design-icons/flag-variant.svg',
+  player: 'material-design-icons/crown.svg',
+  neutral: 'material-design-icons/scale-balance.svg',
+  enemy: 'material-design-icons/axe-battle.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */

@@ -7,7 +7,7 @@ import {
   click,
   endedTurn,
   endTurn,
-  intoSettings,
+  intoGraphics,
   onDesignedSpeed,
   openSaved,
   playedOut,
@@ -27,13 +27,6 @@ const FULLSCREEN = 'graphics-fullscreen';
 /** What the Animation speed row's button reads at that speed. */
 function speedRead(speed: number): string {
   return text('graphics.speed', { speed });
-}
-
-/** From the chronicle screen into Graphics, the way the player walks there. */
-async function intoGraphics(page: Page): Promise<void> {
-  await intoSettings(page);
-  await click(page, 'settings-graphics');
-  await expect.poll(() => standing(page, 'graphics')).toBe(true);
 }
 
 /** A press on the row, waited for until it reads that speed. */

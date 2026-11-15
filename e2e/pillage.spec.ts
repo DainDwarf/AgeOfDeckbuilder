@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
 import { built, terraformed } from '../src/rules/cards';
@@ -14,18 +14,17 @@ import { LOOK, multiplied } from '../src/ui/look';
 import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
-  type BadgeShown,
   budget,
   campKind,
   chronicleOf,
+  type DiscShown,
   endedTurn,
   endTurn,
   freeGround,
-  onScreen,
+  inspected,
   openSaved,
   playerCityTile,
   readingsAndUnitMarks,
-  rested,
   settledOn,
   shownCard,
   textOf,
@@ -83,7 +82,7 @@ function preparesOn(chronicle: Chronicle, tile: TileCoords): PreparedAs | undefi
 }
 
 /** The badge an enemy wears for what its prepare lands as, every colour multiplied by the shade. */
-function enemyBadge(prepares: PreparedAs | undefined, shade = 0xffffff): BadgeShown {
+function enemyBadge(prepares: PreparedAs | undefined, shade = 0xffffff): DiscShown {
   if (prepares === undefined) throw new Error('the enemy has prepared nothing');
   return {
     disc: multiplied(LOOK.enemy, shade),
@@ -91,14 +90,6 @@ function enemyBadge(prepares: PreparedAs | undefined, shade = 0xffffff): BadgeSh
     glyph: glyphFileOf(prepares),
     ink: multiplied(LOOK.unitBadgeInk, shade),
   };
-}
-
-/** The infopanel raised on the tile by a right click, its first card the unit's. */
-async function inspected(page: Page, tile: TileCoords): Promise<void> {
-  await rested(page);
-  const at = await onScreen(page, `tile-${tileKey(tile)}`);
-  await page.mouse.click(at.x, at.y, { button: 'right' });
-  await expect.poll(() => shownCard(page)).toBe('unit');
 }
 
 test('a pillager standing on a farm prepares the pillage: it wears the badge in the enemy colour with the flame and its card reads Pillaging, and at the next end of turn the farm is gone and the pillager wears only what it prepares next', async ({

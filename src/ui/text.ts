@@ -430,6 +430,7 @@ const TEXT = {
   'graphics.animation-speed': 'Animation speed', // glossary exception: speed
   'graphics.speed': '×{speed}', // glossary exception: speed
   'graphics.fullscreen': 'Fullscreen',
+  'graphics.faction-signs': 'Faction signs',
   'graphics.on': 'On',
   'graphics.off': 'Off',
   'key.arrow-up': '↑',

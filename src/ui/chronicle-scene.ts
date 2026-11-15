@@ -46,9 +46,10 @@ import {
   thingUnder,
   UI_FONT,
 } from './design-space';
+import type { DrawsSigns } from './faction-signs';
 import { createHand } from './hand';
 import { createIconsButton } from './icons-button';
-import { cardsOf, createInfoPanel } from './infopanel';
+import { type Card, cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
 import { type AimShown, createMapView, type PressedTile } from './map';
@@ -125,7 +126,10 @@ const LABEL_STYLE = {
   color: css(LOOK.ink),
 };
 
-export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
+export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, DrawsSigns {
+  /** The map and the infopanel drawn again with the faction signs as they now stand. */
+  drawSigns!: () => void;
+
   private choices!: Choices;
   private current!: Chronicle;
   /** What the chronicle paid into the campaign as it ended, and nothing before it has. */
@@ -259,8 +263,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     /** Whether city mode is on: a left click on the selection is the city's act on that tile. */
     let cityMode = false;
 
-    /** The tile the infopanel is inspecting and which of its cards it shows. */
-    let inspection: { on: PressedTile; card: number } | undefined;
+    /** The tile the infopanel is inspecting, its cards, and which of them it shows. */
+    let inspection: { on: PressedTile; cards: Card[]; card: number } | undefined;
 
     /** The inspection let go of on its own: the infopanel down, whatever is selected still ringed. */
     const uninspect = (): void => {
@@ -399,7 +403,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     /**
      * One step of the inspection on a tile: the next of its cards in the infopanel, and after the
      * last of them the first again; on a tile it does not stand on yet, the tile's first card, or the
-     * first of the tile's own past its unit's where `tileOwn`. The one place the infopanel is shown.
+     * first of the tile's own past its unit's where `tileOwn`.
      */
     const inspect = (on: PressedTile, tileOwn: boolean): void => {
       const face = view.drawnAs(on.tile);
@@ -415,7 +419,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       const opening = tileOwn ? cards.findIndex((card) => card.kind !== 'unit') : 0;
       const stepped = already === undefined ? opening : (already.card + 1) % cards.length;
       panel.show(cards, stepped, on.at, already !== undefined && stepped !== already.card);
-      inspection = { on, card: stepped };
+      inspection = { on, cards, card: stepped };
+    };
+
+    this.drawSigns = () => {
+      view.showSigns();
+      if (inspection !== undefined) {
+        panel.show(inspection.cards, inspection.card, inspection.on.at, false);
+      }
     };
 
     const act = async (found: PressedTile): Promise<void> => {

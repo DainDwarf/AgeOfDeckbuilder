@@ -26,6 +26,7 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
+import { factionSigns, pressFactionSigns } from './faction-signs';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
 
@@ -481,21 +482,49 @@ function layControls(
   };
 }
 
+/** A row of a setting the game keeps, reading it, a press turning it and the row reading it again. */
+function keptRow(
+  scene: Phaser.Scene,
+  y: number,
+  name: string,
+  row: string,
+  reads: () => string,
+  press: () => void,
+): Phaser.GameObjects.GameObject[] {
+  const { parts, label } = turningRow(scene, y, name, row, () => {
+    press();
+    label.setText(reads());
+  });
+  label.setText(reads());
+  return parts;
+}
+
 /** The Animation speed row, reading the speed, a press moving it to the next. */
 function speedRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject[] {
-  const reads = (): string => text('graphics.speed', { speed: animationSpeed() });
-  const { parts, label } = turningRow(
+  return keptRow(
     scene,
     y,
     'graphics-animation-speed',
     text('graphics.animation-speed'),
+    () => text('graphics.speed', { speed: animationSpeed() }),
     () => {
       pressAnimationSpeed(scene.game.scene);
-      label.setText(reads());
     },
   );
-  label.setText(reads());
-  return parts;
+}
+
+/** The Faction signs row, reading whether they are on, a press turning them. */
+function signsRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject[] {
+  return keptRow(
+    scene,
+    y,
+    'graphics-faction-signs',
+    text('graphics.faction-signs'),
+    () => text(factionSigns() ? 'graphics.on' : 'graphics.off'),
+    () => {
+      pressFactionSigns(scene.game.scene);
+    },
+  );
 }
 
 /** The Fullscreen row, a press asking the browser and the row reading what it did. */
@@ -524,7 +553,7 @@ function fullscreenRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameO
 }
 
 /** The Graphics window's rows, top down. */
-const GRAPHICS_ROWS = [speedRow, fullscreenRow];
+const GRAPHICS_ROWS = [speedRow, fullscreenRow, signsRow];
 
 function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, top: number): void {
   GRAPHICS_ROWS.forEach((row, index) => {

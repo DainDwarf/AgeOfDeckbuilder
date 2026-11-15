@@ -11,6 +11,7 @@ import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
 import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf, SMALLEST_TYPE } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
+import { factionSigns } from './faction-signs';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Drawn, TileFace } from './map';
@@ -128,7 +129,7 @@ export function createThingCard(
   thing: Thing,
   width: number,
 ): Phaser.GameObjects.Container {
-  const face = buildFace(scene, catalogue, drawingOf(catalogue, thing), width, undefined);
+  const face = buildFace(scene, catalogue, drawingOf(catalogue, thing), width, undefined, false);
   face.root.setPosition(-width / 2, -metricsOf(width).height);
   return scene.add.container(0, 0, [face.root]).setData('reference', thing);
 }
@@ -391,7 +392,7 @@ export function createInfoPanel(
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, answers);
+      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, answers, factionSigns());
       // Under the card it replaces, so the dissolve uncovers it, and over the stop either way.
       panel.addAt(face.root, panel.getIndex(stop) + 1);
       standing = face;
@@ -425,7 +426,8 @@ export function createInfoPanel(
 
 /**
  * The card's head over its rows, laid out in the card's own type and spacing at `width`, from its
- * top-left corner; a row raises a bubble only where its answers are handed.
+ * top-left corner; a row raises a bubble only where its answers are handed, and a unit's head wears
+ * its faction's sign where `signed`.
  */
 function buildFace(
   scene: Phaser.Scene,
@@ -433,6 +435,7 @@ function buildFace(
   card: Drawing,
   width: number,
   answers: RowAnswers | undefined,
+  signed: boolean,
 ): Face {
   const { em, pad } = metricsOf(width);
   const style = stylesOf(em);
@@ -445,7 +448,7 @@ function buildFace(
   const paper = scene.add.graphics();
   drawCardSurface(paper, 0, 0, { width });
 
-  const head = headOf(scene, catalogue, card);
+  const head = headOf(scene, catalogue, card, signed);
   const mark = fitMark(head.mark, markBox, head.fittedBy).setPosition(left + markBox / 2, middle);
   const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title)
     .setOrigin(0, 0.5)
@@ -605,10 +608,11 @@ function headOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   card: Drawing,
+  signed: boolean,
 ): { mark: Mark; fittedBy?: readonly Mark[]; name: string } {
   if (card.kind === 'unit') {
     const { stats, faction, embarked } = card.unit;
-    const mark = unitMark(scene, stats.type, faction, embarked);
+    const mark = unitMark(scene, stats.type, faction, embarked, signed);
     return { mark, fittedBy: unitFittedBy(mark), name: unitName(stats.type) };
   }
   return { mark: markOf(scene, catalogue, card.rows[0]), name: nameOf(card.rows[0]) };

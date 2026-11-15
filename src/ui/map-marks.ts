@@ -166,13 +166,16 @@ const THRESHOLD_GAP = 3;
 const THRESHOLD_PLATE_HEIGHT = 16;
 const THRESHOLD_PLATE_PAD = 4;
 
-/** On the plate of the yield an aimed card would give: the gap after its sign. */
-const SIGN_GAP = 2;
+/** On the plate of the yield an aimed card would give: the gap after its plus sign. */
+const PLUS_GAP = 2;
 
 /** A city's badge: how tall it is, the pad on each side of its number, and how the number reads. */
 const CITY_BADGE_HEIGHT = 14;
 const CITY_BADGE_PAD = 3;
 const CITY_BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bold' };
+
+/** A side of the square of the glyph on the faction sign a city's own tile and a camp's wear. */
+const TILE_SIGN_GLYPH = 10;
 
 /**
  * A prepared unit's badge: how far right of its tile's middle its centre stands, level with it, how
@@ -181,6 +184,9 @@ const CITY_BADGE_STYLE = { fontFamily: UI_FONT, fontSize: '11px', fontStyle: 'bo
 const UNIT_BADGE_OFF = 10;
 const UNIT_BADGE_SIZE = 11;
 const UNIT_BADGE_GLYPH = 8;
+
+/** How far left of its tile's middle a unit's faction sign stands, level with it: the badge's disc and glyph. */
+const UNIT_SIGN_OFF = 5;
 
 /** The dark rim a city's badge and a prepared unit's wear. */
 const BADGE_RIM: Rim = { colour: LOOK.mapOutline, strength: 1, width: MARK_EDGE };
@@ -218,6 +224,9 @@ const SKULL: BarGlyph = { symbol: 'killed', square: 8 };
  */
 const CITY_BAR: BarShape = { lie: 'flat', length: 22, width: 3 };
 const CITY_BAR_DROP: Record<CityBarStock, number> = { food: 11, culture: 15 };
+
+/** How far below its tile's middle a city's badge stands: level with the middle of the two bars. */
+const CITY_BADGE_DROP = (CITY_BAR_DROP.food + CITY_BAR_DROP.culture) / 2;
 
 /**
  * What the map draws a tile's things as: a picture, one polygon, a feature's disc, or a unit's mark,
@@ -811,14 +820,16 @@ function shadeTint(shade: UnitShade): number {
 }
 
 /**
- * A unit's mark with nothing drawn on it yet: his canoe, its halo, its painting, its badge's disc and
- * glyph, and its health bar, bottom first.
+ * A unit's mark with nothing drawn on it yet: his canoe, its halo, its painting, its faction sign's
+ * disc and glyph, its badge's disc and glyph, and its health bar, bottom first.
  */
 export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   return scene.add.container(0, 0, [
     scene.add.image(0, 0, UNIT_SHEET.key, CANOE),
     scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.image(0, 0, UNIT_SHEET.key),
+    scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
+    glyphMark(scene),
     scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
     glyphMark(scene),
     healthBarMarker(scene),
@@ -920,17 +931,25 @@ function healthBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   );
 }
 
-/** The badge of a `unitMarker`: its disc and its glyph. */
-export function unitBadgeOf(
+/** The faction sign of a `unitMarker`: its disc and its glyph. */
+function unitSignOf(
   mark: Phaser.GameObjects.Container,
 ): [Phaser.GameObjects.Arc, Phaser.GameObjects.Container] {
   const [, , , disc, glyph] = mark.list;
   return [disc as Phaser.GameObjects.Arc, glyph as Phaser.GameObjects.Container];
 }
 
+/** The badge of a `unitMarker`: its disc and its glyph. */
+export function unitBadgeOf(
+  mark: Phaser.GameObjects.Container,
+): [Phaser.GameObjects.Arc, Phaser.GameObjects.Container] {
+  const [, , , , , disc, glyph] = mark.list;
+  return [disc as Phaser.GameObjects.Arc, glyph as Phaser.GameObjects.Container];
+}
+
 /** The health bar of a `unitMarker`, its parts in one container. */
 export function unitHealthBarOf(mark: Phaser.GameObjects.Container): Phaser.GameObjects.Container {
-  return mark.getAt<Phaser.GameObjects.Container>(5);
+  return mark.getAt<Phaser.GameObjects.Container>(7);
 }
 
 /** What a motion of a `unitMarker` moves: the marker, its badge's disc and glyph, and its health bar. */
@@ -975,9 +994,36 @@ function shadeTone(tint: number): Tone {
 }
 
 /**
+ * A disc of a unit's faction's colour with a badge's rim, and the symbol's glyph on it, at `across`
+ * from its tile's middle and level with it, darkened by the tint; both hidden where no symbol is
+ * handed.
+ */
+function asUnitDisc(
+  [disc, glyph]: [Phaser.GameObjects.Arc, Phaser.GameObjects.Container],
+  across: number,
+  faction: Faction,
+  symbol: CastSymbol | undefined,
+  tint: number,
+): void {
+  disc
+    .setPosition(across, 0)
+    .setFillStyle(multiplied(FACTION_COLOURS[faction], tint))
+    .setStrokeStyle(BADGE_RIM.width, multiplied(BADGE_RIM.colour, tint), BADGE_RIM.strength)
+    .setAlpha(1)
+    .setVisible(symbol !== undefined);
+  glyph
+    .setPosition(across, 0)
+    .setAlpha(1)
+    .setVisible(symbol !== undefined);
+  if (symbol !== undefined) {
+    asGlyph(glyph, symbol, UNIT_BADGE_GLYPH, { tone: shadeTone(tint), outlined: false });
+  }
+}
+
+/**
  * A `unitMarker` made to draw a unit: its kind's painting low on its tile in a halo of its faction's
- * colour, in his canoe while embarked, the badge of what its prepare lands as where it has prepared,
- * and the health bar it is handed where it is handed one, all of it darkened by the shade.
+ * colour, in his canoe while embarked, its faction's sign where `signed`, the badge of what its
+ * prepare lands as, and the health bar it is handed where it is handed one, darkened by the shade.
  */
 export function asUnit(
   mark: Phaser.GameObjects.Container,
@@ -987,11 +1033,11 @@ export function asUnit(
   shade: UnitShade,
   prepares: PreparedAs | undefined,
   bar: HealthBar | undefined,
+  signed: boolean,
 ): Phaser.GameObjects.Container {
   const { painting, halo, scale } = unitPaintingOf(type);
   const tint = shadeTint(shade);
   const [canoe, haloImage, paintingImage] = mark.list as Phaser.GameObjects.Image[];
-  const [disc, glyph] = unitBadgeOf(mark);
   haloImage
     .setTexture(UNIT_SHEET.key, halo)
     .setScale(scale)
@@ -1007,19 +1053,8 @@ export function asUnit(
     .setScale(scale)
     .setPosition(0, UNIT_DROP)
     .setTint(tint);
-  disc
-    .setPosition(UNIT_BADGE_OFF, 0)
-    .setFillStyle(multiplied(FACTION_COLOURS[faction], tint))
-    .setStrokeStyle(BADGE_RIM.width, multiplied(BADGE_RIM.colour, tint), BADGE_RIM.strength)
-    .setAlpha(1)
-    .setVisible(prepares !== undefined);
-  glyph
-    .setPosition(UNIT_BADGE_OFF, 0)
-    .setAlpha(1)
-    .setVisible(prepares !== undefined);
-  if (prepares !== undefined) {
-    asGlyph(glyph, prepares, UNIT_BADGE_GLYPH, { tone: shadeTone(tint), outlined: false });
-  }
+  asUnitDisc(unitSignOf(mark), -UNIT_SIGN_OFF, faction, signed ? faction : undefined, tint);
+  asUnitDisc(unitBadgeOf(mark), UNIT_BADGE_OFF, faction, prepares, tint);
   asUnitHealthBar(mark, bar, shade);
   return mark;
 }
@@ -1031,16 +1066,26 @@ export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObj
 }
 
 /**
- * A unit off the map, undarkened and wearing neither badge nor health bar, its painting and his canoe
- * centred on the container's point.
+ * A unit off the map, undarkened and wearing neither badge nor health bar, its faction's sign where
+ * `signed`, its painting and his canoe centred on the container's point.
  */
 export function unitMark(
   scene: Phaser.Scene,
   type: string,
   faction: Faction,
   embarked: boolean,
+  signed: boolean,
 ): Phaser.GameObjects.Container {
-  const mark = asUnit(unitMarker(scene), type, faction, embarked, 'clear', undefined, undefined);
+  const mark = asUnit(
+    unitMarker(scene),
+    type,
+    faction,
+    embarked,
+    'clear',
+    undefined,
+    undefined,
+    signed,
+  );
   const { centerX, centerY } = paintedBoundsOf(unitFittedBy(mark));
   for (const part of mark.list as Mark[]) part.setPosition(part.x - centerX, part.y - centerY);
   return mark;
@@ -1205,12 +1250,12 @@ export function showGiven(
   const owed = RESOURCES.flatMap((resource) =>
     Array<Resource>(yields[resource] ?? 0).fill(resource),
   );
-  const sign = ownBoxOf(number).width;
-  const width = sign + SIGN_GAP + owed.length * THRESHOLD_GLYPH;
-  number.setX((sign - width) / 2);
+  const plus = ownBoxOf(number).width;
+  const width = plus + PLUS_GAP + owed.length * THRESHOLD_GLYPH;
+  number.setX((plus - width) / 2);
   glyphs.hide();
   owed.forEach((resource, at) => {
-    const left = sign + SIGN_GAP + at * THRESHOLD_GLYPH - width / 2;
+    const left = plus + PLUS_GAP + at * THRESHOLD_GLYPH - width / 2;
     asGlyph(glyphs.take(), resource, THRESHOLD_GLYPH).setX(left + THRESHOLD_GLYPH / 2);
   });
   drawPlate(plate, width);
@@ -1275,10 +1320,7 @@ export function showCityBadge(
   number.setText(String(population)).setName(`population-${key}-number`).setVisible(true);
   const width = Math.max(CITY_BADGE_HEIGHT, ownBoxOf(number).width + 2 * CITY_BADGE_PAD);
   const { x, y } = positionOf(coord);
-  const at = {
-    x: x + CITY_BAR.length / 2 + width / 2,
-    y: y + (CITY_BAR_DROP.food + CITY_BAR_DROP.culture) / 2,
-  };
+  const at = { x: x + CITY_BAR.length / 2 + width / 2, y: y + CITY_BADGE_DROP };
   number.setPosition(at.x, at.y);
   pill.setPosition(at.x, at.y).setName(`population-${key}`).setVisible(true);
 
@@ -1289,6 +1331,41 @@ export function showCityBadge(
     { colour: CITY_COLOURS[whose], strength: 1 },
     BADGE_RIM,
   );
+}
+
+/** The faction sign a city's own tile or a camp's wears, with nothing drawn on it yet: its disc and its glyph. */
+export function tileSignMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return scene.add.container(0, 0, [
+    scene.add.circle(0, 0, CITY_BADGE_HEIGHT / 2),
+    glyphMark(scene),
+  ]);
+}
+
+/**
+ * A city's own tile or a camp's wearing its faction's sign where `signed`, darkened by its tile's
+ * dark: a city's badge's disc in the faction's colour, its right edge on the left end of the bars the
+ * player's city wears, level with their middle, and the faction's glyph on it.
+ */
+export function showTileSign(
+  mark: Phaser.GameObjects.Container,
+  coord: TileCoords,
+  faction: Faction,
+  dark: TileDark,
+  signed: boolean,
+): void {
+  const [disc, glyph] = mark.list as [Phaser.GameObjects.Arc, Phaser.GameObjects.Container];
+  disc
+    .setFillStyle(darkened(FACTION_COLOURS[faction], dark))
+    .setStrokeStyle(BADGE_RIM.width, darkened(BADGE_RIM.colour, dark), BADGE_RIM.strength);
+  asGlyph(glyph, faction, TILE_SIGN_GLYPH, {
+    tone: (colour) => darkened(colour, dark),
+    outlined: false,
+  });
+  const { x, y } = positionOf(coord);
+  mark
+    .setPosition(x - CITY_BAR.length / 2 - CITY_BADGE_HEIGHT / 2, y + CITY_BADGE_DROP)
+    .setName(`faction-sign-${tileKey(coord)}`)
+    .setVisible(signed);
 }
 
 /** A city's bar with nothing drawn on it yet, hidden. */
