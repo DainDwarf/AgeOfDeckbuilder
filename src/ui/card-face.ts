@@ -88,7 +88,7 @@ export function drawCardSurface(
 
 /**
  * A name a rules entry draws, which a face carries in its data as `names`: what it names, the
- * reading of the face it stands on, and its box.
+ * reading of the text it stands in, and its box.
  */
 export type Name = {
   readonly reference: Reference;
@@ -474,7 +474,7 @@ export function createCardFace(
     }
 
     inked(rules, toned(paint.ink)).setText(next.rules);
-    const marks = centredMarks(ruled, next.reading);
+    const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {
       asGlyph(glyphs.take(), glyph.resource, span, { tone: toned }).setPosition(glyph.x, glyph.y);

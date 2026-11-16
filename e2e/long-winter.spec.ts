@@ -3,10 +3,11 @@ import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
 import { tileAt, tileKey, tilesBeside } from '../src/rules/map';
 import { terrainKind } from '../src/rules/map-kinds';
+import { capstoneReading } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { yieldParts } from '../src/rules/yields';
-import { capstoneFace } from '../src/ui/face';
+import { capstoneText } from '../src/ui/event-text';
 import { capstoneLore } from '../src/ui/lore';
 import { terrainName } from '../src/ui/text';
 import {
@@ -59,7 +60,7 @@ function beforeTheWinter(campaign: Campaign): {
   );
 }
 
-test('the long winter’s landing raises its card, adds its Cold nights to the discard pile, and the city’s tile reads no food of its terrain', async ({
+test('the long winter’s landing raises its window, adds its Cold nights to the discard pile, and the city’s tile reads no food of its terrain', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -76,7 +77,8 @@ test('the long winter’s landing raises its card, adds its Cold nights to the d
   const added = idsOf(landed.discardPile).filter((id) => id === COLD_NIGHT);
   expect(terrain?.yields.food).toBeUndefined();
   expect(idsOf(before.discardPile)).not.toContain(COLD_NIGHT);
-  expect(added.length).toBe(capstoneFace(CATALOGUE, landed).reading.count);
+  const reading = capstoneReading(CATALOGUE, landed, WINTER);
+  expect(added.length).toBe(reading.count);
 
   await openSaved(page, before, campaign);
   await stoppedTurn(page);
@@ -86,7 +88,7 @@ test('the long winter’s landing raises its card, adds its Cold nights to the d
     capstoneLore(WINTER, 'landing'),
     WINTER,
   ]);
-  expect(shown('capstone-card-0').rules).toBe(capstoneFace(CATALOGUE, landed).rules);
+  expect(shown('capstone-card-0').answerText).toBe(capstoneText(WINTER, reading));
 
   await click(page, 'capstone-card-0');
   await playedOut(page);

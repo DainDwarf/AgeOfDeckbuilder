@@ -361,7 +361,7 @@ function unitActs(aim: Aim): boolean {
 
 /**
  * One answer an event deals: its cost, flat or read off the chronicle, what blocks it there where it
- * names that, what its rules entry reads, its cases where it declares them, and what it does to the
+ * names that, what its text reads, its cases where it declares them, and what it does to the
  * chronicle it lands on. A draw of its own steps the generator that chronicle carries.
  */
 export type Answer = {
@@ -386,7 +386,7 @@ export type ScheduledEvent = {
 };
 
 /**
- * A capstone: what it does on its turn and on every turn after, the numbers its rules entry reads,
+ * A capstone: what it does on its turn and on every turn after, the numbers its text reads,
  * the rule it lays over every tile's yield from its landing on, its count read toward the need that
  * passes it, and whether one change, read on the chronicles before and after it, has failed it.
  */

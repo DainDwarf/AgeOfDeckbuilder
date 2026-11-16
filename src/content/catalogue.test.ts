@@ -34,7 +34,14 @@ import {
 import type { Landed } from '../rules/stages';
 import { type Chronicle, keysDealt, type Rewards } from '../rules/state';
 import { yieldParts } from '../rules/yields';
-import { answerLinesOfCase, answerName, answerShown, eventName } from '../ui/event-text';
+import {
+  answerLinesOfCase,
+  answerName,
+  answerShown,
+  capstoneLines,
+  capstoneName,
+  eventName,
+} from '../ui/event-text';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -51,8 +58,6 @@ import {
   achievementGoal,
   ageName,
   buildingName,
-  capstoneName,
-  capstoneRules,
   cardName,
   cardRules,
   civilizationName,
@@ -183,7 +188,7 @@ function answerEntries(chronicle: Chronicle, event: string, answer: string): str
   );
 }
 
-test('every rules entry, every line of every answer’s text and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
+test('every rules entry, every line of every answer’s and every capstone’s text and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
   const entries = Object.keys(CATALOGUE.cards).flatMap(rulesAsDrawn);
   for (const age of AGES) {
     entries.push(
@@ -200,7 +205,9 @@ test('every rules entry, every line of every answer’s text and every goal of t
       }
     }
     for (const id of Object.keys(CATALOGUE.capstones)) {
-      entries.push(capstoneRules(id, capstoneReading(CATALOGUE, chronicle, id)));
+      entries.push(
+        ...capstoneLines(id, capstoneReading(CATALOGUE, chronicle, id)).map(({ line }) => line),
+      );
     }
   }
   for (const entry of entries) {
@@ -346,12 +353,12 @@ test('every reward of every age’s camp, site and neutral’s city has a name, 
   }
 });
 
-test('every capstone of the catalogue has a name, a rules entry read on the numbers it reads of a chronicle launched and settled in each age, a lore at each raising of its window, a victory line and, naming what fails it, a defeat line on the screen', () => {
+test('every capstone of the catalogue has a name, a text read on the numbers it reads of a chronicle launched and settled in each age, a lore at each raising of its window, a victory line and, naming what fails it, a defeat line on the screen', () => {
   const chronicles = AGES.map(settledIn);
   for (const [id, { fails }] of Object.entries(CATALOGUE.capstones)) {
     expect(() => capstoneName(id)).not.toThrow();
     for (const chronicle of chronicles) {
-      expect(() => capstoneRules(id, capstoneReading(CATALOGUE, chronicle, id))).not.toThrow();
+      expect(() => capstoneLines(id, capstoneReading(CATALOGUE, chronicle, id))).not.toThrow();
     }
     expect(() => capstoneLore(id, 'opening')).not.toThrow();
     expect(() => capstoneLore(id, 'landing')).not.toThrow();

@@ -3,10 +3,11 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { gained, struck } from '../src/rules/cards';
 import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { buildingKind } from '../src/rules/map-kinds';
+import { capstoneReading } from '../src/rules/schedule';
 import { walked } from '../src/rules/stages';
 import type { CardId, Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
-import { capstoneFace } from '../src/ui/face';
+import { capstoneText } from '../src/ui/event-text';
 import { capstoneLore } from '../src/ui/lore';
 import { victoryLine } from '../src/ui/text';
 import {
@@ -121,7 +122,7 @@ function builtFrom(landed: Chronicle): Built | undefined {
   return undefined;
 }
 
-test('the monument’s landing raises its card and puts Foundations on top of the draw pile, and the next turn adds one of its hazards to the discard pile', async ({
+test('the monument’s landing raises its window and puts Foundations on top of the draw pile, and the next turn adds one of its hazards to the discard pile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -148,7 +149,9 @@ test('the monument’s landing raises its card and puts Foundations on top of th
     capstoneLore(MONUMENT, 'landing'),
     MONUMENT,
   ]);
-  expect(shown('capstone-card-0').rules).toBe(capstoneFace(CATALOGUE, landed).rules);
+  expect(shown('capstone-card-0').answerText).toBe(
+    capstoneText(MONUMENT, capstoneReading(CATALOGUE, landed, MONUMENT)),
+  );
 
   await click(page, 'capstone-card-0');
   await playedOut(page);

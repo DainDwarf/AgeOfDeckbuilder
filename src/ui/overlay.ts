@@ -29,8 +29,8 @@ import {
   UI_FONT,
 } from './design-space';
 import { type EndingOf, standEnding } from './ending-screen';
-import { type AnswerShown, answerShown, eventName } from './event-text';
-import { capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
+import { type AnswerShown, answerShown, capstoneShown, eventName } from './event-text';
+import { cardFace, cardFaceAtStart, type Face } from './face';
 import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
@@ -125,7 +125,7 @@ type Dealing = {
 /**
  * The capstone's window on the scrim: the chronicle it was raised over, whose timeline names the
  * capstone, and whether the opening raised it or the landing did, which picks its lore and is told
- * when it closes. It offers its one card to be read and nothing to be taken, so it holds no selection.
+ * when it closes. It offers the capstone to be read and nothing to be taken, so it holds no selection.
  */
 type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & {
   [R in Raising]: { readonly raised: R } & RaisedWith[R];
@@ -423,16 +423,20 @@ export function createOverlay({
     }
   };
 
-  /** The capstone's window raised. A left press on its card closes it for good, as a press beside it does. */
+  /**
+   * The capstone's window raised, the capstone drawn as an answer is. A left press on it closes the
+   * window for good, as a press beside it does.
+   */
   const showCapstone = (announcement: Capstone): void => {
     raiseOnScrim(announcement);
 
-    const face = capstoneFace(catalogue, announcement.on);
+    const answer = capstoneShown(catalogue, announcement.on);
     const title = raiseTitle('capstone', text('capstone.title'));
-    layWindow('capstone', [offeredCard(face, 0, 1)], title.y + title.height + MARGIN, () => {
+    const entry: Offered = { shows: 'answer', answer, costs: [], refusal: NO_REFUSAL, at: 0 };
+    layWindow('capstone', [entry], title.y + title.height + MARGIN, () => {
       closeCapstone(announcement);
     });
-    raiseLore('capstone', capstoneLore(face.id, announcement.raised));
+    raiseLore('capstone', capstoneLore(answer.id, announcement.raised));
   };
 
   /** The ending screen raised as the chronicle ends: it stands on the scrim for good. */

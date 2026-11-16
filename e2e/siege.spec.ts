@@ -5,12 +5,12 @@ import { bonusCarried, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { enemyEntering } from '../src/rules/enemies';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
-import { unitDamaged } from '../src/rules/schedule';
+import { capstoneReading, unitDamaged } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { type Unit, unitAt } from '../src/rules/units';
-import { capstoneFace } from '../src/ui/face';
+import { capstoneText } from '../src/ui/event-text';
 import { capstoneLore } from '../src/ui/lore';
 import { text, victoryLine } from '../src/ui/text';
 import {
@@ -119,7 +119,7 @@ function siegeLanding<T>(
   return beforeTheLanding(complaint, answer, { campaign, capstone: SIEGE, readied: cleared });
 }
 
-test('the siege’s landing raises its card and enters a leader and its band of warriors and archers as a raid, every one carrying the siege’s raider', async ({
+test('the siege’s landing raises its window and enters a leader and its band of warriors and archers as a raid, every one carrying the siege’s raider', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -134,9 +134,8 @@ test('the siege’s landing raises its card and enters a leader and its band of 
   const kinds = raid.map((unit) => unit.stats.type);
   expect(enemiesOf(before).some((unit) => unit.stats.type === LEADER)).toBe(false);
   expect(kinds.filter((kind) => kind === LEADER)).toHaveLength(1);
-  expect(kinds.filter((kind) => BAND.includes(kind))).toHaveLength(
-    capstoneFace(CATALOGUE, landed).reading.band,
-  );
+  const reading = capstoneReading(CATALOGUE, landed, SIEGE);
+  expect(kinds.filter((kind) => BAND.includes(kind))).toHaveLength(reading.band);
   expect(raid.map((unit) => (unit.faction === 'enemy' ? unit.script : undefined))).toEqual(
     raid.map(() => SIEGE_RAIDER),
   );
@@ -149,7 +148,7 @@ test('the siege’s landing raises its card and enters a leader and its band of 
     capstoneLore(SIEGE, 'landing'),
     SIEGE,
   ]);
-  expect(shown('capstone-card-0').rules).toBe(capstoneFace(CATALOGUE, landed).rules);
+  expect(shown('capstone-card-0').answerText).toBe(capstoneText(SIEGE, reading));
 
   await click(page, 'capstone-card-0');
   await playedOut(page);

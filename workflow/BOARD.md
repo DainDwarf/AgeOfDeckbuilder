@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The capstone's window as text** — the capstone's window draws the capstone as the deal window draws an answer, its name over its text on an answer's paper, and no card; a name in its text still raises its small card and is shown large by the right click, and the right click off the names shows nothing; The long winter and The monument read a line to each thing their landing does; no capstone face, no capstone kind and no capstone's name or text stands in `src/ui/face.ts` or `src/ui/text.ts`, the window's title excepted; `e2e/capstone.spec.ts` shows the card a name names large off the capstone's text and nothing off its paper; the pages say so. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/SCHEDULE.md`, `docs/INTERFACE.md`, `docs/GLOSSARY.md`, `docs/ages/NOMADIC.md`. [board/the-capstones-window-as-text.md](board/the-capstones-window-as-text.md)
 - **The card face** — the face's layout in the look, in the hand and shown large: the art box, the name, the cost, the text, the kind label and the influence, its states and the card back, with room for what a building's and a unit's card will read.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
 - **The Stone cards' paintings** — every card of the Stone Age wears one painting of his in its art box.

@@ -1,18 +1,19 @@
 import { ageOf, type Catalogue } from '../rules/catalogue';
-import { answerCase, answerOf } from '../rules/schedule';
+import { answerCase, answerOf, capstoneReading } from '../rules/schedule';
 import type { Chronicle } from '../rules/state';
 import type { AnswerReading } from './face';
 import { withValues } from './text';
 
-/** One line of an answer's text: its sentence, and the number of the answer's it hangs on, where it hangs on one. */
+/** One line of a text: its sentence, and the number of the text's reading it hangs on, where it hangs on one. */
 type Line = string | { readonly line: string; readonly while: string };
 
 /** An entry: a name or a text of one line, or a text listing a line to each thing it does. */
 type Entry = string | readonly Line[];
 
 /**
- * Every event's name and every answer's name and text, one entry each, kept out of `text.ts`, the
- * file the glossary lint reads: the lint binds neither the names, which are lore, nor the texts.
+ * Every event's name, every answer's name and text and every capstone's name and text, one entry
+ * each, kept out of `text.ts`, the file the glossary lint reads: the lint binds neither the names,
+ * which are lore, nor the texts.
  */
 const EVENT_TEXT: Readonly<Record<string, Entry>> = {
   'event.lean-season': 'Lean season',
@@ -113,6 +114,21 @@ const EVENT_TEXT: Readonly<Record<string, Entry>> = {
   'answer.follow-it': 'Follow it',
   'answer-text.follow-it':
     'Near your city, one [terrain:forest] gains [feature:deer] or one [terrain:plain] gains [feature:cattle]',
+  'capstone.first-shelter': 'The first shelter',
+  'capstone-text.first-shelter': 'Add [card:shelter] to the top of the draw pile',
+  'capstone.long-winter': 'The long winter',
+  'capstone-text.long-winter': [
+    'Add {count} [card:cold-night] to the discard pile',
+    'Terrain and features give no food',
+  ],
+  'capstone.monument': 'The monument',
+  'capstone-text.monument': [
+    'Add [card:foundations] to the top of the draw pile',
+    'Each turn, add one of [card:unrest], [card:thieves] or [card:weary-builders] to the discard pile',
+  ],
+  'capstone.siege': 'The siege',
+  'capstone-text.siege':
+    'A [enemy:leader] enters as a raid with {band} [enemy:warrior] or [enemy:archer]',
   'nothing-happens': 'Nothing happens',
 };
 
@@ -126,10 +142,15 @@ export function answerName(answer: string): string {
   return nameOf('answer', answer, 'the answer');
 }
 
+/** What a capstone is named on the screen; a capstone no entry names is refused. */
+export function capstoneName(capstone: string): string {
+  return nameOf('capstone', capstone, 'the capstone');
+}
+
 /**
- * What an answer of an event reads on the chronicle it is dealt on: what it stands, for whoever reads
- * that back off the object it is drawn on; its name; its text, of the case it names; and the numbers
- * a card its text names is made at.
+ * What an answer reads on the chronicle it is dealt on, or the capstone, drawn as an answer is: what
+ * it stands, for whoever reads that back off the object drawn; its name; its text, an answer's of the
+ * case it names; and the numbers a card its text names is made at.
  */
 export type AnswerShown = {
   readonly id: string;
@@ -166,6 +187,13 @@ export function answerShown(
   return { id, name: answerName(id), text: answerText(id, values, which), reading };
 }
 
+/** The chronicle's capstone as it reads on it, its text read on the numbers it reads there. */
+export function capstoneShown(catalogue: Catalogue, chronicle: Chronicle): AnswerShown {
+  const { id } = chronicle.timeline.capstone;
+  const reading = capstoneReading(catalogue, chronicle, id);
+  return { id, name: capstoneName(id), text: capstoneText(id, reading), reading };
+}
+
 /**
  * Every line of an answer's text read on the chronicle, of the case handed or its one text where
  * none is, those its numbers leave out included.
@@ -176,29 +204,45 @@ export function answerLinesOfCase(
   event: string,
   id: string,
   which: string | undefined,
-): AnswerLine[] {
+): LineRead[] {
   return answerLines(id, valuesOf(catalogue, chronicle, event, id).values, which);
 }
 
-/** One line of an answer's text read on its numbers, and whether they keep it on the screen. */
-export type AnswerLine = { readonly line: string; readonly kept: boolean };
+/** One line of a text read on its numbers, and whether they keep it on the screen. */
+export type LineRead = { readonly line: string; readonly kept: boolean };
 
 /**
- * Every line of an answer's text, the case handed's or its one text where none is, each filled with
- * its numbers and kept unless the number it hangs on is nought; an answer, or a case of it, no entry
- * names is refused, and so is a line hanging on a number not handed.
+ * Every line of an answer's text, the case handed's or its one text where none is, read as
+ * `linesRead` reads them; an answer, or a case of it, no entry names is refused.
  */
 function answerLines(
   answer: string,
   values: Record<string, string | number>,
   which: string | undefined,
-): AnswerLine[] {
+): LineRead[] {
   const key = `answer-text.${which === undefined ? answer : `${answer}.${which}`}`;
-  return linesOf(entryOf(key, `the answer ${answer}`)).map((each) => lineRead(each, values, key));
+  return linesRead(key, `the answer ${answer}`, values);
 }
 
-/** A line of the entry held under that key, read on the answer's numbers. */
-function lineRead(each: Line, values: Record<string, string | number>, key: string): AnswerLine {
+/**
+ * Every line of a capstone's text, read as `linesRead` reads them, those its numbers leave out
+ * included; a capstone no entry names is refused.
+ */
+export function capstoneLines(capstone: string, values: Record<string, number>): LineRead[] {
+  return linesRead(`capstone-text.${capstone}`, `the capstone ${capstone}`, values);
+}
+
+/**
+ * Every line of the text held under that key, each filled with its numbers and kept unless the
+ * number it hangs on is nought; a key no entry is held under is refused, saying `what` it reads, and
+ * so is a line hanging on a number not handed.
+ */
+function linesRead(key: string, what: string, values: Record<string, string | number>): LineRead[] {
+  return linesOf(entryOf(key, what)).map((each) => lineRead(each, values, key));
+}
+
+/** A line of the entry held under that key, read on the text's numbers. */
+function lineRead(each: Line, values: Record<string, string | number>, key: string): LineRead {
   switch (typeof each) {
     case 'string':
       return { line: withValues(each, values, key), kept: true };
@@ -220,16 +264,23 @@ function linesOf(entry: Entry): readonly Line[] {
   }
 }
 
-/**
- * What an answer's text reads on the screen: the lines `answerLines` keeps, one under the other, and
- * that nothing happens where it keeps none.
- */
+/** What an answer's text reads on the screen, its lines as `shownText` shows them. */
 export function answerText(
   answer: string,
   values: Record<string, string | number>,
   which: string | undefined,
 ): string {
-  const kept = answerLines(answer, values, which).filter((each) => each.kept);
+  return shownText(answerLines(answer, values, which));
+}
+
+/** What a capstone's text reads on the screen, on its numbers, its lines as `shownText` shows them. */
+export function capstoneText(capstone: string, values: Record<string, number>): string {
+  return shownText(capstoneLines(capstone, values));
+}
+
+/** Of a text's lines, those kept, one under the other, and that nothing happens where none is. */
+function shownText(lines: readonly LineRead[]): string {
+  const kept = lines.filter((each) => each.kept);
   return kept.length === 0
     ? oneLine('nothing-happens', 'nothing happening')
     : kept.map((each) => each.line).join('\n');

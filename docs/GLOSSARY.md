@@ -4,7 +4,7 @@ The **closed vocabulary** of gameplay. Every concept has exactly one term, and t
 
 The vocabulary covers player-facing terms and the code that represents and manipulates those player-facing objects; development internals (the machinery under the game, such as `apply`'s command) are outside it.
 
-So is lore, the fiction a window reads over what it deals, an event's name and its answers' names among it: prose the lint does not read, free to say tribe and hunter. An answer's text is no lore, and the lint does not read it either: it says what choosing the answer does, and intake and review hold it to this vocabulary.
+So is lore, the fiction a window reads over what it deals, an event's name, its answers' names and a capstone's name among it: prose the lint does not read, free to say tribe and hunter. An answer's text and a capstone's are no lore, and the lint does not read them either: the one says what choosing the answer does, the other what the capstone's landing does, and intake and review hold both to this vocabulary.
 
 The meaning names what the term englobes, enough to tell it from its neighbours and from the word's other uses, and nothing more: the rules, the cases, the rendering and the reasons live on the design pages. A term a meaning needs is a row of its own, never a bold inside another's cell.
 

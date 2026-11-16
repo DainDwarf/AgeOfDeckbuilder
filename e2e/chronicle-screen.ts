@@ -149,6 +149,7 @@ type PageReading = {
   onScreen: Answer<OnScreen>;
   frame: Answer<string>;
   kindLabelOnScreen: Answer<Spot>;
+  answerNameOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
   across: Answer<Across>;
   scrolled: Answer<Scrolled>;
@@ -423,7 +424,7 @@ export function watch(page: Page): string[] {
 }
 
 /**
- * Closes the capstone's window standing by a press on its card, and rests: the back key is
+ * Closes the capstone's window standing by a press on the capstone, and rests: the back key is
  * rebindable, and specs rebind it.
  */
 export async function capstoneClosed(page: Page): Promise<void> {
@@ -734,6 +735,16 @@ export async function readNames(page: Page): Promise<void> {
         if (inside === undefined) throw new Error(complaint);
         return inside;
       };
+      /** Where a Text the object holds sits on the page, its middle, and how tall it stands there. */
+      const partOnScreen = (named: string, complaint: string): Spot => {
+        const label = part(named, complaint) as Phaser.GameObjects.Text;
+        const middle = matrix().transformPoint(
+          label.x + (0.5 - label.originX) * label.width,
+          label.y + (0.5 - label.originY) * label.height,
+        );
+        const shown = onPage(found().camera, middle.x, middle.y);
+        return { x: shown.x, y: shown.y, height: label.height * shown.unit };
+      };
       const standingCount = shownOf(all).length;
       return {
         standing: standingCount > 0,
@@ -822,18 +833,8 @@ export async function readNames(page: Page): Promise<void> {
           if (drawn === undefined) throw new Error(`${name} draws no frame`);
           return drawn.name;
         }),
-        kindLabelOnScreen: answer(() => {
-          const label = part(
-            'kind-label',
-            `${name} wears no kind label`,
-          ) as Phaser.GameObjects.Text;
-          const middle = matrix().transformPoint(
-            label.x + (0.5 - label.originX) * label.width,
-            label.y + (0.5 - label.originY) * label.height,
-          );
-          const shown = onPage(found().camera, middle.x, middle.y);
-          return { x: shown.x, y: shown.y, height: label.height * shown.unit };
-        }),
+        kindLabelOnScreen: answer(() => partOnScreen('kind-label', `${name} wears no kind label`)),
+        answerNameOnScreen: answer(() => partOnScreen('name', `${name} is no answer`)),
         boundsOnScreen: answer(() => {
           const box = bounds();
           const corner = onPage(found().camera, box.x, box.y);
@@ -1540,6 +1541,8 @@ export type Reading = {
   readonly frame: string;
   readonly nameOnScreen: Spot;
   readonly kindLabelOnScreen: Spot;
+  /** Where the answer's name sits on the page, its middle, and how tall it stands there. */
+  readonly answerNameOnScreen: Spot;
   /** Where the object's bounds stand on the page. */
   readonly boundsOnScreen: Frame;
   readonly across: Across;
@@ -1615,6 +1618,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get kindLabelOnScreen() {
       return owed(name, answered?.kindLabelOnScreen);
+    },
+    get answerNameOnScreen() {
+      return owed(name, answered?.answerNameOnScreen);
     },
     get boundsOnScreen() {
       return owed(name, answered?.boundsOnScreen);
@@ -3632,7 +3638,7 @@ export async function stoppedTurn(page: Page): Promise<void> {
 /**
  * One whole turn: the end of turn, the first entry the rules admit of every deal it may stop on
  * taken through the window's presses, and the capstone's window a landing stops on closed by a press
- * on its card, the landing after it waited out.
+ * on the capstone, the landing after it waited out.
  */
 export async function endTurn(page: Page): Promise<void> {
   await stoppedTurn(page);

@@ -1,8 +1,8 @@
 import type { MadeCard } from '../rules/state';
 import type { Reference } from './text-run';
 
-// A `rules.`, `capstone-rules.` or `goal.` entry, `plate.cards` and `plate.building`, and an
-// answer's text (`event-text.ts`) may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind
+// A `rules.` or `goal.` entry, `plate.cards` and `plate.building`, and an answer's or a capstone's
+// text (`event-text.ts`) may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind
 // `REFERENCE_KINDS` lists, which only a card face, a plate and an answer draw: elsewhere the mark shows.
 /**
  * Every player-facing sentence but the lore (`lore.ts`) and the events' (`event-text.ts`), one entry
@@ -99,7 +99,6 @@ const TEXT = {
   'kind.hazard': 'Hazard',
   'kind.trophy': 'Trophy',
   'kind.challenge': 'Challenge',
-  'kind.capstone': 'Capstone',
   'kind-tooltip.settle': 'Played on the settle phase only',
   'kind-tooltip.unit': 'One idle population becomes the unit',
   'kind-tooltip.building': 'Built once by a worker on a tile inside your border',
@@ -110,7 +109,6 @@ const TEXT = {
   'kind-tooltip.trophy': 'Played, it is banished. Kept to the ending, it gains its influence',
   'kind-tooltip.challenge':
     'Cannot be played. Strikes each turn it stays in your hand. Gains its influence if you win the age',
-  'kind-tooltip.capstone': "The age's trial. Pass it to win the age",
   'unit.worker': 'Worker',
   'unit.warrior': 'Warrior',
   'unit.scout': 'Scout',
@@ -241,17 +239,6 @@ const TEXT = {
   'rules.thieves': 'Takes 2[money]',
   'card.weary-builders': 'Weary builders',
   'rules.weary-builders': 'Takes 2[production]',
-  'capstone-name.first-shelter': 'The first shelter',
-  'capstone-rules.first-shelter': 'Add [card:shelter] to the top of the draw pile',
-  'capstone-name.long-winter': 'The long winter',
-  'capstone-rules.long-winter':
-    'Add {count} [card:cold-night] to the discard pile. Terrain and features give no food',
-  'capstone-name.monument': 'The monument',
-  'capstone-rules.monument':
-    'Add [card:foundations] to the top of the draw pile. Each turn, add one of [card:unrest], [card:thieves] or [card:weary-builders] to the discard pile',
-  'capstone-name.siege': 'The siege',
-  'capstone-rules.siege':
-    'A [enemy:leader] enters as a raid with {band} [enemy:warrior] or [enemy:archer]',
   'capstone.title': 'Capstone',
   'aim.tile': 'Play {card} at a tile',
   'aim.unit': 'Play {card} at a unit',
@@ -549,16 +536,6 @@ export function referenceName(reference: Reference): string {
 export function cardRules(card: MadeCard, city: string | undefined): string {
   const values = city === undefined ? card.counters : { ...card.counters, building: city };
   return named('rules', card.id, 'the card', values);
-}
-
-/** What a capstone is named on the screen; a capstone no entry names is refused. */
-export function capstoneName(capstone: string): string {
-  return named('capstone-name', capstone, 'the capstone');
-}
-
-/** What a capstone's rules entry reads on the screen, with its numbers; a capstone no entry names is refused. */
-export function capstoneRules(capstone: string, values: Record<string, number>): string {
-  return named('capstone-rules', capstone, 'the capstone', values);
 }
 
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */

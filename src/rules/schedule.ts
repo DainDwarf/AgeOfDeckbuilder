@@ -237,7 +237,7 @@ export function continued(catalogue: Catalogue, chronicle: Chronicle): Sequence<
   return grouped({ name: 'capstone-continued' }, continues(catalogue, chronicle));
 }
 
-/** The numbers the capstone's rules entry reads of the chronicle as it stands, none for one reading none. */
+/** The numbers the capstone's text reads of the chronicle as it stands, none for one reading none. */
 export function capstoneReading(
   catalogue: Catalogue,
   chronicle: Chronicle,

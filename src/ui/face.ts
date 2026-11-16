@@ -9,12 +9,11 @@ import {
   costOf,
   influenceOf,
 } from '../rules/catalogue';
-import { capstoneReading } from '../rules/schedule';
-import type { CardId, Chronicle, Cost, MadeCard } from '../rules/state';
-import { capstoneName, capstoneRules, cardName, cardRules, text } from './text';
+import type { CardId, Cost, MadeCard } from '../rules/state';
+import { cardName, cardRules, text } from './text';
 
 /** What the label at a face's foot reads, and what its tooltip says. */
-export type FaceKind = CardKind | 'worker-action' | 'capstone';
+export type FaceKind = CardKind | 'worker-action';
 
 /** What the label at a face's foot reads. */
 export function kindLabel(kind: FaceKind): string {
@@ -53,7 +52,7 @@ function actionLabelled(aim: Aim): FaceKind {
   }
 }
 
-/** The numbers an answer's text or the capstone's rules entry reads of the chronicle, by name. */
+/** The numbers an answer's text or the capstone's reads of the chronicle, by name. */
 export type AnswerReading = Readonly<Record<string, number>>;
 
 /**
@@ -67,8 +66,6 @@ export type Face = {
   readonly kind: FaceKind;
   readonly rules: string;
   readonly costs: readonly Cost[];
-  /** What a card named on it is made at: the capstone's reading, and nothing on any other face. */
-  readonly reading: AnswerReading;
   readonly influence: number;
 };
 
@@ -84,7 +81,6 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     kind: labelledKind(content),
     rules: cardRules(card, city),
     costs: costOf(catalogue, card.id),
-    reading: {},
     influence: influenceOf(content) ?? 0,
   };
 }
@@ -95,7 +91,7 @@ export function cardFaceAtStart(catalogue: Catalogue, id: CardId, city: string |
 }
 
 /**
- * The card a face names, made at the counters that face's reading hands under the names the card
+ * The card a text names, made at the counters that text's reading hands under the names the card
  * declares, and at its start under every other.
  */
 export function namedCardMade(catalogue: Catalogue, id: CardId, reading: AnswerReading): MadeCard {
@@ -107,27 +103,9 @@ export function namedCardMade(catalogue: Catalogue, id: CardId, reading: AnswerR
 }
 
 /**
- * The face a card named on a face is drawn as: the card `namedCardMade` makes of that face's reading,
+ * The face a card a text names is drawn as: the card `namedCardMade` makes of that text's reading,
  * under no city section.
  */
 export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerReading): Face {
   return cardFace(catalogue, namedCardMade(catalogue, id, reading), undefined);
-}
-
-/**
- * The face the chronicle's capstone is drawn as: it costs nothing, and its rules entry and the cards
- * it names read the numbers it reads of that chronicle.
- */
-export function capstoneFace(catalogue: Catalogue, chronicle: Chronicle): Face {
-  const { id } = chronicle.timeline.capstone;
-  const reading = capstoneReading(catalogue, chronicle, id);
-  return {
-    id,
-    name: capstoneName(id),
-    kind: 'capstone',
-    rules: capstoneRules(id, reading),
-    costs: [],
-    reading,
-    influence: 0,
-  };
 }
