@@ -17,7 +17,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The card face** — the face's layout in the look, in the hand and shown large: the art box, the name, the cost, the text, the kind label and the influence, its states and the card back, with room for what a building's and a unit's card will read.
+- **The card face** — every card face on every screen is the frame pack's plain front in its family's colour, 124 by 182, the oval window on a card that places a thing and the arched one on the rest, its name on the riveted plate, its cost on the pack's disc, its influence on a disc at the foot's right corner, and every back the crowned back; `docs/LOOK.md` and `docs/INTERFACE.md` say so, and the pack stands in the store with its licence entry. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`, `public/assets/LICENSES.md`. [board/the-card-face.md](board/the-card-face.md)
+- **The card's states** — how a card reads selected, being aimed, lifted, unaffordable and worn on the painted face, today's marks having been carried over as they were.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
 - **The Stone cards' paintings** — every card of the Stone Age wears one painting of his in its art box.
 - **A building's card reads its building** — a building card, and a card that places an improvement, reads on its face what the thing placed gives and takes, with a place for the terrains and the features it goes on, in place of a sentence naming it.
