@@ -8,7 +8,6 @@ import { unitShown } from '../rules/sight';
 import type { Chronicle } from '../rules/state';
 import { relationsOf, type Unit } from '../rules/units';
 import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
-import { CARD_HEIGHT, CARD_WIDTH, drawCardSurface, metricsOf, SMALLEST_TYPE } from './card-face';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
 import { factionSigns } from './faction-signs';
@@ -30,6 +29,40 @@ import {
 import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
 import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
+
+/** How wide a card of the infopanel's grey paper stands, and a thing named shown small. */
+export const PAPER_WIDTH = 130;
+
+/** Every measure inside a card of grey paper is a multiple of `em`, so one width scales it whole. */
+export function paperMetricsOf(width: number): {
+  height: number;
+  em: number;
+  pad: number;
+  radius: number;
+} {
+  const em = width * 0.13;
+  return { height: Math.round(width * 1.4), em, pad: 0.55 * em, radius: 0.45 * em };
+}
+
+/** How tall a card of grey paper stands at `PAPER_WIDTH`. */
+export const PAPER_HEIGHT = paperMetricsOf(PAPER_WIDTH).height;
+
+/** The smallest type on a card of grey paper, as a share of its `em`; `addText` refuses less at `PAPER_WIDTH`. */
+const SMALLEST_TYPE = 0.66;
+
+/** A card's grey paper and its edge that wide, from the top-left corner of its box. */
+function drawPaper(
+  surface: Phaser.GameObjects.Graphics,
+  x: number,
+  y: number,
+  width = PAPER_WIDTH,
+): void {
+  const { height, radius } = paperMetricsOf(width);
+  surface.fillStyle(LOOK.affordableCard.face);
+  surface.fillRoundedRect(x, y, width, height, radius);
+  surface.lineStyle(1, LOOK.cardEdge);
+  surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, radius);
+}
 
 /** One line of a card's ledger: what it is drawn and named by, and what it gives at income. */
 type Row = (YieldSource | { readonly kind: 'river' }) & { readonly yields: Partial<Resources> };
@@ -130,7 +163,7 @@ export function createThingCard(
   width: number,
 ): Phaser.GameObjects.Container {
   const face = buildFace(scene, catalogue, drawingOf(catalogue, thing), width, undefined, false);
-  face.root.setPosition(-width / 2, -metricsOf(width).height);
+  face.root.setPosition(-width / 2, -paperMetricsOf(width).height);
   return scene.add.container(0, 0, [face.root]).setData('reference', thing);
 }
 
@@ -317,7 +350,7 @@ export function createInfoPanel(
 ): InfoPanel {
   const ghosts = scene.add.graphics();
   // Interactive, so no press reaches the map's catchers under it, and never marked as reacting to one.
-  const stop = scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0).setInteractive();
+  const stop = scene.add.zone(0, 0, PAPER_WIDTH, PAPER_HEIGHT).setOrigin(0, 0).setInteractive();
   const panel = scene.add.container(0, 0, [ghosts, stop]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
 
@@ -332,7 +365,7 @@ export function createInfoPanel(
   const reactions: RowReactions = {
     raise(centre: number, message: string): void {
       tooltip.beside(message, () => ({
-        x: box.left + CARD_WIDTH * box.unit,
+        x: box.left + PAPER_WIDTH * box.unit,
         y: box.top + centre * box.unit,
       }));
     },
@@ -346,13 +379,13 @@ export function createInfoPanel(
     beside = at;
     box.unit = on.unit();
     box.left = at.x + at.radius + STANDOFF * box.unit;
-    box.top = at.y - (CARD_HEIGHT / 2) * box.unit;
+    box.top = at.y - (PAPER_HEIGHT / 2) * box.unit;
 
     ghosts.clear();
     for (let ghost = behind; ghost >= 1; ghost--) {
-      drawCardSurface(ghosts, ghost * GHOST_OFFSET, ghost * GHOST_OFFSET);
+      drawPaper(ghosts, ghost * GHOST_OFFSET, ghost * GHOST_OFFSET);
     }
-    stop.setSize(CARD_WIDTH + behind * GHOST_OFFSET, CARD_HEIGHT + behind * GHOST_OFFSET);
+    stop.setSize(PAPER_WIDTH + behind * GHOST_OFFSET, PAPER_HEIGHT + behind * GHOST_OFFSET);
     panel.setScale(box.unit).setPosition(box.left, box.top);
   };
 
@@ -392,7 +425,14 @@ export function createInfoPanel(
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, reactions, factionSigns());
+      const face = buildFace(
+        scene,
+        catalogue,
+        cards[index],
+        PAPER_WIDTH,
+        reactions,
+        factionSigns(),
+      );
       // Under the card it replaces, so the dissolve uncovers it, and over the stop either way.
       panel.addAt(face.root, panel.getIndex(stop) + 1);
       standing = face;
@@ -437,7 +477,7 @@ function buildFace(
   reactions: RowReactions | undefined,
   signed: boolean,
 ): Face {
-  const { em, pad } = metricsOf(width);
+  const { em, pad } = paperMetricsOf(width);
   const style = stylesOf(em);
   const left = 1 + pad;
   const right = width - 1 - pad;
@@ -446,7 +486,7 @@ function buildFace(
   const markBox = 1.15 * em;
 
   const paper = scene.add.graphics();
-  drawCardSurface(paper, 0, 0, { width });
+  drawPaper(paper, 0, 0, width);
 
   const head = headOf(scene, catalogue, card, signed);
   const mark = fitMark(head.mark, markBox, head.fittedBy).setPosition(left + markBox / 2, middle);

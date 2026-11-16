@@ -54,31 +54,34 @@ function featureLookOf(feature: string): { readonly icon: string; readonly dress
   return drawn(FEATURE_LOOKS, feature, 'no icon is drawn for the feature');
 }
 
-/** David Baumgart's paintings of each terrain: his pack's folder, the family's name, how many he painted. */
+/**
+ * David Baumgart's paintings of each terrain: his pack's folder, the stem his files' names start
+ * with, how many he painted.
+ */
 const TERRAIN_FACES: Readonly<
-  Record<string, { readonly pack: string; readonly family: string; readonly count: number }>
+  Record<string, { readonly pack: string; readonly stem: string; readonly count: number }>
 > = {
-  plain: { pack: 'hex-basic-terrain-set', family: 'hexPlains', count: 4 },
-  forest: { pack: 'hex-basic-terrain-set', family: 'hexForestBroadleaf', count: 4 },
-  hills: { pack: 'hex-basic-terrain-set', family: 'hexHighlands', count: 4 },
-  mountain: { pack: 'hex-basic-terrain-set', family: 'hexMountain', count: 4 },
-  desert: { pack: 'hex-basic-terrain-set', family: 'hexDesertDunes', count: 4 },
-  coast: { pack: 'hex-rivers-coasts-and-seas', family: 'hexLake', count: 4 },
-  ocean: { pack: 'hex-rivers-coasts-and-seas', family: 'hexOceanCalm', count: 4 },
+  plain: { pack: 'hex-basic-terrain-set', stem: 'hexPlains', count: 4 },
+  forest: { pack: 'hex-basic-terrain-set', stem: 'hexForestBroadleaf', count: 4 },
+  hills: { pack: 'hex-basic-terrain-set', stem: 'hexHighlands', count: 4 },
+  mountain: { pack: 'hex-basic-terrain-set', stem: 'hexMountain', count: 4 },
+  desert: { pack: 'hex-basic-terrain-set', stem: 'hexDesertDunes', count: 4 },
+  coast: { pack: 'hex-rivers-coasts-and-seas', stem: 'hexLake', count: 4 },
+  ocean: { pack: 'hex-rivers-coasts-and-seas', stem: 'hexOceanCalm', count: 4 },
 };
 
-/** The files that many of his paintings of one family are, numbered from nought, under the assets folder. */
-function numberedFiles(folder: string, family: string, count: number): string[] {
+/** The files that many of his paintings of one stem are, numbered from nought, under the assets folder. */
+function numberedFiles(folder: string, stem: string, count: number): string[] {
   return Array.from(
     { length: count },
-    (_, at) => `store/${folder}/${family}${String(at).padStart(2, '0')}.png`,
+    (_, at) => `store/${folder}/${stem}${String(at).padStart(2, '0')}.png`,
   );
 }
 
 /** The files a terrain's paintings are, under the assets folder; a terrain with none is refused. */
 export function paintingsOf(terrain: string): string[] {
-  const { pack, family, count } = drawn(TERRAIN_FACES, terrain, 'no painting faces the terrain');
-  return numberedFiles(`${pack}/Tiles`, family, count);
+  const { pack, stem, count } = drawn(TERRAIN_FACES, terrain, 'no painting faces the terrain');
+  return numberedFiles(`${pack}/Tiles`, stem, count);
 }
 
 // His coast files name their edges north-west, north-east, east, south-east, south-west, west, one
@@ -628,11 +631,11 @@ function riverMask(edges: ReadonlySet<number>): string {
 }
 
 /** The files that many paintings of one of his river pieces are, under the assets folder. */
-function riverFiles(folder: string, family: string, mask: string, count: number): string[] {
+function riverFiles(folder: string, stem: string, mask: string, count: number): string[] {
   return Array.from(
     { length: count },
     (_, at) =>
-      `store/hex-rivers-coasts-and-seas/${folder}/${family}${mask}-${String(at).padStart(2, '0')}.png`,
+      `store/hex-rivers-coasts-and-seas/${folder}/${stem}${mask}-${String(at).padStart(2, '0')}.png`,
   );
 }
 

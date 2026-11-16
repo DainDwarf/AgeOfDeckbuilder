@@ -38,6 +38,12 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.0.2 of 11 October 2025, the files as released.
 - **Licence:** his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
 
+## Nice Card Game Template 2
+
+- **What:** chicogames' card fronts, plain and decorated, card backs, name plates and discs, in `store/nice-card-game-template-2/`, the pack's `License.txt` beside them.
+- **From:** chicogames, <https://chicogames.itch.io/nice-card-game-template-2>, bought on 2026-11-16, version 2.0, the files as released.
+- **Licence:** Creative Commons Attribution-ShareAlike 3.0 Unported, <https://creativecommons.org/licenses/by-sa/3.0/>, as the pack's `License.txt` has it, which adds that credit "would be nice but is not mandatory". The game credits chicogames. The game turns the plain fronts to its families' colours as it loads them: those are changed files and stay under the same licence. The files sit in the store.
+
 ## Source Sans 3
 
 - **What:** the UI typeface, regular and bold, in `fonts/source-sans-3/`.

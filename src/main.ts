@@ -5,6 +5,7 @@ import Phaser from 'phaser';
 import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
 import { CampaignScreen } from './ui/campaign-screen';
+import { CARDS_SHEET } from './ui/card-frames';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
 import { CollectionScreen } from './ui/collection-screen';
 import { DebugConsole } from './ui/debug-console';
@@ -91,6 +92,7 @@ class LoadScene extends Phaser.Scene {
     // The features sheet last: its tinted paintings, the river's cut and the deer in his net are
     // drawn off the others'.
     this.sheets = [
+      CARDS_SHEET,
       FACE_SHEET,
       RIVER_SHEET,
       BUILDING_SHEET,

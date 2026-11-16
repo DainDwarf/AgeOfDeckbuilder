@@ -9,6 +9,8 @@ Everything drawn is one of two families, and each has one job.
 - **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects, his painted resource icons, his painted arms and armour icons. Code draws geometry, recolours and composes his pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
 - **Symbols** are signs of quantities, states, factions and sites: a resource, population, influence, a unit's stat, a unit's state, a faction, a site. Every symbol is a **flat, filled, one-colour glyph** from one of two sources, **game-icons.net** where the sign is an object and **Material Design Icons** where it is a plain form, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol's shape alone tells it from every other symbol, so no symbol's meaning rests on its colour. A symbol stands without its word where it reads a number or a state. A symbol is never a picture of a thing on the map.
 
+**A card's frame** is neither: a painted piece of the interface from another hand, chicogames', taken because it sits quietly beside Baumgart's paintings, which stand in its window.
+
 A painted world under flat symbols is the convention of the genre, and the two families do not read as two styles because they never do the same job.
 
 ## The cast ✅
@@ -102,7 +104,19 @@ A glyph stands in a square and is as large as that square's side. It is drawn in
 
 ## The cards 🔧
 
-A card's art box holds **one painted object** from the one hand over a ground tinted in the card's kind: a building card its building's sprite, a unit card its unit's picture, an action card the object of the action, a hazard its cause. The chips, the cost and the glyphs in a card's text are symbols. A card face is one size wherever it stands, and a card shown large is the one other. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face.
+A card is 124 units wide and 182 tall wherever it stands, and a card shown large is the one other size, 380 wide; the face is one drawing at both, every measure of it a share of its width.
+
+**The frame** is one of the pack's two plain fronts, a silver rim round a window over a text box of paper, drawn so the front's body is the card. A card whose play places a unit, a building or an improvement wears the oval window, whose rim rises a little above the card's top edge, and every other card the arched one. The frame's body wears the colour of the card's family, the pack's brown paper turned to that colour with its grain kept, the rims and the text box's paper left as painted: gold for a card that places a unit, teal for one that places a building, olive for one that places an improvement, crimson for a hazard, maroon for a challenge, ochre for a trophy, and bone for every other card. The family is read as the window is, by what the card places first and by its kind otherwise. The pack's decorated fronts are drawn nowhere.
+
+**The art box** is the frame's window, of one size on each front, its glass and the shadow at its rim lying over what it holds: one painting of Baumgart's, a building card its building, a unit card its unit's picture, an action card the object of the action, a hazard its cause. A window holding no painting shows its family's colour, pale.
+
+**The name** stands on the pack's riveted plate across the card, at one height on both fronts, the plate's middle 58% of the way down the card, over the foot of the window and the head of the text box. **The text** stands centred on the paper under the plate, and the kind label at the paper's foot.
+
+**The cost** stands on the pack's steel disc at the card's top-left corner, the resource's glyph and the number side by side on it, the disc rising above the card's top edge; a card of two costs wears two discs, the second under the first, in the order the resource bar reads the resources. **The influence** a card gains stands on the same disc at the foot's right corner, influence's glyph and the number.
+
+**The back** is the pack's dark back with its two gold lines, and on it the player's crown in the civilization's colour, six tenths of the card's width across.
+
+The glyphs on the discs and in a card's text are symbols. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face.
 
 ## The type ✅
 
@@ -111,6 +125,7 @@ Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's
 ## The packs ✅
 
 - **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, his painted objects, his resource icons and his arms and armour icons, and the ancient objects he sent by mail. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
+- **Nice Card Game Template 2**, chicogames', bought: the cards' fronts and back, the name's plate and the disc. Creative Commons Attribution-ShareAlike 3.0: chicogames is credited, and a file the game changes, a front turned to a family's colour among them, stays under the same terms. The files live in the store with the bought packs.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
 - **Material Design Icons**, the Pictogrammers' set, Apache 2.0 for every icon but those of its Brand / Logos category, which the game takes none of: each glyph's categories are read on its own page as it enters, its author is named in the licence record, a file the game changed says so, and the licence ships beside the files.
 - **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.

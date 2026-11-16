@@ -11,7 +11,7 @@ import {
 } from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import { standBrowse } from './browse';
-import { createCardFace, createFootBubble } from './card-face';
+import { CARD_RISE, createCardFace, createFootBubble } from './card-face';
 import { createPile, PILE_SPAN } from './civilization-pile';
 import {
   type CollectionStack,
@@ -187,9 +187,9 @@ function collectionOf(
 }
 
 /**
- * The campaign's civilizations top down from the top handed, each its pile, centred in the right
- * panel from its left handed; a press on a pile opens its civilization, a right click raises its
- * browse.
+ * The campaign's civilizations top down under the top handed by the room a card's rising parts take,
+ * each its pile, centred in the right panel from its left handed; a press on a pile opens its
+ * civilization, a right click raises its browse.
  */
 function civilizationsOf(
   laying: Laying,
@@ -204,7 +204,7 @@ function civilizationsOf(
   const left = frame.x + (frame.width - PILE_SPAN) / 2;
   const parts: Phaser.GameObjects.Container[] = [];
   const held: Held[] = [];
-  let pileTop = top;
+  let pileTop = top + CARD_RISE;
   let foot = top;
   for (const [id, owned] of Object.entries(civilizations)) {
     const name = `collection-civilization-${id}`;

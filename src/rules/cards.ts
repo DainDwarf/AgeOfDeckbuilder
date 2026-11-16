@@ -711,6 +711,7 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
       ),
     effect: (catalogue, paid, at) =>
       entered(catalogue, paid, { type, faction: 'player', tile: { q: at.q, r: at.r } }),
+    places: 'unit',
   };
 }
 
@@ -729,7 +730,7 @@ export function builds(building: string, over?: string): Aim & { readonly aim: '
         ),
       (catalogue, paid, at) => built(catalogue, paid, at, building),
     ),
-    places: true,
+    places: 'building',
   };
 }
 
@@ -748,7 +749,7 @@ export function placesImprovement(improvement: string): Aim & { readonly aim: 't
         ),
       (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, improvement),
     ),
-    places: true,
+    places: 'improvement',
   };
 }
 
@@ -805,11 +806,30 @@ export function triedAt(
 }
 
 /**
+ * How a card settles the city section's building, aimed at a tile its own reasons admit: what
+ * `readied` lands on the tile first, where it is handed, then the settle there.
+ */
+export function settlesCity(
+  refuses: Extract<Aim, { readonly aim: 'tile' }>['refuses'],
+  readied?: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed,
+): Aim & { readonly aim: 'tile' } {
+  return {
+    aim: 'tile',
+    refuses,
+    effect: (catalogue, paid, at) =>
+      readied === undefined
+        ? settled(catalogue, paid, at)
+        : followed(readied(catalogue, paid, at), (left) => settled(catalogue, left, at)),
+    places: 'building',
+  };
+}
+
+/**
  * The settle of the city section the chronicle carries: its building in the tile's slot, the city
  * holding that tile alone with one population on it and the section's idle besides, and then the
  * city standing on the tile from now on.
  */
-export function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
+function settled(catalogue: Catalogue, paid: Chronicle, at: TileCoords): Landed {
   const city = { q: at.q, r: at.r };
   const key = tileKey(city);
   const alone = (tiles: readonly TileCoords[]): boolean =>

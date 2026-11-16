@@ -1,4 +1,15 @@
 import type { Resource } from '../rules/resources';
+import type { CardFamily } from './face';
+
+/**
+ * A family's colour as a card's frame wears it: the hue its paper is turned to, in degrees, the
+ * saturation that paper's own is scaled by, and how much its lightness is scaled by.
+ */
+export type FamilyColour = {
+  readonly hue: number;
+  readonly saturation: number;
+  readonly darkness: number;
+};
 
 /** What the resource bar reads: one resource, or the idle population. */
 export type BarReading = Resource | 'idle';
@@ -6,11 +17,9 @@ export type BarReading = Resource | 'idle';
 /** A colour laid over what is under it, at the strength it rests at. */
 export type Wash = { readonly colour: number; readonly strength: number };
 
-/** The paper one card face is drawn on. */
+/** A grey paper and the ink on it. */
 export type Paper = {
   readonly face: number;
-  readonly art: number;
-  readonly artEdge: number;
   readonly ink: number;
 };
 
@@ -131,7 +140,20 @@ export type Look = {
   /** The edge of a button that changes the collection screen's mode. */
   readonly modeButtonEdge: number;
   readonly cardEdge: number;
-  readonly cardBack: number;
+  /** The ground of the badge reading a browse's stack's copies. */
+  readonly copiesBadge: number;
+  /** Each family's colour, on the frame of every card of that family. */
+  readonly cardFamily: Readonly<Record<CardFamily, FamilyColour>>;
+  /** The ink a card's name reads in on its plate. */
+  readonly cardNameInk: number;
+  /** The ink a card's text reads in on its paper, and its kind label. */
+  readonly cardTextInk: number;
+  /** The strength a card's kind label stands at in its text's ink. */
+  readonly cardKindLabel: number;
+  /** The ink of the number on a card's disc, its cost's or its influence's. */
+  readonly cardDiscInk: number;
+  /** The tint a card's painted parts are multiplied by while the city cannot play it. */
+  readonly unaffordableFront: number;
   readonly aimSlab: number;
   readonly emptyEdge: number;
   readonly unaffordableMark: number;
@@ -247,13 +269,27 @@ export const LOOK: Look = {
   cityRowEdge: 0xd4d7db,
   modeButtonEdge: 0x5c6068,
   cardEdge: 0x6f757d,
-  cardBack: 0x232833,
+  copiesBadge: 0x232833,
+  cardFamily: {
+    unit: { hue: 46, saturation: 0.85, darkness: 0.84 },
+    building: { hue: 176, saturation: 0.5, darkness: 0.52 },
+    improvement: { hue: 70, saturation: 0.45, darkness: 0.58 },
+    'thing-done': { hue: 42, saturation: 0.14, darkness: 1.12 },
+    hazard: { hue: 356, saturation: 0.78, darkness: 0.6 },
+    challenge: { hue: 344, saturation: 0.6, darkness: 0.38 },
+    trophy: { hue: 38, saturation: 0.7, darkness: 0.78 },
+  },
+  cardNameInk: 0x34240f,
+  cardTextInk: 0x2a2010,
+  cardKindLabel: 0.72,
+  cardDiscInk: 0xf2f6ff,
+  unaffordableFront: 0xc9c9c9,
   aimSlab: 0x232833,
   emptyEdge: 0x4a5058,
   unaffordableMark: 0xc0392b,
   takenPastNothing: 0xc0392b,
-  affordableCard: { face: 0xd4d7db, art: 0xb6bbc2, artEdge: 0x9aa0a8, ink: 0x0d1014 },
-  unaffordableCard: { face: 0xa7abb1, art: 0x8f959c, artEdge: 0x7c828a, ink: 0x3a3f45 },
+  affordableCard: { face: 0xd4d7db, ink: 0x0d1014 },
+  unaffordableCard: { face: 0xa7abb1, ink: 0x3a3f45 },
   yieldPatch: { colour: 0x0d1014, strength: 0.7 },
   unitsInCityMode: 0.5,
   yieldNotGiven: 0.5,

@@ -6,7 +6,7 @@ import {
   unaffordableIn,
 } from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
-import { CARD_HEIGHT, CARD_METRICS, CARD_WIDTH, createCardFace, dashAlong } from './card-face';
+import { CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, createCardFace, dashAlong } from './card-face';
 import { type CollectionStack, copiesIn, type DeckRows, stacksOf } from './collection-layout';
 import {
   type Cell,
@@ -92,7 +92,7 @@ function rowOf(
   { x, y, width }: Box,
   name: string,
 ): Phaser.GameObjects.Container {
-  const { radius } = CARD_METRICS;
+  const radius = CARD_RADIUS;
   const middle = ROW_HEIGHT / 2;
   const surface = scene.add
     .graphics()
@@ -171,7 +171,7 @@ export function cityEdgeOf(scene: Phaser.Scene, box: Box): Phaser.GameObjects.Gr
       box.y - off,
       box.width + 2 * off,
       box.height + 2 * off,
-      CARD_METRICS.radius + off,
+      CARD_RADIUS + off,
     );
 }
 

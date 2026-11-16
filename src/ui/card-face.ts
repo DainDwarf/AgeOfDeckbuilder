@@ -2,10 +2,22 @@ import type Phaser from 'phaser';
 import type { Resource } from '../rules/resources';
 import { playable, type Refusal } from '../rules/state';
 import {
+  BACK,
+  BODY,
+  BODY_RADIUS,
+  CARDS_SHEET_KEY,
+  DISC,
+  frontOf,
+  HIGHEST_RIM,
+  HIGHEST_RISE,
+  type PackPoint,
+  PLATE,
+  paleOf,
+} from './card-frames';
+import {
   addText,
   corners,
   DESIGN_HEIGHT,
-  hexagon,
   MARGIN,
   onClick,
   onHover,
@@ -14,38 +26,36 @@ import {
   type SizedStyle,
   UI_FONT,
 } from './design-space';
-import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
+import { type AnswerReading, type CardFamily, type Face, kindLabel, kindTooltip } from './face';
 import { asGlyph, glyphMark } from './glyphs';
-import { css, LOOK, type Paper, type Tone, unworn } from './look';
-import { poolOf, zonePoolOf } from './pool';
+import { css, LOOK, multiplied, type Tone, unworn } from './look';
+import type { CastSymbol } from './marks';
+import { poolOf, rootedPoolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
 
-export const CARD_WIDTH = 130;
+export const CARD_WIDTH = 124;
+
+/** How many units one of the pack's pixels is across a card that wide. */
+function unitOf(width: number): number {
+  return width / BODY.width;
+}
 
 /** The card's height at that width: the one aspect a card is drawn at, wherever it is drawn. */
 export function heightOf(width: number): number {
-  return Math.round(width * 1.4);
+  return Math.round(BODY.height * unitOf(width));
 }
 
-/** Every measure inside a card is a multiple of `em`, so one width scales the whole face. */
-export function metricsOf(width: number): {
-  height: number;
-  em: number;
-  pad: number;
-  radius: number;
-} {
-  const em = width * 0.13;
-  return { height: heightOf(width), em, pad: 0.55 * em, radius: 0.45 * em };
+/** How many units one of the pack's pixels is down a card that wide, its body drawn `heightOf` tall. */
+function downOf(width: number): number {
+  return heightOf(width) / BODY.height;
 }
 
-/** The smallest type on a card, as a share of its `em`; `addText` refuses less at `CARD_WIDTH`. */
-export const SMALLEST_TYPE = 0.66;
+export const CARD_HEIGHT = heightOf(CARD_WIDTH);
 
-/** The card wherever it stands but large: what anything in the card's language measures by. */
-export const CARD_METRICS = metricsOf(CARD_WIDTH);
-export const CARD_HEIGHT = CARD_METRICS.height;
+/** How far a card's corners are rounded wherever it stands but large. */
+export const CARD_RADIUS = BODY_RADIUS * unitOf(CARD_WIDTH);
 
 /** Where a card lying on the chronicle screen rests: its bottom edge, one margin off the bottom. */
 export const CARD_BASELINE = DESIGN_HEIGHT - MARGIN;
@@ -61,30 +71,31 @@ const RING_WEIGHT = 3;
 const POINT_WIDTH = 18;
 const POINT_HEIGHT = 12;
 
-/** How far the point on a card being aimed reaches above the card's own top edge, ring included. */
-export const AIM_POINT_REACH = RING_STANDOFF + RING_WEIGHT / 2 + POINT_HEIGHT;
-
 /**
- * The paper and edge the card face, the card back and the infopanel with its ghosts are drawn on.
- * `x` and `y` are the box's top-left corner, as `fillRoundedRect` reads them — cards themselves are
- * drawn about their bottom centre, so a card passes its own corner.
+ * How far the point over a card being aimed stands above the card's top edge: past its ring, and past
+ * the frame's rim where that rises higher.
  */
-export function drawCardSurface(
-  surface: Phaser.GameObjects.Graphics,
-  x: number,
-  y: number,
-  {
-    width = CARD_WIDTH,
-    face = LOOK.affordableCard.face,
-    edge = LOOK.cardEdge,
-  }: { width?: number; face?: number; edge?: number } = {},
-): void {
-  const { height, radius } = metricsOf(width);
-  surface.fillStyle(face);
-  surface.fillRoundedRect(x, y, width, height, radius);
-  surface.lineStyle(1, edge);
-  surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, radius);
+function pointStandoff(rises: number, width: number): number {
+  return Math.max(RING_STANDOFF, rises * downOf(width)) + RING_WEIGHT / 2;
 }
+
+/** How far the point on a card being aimed reaches above the card's own top edge, at the most. */
+export const AIM_POINT_REACH = pointStandoff(HIGHEST_RIM, CARD_WIDTH) + POINT_HEIGHT;
+
+/** How far a card's rim or a disc rises above its top edge, at the most: the room a line of cards keeps over it. */
+export const CARD_RISE = HIGHEST_RISE * downOf(CARD_WIDTH);
+
+/** The type on a face, in units of a card wherever it stands but large. */
+const NAME_SIZE = 12;
+const TEXT_SIZE = 11;
+const DISC_NUMBER_SIZE = 15;
+
+/** How wide a glyph on a disc stands, as a share of the number beside it, and the gap between. */
+const DISC_GLYPH_SHARE = 0.72;
+const DISC_GAP = 0.1;
+
+/** How far below the plate's middle the text's box starts, in the pack's pixels. */
+const TEXT_BELOW_PLATE = 49;
 
 /**
  * A name a rules entry draws, which a face carries in its data as `names`: what it names, the
@@ -130,8 +141,15 @@ export function spotOn(container: Phaser.GameObjects.Container, name: Name): Spo
 /** A glyph a run marks, a side of its square, as a share of the run's type. */
 export const GLYPH_SHARE = 2 / 3;
 
-/** A label drawn as a run, and the run its entry was last laid out as. */
-export type RunLabel = { readonly label: Phaser.GameObjects.Text; readonly run: Run };
+/**
+ * A label drawn as a run, the run its entry was last laid out as, and the width it wraps at, which
+ * a change lays it out again at.
+ */
+export type RunLabel = {
+  readonly label: Phaser.GameObjects.Text;
+  readonly run: Run;
+  wrapAt(width: number): void;
+};
 
 /**
  * An entry drawn in that style as a run wrapped at that width, its glyphs `GLYPH_SHARE` of its type:
@@ -144,6 +162,7 @@ export function addRun(
   width: number,
 ): RunLabel {
   const size = Number.parseFloat(style.fontSize);
+  let wrap = width;
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
   let run!: Run;
   const label = addText(scene, 0, 0, entry, {
@@ -154,7 +173,7 @@ export function addRun(
         run = layOutRun(
           content,
           measure,
-          { width, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
+          { width: wrap, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
           referenceName,
         );
         return run.content.split('\n');
@@ -166,6 +185,11 @@ export function addRun(
     get run() {
       return run;
     },
+    wrapAt(next: number): void {
+      if (next === wrap) return;
+      wrap = next;
+      label.updateText();
+    },
   };
 }
 
@@ -174,7 +198,7 @@ export function addRun(
  * each glyph's resource and middle, and each name's box, the reading handed carried by every name.
  */
 export function centredMarks(
-  { label, run }: RunLabel,
+  { label, run }: Pick<RunLabel, 'label' | 'run'>,
   reading: AnswerReading,
 ): {
   glyphs: { readonly resource: Resource; readonly x: number; readonly y: number }[];
@@ -241,15 +265,46 @@ export type CardFace = {
   explainFoot(tooltip: Tooltip, label: FootLabel): void;
 };
 
-/** The paper a face is drawn on: any refusal at all draws it unplayable. */
-function paperOf(refusal: Refusal): Paper {
-  return playable(refusal) ? LOOK.affordableCard : LOOK.unaffordableCard;
-}
-
 /** A Text's ink, written where it moved: `setColor` redraws the Text whatever it is handed. */
 function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjects.Text {
   const ink = css(colour);
   return label.style.color === ink ? label : label.setColor(ink);
+}
+
+/** The tint a card's painted parts are multiplied by: white through the tone, darkened while refused. */
+function paintedTint(refusal: Refusal, tone: Tone): number {
+  const toned = tone(0xffffff);
+  return playable(refusal) ? toned : multiplied(toned, LOOK.unaffordableFront);
+}
+
+/**
+ * The image of the front a card of the family wears, at a card that wide, its body's top-left corner
+ * where the image stands.
+ */
+function wearFront(
+  image: Phaser.GameObjects.Image,
+  family: CardFamily,
+  width: number,
+): Phaser.GameObjects.Image {
+  const { frame, body } = frontOf(family);
+  return image
+    .setTexture(CARDS_SHEET_KEY, frame)
+    .setScale(unitOf(width), downOf(width))
+    .setDisplayOrigin(body.x, body.y);
+}
+
+/**
+ * The front of a card of the family drawn alone, as a copy under a stack's face shows it, at a card
+ * of the hand's size, its body's top-left corner at its place, every colour through the tone.
+ */
+export function addFront(
+  scene: Phaser.Scene,
+  family: CardFamily,
+  tone: Tone,
+): Phaser.GameObjects.Image {
+  return wearFront(scene.add.image(0, 0, CARDS_SHEET_KEY), family, CARD_WIDTH).setTint(
+    tone(0xffffff),
+  );
 }
 
 /** An interactive zone of a face that a pool or a re-read gives its place and its size. */
@@ -304,6 +359,61 @@ function footZoneOf(
   return zone;
 }
 
+/** The pack's disc with a symbol's glyph and a number side by side on it, about its middle. */
+type DiscMark = {
+  readonly root: Phaser.GameObjects.Container;
+  readonly disc: Phaser.GameObjects.Image;
+  readonly glyph: Phaser.GameObjects.Container;
+  readonly number: Phaser.GameObjects.Text;
+};
+
+/** A disc drawing nothing yet, for a card that wide, its number set that large. */
+function discMarkOf(scene: Phaser.Scene, width: number, numberSize: number): DiscMark {
+  const disc = scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file);
+  disc.setScale((DISC.width * unitOf(width)) / disc.width);
+  const glyph = glyphMark(scene);
+  const number = addText(scene, 0, 0, '', {
+    fontFamily: UI_FONT,
+    fontSize: `${numberSize}px`,
+    fontStyle: 'bold',
+  }).setOrigin(0.5);
+  return { root: scene.add.container(0, 0, [disc, glyph, number]), disc, glyph, number };
+}
+
+/**
+ * A disc made to read the symbol's glyph and the amount at its middle, the pair centred on it, the
+ * disc under the tint, the number in its ink, both through the tone.
+ */
+function showDisc(
+  { root, disc, glyph, number }: DiscMark,
+  {
+    symbol,
+    amount,
+    ink,
+    tint,
+    tone,
+    at,
+  }: {
+    readonly symbol: CastSymbol;
+    readonly amount: number;
+    readonly ink: number;
+    readonly tint: number;
+    readonly tone: Tone;
+    readonly at: { readonly x: number; readonly y: number };
+  },
+): void {
+  disc.setTint(tint);
+  inked(number, tone(ink)).setText(String(amount));
+  const size = Number.parseFloat(number.style.fontSize as string);
+  const square = DISC_GLYPH_SHARE * size;
+  const gap = DISC_GAP * size;
+  const wide = ownBoxOf(number).width;
+  const span = square + gap + wide;
+  asGlyph(glyph, symbol, square, { tone, outlined: false }).setX(-span / 2 + square / 2);
+  number.setX(span / 2 - wide / 2);
+  root.setPosition(at.x, at.y);
+}
+
 /**
  * A face, drawn about its own bottom centre so a container's angle fans it from that corner, every
  * colour of it through the tone. The refusal marks the costs the city cannot pay, and any refusal
@@ -320,62 +430,50 @@ export function createCardFace(
     names: presses,
   }: { tone?: Tone; width?: number; names?: NamePresses } = {},
 ): CardFace {
-  const { height, em, pad, radius } = metricsOf(width);
-  const palette = paperOf(refusal);
-
-  const left = -width / 2 + 1 + pad;
-  const right = width / 2 - 1 - pad;
-  const top = -height + 1 + pad;
+  const unit = unitOf(width);
+  const down = downOf(width);
+  const height = heightOf(width);
+  const size = (units: number): number => (units * width) / CARD_WIDTH;
+  const discNumber = size(DISC_NUMBER_SIZE);
+  /** A point of the pack's pixels, from the body's top-left corner, about the face's bottom centre. */
+  const placed = ({ x, y }: PackPoint): { x: number; y: number } => ({
+    x: -width / 2 + x * unit,
+    y: -height + y * down,
+  });
 
   const root = scene.add.container(0, 0);
-  const paper = scene.add.graphics();
-  root.add(paper);
+  const window = scene.add.rectangle(0, 0, 1, 1, 0).setOrigin(0, 0);
+  const front = scene.add.image(0, 0, CARDS_SHEET_KEY);
+  const plate = scene.add.image(0, -height + PLATE.middle * down, CARDS_SHEET_KEY, PLATE.file);
+  plate.setScale((PLATE.width * unit) / plate.width);
 
-  const middle = top + 0.55 * em;
-
-  const name = addText(scene, right, middle, face.name, {
+  const name = addText(scene, 0, plate.y, face.name, {
     fontFamily: UI_FONT,
-    fontSize: `${0.75 * em}px`,
+    fontSize: `${size(NAME_SIZE)}px`,
     fontStyle: 'bold',
-    color: css(tone(palette.ink)),
-  }).setOrigin(1, 0.5);
+    color: css(tone(LOOK.cardNameInk)),
+  }).setOrigin(0.5);
 
-  const size = SMALLEST_TYPE * em;
-
-  const kind = addText(scene, 0, -1 - pad, kindLabel(face.kind).toUpperCase(), {
+  const type = size(TEXT_SIZE);
+  const kind = addText(scene, 0, 0, kindLabel(face.kind).toUpperCase(), {
     fontFamily: UI_FONT,
-    fontSize: `${size}px`,
-    color: css(tone(LOOK.faintInk)),
-    letterSpacing: 0.14 * size,
+    fontSize: `${type}px`,
+    letterSpacing: 0.14 * type,
   })
     .setOrigin(0.5, 1)
+    .setAlpha(LOOK.cardKindLabel)
     .setName('kind-label');
-  const kindMiddle = kind.y - kind.height / 2;
 
-  const influence = addText(scene, right, kindMiddle, String(face.influence), {
-    fontFamily: UI_FONT,
-    fontSize: `${size}px`,
-    fontStyle: 'bold',
-    color: css(tone(palette.ink)),
-  })
-    .setOrigin(1, 0.5)
-    .setName('influence-label');
-  const gained = glyphMark(scene).setY(kindMiddle);
-
-  const span = GLYPH_SHARE * size;
   const ruled = addRun(
     scene,
     face.rules,
-    { fontFamily: UI_FONT, fontSize: `${size}px`, color: css(tone(palette.ink)), align: 'center' },
-    right - left,
+    { fontFamily: UI_FONT, fontSize: `${type}px`, align: 'center' },
+    frontOf(face.family).paper.width * unit,
   );
-  const rules = ruled.label
-    .setPosition(0, kind.y - kind.height - 0.45 * em)
-    .setOrigin(0.5, 1)
-    .setName('rules');
+  const rules = ruled.label.setOrigin(0.5).setName('rules');
 
-  const artTop = middle + 1.15 * em;
-  const art = scene.add.graphics();
+  const influence = discMarkOf(scene, width, discNumber);
+  influence.number.setName('influence-label');
 
   const ring = scene.add.graphics().setName('ring').setVisible(false);
   for (const [weight, colour] of [
@@ -388,14 +486,14 @@ export function createCardFace(
       -height - RING_STANDOFF,
       width + 2 * RING_STANDOFF,
       height + 2 * RING_STANDOFF,
-      radius + RING_STANDOFF,
+      BODY_RADIUS * unit + RING_STANDOFF,
     );
   }
 
   const point = scene.add
     .polygon(
       0,
-      -height - RING_STANDOFF - RING_WEIGHT / 2 - POINT_HEIGHT / 2,
+      0,
       corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
       LOOK.selected,
     )
@@ -403,22 +501,14 @@ export function createCardFace(
     .setName('aim-point')
     .setVisible(false);
 
-  root.add([art, name, kind, gained, influence, rules, ring, point]);
+  root.add([window, front, plate, name, rules, kind, influence.root, ring, point]);
 
-  // A long name runs over the costs, and stands over them.
-  const underName = {
+  const underRing = {
     scene,
-    add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(name)),
+    add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(ring)),
   };
-  const chips = poolOf(underName, () => glyphMark(scene).setY(middle));
-  const amounts = poolOf(underName, () =>
-    addText(scene, 0, middle, '', {
-      fontFamily: UI_FONT,
-      fontSize: `${em}px`,
-      fontStyle: 'bold',
-    }).setOrigin(0, 0.5),
-  );
-  const glyphs = poolOf(root, () => glyphMark(scene));
+  const costs = rootedPoolOf(underRing, () => discMarkOf(scene, width, discNumber));
+  const glyphs = poolOf(underRing, () => glyphMark(scene));
   const layNameZones = presses === undefined ? undefined : nameZonesOf(root, presses);
   const footZones =
     presses?.footOver === undefined
@@ -429,74 +519,92 @@ export function createCardFace(
         };
   if (footZones !== undefined) root.add([footZones.kind, footZones.influence]);
 
+  const influenceAt = placed(DISC.influence);
+  const painted = DISC.painted * unit;
+
   /** What the face reads now. */
   let reads = face;
   /** The names its rules draw. */
   let names: Name[] = [];
-  /** Where the influence it gains starts along its foot. */
-  let gainsLeft = right;
+  /** The middle of its kind label. */
+  let kindMiddle = 0;
 
   const read = (next: Face, refused: Refusal, toned: Tone = unworn): void => {
     reads = next;
-    const paint = paperOf(refused);
+    const shape = frontOf(next.family);
+    const tint = paintedTint(refused, toned);
+    const textInk = toned(playable(refused) ? LOOK.cardTextInk : LOOK.unaffordableCard.ink);
 
-    paper.clear();
-    drawCardSurface(paper, -width / 2, -height, {
-      width,
-      face: toned(paint.face),
-      edge: toned(LOOK.cardEdge),
-    });
+    const glass = placed(shape.window);
+    window
+      .setPosition(glass.x, glass.y)
+      .setSize(shape.window.width * unit, shape.window.height * down)
+      .setFillStyle(multiplied(paleOf(next.family), tint));
+    wearFront(front, next.family, width)
+      .setPosition(-width / 2, -height)
+      .setTint(tint);
+    plate.setTint(tint);
 
-    chips.hide();
-    amounts.hide();
-    let x = left;
-    for (const { resource, amount } of next.costs) {
-      const marked = refused.unaffordable.includes(resource);
-      asGlyph(chips.take(), resource, Math.SQRT2 * 0.8 * em, { tone: toned }).setX(x + 0.4 * em);
-      const value = inked(amounts.take(), toned(marked ? LOOK.unaffordableMark : paint.ink))
-        .setX(x + 1.3 * em)
-        .setText(String(amount));
-      x = value.x + value.width + 0.35 * em;
-    }
+    inked(name, toned(LOOK.cardNameInk)).setText(next.name);
 
-    inked(name, toned(paint.ink)).setText(next.name);
-    inked(kind, toned(LOOK.faintInk)).setText(kindLabel(next.kind).toUpperCase());
+    const paper = placed(shape.paper);
+    const paperMiddle = paper.x + (shape.paper.width * unit) / 2;
+    const foot = paper.y + shape.paper.height * down;
+    inked(kind, textInk).setText(kindLabel(next.kind).toUpperCase()).setPosition(paperMiddle, foot);
+    kindMiddle = foot - kind.height / 2;
 
-    const gains = next.influence !== 0;
-    influence.setVisible(gains);
-    gained.setVisible(gains);
-    if (gains) {
-      inked(influence, toned(paint.ink)).setText(String(next.influence));
-      asGlyph(gained, 'influence', Math.SQRT2 * 0.55 * em, { tone: toned }).setX(
-        influence.x - influence.width - 0.3 * em,
-      );
-      gainsLeft = gained.x - 0.4 * em;
-    }
-
-    inked(rules, toned(paint.ink)).setText(next.rules);
+    const textTop = plate.y + TEXT_BELOW_PLATE * down;
+    ruled.wrapAt(shape.paper.width * unit);
+    inked(rules, textInk)
+      .setText(next.rules)
+      .setPosition(paperMiddle, (textTop + foot - kind.height) / 2);
     const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {
-      asGlyph(glyphs.take(), glyph.resource, span, { tone: toned }).setPosition(glyph.x, glyph.y);
+      asGlyph(glyphs.take(), glyph.resource, GLYPH_SHARE * type, { tone: toned }).setPosition(
+        glyph.x,
+        glyph.y,
+      );
     }
     names = marks.names;
     root.setData({ card: next.id, names });
     layNameZones?.(names);
-    if (footZones !== undefined) {
-      footZones.kind.setPosition(0, kindMiddle).setSize(kind.width, kind.height);
-      footZones.influence
-        .setVisible(gains)
-        .setPosition((gainsLeft + right) / 2, kindMiddle)
-        .setSize(right - gainsLeft, kind.height);
+
+    costs.hide();
+    const first = placed(shape.cost);
+    for (const [at, { resource, amount }] of next.costs.entries()) {
+      showDisc(costs.take(), {
+        symbol: resource,
+        amount,
+        ink: refused.unaffordable.includes(resource) ? LOOK.unaffordableMark : LOOK.cardDiscInk,
+        tint,
+        tone: toned,
+        at: { x: first.x, y: first.y + at * DISC.below * down },
+      });
     }
 
-    const artHeight = rules.y - rules.height - 0.45 * em - artTop;
-    art.clear();
-    art.fillStyle(toned(paint.art));
-    art.fillRoundedRect(left, artTop, right - left, artHeight, 0.2 * em);
-    art.lineStyle(1, toned(paint.artEdge));
-    art.strokeRoundedRect(left + 0.5, artTop + 0.5, right - left - 1, artHeight - 1, 0.2 * em);
+    const gains = next.influence !== 0;
+    influence.root.setVisible(gains);
+    if (gains) {
+      showDisc(influence, {
+        symbol: 'influence',
+        amount: next.influence,
+        ink: LOOK.cardDiscInk,
+        tint,
+        tone: toned,
+        at: influenceAt,
+      });
+    }
 
+    if (footZones !== undefined) {
+      footZones.kind.setPosition(kind.x, kindMiddle).setSize(kind.width, kind.height);
+      footZones.influence
+        .setVisible(gains)
+        .setPosition(influenceAt.x, influenceAt.y)
+        .setSize(painted, painted);
+    }
+
+    point.setY(-height - pointStandoff(shape.rises, width) - POINT_HEIGHT / 2);
     ring.setVisible(false);
     point.setVisible(false);
   };
@@ -519,9 +627,19 @@ export function createCardFace(
     },
     footAt(x: number, y: number): FootLabel | undefined {
       const local = root.getLocalPoint(x, y);
-      if (Math.abs(local.y - kindMiddle) > kind.height / 2) return undefined;
-      if (Math.abs(local.x) <= kind.width / 2) return 'kind';
-      if (reads.influence !== 0 && local.x >= gainsLeft && local.x <= right) return 'influence';
+      if (
+        Math.abs(local.y - kindMiddle) <= kind.height / 2 &&
+        Math.abs(local.x - kind.x) <= kind.width / 2
+      ) {
+        return 'kind';
+      }
+      if (
+        reads.influence !== 0 &&
+        Math.abs(local.x - influenceAt.x) <= painted / 2 &&
+        Math.abs(local.y - influenceAt.y) <= painted / 2
+      ) {
+        return 'influence';
+      }
       return undefined;
     },
     cardAt(x: number, y: number): boolean {
@@ -529,18 +647,26 @@ export function createCardFace(
       return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
     explainFoot(tooltip: Tooltip, label: FootLabel): void {
-      const besideOf = (part: Phaser.GameObjects.Text, saying: string): void => {
+      const besideAt = (saying: string, at: () => { x: number; y: number }): void => {
         tooltip.beside(saying, () => {
-          const own = ownBoxOf(part);
-          return root.getWorldTransformMatrix().transformPoint(own.x + own.width, kindMiddle);
+          const { x, y } = at();
+          return root.getWorldTransformMatrix().transformPoint(x, y);
         });
       };
       switch (label) {
         case 'kind':
-          besideOf(kind, kindTooltip(reads.kind));
+          besideAt(kindTooltip(reads.kind), () => {
+            const own = ownBoxOf(kind);
+            return { x: own.x + own.width, y: kindMiddle };
+          });
           return;
         case 'influence':
-          if (reads.influence !== 0) besideOf(influence, text('tooltip.influence'));
+          if (reads.influence !== 0) {
+            besideAt(text('tooltip.influence'), () => ({
+              x: influenceAt.x + painted / 2,
+              y: influenceAt.y,
+            }));
+          }
           return;
       }
       const unlisted: never = label;
@@ -596,22 +722,24 @@ export type CardBack = {
   wear(tone: Tone): void;
 };
 
-/** A face-down card, about its own bottom centre. */
+/** How wide the crown on a back stands, as a share of the card's width. */
+const CROWN_SHARE = 0.6;
+
+/** A face-down card, about its own bottom centre: the pack's back with the player's crown on it. */
 export function createCardBack(scene: Phaser.Scene): CardBack {
-  const paper = scene.add.graphics();
-  const emblem = scene.add.polygon(0, -CARD_HEIGHT / 2, hexagon(CARD_WIDTH * 0.28 - 3), 0, 0);
+  const back = scene.add
+    .image(-CARD_WIDTH / 2, -CARD_HEIGHT, CARDS_SHEET_KEY, BACK.file)
+    .setScale(unitOf(CARD_WIDTH), downOf(CARD_WIDTH))
+    .setDisplayOrigin(BACK.body.x, BACK.body.y);
+  const crown = glyphMark(scene).setY(-CARD_HEIGHT / 2);
 
   const wear = (tone: Tone): void => {
-    paper.clear();
-    drawCardSurface(paper, -CARD_WIDTH / 2, -CARD_HEIGHT, {
-      face: tone(LOOK.cardBack),
-      edge: tone(LOOK.cardEdge),
-    });
-    emblem.setStrokeStyle(3, tone(LOOK.civilization));
+    back.setTint(tone(0xffffff));
+    asGlyph(crown, 'player', CROWN_SHARE * CARD_WIDTH, { tone, colour: LOOK.civilization });
   };
   wear(unworn);
 
-  return { root: scene.add.container(0, 0, [paper, emblem]), wear };
+  return { root: scene.add.container(0, 0, [back, crown]), wear };
 }
 
 /** Where a pile's top card would be: the card's own rounded outline, dashed. */
@@ -625,7 +753,7 @@ export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Contain
 /** The card's outline as a closed polyline, corner arcs sampled into short chords. */
 function cardOutline(): { x: number; y: number }[] {
   const half = CARD_WIDTH / 2;
-  const r = CARD_METRICS.radius;
+  const r = CARD_RADIUS;
   const points: { x: number; y: number }[] = [];
   const corner = (cx: number, cy: number, from: number): void => {
     for (let i = 0; i <= 6; i++) {

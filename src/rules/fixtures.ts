@@ -23,7 +23,7 @@ import {
   outside,
   placesImprovement,
   refreshed,
-  settled,
+  settlesCity,
   slotFree,
   terraformable,
   terraformed,
@@ -560,11 +560,11 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Settle: {
       kind: 'settle',
       cost: {},
-      aim: 'tile',
-      refuses: (catalogue, _chronicle, tile) =>
-        firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
-      effect: (catalogue, paid, at) =>
-        followed(terraformed(catalogue, paid, at, 'urban'), (left) => settled(catalogue, left, at)),
+      ...settlesCity(
+        (catalogue, _chronicle, tile) =>
+          firstRefusal(made(catalogue, tile, ['plain', 'forest', 'hills']), slotFree(tile)),
+        (catalogue, paid, at) => terraformed(catalogue, paid, at, 'urban'),
+      ),
     },
     PH_Claim: {
       kind: 'settle',

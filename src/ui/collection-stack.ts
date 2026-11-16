@@ -1,11 +1,12 @@
 import type Phaser from 'phaser';
 import { NO_REFUSAL, type Refusal } from '../rules/state';
 import {
+  addFront,
   CARD_HEIGHT,
+  CARD_RISE,
   CARD_WIDTH,
   type CardFace,
   createCardFace,
-  drawCardSurface,
 } from './card-face';
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
@@ -68,8 +69,8 @@ export function spanOf(across: number): number {
 }
 
 /**
- * The cells of stacks, `across` to a line from the left and the top handed, each line under the foot
- * of the one before.
+ * The cells of stacks, `across` to a line from the left and under the top handed by the room a card's
+ * rising parts take, each line under the foot of the one before.
  */
 export function linesOf(
   cells: readonly Cell[],
@@ -77,7 +78,7 @@ export function linesOf(
 ): Filled {
   const parts: Phaser.GameObjects.GameObject[] = [];
   const held: Held[] = [];
-  let lineTop = top;
+  let lineTop = top + CARD_RISE;
   let foot = top;
   for (let from = 0; from < cells.length; from += across) {
     for (const [column, cell] of cells.slice(from, from + across).entries()) {
@@ -116,7 +117,7 @@ export type LaidStack = {
  * together, and where a stack of the most copies would end, whatever this one holds.
  */
 export type StackedCards = {
-  readonly unders: readonly Phaser.GameObjects.Graphics[];
+  readonly unders: readonly Phaser.GameObjects.Image[];
   readonly card: CardFace;
   readonly shown: Face;
   readonly face: Box;
@@ -151,12 +152,7 @@ export function stackedCardsOf(
   const under = Math.min(copies - 1, UNDER_MOST);
   const unders = Array.from({ length: under }, (_, at) => {
     const step = (under - at) * UNDER_STEP;
-    const surface = scene.add.graphics();
-    drawCardSurface(surface, left + step, top + step, {
-      face: tone(LOOK.affordableCard.face),
-      edge: tone(LOOK.cardEdge),
-    });
-    return surface;
+    return addFront(scene, shown.family, tone).setPosition(left + step, top + step);
   });
   const card = createCardFace(scene, shown, refusal, { tone });
   card.root.setPosition(left + CARD_WIDTH / 2, top + CARD_HEIGHT).setName(name);

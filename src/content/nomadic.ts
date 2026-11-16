@@ -10,7 +10,7 @@ import {
   movePointsSpent,
   outside,
   refreshed,
-  settled,
+  settlesCity,
   slotFree,
   throughWorker,
 } from '../rules/cards';
@@ -94,13 +94,12 @@ const TABLES: Tables = {
     settle: {
       kind: 'settle',
       cost: {},
-      aim: 'tile',
-      refuses: (catalogue, chronicle, tile) =>
+      ...settlesCity((catalogue, chronicle, tile) =>
         firstRefusal(
           made(catalogue, tile, buildingKind(catalogue, chronicle.citySection.building).terrains),
           slotFree(tile),
         ),
-      effect: (catalogue, paid, at) => settled(catalogue, paid, at),
+      ),
     },
     'first-worker': { kind: 'settle', cost: {}, ...entersOn('worker') },
     'first-scout': { kind: 'settle', cost: {}, ...entersOn('scout') },

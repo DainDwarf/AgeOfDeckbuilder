@@ -20,7 +20,7 @@ import {
   type Stratum,
 } from './design-space';
 import { type Face, namedCardFace } from './face';
-import { createThingCard, type Thing } from './infopanel';
+import { createThingCard, paperMetricsOf, type Thing } from './infopanel';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf, type SmallCards } from './small-card';
 import { createTooltip } from './tooltip';
@@ -83,7 +83,10 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
     const newest = cards.length - 1;
     const left = (DESIGN_WIDTH - WIDTH - newest * BAND) / 2;
     const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
-    const drawnOf = (inspected: Inspected, index: number): Phaser.GameObjects.Container => {
+    const drawnOf = (
+      inspected: Inspected,
+      index: number,
+    ): { readonly root: Phaser.GameObjects.Container; readonly height: number } => {
       switch (inspected.shows) {
         case 'face': {
           const face: CardFace = createCardFace(scene, inspected.face, NO_REFUSAL, {
@@ -103,20 +106,24 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
                   }
                 : undefined,
           });
-          return face.root;
+          return { root: face.root, height };
         }
         case 'thing':
-          return createThingCard(scene, catalogue, inspected.thing, WIDTH);
+          return {
+            root: createThingCard(scene, catalogue, inspected.thing, WIDTH),
+            height: paperMetricsOf(WIDTH).height,
+          };
       }
     };
     drawn = cards.map((inspected, index) => {
-      const root = drawnOf(inspected, index)
+      const card = drawnOf(inspected, index);
+      const root = card.root
         .setName(index === newest ? 'inspection' : `inspection-${index}`)
         .setPosition(left + index * BAND + WIDTH / 2, top + index * BAND + height)
         // The card is interactive so that both presses on it reach nothing beneath, the scrim
         // included; only its names react to one.
         .setInteractive({
-          hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -height, WIDTH, height),
+          hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -card.height, WIDTH, card.height),
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
       scene.strata.large.layer.add(root);

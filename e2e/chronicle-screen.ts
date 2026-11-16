@@ -149,6 +149,7 @@ type PageReading = {
   onScreen: Answer<OnScreen>;
   frame: Answer<string>;
   kindLabelOnScreen: Answer<Spot>;
+  influence: Answer<{ text: string; onScreen: Spot }>;
   answerNameOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
   across: Answer<Across>;
@@ -729,19 +730,31 @@ export async function readNames(page: Page): Promise<void> {
         if (box === undefined) throw new Error(`${name} has no bounds`);
         return box;
       };
+      /** The part of that name the object holds, among its own children first, then theirs. */
       const part = (named: string, complaint: string): Phaser.GameObjects.GameObject => {
-        const parts = (found().object as Partial<Phaser.GameObjects.Container>).list;
-        const inside = Array.isArray(parts) ? parts.find((one) => one.name === named) : undefined;
+        const within = (
+          holder: Phaser.GameObjects.GameObject,
+        ): Phaser.GameObjects.GameObject | undefined => {
+          const parts = (holder as Partial<Phaser.GameObjects.Container>).list;
+          if (!Array.isArray(parts)) return undefined;
+          return (
+            parts.find((one) => one.name === named) ??
+            parts.map(within).find((one) => one !== undefined)
+          );
+        };
+        const inside = within(found().object);
         if (inside === undefined) throw new Error(complaint);
         return inside;
       };
       /** Where a Text the object holds sits on the page, its middle, and how tall it stands there. */
       const partOnScreen = (named: string, complaint: string): Spot => {
         const label = part(named, complaint) as Phaser.GameObjects.Text;
-        const middle = matrix().transformPoint(
-          label.x + (0.5 - label.originX) * label.width,
-          label.y + (0.5 - label.originY) * label.height,
-        );
+        const middle = label
+          .getWorldTransformMatrix()
+          .transformPoint(
+            (0.5 - label.originX) * label.width,
+            (0.5 - label.originY) * label.height,
+          );
         const shown = onPage(found().camera, middle.x, middle.y);
         return { x: shown.x, y: shown.y, height: label.height * shown.unit };
       };
@@ -834,6 +847,11 @@ export async function readNames(page: Page): Promise<void> {
           return drawn.name;
         }),
         kindLabelOnScreen: answer(() => partOnScreen('kind-label', `${name} wears no kind label`)),
+        influence: answer(() => {
+          const complaint = `${name} wears no influence's disc`;
+          const label = part('influence-label', complaint) as Phaser.GameObjects.Text;
+          return { text: label.text, onScreen: partOnScreen('influence-label', complaint) };
+        }),
         answerNameOnScreen: answer(() => partOnScreen('name', `${name} is no answer`)),
         boundsOnScreen: answer(() => {
           const box = bounds();
@@ -1541,6 +1559,11 @@ export type Reading = {
   readonly frame: string;
   readonly nameOnScreen: Spot;
   readonly kindLabelOnScreen: Spot;
+  /**
+   * The number on a face's influence disc, and where it sits on the page, its middle, and how tall it
+   * stands there.
+   */
+  readonly influence: { readonly text: string; readonly onScreen: Spot };
   /** Where the answer's name sits on the page, its middle, and how tall it stands there. */
   readonly answerNameOnScreen: Spot;
   /** Where the object's bounds stand on the page. */
@@ -1618,6 +1641,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get kindLabelOnScreen() {
       return owed(name, answered?.kindLabelOnScreen);
+    },
+    get influence() {
+      return owed(name, answered?.influence);
     },
     get answerNameOnScreen() {
       return owed(name, answered?.answerNameOnScreen);

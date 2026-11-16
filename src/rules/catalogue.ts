@@ -141,8 +141,11 @@ export type Aim =
        * alone, which is what checks and spends that worker.
        */
       readonly worker?: true;
-      /** Places a building or an improvement on the tile: set by `builds` and `placesImprovement` alone. */
-      readonly places?: true;
+      /**
+       * What the play places on the tile: set by `builds`, `placesImprovement`, `entersOn` and
+       * `settlesCity` alone.
+       */
+      readonly places?: PlacedThing;
       readonly refuses: (
         catalogue: Catalogue,
         chronicle: Chronicle,
@@ -288,6 +291,38 @@ export function influenceCardOf(card: Card): InfluenceCard | undefined {
 /** The influence a card of either influence kind gains at the ending, and nothing for any other card. */
 export function influenceOf(card: Card): number | undefined {
   return influenceCardOf(card)?.influence;
+}
+
+/** What a card's play can place: a unit, a building or an improvement. */
+export type PlacedThing = 'unit' | 'building' | 'improvement';
+
+/** What a card's play places, and nothing for a card whose play places none. */
+export function placedBy(card: Card): PlacedThing | undefined {
+  switch (card.kind) {
+    case 'unit':
+      return 'unit';
+    case 'settle':
+    case 'building':
+    case 'action':
+    case 'instant':
+    case 'trophy':
+      return card.aim === 'tile' ? card.places : undefined;
+    case 'hazard':
+    case 'challenge':
+      return undefined;
+  }
+}
+
+/** Whether what a play places lies on the tile's ground: a building or an improvement. */
+export function placedOnGround(placed: PlacedThing | undefined): boolean {
+  switch (placed) {
+    case 'building':
+    case 'improvement':
+      return true;
+    case 'unit':
+    case undefined:
+      return false;
+  }
 }
 
 /** A card's counters read by name. */
@@ -870,7 +905,7 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
             `the age ${id}'s neutral's workers play ${card}, which no worker's action goes to`,
           );
         }
-        if (aim.places !== true) {
+        if (!placedOnGround(aim.places)) {
           refuse(
             content,
             `the age ${id}'s neutral's workers play ${card}, which places neither a building nor an improvement`,

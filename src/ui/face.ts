@@ -8,6 +8,8 @@ import {
   cardOf,
   costOf,
   influenceOf,
+  type PlacedThing,
+  placedBy,
 } from '../rules/catalogue';
 import type { CardId, Cost, MadeCard } from '../rules/state';
 import { cardName, cardRules, text } from './text';
@@ -52,18 +54,40 @@ function actionLabelled(aim: Aim): FaceKind {
   }
 }
 
+/** The family a card's frame wears the colour of. */
+export type CardFamily = PlacedThing | 'thing-done' | 'hazard' | 'challenge' | 'trophy';
+
+/** A card's family: what its play places, and its kind where it places nothing. */
+export function familyOf(card: Card): CardFamily {
+  const placed = placedBy(card);
+  if (placed !== undefined) return placed;
+  switch (card.kind) {
+    case 'hazard':
+    case 'challenge':
+    case 'trophy':
+      return card.kind;
+    case 'settle':
+    case 'unit':
+    case 'building':
+    case 'action':
+    case 'instant':
+      return 'thing-done';
+  }
+}
+
 /** The numbers an answer's text or the capstone's reads of the chronicle, by name. */
 export type AnswerReading = Readonly<Record<string, number>>;
 
 /**
  * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
- * name; the kind it is labelled by; its rules entry; what it costs, in the order the resource bar
- * reads the resources; and the influence it gains, none on a face that gains none.
+ * name; the kind it is labelled by; its family; its rules entry; what it costs, in the order the
+ * resource bar reads the resources; and the influence it gains, none on a face that gains none.
  */
 export type Face = {
   readonly id: string;
   readonly name: string;
   readonly kind: FaceKind;
+  readonly family: CardFamily;
   readonly rules: string;
   readonly costs: readonly Cost[];
   readonly influence: number;
@@ -79,6 +103,7 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     id: card.id,
     name: cardName(card.id),
     kind: labelledKind(content),
+    family: familyOf(content),
     rules: cardRules(card, city),
     costs: costOf(catalogue, card.id),
     influence: influenceOf(content) ?? 0,

@@ -79,7 +79,7 @@ function badgeOf(
   const radius = BADGE_HEIGHT / 2;
   const ground = scene.add
     .graphics()
-    .fillStyle(LOOK.cardBack)
+    .fillStyle(LOOK.copiesBadge)
     .fillRoundedRect(box.x, box.y, width, BADGE_HEIGHT, radius)
     .lineStyle(1, LOOK.cardEdge)
     .strokeRoundedRect(box.x + 0.5, box.y + 0.5, width - 1, BADGE_HEIGHT - 1, radius - 0.5);

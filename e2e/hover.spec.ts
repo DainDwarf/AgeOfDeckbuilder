@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
-import { offered } from '../src/rules/schedule';
+import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import { cardFace, cardFaceAtStart, kindTooltip } from '../src/ui/face';
 import { text } from '../src/ui/text';
 import {
@@ -14,12 +14,15 @@ import {
   cardOnFace,
   chronicleOf,
   cursorOverCanvas,
+  endedTurn,
   endTurnLabel,
   firstDealt,
+  influenceCardGaining,
   kindLabelOnScreen,
   offCanvas,
   onScreen,
   openSaved,
+  reading,
   rested,
   restedOnDeal,
   ringedTile,
@@ -316,21 +319,30 @@ test('a hand card the pointer leaves the canvas over settles back into the hand'
   expect(problems).toEqual([]);
 });
 
+/** A part of a card of the hand, read by `at`, once the card has come to rest lifted out of the hand. */
+async function liftedPart(
+  page: Page,
+  at: () => Promise<{ x: number; y: number }>,
+  lying: { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+  let part = lying;
+  await expect
+    .poll(async () => {
+      const was = await at();
+      await rested(page);
+      part = await at();
+      return part.y < lying.y && part.y === was.y;
+    })
+    .toBe(true);
+  return part;
+}
+
 /** The first card's kind label once the card has come to rest lifted out of the hand. */
-async function liftedLabel(
+function liftedLabel(
   page: Page,
   lying: { x: number; y: number },
 ): Promise<{ x: number; y: number }> {
-  let label = lying;
-  await expect
-    .poll(async () => {
-      const was = await kindLabelOnScreen(page, 'hand-0');
-      await rested(page);
-      label = await kindLabelOnScreen(page, 'hand-0');
-      return label.y < lying.y && label.y === was.y;
-    })
-    .toBe(true);
-  return label;
+  return liftedPart(page, () => kindLabelOnScreen(page, 'hand-0'), lying);
 }
 
 test("a card's kind label in the hand raises the bubble reading what its kind is, and a right click on it shows the card large", async ({
@@ -362,6 +374,42 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
   const again = await liftedLabel(page, lying);
   await page.mouse.click(again.x, again.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(id);
+
+  expect(problems).toEqual([]);
+});
+
+test("a card of the hand that gains influence reads it on its disc, and the disc raises the influence reading's bubble", async ({
+  page,
+}) => {
+  const problems = watch(page);
+  test.setTimeout(budget(1));
+  const trophy = influenceCardGaining('trophy', (influence) => influence > 0);
+  const added = addedToDrawPileTop(CATALOGUE, settledOn(1), trophy).chronicle;
+  const [drawn] = added.drawPile;
+  const opened = endedTurn(added);
+  const at = opened.hand.findIndex(({ key }) => key === drawn.key);
+  if (at === -1) throw new Error(`the turn ended draws no ${trophy}`);
+  const { influence } = cardFace(CATALOGUE, opened.hand[at], opened.citySection.building);
+  const face = `hand-${at}`;
+
+  await openSaved(page, opened);
+  const card = await onScreen(page, face);
+  const lying = await reading(page, face);
+  expect(lying.influence.text).toBe(String(influence));
+
+  await page.mouse.move(card.x, card.y, { steps: 5 });
+  const disc = await liftedPart(
+    page,
+    async () => (await reading(page, face)).influence.onScreen,
+    lying.influence.onScreen,
+  );
+  await page.mouse.move(disc.x, disc.y, { steps: 5 });
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(text('tooltip.influence'));
+
+  const beside = await besideTiles(page);
+  await page.mouse.move(beside.x, beside.y, { steps: 5 });
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(false);
 
   expect(problems).toEqual([]);
 });

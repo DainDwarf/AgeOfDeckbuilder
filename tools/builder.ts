@@ -6,6 +6,7 @@ import {
   costOf,
   earningOf,
   fullHealth,
+  placedOnGround,
   strikeOf,
   victoryTechnologyOf,
   workerAim,
@@ -931,7 +932,7 @@ function playedThroughWorker(
   }
   return {
     command: { type: 'play', key, aim: 'tile', tile: { q: tile.q, r: tile.r } },
-    places: aim.places === true,
+    places: placedOnGround(aim.places),
   };
 }
 
@@ -1074,7 +1075,7 @@ function workerPlays(
   return ranked(
     chronicle.hand.flatMap((held, index) => {
       const aim = workerAim(cardOf(catalogue, held.id));
-      if (aim === undefined || (aim.places === true) !== places) return [];
+      if (aim === undefined || placedOnGround(aim.places) !== places) return [];
       return admitted(catalogue, chronicle, aim).flatMap((at) => {
         const tile = tileAt(chronicle.tiles, at);
         const play = tile && workerPlay(catalogue, chronicle, index, tile);

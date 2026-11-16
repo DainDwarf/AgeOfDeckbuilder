@@ -21,7 +21,7 @@ import {
   type Stratum,
 } from './design-space';
 import { type AnswerReading, namedCardFace } from './face';
-import { createThingCard } from './infopanel';
+import { createThingCard, PAPER_HEIGHT, PAPER_WIDTH } from './infopanel';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
 /** The clear water between a small card and the line of the name that raised it. */
@@ -133,11 +133,16 @@ export function createSmallCards(
   const drawnOf = (
     { reference, reading }: Name,
     over: (under: Raiser | undefined) => void,
-  ): { root: Phaser.GameObjects.Container; face: CardFace | undefined } => {
+  ): {
+    root: Phaser.GameObjects.Container;
+    face: CardFace | undefined;
+    width: number;
+    height: number;
+  } => {
     switch (reference.kind) {
       case 'card': {
         const face = faceOf(reference.id, reading, over);
-        return { root: face.root, face };
+        return { root: face.root, face, width: CARD_WIDTH, height: CARD_HEIGHT };
       }
       case 'terrain':
       case 'feature':
@@ -146,26 +151,28 @@ export function createSmallCards(
       case 'player':
       case 'enemy':
         return {
-          root: createThingCard(scene, catalogue, reference, CARD_WIDTH),
+          root: createThingCard(scene, catalogue, reference, PAPER_WIDTH),
           face: undefined,
+          width: PAPER_WIDTH,
+          height: PAPER_HEIGHT,
         };
     }
   };
 
   const raise = (raiser: Raiser, level: number): void => {
     cut(level);
-    const { root, face } = drawnOf(raiser.name, (under) => {
+    const { root, face, width, height } = drawnOf(raiser.name, (under) => {
       link.under = under;
       settle();
     });
     const spot = raiser.where();
-    const half = CARD_WIDTH / 2;
+    const half = width / 2;
     const above = spot.top - STANDOFF;
     const x = Math.min(Math.max(spot.x, MARGIN + half), DESIGN_WIDTH - MARGIN - half);
     const y =
-      above - CARD_HEIGHT >= MARGIN
+      above - height >= MARGIN
         ? above
-        : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN);
+        : Math.min(spot.bottom + STANDOFF + height, DESIGN_HEIGHT - MARGIN);
     const off = { x: x - spot.x, y: y - spot.top };
     const link: Link = { raiser, root, off, onCard: false, under: undefined };
 
@@ -173,7 +180,7 @@ export function createSmallCards(
       .setName(`small-card-${level}`)
       .setPosition(x, y)
       .setInteractive({
-        hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
+        hitArea: new Phaser.Geom.Rectangle(-half, -height, width, height),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
     reactsToPress(root);
