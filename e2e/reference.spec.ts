@@ -23,7 +23,7 @@ import {
   referenceOnFace,
   rested,
   restedOnDeal,
-  ringed,
+  selected,
   settledOn,
   shows,
   standing,
@@ -238,7 +238,7 @@ test('a building named on the settle card raises its card small at a rest and sh
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'small-card-0')).toBe(false);
-  expect(await ringed(page, 'hand-0')).toBe(false);
+  expect(await selected(page, 0, card)).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
 

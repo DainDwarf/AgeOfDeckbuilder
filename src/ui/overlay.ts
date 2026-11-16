@@ -15,7 +15,8 @@ import {
 import { ANSWER_WIDTH, createAnswerPlate } from './answer-plate';
 import { type Bind, boundTo } from './bindings';
 import { badgedStackOf, standBrowser } from './browse';
-import { CARD_HEIGHT, CARD_WIDTH, createCardFace, type Name } from './card-face';
+import { CARD_HEIGHT, createCardFace, type Name } from './card-face';
+import { CARD_WIDTH } from './card-frames';
 import { EASE, ended } from './card-motion';
 import { pileStacksOf } from './collection-layout';
 import {

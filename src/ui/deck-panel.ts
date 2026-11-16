@@ -6,7 +6,8 @@ import {
   unaffordableIn,
 } from '../rules/campaign';
 import { type CardId, NO_REFUSAL } from '../rules/state';
-import { CARD_HEIGHT, CARD_RADIUS, CARD_WIDTH, createCardFace, dashAlong } from './card-face';
+import { CARD_HEIGHT, CARD_RADIUS, createCardFace, dashAlong } from './card-face';
+import { CARD_WIDTH } from './card-frames';
 import { type CollectionStack, copiesIn, type DeckRows, stacksOf } from './collection-layout';
 import {
   type Cell,

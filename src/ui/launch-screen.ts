@@ -77,13 +77,17 @@ const LINE_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', c
 
 type Row = 'age' | 'region' | 'civilization';
 
-/** An option's drawing, the parts of it a press lands on, and how a press on it selects. */
+/**
+ * An option's drawing, the parts of it a press lands on, how a press on it selects, and whether it
+ * fades by its container's strength while unselected, which an option that dims itself does not.
+ */
 type Option = {
   readonly row: Row;
   readonly option: string;
   readonly selected: boolean;
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly hits: readonly Phaser.GameObjects.GameObject[];
+  readonly fades: boolean;
 };
 
 /**
@@ -182,6 +186,7 @@ function arrowOf(
       selected,
       parts: [segment, name],
       hits: [pressedOnShape(segment)],
+      fades: true,
     });
   }
   return { options, unknownAges };
@@ -245,6 +250,7 @@ function regionsOf(
       selected,
       parts: [cluster, name],
       hits: [...hexagons, name],
+      fades: true,
     });
   }
   return { options, unknownRegions };
@@ -276,6 +282,7 @@ function pilesOf(
       selected,
       parts: [...pile.parts, zone],
       hits: [zone],
+      fades: false,
     };
   });
 }
@@ -349,6 +356,7 @@ export class LaunchScreen extends Phaser.Scene {
       selected,
       parts,
       hits,
+      fades,
     }: Option): Phaser.GameObjects.Container => {
       for (const hit of hits) {
         reactsToPress(hit);
@@ -358,7 +366,7 @@ export class LaunchScreen extends Phaser.Scene {
         .container(0, 0, [...parts])
         .setName(`launch-${row}-${option}`)
         .setData('selected', selected)
-        .setAlpha(selected ? 1 : LOOK.unselected);
+        .setAlpha(fades && !selected ? LOOK.unselected : 1);
     };
 
     const word = (key: TextKey, y: number): Phaser.GameObjects.Text =>

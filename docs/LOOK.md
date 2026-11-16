@@ -45,6 +45,7 @@ A glyph stands in a square and is as large as that square's side. It is drawn in
 | The neutral | a scale | Material Design Icons, `scale-balance` |
 | The enemies | a battle axe | Material Design Icons, `axe-battle` |
 | A site | a star of four points | Material Design Icons, `star-four-points` |
+| A card nothing plays | a crossed circle | Material Design Icons, `block-helper` |
 
 ## The map ✅
 
@@ -115,6 +116,12 @@ A card is 124 units wide and 182 tall wherever it stands, and a card shown large
 **The cost** stands on the pack's steel disc at the card's top-left corner, the resource's glyph and the number side by side on it, the disc rising above the card's top edge; a card of two costs wears two discs, the second under the first, in the order the resource bar reads the resources. **The influence** a card gains stands on the same disc at the foot's right corner, influence's glyph and the number.
 
 **The back** is the pack's dark back with its two gold lines, and on it the player's crown in the civilization's colour, six tenths of the card's width across.
+
+**A card's states.** A card lifted out of the hand's lane, under the pointer, held by a small card raised from it, selected or dragged, stands upright, 110% of its size about the middle of its bottom edge, 32 units out of the lane, over a soft black shadow at 50% laid from its own outline, blurred over 9 units and falling 5 units under it. That is all a selected card wears, and a card being aimed wears no more, the line over the hand saying the aim. A cost the player's city cannot pay stands on its disc turned red, the number and the glyph in their own colours, and the card is otherwise drawn as any other; a card the rules refuse for anything but its cost is drawn as any other. A worn card, the discard pile's top card and the back of a dry draw pile, is darkened by 50%, every part of it alike.
+
+**A card nothing plays** wears, where a first cost would stand, the disc of a cost turned the red of an unaffordable one, and on it the sign of a card nothing plays, pale, 16.5 units across on a card 124 wide, with no number. It wears it on every face it is drawn as.
+
+**The launch screen's selected pile** wears a ring round its card: a line of the selection's white 3 units wide, 3.5 units off the card's body, a dark line a unit wide along each of its sides, drawn under the card's frame, so the rim of an oval window and a disc rising over the body stand over it. A pile that is not selected is dimmed as one thing, to half its strength over the page, its backs never showing through its card.
 
 The glyphs on the discs and in a card's text are symbols. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face.
 

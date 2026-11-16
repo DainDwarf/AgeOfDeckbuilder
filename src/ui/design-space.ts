@@ -208,6 +208,25 @@ function* textsIn(
   }
 }
 
+/** The resolution a Text drawn `scale` times its own size is cut at, at the factor the scene is drawn at. */
+export function resolutionAt(scale: number): number {
+  // A fractional resolution would truncate the backing canvas to whole pixels, hence the ceiling.
+  return Math.ceil(renderFactor() * scale);
+}
+
+/**
+ * Every Text among the objects, however deep in layers and containers, cut at that resolution,
+ * written where it moved: `setResolution` re-rasterises at every call.
+ */
+export function cutTexts(
+  objects: readonly Phaser.GameObjects.GameObject[],
+  resolution: number,
+): void {
+  for (const label of textsIn(objects)) {
+    if (label.style.resolution !== resolution) label.setResolution(resolution);
+  }
+}
+
 /** How far a press travels before it is a drag and no longer a click, in design units. */
 const DRAG_SLACK = 8;
 
@@ -259,10 +278,7 @@ export function followFactor(scene: Phaser.Scene): void {
   onResize(scene, () => {
     // Phaser measures the drag threshold between raw pointer positions, in device pixels.
     scene.input.dragDistanceThreshold = DRAG_SLACK * renderFactor();
-    const resolution = Math.ceil(renderFactor());
-    for (const label of textsIn(scene.children.list)) {
-      if (label.style.resolution !== resolution) label.setResolution(resolution);
-    }
+    cutTexts(scene.children.list, resolutionAt(1));
   });
 }
 
@@ -558,10 +574,9 @@ export function addText(
   if (Number.parseFloat(style.fontSize) < TYPE_FLOOR) {
     throw new Error(`no text is set at ${style.fontSize}, under the floor of ${TYPE_FLOOR}`);
   }
-  // A fractional resolution would truncate the backing canvas to whole pixels, hence the ceiling.
   return scene.add.text(x, y, content, {
     ...style,
-    resolution: Math.ceil(renderFactor()),
+    resolution: resolutionAt(1),
     padding: TEXT_INSET,
   });
 }

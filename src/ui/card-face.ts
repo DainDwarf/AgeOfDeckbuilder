@@ -1,28 +1,30 @@
 import type Phaser from 'phaser';
 import type { Resource } from '../rules/resources';
-import { playable, type Refusal } from '../rules/state';
+import type { Refusal } from '../rules/state';
 import {
   BACK,
   BODY,
   BODY_RADIUS,
+  CARD_WIDTH,
   CARDS_SHEET_KEY,
   DISC,
   frontOf,
-  HIGHEST_RIM,
   HIGHEST_RISE,
   type PackPoint,
   PLATE,
   paleOf,
+  SHADOW,
 } from './card-frames';
 import {
   addText,
-  corners,
+  cutTexts,
   DESIGN_HEIGHT,
   MARGIN,
   onClick,
   onHover,
   ownBoxOf,
   reactsToPress,
+  resolutionAt,
   type SizedStyle,
   UI_FONT,
 } from './design-space';
@@ -34,8 +36,6 @@ import { poolOf, rootedPoolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
-
-export const CARD_WIDTH = 124;
 
 /** How many units one of the pack's pixels is across a card that wide. */
 function unitOf(width: number): number {
@@ -63,25 +63,6 @@ export const CARD_BASELINE = DESIGN_HEIGHT - MARGIN;
 /** How far a card comes out of the lane it lies in: the lift a hover gives it, and the selection's. */
 export const CARD_LIFT = 32;
 
-/** The ring the selection wears: this far outside the card's own edge, stroked this wide. */
-const RING_STANDOFF = 3.5;
-const RING_WEIGHT = 3;
-
-/** The point a card being aimed wears over its ring, its apex towards the map. */
-const POINT_WIDTH = 18;
-const POINT_HEIGHT = 12;
-
-/**
- * How far the point over a card being aimed stands above the card's top edge: past its ring, and past
- * the frame's rim where that rises higher.
- */
-function pointStandoff(rises: number, width: number): number {
-  return Math.max(RING_STANDOFF, rises * downOf(width)) + RING_WEIGHT / 2;
-}
-
-/** How far the point on a card being aimed reaches above the card's own top edge, at the most. */
-export const AIM_POINT_REACH = pointStandoff(HIGHEST_RIM, CARD_WIDTH) + POINT_HEIGHT;
-
 /** How far a card's rim or a disc rises above its top edge, at the most: the room a line of cards keeps over it. */
 export const CARD_RISE = HIGHEST_RISE * downOf(CARD_WIDTH);
 
@@ -89,6 +70,9 @@ export const CARD_RISE = HIGHEST_RISE * downOf(CARD_WIDTH);
 const NAME_SIZE = 12;
 const TEXT_SIZE = 11;
 const DISC_NUMBER_SIZE = 15;
+
+/** How wide the sign of a card nothing plays stands on its disc, in units of a card wherever it stands but large. */
+const SIGN_SIZE = 16.5;
 
 /** How wide a glyph on a disc stands, as a share of the number beside it, and the gap between. */
 const DISC_GLYPH_SHARE = 0.72;
@@ -134,8 +118,10 @@ export function namedAt(
 
 /** Where a name drawn in the container stands on the surface the container is drawn on. */
 export function spotOn(container: Phaser.GameObjects.Container, name: Name): Spot {
-  const middle = container.getWorldTransformMatrix().transformPoint(name.x, name.y);
-  return { x: middle.x, top: middle.y - name.height / 2, bottom: middle.y + name.height / 2 };
+  const matrix = container.getWorldTransformMatrix();
+  const top = matrix.transformPoint(name.x, name.y - name.height / 2);
+  const bottom = matrix.transformPoint(name.x, name.y + name.height / 2);
+  return { x: (top.x + bottom.x) / 2, top: top.y, bottom: bottom.y };
 }
 
 /** A glyph a run marks, a side of its square, as a share of the run's type. */
@@ -241,12 +227,13 @@ export type NamePresses = {
 
 export type CardFace = {
   readonly root: Phaser.GameObjects.Container;
-  /** The face read as this card, under this refusal and tone, unringed and with no point. */
+  /** The face read as this card, under this refusal and tone. */
   read(face: Face, refusal: Refusal, tone?: Tone): void;
-  /** Draws the card as the selection, or as one more card lying where it lies. */
-  select(selected: boolean): void;
-  /** Draws the card as the one being aimed: the point on its ring, or no point at all. */
-  aim(beingAimed: boolean): void;
+  /**
+   * Draws the card lifted out of the hand's lane, larger about the middle of its bottom edge, over
+   * its shadow and its texts cut for that size, or at its own size.
+   */
+  lift(lifted: boolean): void;
   /** The name lying under a point of the surface the face is drawn on, and nothing where none does. */
   nameAt(x: number, y: number): Name | undefined;
   /** Where one of the face's names stands on the surface the face is drawn on. */
@@ -271,12 +258,6 @@ function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjec
   return label.style.color === ink ? label : label.setColor(ink);
 }
 
-/** The tint a card's painted parts are multiplied by: white through the tone, darkened while refused. */
-function paintedTint(refusal: Refusal, tone: Tone): number {
-  const toned = tone(0xffffff);
-  return playable(refusal) ? toned : multiplied(toned, LOOK.unaffordableFront);
-}
-
 /**
  * The image of the front a card of the family wears, at a card that wide, its body's top-left corner
  * where the image stands.
@@ -291,6 +272,20 @@ function wearFront(
     .setTexture(CARDS_SHEET_KEY, frame)
     .setScale(unitOf(width), downOf(width))
     .setDisplayOrigin(body.x, body.y);
+}
+
+/** The image of the shadow of the front a card of the family wears, laid as `wearFront` lays it. */
+function wearShadow(
+  image: Phaser.GameObjects.Image,
+  family: CardFamily,
+  width: number,
+): Phaser.GameObjects.Image {
+  const { shadow, body } = frontOf(family);
+  const { pixels, room } = SHADOW;
+  return image
+    .setTexture(CARDS_SHEET_KEY, shadow)
+    .setScale(unitOf(width) / pixels, downOf(width) / pixels)
+    .setDisplayOrigin(room + body.x * pixels, room + body.y * pixels);
 }
 
 /**
@@ -367,10 +362,15 @@ type DiscMark = {
   readonly number: Phaser.GameObjects.Text;
 };
 
+/** The pack's steel disc for a card that wide, about its middle. */
+function discOf(scene: Phaser.Scene, width: number): Phaser.GameObjects.Image {
+  const disc = scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file);
+  return disc.setScale((DISC.width * unitOf(width)) / disc.width);
+}
+
 /** A disc drawing nothing yet, for a card that wide, its number set that large. */
 function discMarkOf(scene: Phaser.Scene, width: number, numberSize: number): DiscMark {
-  const disc = scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file);
-  disc.setScale((DISC.width * unitOf(width)) / disc.width);
+  const disc = discOf(scene, width);
   const glyph = glyphMark(scene);
   const number = addText(scene, 0, 0, '', {
     fontFamily: UI_FONT,
@@ -416,9 +416,8 @@ function showDisc(
 
 /**
  * A face, drawn about its own bottom centre so a container's angle fans it from that corner, every
- * colour of it through the tone. The refusal marks the costs the city cannot pay, and any refusal
- * at all draws the face unplayable. Its width and whether its names react to presses are its for
- * life.
+ * colour of it through the tone, the costs the refusal names unaffordable on red discs. Its width and
+ * whether its names react to presses are its for life.
  */
 export function createCardFace(
   scene: Phaser.Scene,
@@ -442,6 +441,7 @@ export function createCardFace(
   });
 
   const root = scene.add.container(0, 0);
+  const shadow = scene.add.image(0, 0, CARDS_SHEET_KEY).setVisible(false);
   const window = scene.add.rectangle(0, 0, 1, 1, 0).setOrigin(0, 0);
   const front = scene.add.image(0, 0, CARDS_SHEET_KEY);
   const plate = scene.add.image(0, -height + PLATE.middle * down, CARDS_SHEET_KEY, PLATE.file);
@@ -475,40 +475,18 @@ export function createCardFace(
   const influence = discMarkOf(scene, width, discNumber);
   influence.number.setName('influence-label');
 
-  const ring = scene.add.graphics().setName('ring').setVisible(false);
-  for (const [weight, colour] of [
-    [RING_WEIGHT + 2, LOOK.selectedEdge],
-    [RING_WEIGHT, LOOK.selected],
-  ] as const) {
-    ring.lineStyle(weight, colour);
-    ring.strokeRoundedRect(
-      -width / 2 - RING_STANDOFF,
-      -height - RING_STANDOFF,
-      width + 2 * RING_STANDOFF,
-      height + 2 * RING_STANDOFF,
-      BODY_RADIUS * unit + RING_STANDOFF,
-    );
-  }
+  const signDisc = discOf(scene, width);
+  const signGlyph = glyphMark(scene);
+  const sign = scene.add.container(0, 0, [signDisc, signGlyph]);
 
-  const point = scene.add
-    .polygon(
-      0,
-      0,
-      corners([-POINT_WIDTH / 2, POINT_HEIGHT, POINT_WIDTH / 2, POINT_HEIGHT, 0, 0]),
-      LOOK.selected,
-    )
-    .setStrokeStyle(1, LOOK.selectedEdge)
-    .setName('aim-point')
-    .setVisible(false);
+  root.add([shadow, window, front, plate, name, rules, kind, influence.root, sign]);
 
-  root.add([window, front, plate, name, rules, kind, influence.root, ring, point]);
-
-  const underRing = {
+  const underSign = {
     scene,
-    add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(ring)),
+    add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(sign)),
   };
-  const costs = rootedPoolOf(underRing, () => discMarkOf(scene, width, discNumber));
-  const glyphs = poolOf(underRing, () => glyphMark(scene));
+  const costs = rootedPoolOf(underSign, () => discMarkOf(scene, width, discNumber));
+  const glyphs = poolOf(underSign, () => glyphMark(scene));
   const layNameZones = presses === undefined ? undefined : nameZonesOf(root, presses);
   const footZones =
     presses?.footOver === undefined
@@ -532,9 +510,10 @@ export function createCardFace(
   const read = (next: Face, refused: Refusal, toned: Tone = unworn): void => {
     reads = next;
     const shape = frontOf(next.family);
-    const tint = paintedTint(refused, toned);
-    const textInk = toned(playable(refused) ? LOOK.cardTextInk : LOOK.unaffordableCard.ink);
+    const tint = toned(0xffffff);
+    const textInk = toned(LOOK.cardTextInk);
 
+    wearShadow(shadow, next.family, width).setPosition(-width / 2, -height);
     const glass = placed(shape.window);
     window
       .setPosition(glass.x, glass.y)
@@ -576,11 +555,18 @@ export function createCardFace(
       showDisc(costs.take(), {
         symbol: resource,
         amount,
-        ink: refused.unaffordable.includes(resource) ? LOOK.unaffordableMark : LOOK.cardDiscInk,
-        tint,
+        ink: LOOK.cardDiscInk,
+        tint: refused.unaffordable.includes(resource) ? toned(LOOK.unaffordableDisc) : tint,
         tone: toned,
         at: { x: first.x, y: first.y + at * DISC.below * down },
       });
+    }
+
+    sign.setVisible(next.playedByNothing);
+    if (next.playedByNothing) {
+      signDisc.setTint(toned(LOOK.unaffordableDisc));
+      asGlyph(signGlyph, 'played-by-nothing', size(SIGN_SIZE), { tone: toned, outlined: false });
+      sign.setPosition(first.x, first.y);
     }
 
     const gains = next.influence !== 0;
@@ -603,21 +589,17 @@ export function createCardFace(
         .setPosition(influenceAt.x, influenceAt.y)
         .setSize(painted, painted);
     }
-
-    point.setY(-height - pointStandoff(shape.rises, width) - POINT_HEIGHT / 2);
-    ring.setVisible(false);
-    point.setVisible(false);
   };
   read(face, refusal, tone);
 
   return {
     root,
     read,
-    select(on: boolean): void {
-      ring.setVisible(on);
-    },
-    aim(on: boolean): void {
-      point.setVisible(on);
+    lift(lifted: boolean): void {
+      const scale = lifted ? LOOK.liftedCard : 1;
+      root.setScale(scale);
+      shadow.setVisible(lifted);
+      cutTexts(root.list, resolutionAt(scale));
     },
     nameAt(x: number, y: number): Name | undefined {
       return namedAt(root, names, x, y);

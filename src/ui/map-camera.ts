@@ -3,7 +3,14 @@ import { CENTRE, type Tile, type TileCoords } from '../rules/map';
 import { MAP_FRAME } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended } from './card-motion';
-import { dragged, onLetGoOffCanvas, onResize, renderFactor, type Stratum } from './design-space';
+import {
+  dragged,
+  onLetGoOffCanvas,
+  onResize,
+  renderFactor,
+  resolutionAt,
+  type Stratum,
+} from './design-space';
 import { onHeldKeys, onKeyDown } from './keys';
 import { positionOf, TILE_SIZE } from './map-marks';
 import { PAN_SPEED } from './scroll';
@@ -302,7 +309,7 @@ export function createMapCamera(
     },
 
     atZoom(): number {
-      return Math.ceil(renderFactor() * zoom);
+      return resolutionAt(zoom);
     },
 
     zoomBy,

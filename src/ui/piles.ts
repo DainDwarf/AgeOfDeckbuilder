@@ -11,7 +11,6 @@ import {
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
-  CARD_WIDTH,
   type CardFace,
   createCardBack,
   createEmptySlot,
@@ -19,6 +18,7 @@ import {
   type FootLabel,
   type Name,
 } from './card-face';
+import { CARD_WIDTH } from './card-frames';
 import { blockLength, SHUFFLE, stopMotion, TURN_OVER, travel, turnOver } from './card-motion';
 import type { ChronicleFaces } from './chronicle-faces';
 import {

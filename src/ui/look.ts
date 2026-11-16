@@ -23,6 +23,9 @@ export type Paper = {
   readonly ink: number;
 };
 
+/** A shadow in a colour at its strength, blurred over `blur` units and falling `fall` units under what casts it. */
+export type Shadow = Wash & { readonly blur: number; readonly fall: number };
+
 /** Every colour of the screen, by the role it paints. */
 export type Look = {
   readonly button: number;
@@ -150,17 +153,23 @@ export type Look = {
   readonly cardTextInk: number;
   /** The strength a card's kind label stands at in its text's ink. */
   readonly cardKindLabel: number;
-  /** The ink of the number on a card's disc, its cost's or its influence's. */
+  /** What reads on a card's disc: its cost's or its influence's number, and the sign of a card nothing plays. */
   readonly cardDiscInk: number;
-  /** The tint a card's painted parts are multiplied by while the city cannot play it. */
-  readonly unaffordableFront: number;
+  /** The tint a cost's disc is multiplied by where the player's city cannot pay it, and the disc of a card nothing plays. */
+  readonly unaffordableDisc: number;
+  /** How much larger than its own size a card lifted out of the hand's lane is drawn. */
+  readonly liftedCard: number;
+  /** The shadow under a card lifted out of the hand's lane, its numbers in units of the card at its own size. */
+  readonly liftedShadow: Shadow;
+  /** The strength a worn card is darkened by, every part of it alike. */
+  readonly wornCard: number;
   readonly aimSlab: number;
   readonly emptyEdge: number;
-  readonly unaffordableMark: number;
   /** The ink of a stock ending the turn takes past nothing, and of the population it takes. */
   readonly takenPastNothing: number;
   readonly affordableCard: Paper;
-  readonly unaffordableCard: Paper;
+  /** The paper an answer the player's city cannot pay for, or one refused, stands on, and its ink. */
+  readonly refusedAnswer: Paper;
   /** The dark under a tile's yield glyphs, at its strength over its middle. */
   readonly yieldPatch: Wash;
   /** The strength every unit is drawn at while city mode is on. */
@@ -283,13 +292,15 @@ export const LOOK: Look = {
   cardTextInk: 0x2a2010,
   cardKindLabel: 0.72,
   cardDiscInk: 0xf2f6ff,
-  unaffordableFront: 0xc9c9c9,
+  unaffordableDisc: 0xff6b66,
+  liftedCard: 1.1,
+  liftedShadow: { colour: 0x000000, strength: 0.5, blur: 9, fall: 5 },
+  wornCard: 0.5,
   aimSlab: 0x232833,
   emptyEdge: 0x4a5058,
-  unaffordableMark: 0xc0392b,
   takenPastNothing: 0xc0392b,
   affordableCard: { face: 0xd4d7db, ink: 0x0d1014 },
-  unaffordableCard: { face: 0xa7abb1, ink: 0x3a3f45 },
+  refusedAnswer: { face: 0xa7abb1, ink: 0x3a3f45 },
   yieldPatch: { colour: 0x0d1014, strength: 0.7 },
   unitsInCityMode: 0.5,
   yieldNotGiven: 0.5,
@@ -363,12 +374,15 @@ export function unworn(colour: number): number {
   return colour;
 }
 
-/** A colour worn down as the discard pile's top card and a dry draw pile are: CSS `grayscale(0.35) brightness(0.75)`. */
+/** A colour worn as the discard pile's top card and a dry draw pile are: darkened by a worn card's strength. */
 export function worn(colour: number): number {
-  const red = (colour >> 16) & 0xff;
-  const green = (colour >> 8) & 0xff;
-  const blue = colour & 0xff;
-  const grey = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
-  const wear = (channel: number): number => Math.round((channel * 0.65 + grey * 0.35) * 0.75);
-  return (wear(red) << 16) | (wear(green) << 8) | wear(blue);
+  return multiplied(colour, darkeningOf(LOOK.wornCard));
+}
+
+/**
+ * The tone of a thing dimmed as one, every colour of it over the page at that strength: a container's
+ * alpha fades each child alone, so what lies under a part would show through it.
+ */
+export function dimmedTo(strength: number): Tone {
+  return (colour) => overPage(colour, strength);
 }

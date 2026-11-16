@@ -36,6 +36,8 @@ function colourOf(symbol: CastSymbol): number {
       return LOOK.enemySignInk;
     case 'site':
       return LOOK.siteSignInk;
+    case 'played-by-nothing':
+      return LOOK.cardDiscInk;
   }
 }
 

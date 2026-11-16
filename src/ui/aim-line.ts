@@ -1,16 +1,16 @@
 import type Phaser from 'phaser';
 import type { AimedCard } from '../rules/catalogue';
 import type { CardId } from '../rules/state';
-import { AIM_POINT_REACH, CARD_BASELINE, CARD_HEIGHT, CARD_LIFT } from './card-face';
+import { CARD_BASELINE, CARD_HEIGHT, CARD_LIFT, CARD_RISE } from './card-face';
 import { addText, DESIGN_WIDTH, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import { cardName, text } from './text';
 
-/** The clear water between the line and the point of the card being aimed under it. */
+/** The clear water between the line and the card being aimed under it. */
 const STANDOFF = 8;
 
-/** The line's bottom edge: clear of the point on a card lifted out of the hand. */
-const BOTTOM = CARD_BASELINE - CARD_HEIGHT - CARD_LIFT - AIM_POINT_REACH - STANDOFF;
+/** The line's bottom edge: clear of the highest thing a card lifted out of the hand reaches. */
+const BOTTOM = CARD_BASELINE - CARD_LIFT - LOOK.liftedCard * (CARD_HEIGHT + CARD_RISE) - STANDOFF;
 
 /** How far the sentence stands off the slab's edges. */
 const PAD_X = 10;
@@ -23,18 +23,18 @@ const STYLE = {
   color: css(LOOK.selected),
 };
 
-/** What a card being aimed wears the point for: a tile, a unit or a card of the hand. */
-export type PointedAim = AimedCard['aim'] | 'hand';
+/** What a card being aimed is played at: a tile, a unit or a card of the hand. */
+export type AimedAt = AimedCard['aim'] | 'hand';
 
 export type AimLine = {
   /** Says what the card being aimed is played at, over the hand, until it is taken down. */
-  show(id: CardId, aim: PointedAim): void;
+  show(id: CardId, aim: AimedAt): void;
   hide(): void;
 };
 
 /**
- * The one line over the hand: what the card being aimed is played at. It stands and falls with the
- * point that card wears, so one card being aimed is one sentence, and none standing is none.
+ * The one line over the hand: what the card being aimed is played at, so one card being aimed is one
+ * sentence, and none standing is none.
  */
 export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
   let line: Phaser.GameObjects.Container | undefined;
@@ -45,7 +45,7 @@ export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
   };
 
   return {
-    show(id: CardId, aim: PointedAim): void {
+    show(id: CardId, aim: AimedAt): void {
       hide();
       const label = addText(scene, PAD_X, PAD_Y, sentence(id, aim), STYLE);
       const width = label.width + 2 * PAD_X;
@@ -68,7 +68,7 @@ export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
 }
 
 /** The sentence one aim is said in, the card named by its own name. */
-function sentence(id: CardId, aim: PointedAim): string {
+function sentence(id: CardId, aim: AimedAt): string {
   const card = cardName(id);
   switch (aim) {
     case 'tile':

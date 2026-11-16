@@ -11,19 +11,19 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import { createAimLine, type PointedAim } from './aim-line';
+import { type AimedAt, createAimLine } from './aim-line';
 import { pressOf } from './bindings';
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
   CARD_LIFT,
-  CARD_WIDTH,
   type CardFace,
   createCardBack,
   type FootBubble,
   type FootLabel,
   type Name,
 } from './card-face';
+import { CARD_WIDTH } from './card-frames';
 import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import type { ChronicleFaces } from './chronicle-faces';
 import {
@@ -31,10 +31,12 @@ import {
   onClick,
   onHover,
   onLetGoOffCanvas,
+  onResize,
   reactsToPress,
   type Stratum,
 } from './design-space';
 import { cardFace } from './face';
+import { LOOK } from './look';
 import { PILE_PLACE, pileOf } from './piles';
 import { asPainted, poolOf } from './pool';
 import { refused } from './refusal-lines';
@@ -117,7 +119,7 @@ export type HandPresses = {
     held: ChronicleCard,
     card: AimedCard,
     released: () => void,
-    reaimed: (aim: PointedAim) => void,
+    reaimed: (aim: AimedAt) => void,
   ): () => void;
   inspect(card: ChronicleCard): void;
   /** What a name on a card of the hand names, shown large. */
@@ -196,13 +198,20 @@ export function createHand(
 
   const restingY = (record: CardRecord): number => record.home.y - (raised(record) ? CARD_LIFT : 0);
 
-  /** The card back where it rests, at once or over that long; the promise settles when it is home. */
+  /**
+   * The card back where it rests, lifted or lying, at once or over that long; the promise settles
+   * when it is home.
+   */
   const settle = (record: CardRecord, duration: number): Promise<void> => {
     stopMotion(scene, record.face.root);
-    (raised(record) ? on.lifted : on.resting).layer.add(record.face.root);
+    const lifted = raised(record);
+    (lifted ? on.lifted : on.resting).layer.add(record.face.root);
+    record.face.lift(lifted);
+    record.face.root.setRotation(lifted ? 0 : record.home.rotation);
     // Short of its resting place, a card lifted by a hover rises off a pointer holding still near its
-    // bottom edge, is left and falls back onto it, frame after frame.
-    record.hitArea.height = CARD_HEIGHT + (record.hovered ? CARD_LIFT : 0);
+    // bottom edge, is left and falls back onto it, frame after frame. The hit area is the card's own,
+    // so it grows with the lift.
+    record.hitArea.height = CARD_HEIGHT + (record.hovered ? CARD_LIFT / LOOK.liftedCard : 0);
     if (duration === 0) {
       record.face.root.setPosition(record.home.x, restingY(record));
       return Promise.resolve();
@@ -218,31 +227,18 @@ export function createHand(
     );
   };
 
-  /** Every reason the rules refuse this card, over it and clear of the lift a selection gives it. */
+  /** Every reason the rules refuse this card, over the top of it as a selection lifts it. */
   const refuse = (record: CardRecord): void => {
     note.overCard(
       refused(costOf(catalogue, record.card.id), record.refusal),
       record.home.x,
-      record.home.y - CARD_LIFT - CARD_HEIGHT,
+      record.home.y - CARD_LIFT - LOOK.liftedCard * CARD_HEIGHT,
     );
   };
 
-  /** The card being aimed says so: the point on its ring, the line over the hand. */
-  const aiming = (record: CardRecord, aim: PointedAim): void => {
-    record.face.aim(true);
-    line.show(record.card.id, aim);
-  };
-
-  /** The card is being aimed no longer: the point comes off its ring and the line goes with it. */
-  const aimedNoMore = (record: CardRecord): void => {
-    record.face.aim(false);
-    line.hide();
-  };
-
-  /** The card let go of: it comes down into the lane, unringed, whatever it was doing out of it. */
+  /** The card let go of: it comes down into the lane, whatever it was doing out of it, its aim's line gone. */
   const letGoOf = (record: CardRecord): Promise<void> => {
-    aimedNoMore(record);
-    record.face.select(false);
+    line.hide();
     record.hovered = false;
     return settle(record, SLIDE_HOME);
   };
@@ -272,15 +268,14 @@ export function createHand(
 
   /**
    * The card the hand takes as the selection: whatever it held comes home, the card lifts out of the
-   * lane and takes the ring, and one that aims at a tile or at a unit is being aimed from here. A
-   * card aimed at the hand waits for its second press.
+   * lane, and one that aims at a tile or at a unit is being aimed from here. A card aimed at the hand
+   * waits for its second press.
    */
   const select = (record: CardRecord): Selected => {
     unselect();
     presses.dismiss();
     const standing: Selected = { record, cancel: undefined, atHand: false };
     selected = standing;
-    record.face.select(true);
     settle(record, 120);
 
     const card = aimOf(cardOf(catalogue, record.card.id));
@@ -291,9 +286,9 @@ export function createHand(
       case 'tile':
       case 'unit':
         standing.cancel = presses.aimTile(record.card, card, releasing(record), (aim) => {
-          if (selected?.record === record) aiming(record, aim);
+          if (selected?.record === record) line.show(record.card.id, aim);
         });
-        aiming(record, card.aim);
+        line.show(record.card.id, card.aim);
         break;
     }
     return standing;
@@ -318,7 +313,7 @@ export function createHand(
         break;
       case 'hand':
         standing.atHand = true;
-        aiming(record, card.aim);
+        line.show(record.card.id, card.aim);
         break;
       case 'tile':
       case 'unit':
@@ -335,13 +330,12 @@ export function createHand(
     presses.play(standing.record.card.key, { aim: 'hand', card: at.card.key });
   };
 
-  /** The card carried to where the pointer stands, ringed once it is clear of the play height. */
+  /** The card carried to where the pointer stands. */
   const carry = (pointer: Phaser.Input.Pointer): void => {
     if (dragged === undefined) return;
     const { record, grabbed, lifted } = dragged;
     const at = on.resting.at(pointer.x, pointer.y);
     record.face.root.setPosition(lifted.x + at.x - grabbed.x, lifted.y + at.y - grabbed.y);
-    record.face.select(grabbed.y - at.y > PLAY_HEIGHT);
   };
 
   /** The one place a drag ends on the canvas: played past the play height, and home under it. */
@@ -349,7 +343,6 @@ export function createHand(
     const carrying = dragged;
     if (carrying === undefined) return;
     dragged = undefined;
-    carrying.record.face.select(false);
     const at = on.resting.at(pointer.x, pointer.y);
     if (carrying.grabbed.y - at.y <= PLAY_HEIGHT) {
       settle(carrying.record, SLIDE_HOME);
@@ -374,6 +367,11 @@ export function createHand(
   });
   onLetGoOffCanvas(scene, (press) => {
     if (press === 'left') abandonDrag();
+  });
+  // The scene's own cut at a resize, subscribed before this one, cuts every text for its own size
+  // (followFactor), a lifted card's among them.
+  onResize(scene, () => {
+    for (const record of laidOut) if (raised(record)) record.face.lift(true);
   });
 
   /** The name of this card under the pointer, handed over as the small cards take one. */
@@ -479,9 +477,10 @@ export function createHand(
     return record;
   };
 
-  /** The card out of the hand: it reacts to the pointer no more, and its bubble comes down. */
+  /** The card out of the hand: it lies at its own size, reacts to the pointer no more, and its bubble comes down. */
   const letLeave = ({ face }: CardRecord): void => {
     stopMotion(scene, face.root);
+    face.lift(false);
     footBubble.over(face, undefined);
     face.root.disableInteractive();
   };

@@ -8,6 +8,9 @@ const PACK = 'store/nice-card-game-template-2';
 /** How wide and how tall a front's body is, the card itself, in the pack's pixels. */
 export const BODY = { width: 560, height: 820 };
 
+/** How wide a card is wherever it stands but large, in units. */
+export const CARD_WIDTH = 124;
+
 /** A box in the pack's pixels, from the top-left corner of a front's body. */
 type PackBox = {
   readonly x: number;
@@ -109,9 +112,73 @@ function windowOf(family: CardFamily): FrontWindow {
   }
 }
 
-/** The front a card of the family wears, and the frame of the cards sheet it is drawn from. */
-export function frontOf(family: CardFamily): Front & { readonly frame: string } {
-  return { ...FRONTS[windowOf(family)], frame: `front-${family}` };
+/**
+ * The front a card of the family wears, the frame of the cards sheet it is drawn from, and the frame
+ * its shadow is.
+ */
+export function frontOf(
+  family: CardFamily,
+): Front & { readonly frame: string; readonly shadow: string } {
+  const window = windowOf(family);
+  return { ...FRONTS[window], frame: `front-${family}`, shadow: shadowFrameOf(window) };
+}
+
+/** The frame of the cards sheet the shadow of a front of that window is. */
+function shadowFrameOf(window: FrontWindow): string {
+  return `shadow-${window}`;
+}
+
+/** How many of a shadow's pixels make one of the pack's. */
+const SHADOW_PIXELS = 0.5;
+
+/** How many of a shadow's pixels make a unit, on a card at its own size. */
+const SHADOW_UNIT = (SHADOW_PIXELS * BODY.width) / CARD_WIDTH;
+
+/**
+ * A front's shadow: how many of its pixels make one of the pack's, and how many it reaches past the
+ * front on every side, its fall and three deviations of its blur, a canvas's blur being two of them.
+ */
+export const SHADOW = {
+  pixels: SHADOW_PIXELS,
+  room: Math.ceil((1.5 * LOOK.liftedShadow.blur + LOOK.liftedShadow.fall) * SHADOW_UNIT) + 1,
+};
+
+/** The shadow of each front, laid from the pack's file at `SHADOW.pixels`, its body where the front's is. */
+function shadowsMade(): Made[] {
+  const { pixels, room } = SHADOW;
+  const { colour, strength, blur, fall } = LOOK.liftedShadow;
+  return (Object.keys(FRONTS) as FrontWindow[]).map((window) => {
+    const { file, width, height } = FRONTS[window];
+    const drawn = { width: Math.ceil(width * pixels), height: Math.ceil(height * pixels) };
+    const across = drawn.width + 2 * room;
+    const down = drawn.height + 2 * room;
+    return {
+      frame: shadowFrameOf(window),
+      width: across,
+      height: down,
+      paint: (context, paintingIn) => {
+        const from = paintingIn(CARDS_SHEET_KEY, file);
+        // The front is drawn in the canvas's right half and its shadow cast into the left, the half kept.
+        const on = blankCanvas(2 * across, down);
+        on.shadowColor = `rgba(${(colour >> 16) & 0xff}, ${(colour >> 8) & 0xff}, ${colour & 0xff}, ${strength})`;
+        on.shadowBlur = blur * SHADOW_UNIT;
+        on.shadowOffsetX = -across;
+        on.shadowOffsetY = fall * SHADOW_UNIT;
+        on.drawImage(
+          from.canvas,
+          from.x,
+          from.y,
+          from.width,
+          from.height,
+          across + room,
+          room,
+          drawn.width,
+          drawn.height,
+        );
+        context.drawImage(on.canvas, 0, 0, across, down, 0, 0, across, down);
+      },
+    };
+  });
 }
 
 /** A colour of hue, saturation and lightness, each of the last two out of one. */
@@ -276,6 +343,6 @@ function frontsMade(): Made[] {
 export const CARDS_SHEET: Sheet = {
   key: CARDS_SHEET_KEY,
   files: [FRONTS.arched.file, FRONTS.oval.file, BACK.file, PLATE.file, DISC.file],
-  made: frontsMade(),
+  made: [...frontsMade(), ...shadowsMade()],
   side: 4096,
 };

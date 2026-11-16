@@ -107,12 +107,20 @@ export function aimOf(card: Card): Aim {
     case 'hazard':
       return { aim: 'none', effect: (_catalogue, paid) => unchanged(paid) };
     case 'challenge':
-      return {
-        aim: 'none',
-        blocked: () => ['played-by-nothing'],
-        effect: (_catalogue, paid) => unchanged(paid),
-      };
+      return PLAYED_BY_NOTHING;
   }
+}
+
+/** The aim of a card nothing plays: aimed at nothing, it blocks every play, on any chronicle. */
+const PLAYED_BY_NOTHING: Aim = {
+  aim: 'none',
+  blocked: () => ['played-by-nothing'],
+  effect: (_catalogue, paid) => unchanged(paid),
+};
+
+/** Whether nothing plays the card: its aim is the one that blocks every play, on any chronicle. */
+export function playedByNothing(card: Card): boolean {
+  return aimOf(card) === PLAYED_BY_NOTHING;
 }
 
 /** A settle card's aim: aimed at a tile, it asks for the tile charted before its own reasons. */

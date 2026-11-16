@@ -811,7 +811,7 @@ export async function readNames(page: Page): Promise<void> {
           return scaled;
         }),
         ringed: answer(() => {
-          const ring = part('ring', `${name} is no card face`);
+          const ring = part('ring', `${name} is no launch pile's card`);
           return (ring as Phaser.GameObjects.GameObject & { visible: boolean }).visible;
         }),
         rules: answer(
@@ -1482,11 +1482,6 @@ export async function namedOn(
 ): Promise<{ kind: string; id: string } | undefined> {
   const { card, reference } = await reading(page, name);
   return card === undefined ? reference : { kind: 'card', id: card };
-}
-
-/** Whether the named card face wears the ring: every one carries it, shown while it is selected. */
-export async function ringed(page: Page, name: string): Promise<boolean> {
-  return (await reading(page, name)).ringed;
 }
 
 /**

@@ -8,6 +8,7 @@ import { unitAt } from '../src/rules/units';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { achievementGoal, cardName, text } from '../src/ui/text';
 import {
+  AIMED_AT_HAND,
   admits,
   aimableAtHand,
   aimed,
@@ -614,7 +615,7 @@ test('a click aims a card at the tiles it admits, and a click on another card ta
   expect(problems).toEqual([]);
 });
 
-test('the card being aimed wears a point and says what it is played at, and a card merely selected neither', async ({
+test('the card being aimed says what it is played at over the hand, and a card merely selected does not', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -626,19 +627,16 @@ test('the card being aimed wears a point and says what it is played at, and a ca
   await page.mouse.click(beside.x, beside.y);
   await rested(page);
   expect(await selected(page, unit, beside)).toBe(true);
-  expect(await standing(page, 'aim-point')).toBe(false);
   expect(await aimLine(page)).toBeUndefined();
 
   const card = await onScreen(page, `hand-${tile}`);
   await page.mouse.click(card.x, card.y);
   await aimed(page);
 
-  expect(await standing(page, 'aim-point')).toBe(true);
   expect(await aimLine(page)).toBe(text('aim.tile', { card: cardName(opened.hand[tile].id) }));
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'aim')).toBe(false);
-  expect(await standing(page, 'aim-point')).toBe(false);
   expect(await aimLine(page)).toBeUndefined();
   expect(await chronicleOf(page)).toEqual(opened);
 
@@ -659,7 +657,6 @@ test('a card aimed at a unit says it is played at a unit', async ({ page }) => {
   await page.mouse.click(home.x, home.y);
   await aimed(page);
 
-  expect(await standing(page, 'aim-point')).toBe(true);
   expect(await aimLine(page)).toBe(text('aim.unit', { card: cardName(moved.hand[index].id) }));
 
   expect(problems).toEqual([]);
@@ -1156,12 +1153,13 @@ test('a drag that carries the map leaves a card aimed at the hand being aimed', 
   await page.mouse.click(home.x, home.y);
   await rested(page);
   await page.mouse.click(home.x, home.y);
-  await expect.poll(() => standing(page, 'aim-point')).toBe(true);
+  const aimedAtHand = text('aim.hand', { card: cardName(AIMED_AT_HAND) });
+  await expect.poll(() => aimLine(page)).toBe(aimedAtHand);
 
   const city = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
   await dragBetween(page, city, { x: city.x + 120 * city.unit, y: city.y - 80 * city.unit });
   await rested(page);
-  expect(await standing(page, 'aim-point')).toBe(true);
+  expect(await aimLine(page)).toBe(aimedAtHand);
   expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);

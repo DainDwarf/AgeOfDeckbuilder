@@ -9,6 +9,7 @@ import {
   type GivenTo,
   improvementPlaced,
   made,
+  playedByNothing,
   playedThrough,
   refuses,
   struck,
@@ -1965,6 +1966,23 @@ test('a challenge in the hand is blocked by its own block, its play refused what
   expect(namesOf(played)).toEqual(['refused']);
   expect(outcome(played)).toEqual(city);
   expect(idsOf(cycled.hand)).toEqual(['PH_Ordeal']);
+});
+
+test('nothing plays a challenge, on any chronicle, and something plays a hazard and every card of the other kinds', () => {
+  const played = (id: string): boolean => !playedByNothing(cardOf(CATALOGUE, id));
+
+  expect(played('PH_Ordeal')).toBe(false);
+  for (const id of [
+    'PH_Hunger',
+    'PH_Settle',
+    'PH_Worker',
+    'PH_Farm',
+    'PH_Mine',
+    'PH_Harvest',
+    'PH_Spoils',
+  ]) {
+    expect(played(id), id).toBe(true);
+  }
 });
 
 test('a challenge carrying a strike strikes as a hazard does at the end of a turn it is still in the hand, after the income and before the discard, and one carrying none strikes nothing', () => {

@@ -1,17 +1,11 @@
 import type Phaser from 'phaser';
 import { NO_REFUSAL, type Refusal } from '../rules/state';
-import {
-  addFront,
-  CARD_HEIGHT,
-  CARD_RISE,
-  CARD_WIDTH,
-  type CardFace,
-  createCardFace,
-} from './card-face';
+import { addFront, CARD_HEIGHT, CARD_RISE, type CardFace, createCardFace } from './card-face';
+import { CARD_WIDTH } from './card-frames';
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
-import { css, LOOK, overPage, type Tone, unworn } from './look';
+import { css, dimmedTo, LOOK, type Tone, unworn } from './look';
 import type { Filled, Held } from './panel';
 import { chipAt, READING_GLYPH } from './resource-bar';
 import { type Laying, type Reactions, reactionsOf } from './stack';
@@ -48,11 +42,6 @@ export type Drawn = {
 
 /** A cell of a line, drawn from the left and the top handed. */
 export type Cell = (at: { readonly left: number; readonly top: number }) => Drawn;
-
-/** A colour as it stands on a dimmed stack: a container's alpha fades each child alone, so the cards under the face would show through it. */
-function dimmed(colour: number): number {
-  return overPage(colour, LOOK.whollyHeld);
-}
 
 /** What a button on a reading line reacts to: no rest and no right click. */
 const REACTS_TO_NOTHING: Reactions = {
@@ -196,7 +185,7 @@ export function stackOf(
     left,
     top,
     name: `${name}-card-${id}`,
-    tone: reading.dimmed ? dimmed : undefined,
+    tone: reading.dimmed ? dimmedTo(LOOK.whollyHeld) : undefined,
   });
   const lineTop = foot + COPIES_GAP;
   const middle = lineTop + LINE_HEIGHT / 2;

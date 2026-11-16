@@ -360,7 +360,7 @@ export const UNIT_SHEET: Sheet = {
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, an
- * attack that would kill, what a prepare lands as, a faction, or a site.
+ * attack that would kill, what a prepare lands as, a faction, a site, or a card nothing plays.
  */
 export type CastSymbol =
   | Resource
@@ -370,7 +370,8 @@ export type CastSymbol =
   | 'killed'
   | PreparedAs
   | Faction
-  | 'site';
+  | 'site'
+  | 'played-by-nothing';
 
 /** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
 const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
@@ -390,6 +391,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   neutral: 'material-design-icons/scale-balance.svg',
   enemy: 'material-design-icons/axe-battle.svg',
   site: 'material-design-icons/star-four-points.svg',
+  'played-by-nothing': 'material-design-icons/block-helper.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */

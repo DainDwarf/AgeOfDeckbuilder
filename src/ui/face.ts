@@ -1,4 +1,4 @@
-import type { CardKind } from '../rules/cards';
+import { type CardKind, playedByNothing } from '../rules/cards';
 import {
   type Aim,
   actionGoesTo,
@@ -80,8 +80,8 @@ export type AnswerReading = Readonly<Record<string, number>>;
 
 /**
  * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
- * name; the kind it is labelled by; its family; its rules entry; what it costs, in the order the
- * resource bar reads the resources; and the influence it gains, none on a face that gains none.
+ * name, kind label, family and rules entry; its costs in the resource bar's order; the influence it
+ * gains, none on a face that gains none; and whether nothing plays its card.
  */
 export type Face = {
   readonly id: string;
@@ -91,6 +91,7 @@ export type Face = {
   readonly rules: string;
   readonly costs: readonly Cost[];
   readonly influence: number;
+  readonly playedByNothing: boolean;
 };
 
 /**
@@ -107,6 +108,7 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     rules: cardRules(card, city),
     costs: costOf(catalogue, card.id),
     influence: influenceOf(content) ?? 0,
+    playedByNothing: playedByNothing(content),
   };
 }
 

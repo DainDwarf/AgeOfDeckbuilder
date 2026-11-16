@@ -264,7 +264,7 @@ test('a left click on a pile opens nothing; a right click opens its browse, a st
   for (const [at, { card, copies }] of stacks.entries()) {
     expect(seen(`browse-card-${at}`).card).toBe(card.id);
     expect(seen(`browse-card-${at}-copies`).text).toBe(text('collection.row-copies', { copies }));
-    expect(seen(`browse-card-${at}`).ringed).toBe(false);
+    expect(seen(`browse-card-${at}`).scale).toBe(1);
   }
   expect(seen(`browse-card-${stacks.length}`).standing).toBe(false);
   const indices = stacks.map((_, index) => index);
@@ -274,7 +274,7 @@ test('a left click on a pile opens nothing; a right click opens its browse, a st
   await page.mouse.click(first.x, first.y);
   await rested(page);
   const clicked = await readings(page, ['browse-card-0', 'inspection', 'browse']);
-  expect(clicked('browse-card-0').ringed).toBe(false);
+  expect(clicked('browse-card-0').scale).toBe(1);
   expect(clicked('inspection').standing).toBe(false);
   expect(clicked('browse').standing).toBe(true);
 

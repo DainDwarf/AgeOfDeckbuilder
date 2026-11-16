@@ -48,7 +48,7 @@ import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf, thresholdOf } from './city-bar';
-import { onResize, type Stratum, thingUnder, whileUp } from './design-space';
+import { cutTexts, onResize, type Stratum, thingUnder, whileUp } from './design-space';
 import { factionSigns } from './faction-signs';
 import { glyphMark } from './glyphs';
 import { type HealthBar, healthBarOf } from './health-bar';
@@ -647,7 +647,7 @@ export function createMapView(
     const resolution = frame.atZoom();
     for (const { tile, yields, already } of plated?.gives ?? []) {
       const plate = givenPool.take();
-      if (plate.number.style.resolution !== resolution) plate.number.setResolution(resolution);
+      cutTexts([plate.number], resolution);
       showGiven(plate, tile, yields, already);
     }
   };
@@ -732,11 +732,8 @@ export function createMapView(
 
   /** Every text the map raises at its own zoom, raised again. */
   const paintAtZoom = (): void => {
-    const resolution = frame.atZoom();
     const numbers = CITY_FACTIONS.map((whose) => cityBadges[whose].number);
-    for (const label of [thresholdOnTile.number, path.number, ...numbers]) {
-      if (label.style.resolution !== resolution) label.setResolution(resolution);
-    }
+    cutTexts([thresholdOnTile.number, path.number, ...numbers], frame.atZoom());
     paintThreshold();
     paintPlates();
     paintCityBadges();

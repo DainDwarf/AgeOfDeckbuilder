@@ -38,7 +38,7 @@ export type AnswerPlate = {
 
 /**
  * An answer as its name over its text on a plate's paper, both centred, the text's names made at the
- * answer's numbers; any refusal at all draws it in the paper and the ink of an unaffordable card.
+ * answer's numbers; any refusal at all draws it on a refused answer's paper.
  */
 export function createAnswerPlate(
   scene: Phaser.Scene,
@@ -47,7 +47,7 @@ export function createAnswerPlate(
 ): AnswerPlate {
   const paint = playable(refusal)
     ? { fill: LOOK.panelFill, ink: LOOK.ink }
-    : { fill: LOOK.unaffordableCard.face, ink: LOOK.unaffordableCard.ink };
+    : { fill: LOOK.refusedAnswer.face, ink: LOOK.refusedAnswer.ink };
   const ink = css(paint.ink);
   const middle = ANSWER_WIDTH / 2;
   const inner = ANSWER_WIDTH - 2 * 16;

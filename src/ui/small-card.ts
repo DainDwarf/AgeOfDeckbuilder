@@ -3,13 +3,13 @@ import type { Catalogue } from '../rules/catalogue';
 import { type CardId, NO_REFUSAL } from '../rules/state';
 import {
   CARD_HEIGHT,
-  CARD_WIDTH,
   type CardFace,
   createCardFace,
   type FootBubble,
   type Name,
   type Spot,
 } from './card-face';
+import { CARD_WIDTH } from './card-frames';
 import {
   COVERED,
   DESIGN_HEIGHT,
