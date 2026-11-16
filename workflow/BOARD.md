@@ -18,6 +18,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 ## Lines
 
 - **The card's states** — how a card reads selected, being aimed, lifted, unaffordable and worn on the painted face, today's marks having been carried over as they were.
+- **The texts overflowing the card face** — the card texts that overflow the painted face's text box (Hunt, Megalith, Tannery and Heal at three lines, Embark and Irrigation at four, the "WORKER ACTION" label wider than the box) are inspected one by one, and the text box is changed or given a scroll, through mockups.
+- **The card types reviewed** — a card's type does not say its family, a settle card placing a building and an action card placing an improvement or nothing, which is a design issue of the card types: review them.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
 - **The Stone cards' paintings** — every card of the Stone Age wears one painting of his in its art box.
 - **A building's card reads its building** — a building card, and a card that places an improvement, reads on its face what the thing placed gives and takes, with a place for the terrains and the features it goes on, in place of a sentence naming it.
