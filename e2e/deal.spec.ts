@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { tileKey } from '../src/rules/map';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
@@ -18,6 +19,7 @@ import {
   firstSeed,
   offeredOn,
   openSaved,
+  playerCityTile,
   readings,
   refusalLines,
   rested,
@@ -72,19 +74,36 @@ test('the events phase deals a choice, and the turn plays on from the one a left
 
   await openSaved(page, dealt);
   await restedOnDeal(page);
-  const shown = await eventDealRead(page, dealt, LEAN_SEASON, []);
+  const city = `tile-${tileKey(playerCityTile(dealt))}`;
+  const shown = await eventDealRead(page, dealt, LEAN_SEASON, [city]);
 
   const first = shown('deal-card-0').onScreen;
   const second = shown('deal-card-1').onScreen;
+  // The pointer never rests on a name of an answer: the small card a rest raises stands over the
+  // answer's padding, and a right click on it shows the named thing large.
+  const { x, y, width } = shown('deal-card-1').boundsOnScreen;
+  const inset = 2 * second.unit;
+  const offNames = {
+    x: Math.min(Math.max(shown(city).onScreen.x, x + inset), x + width - inset),
+    y: y + 6 * second.unit,
+  };
   expect(await cursorAt(page, { x: (first.x + second.x) / 2, y: first.y })).toBe('');
-  expect(await cursorAt(page, second)).toBe(HAND);
+  expect(await cursorAt(page, offNames)).toBe(HAND);
 
-  // Inside the answer's padding over its name, where no name of its text lies.
-  const offNames = { x: second.x, y: shown('deal-card-1').boundsOnScreen.y + 6 * second.unit };
+  // In the answer's padding over its name, as near the city's tile beneath as the answer reaches.
   await page.mouse.click(offNames.x, offNames.y, { button: 'right' });
   await rested(page);
-  const inspected = await readings(page, ['inspection', 'deal', 'deal-card-1', 'deal-lore']);
-  expect(inspected('inspection').standing).toBe(false);
+  const inspected = await readings(page, [
+    'inspection',
+    'infopanel',
+    'deal',
+    'deal-card-1',
+    'deal-lore',
+  ]);
+  expect([inspected('inspection').standing, inspected('infopanel').standing]).toEqual([
+    false,
+    false,
+  ]);
   expect(inspected('deal').standing).toBe(true);
   expect(inspected('deal-card-1').standing).toBe(true);
   expect(inspected('deal-lore').text).toBe(eventLore(LEAN_SEASON));
