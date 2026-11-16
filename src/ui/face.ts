@@ -2,7 +2,6 @@ import type { CardKind } from '../rules/cards';
 import {
   type Aim,
   actionGoesTo,
-  ageOf,
   type Card,
   type Catalogue,
   cardMade,
@@ -10,20 +9,12 @@ import {
   costOf,
   influenceOf,
 } from '../rules/catalogue';
-import { answerCase, answerOf, capstoneReading } from '../rules/schedule';
+import { capstoneReading } from '../rules/schedule';
 import type { CardId, Chronicle, Cost, MadeCard } from '../rules/state';
-import {
-  answerName,
-  answerRules,
-  capstoneName,
-  capstoneRules,
-  cardName,
-  cardRules,
-  text,
-} from './text';
+import { capstoneName, capstoneRules, cardName, cardRules, text } from './text';
 
 /** What the label at a face's foot reads, and what its tooltip says. */
-export type FaceKind = CardKind | 'worker-action' | 'event' | 'capstone';
+export type FaceKind = CardKind | 'worker-action' | 'capstone';
 
 /** What the label at a face's foot reads. */
 export function kindLabel(kind: FaceKind): string {
@@ -62,7 +53,7 @@ function actionLabelled(aim: Aim): FaceKind {
   }
 }
 
-/** The numbers an answer's rules entry reads of the chronicle it is dealt on, by name. */
+/** The numbers an answer's text or the capstone's rules entry reads of the chronicle, by name. */
 export type AnswerReading = Readonly<Record<string, number>>;
 
 /**
@@ -76,7 +67,7 @@ export type Face = {
   readonly kind: FaceKind;
   readonly rules: string;
   readonly costs: readonly Cost[];
-  /** What a card named on it is made at: an answer's reading, and nothing on any other face. */
+  /** What a card named on it is made at: the capstone's reading, and nothing on any other face. */
   readonly reading: AnswerReading;
   readonly influence: number;
 };
@@ -135,48 +126,6 @@ export function capstoneFace(catalogue: Catalogue, chronicle: Chronicle): Face {
     name: capstoneName(id),
     kind: 'capstone',
     rules: capstoneRules(id, reading),
-    costs: [],
-    reading,
-    influence: 0,
-  };
-}
-
-/**
- * The face an answer of an event is drawn as: its rules entry, of the case it names, and the cards it
- * names, read on the chronicle it was dealt on, the entry naming that chronicle's city's building and
- * its age's camp's. What the answer costs reads in that entry, so the face wears no chip for it.
- */
-export function answerFace(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  event: string,
-  id: string,
-): Face {
-  return answerFaceOfCase(
-    catalogue,
-    chronicle,
-    event,
-    id,
-    answerCase(catalogue, chronicle, event, id),
-  );
-}
-
-/** The face `answerFace` draws, its rules entry the case handed's, or its one entry where none is. */
-export function answerFaceOfCase(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  event: string,
-  id: string,
-  which: string | undefined,
-): Face {
-  const reading = answerOf(catalogue, event, id).reads(catalogue, chronicle);
-  const building = chronicle.citySection.building;
-  const camp = ageOf(catalogue, chronicle.age).camp.building;
-  return {
-    id,
-    name: answerName(id),
-    kind: 'event',
-    rules: answerRules(id, { ...reading, building, camp }, which),
     costs: [],
     reading,
     influence: 0,

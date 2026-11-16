@@ -1,4 +1,5 @@
 import type Phaser from 'phaser';
+import type { Resource } from '../rules/resources';
 import { playable, type Refusal } from '../rules/state';
 import {
   addText,
@@ -10,6 +11,7 @@ import {
   onClick,
   onHover,
   ownBoxOf,
+  type SizedStyle,
   UI_FONT,
 } from './design-space';
 import { type AnswerReading, type Face, kindLabel, kindTooltip } from './face';
@@ -91,7 +93,7 @@ export function drawCardSurface(
 export type Name = {
   readonly reference: Reference;
   readonly reading: AnswerReading;
-  /** Its middle, about the face's own bottom centre. */
+  /** Its middle, about the origin of the container it is drawn in. */
   readonly x: number;
   readonly y: number;
   readonly width: number;
@@ -101,6 +103,103 @@ export type Name = {
 
 /** Where a name stands on the surface its face is drawn on: its middle, and its line's two edges. */
 export type Spot = { readonly x: number; readonly top: number; readonly bottom: number };
+
+/**
+ * Of the names drawn in the container, the one lying under a point of the surface it is drawn on,
+ * and nothing where none does.
+ */
+export function namedAt(
+  container: Phaser.GameObjects.Container,
+  names: readonly Name[],
+  x: number,
+  y: number,
+): Name | undefined {
+  const local = container.getLocalPoint(x, y);
+  return names.find(
+    (name) =>
+      Math.abs(local.x - name.x) <= name.width / 2 && Math.abs(local.y - name.y) <= name.height / 2,
+  );
+}
+
+/** Where a name drawn in the container stands on the surface the container is drawn on. */
+export function spotOn(container: Phaser.GameObjects.Container, name: Name): Spot {
+  const middle = container.getWorldTransformMatrix().transformPoint(name.x, name.y);
+  return { x: middle.x, top: middle.y - name.height / 2, bottom: middle.y + name.height / 2 };
+}
+
+/** A glyph a run marks, a side of its square, as a share of the run's type. */
+export const GLYPH_SHARE = 2 / 3;
+
+/** A label drawn as a run, and the run its entry was last laid out as. */
+export type RunLabel = { readonly label: Phaser.GameObjects.Text; readonly run: Run };
+
+/**
+ * An entry drawn in that style as a run wrapped at that width, its glyphs `GLYPH_SHARE` of its type:
+ * the label leaves room for the glyphs, which are the caller's to draw.
+ */
+export function addRun(
+  scene: Phaser.Scene,
+  entry: string,
+  style: SizedStyle,
+  width: number,
+): RunLabel {
+  const size = Number.parseFloat(style.fontSize);
+  // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
+  let run!: Run;
+  const label = addText(scene, 0, 0, entry, {
+    ...style,
+    wordWrap: {
+      callback: (content, textObject) => {
+        const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
+        run = layOutRun(
+          content,
+          measure,
+          { width, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
+          referenceName,
+        );
+        return run.content.split('\n');
+      },
+    },
+  });
+  return {
+    label,
+    get run() {
+      return run;
+    },
+  };
+}
+
+/**
+ * Where a run's glyphs and names stand about its label's own space, the label centred on its lines:
+ * each glyph's resource and middle, and each name's box, the reading handed carried by every name.
+ */
+export function centredMarks(
+  { label, run }: RunLabel,
+  reading: AnswerReading,
+): {
+  glyphs: { readonly resource: Resource; readonly x: number; readonly y: number }[];
+  names: Name[];
+} {
+  const own = ownBoxOf(label);
+  const pitch = own.height / run.widths.length;
+  const centre = own.x + own.width / 2;
+  const middleOf = (line: number): number => own.y + (line + 0.5) * pitch;
+  return {
+    glyphs: run.glyphs.map(({ resource, x, line }) => ({
+      resource,
+      x: centre + x,
+      y: middleOf(line),
+    })),
+    names: run.names.map(({ reference, from, to, line }) => ({
+      reference,
+      reading,
+      x: centre + (from + to) / 2,
+      y: middleOf(line),
+      width: to - from,
+      height: pitch,
+    })),
+  };
+}
 
 /** What stands at a face's foot and raises a tooltip: the kind label, and the influence it gains. */
 export type FootLabel = 'kind' | 'influence';
@@ -262,27 +361,15 @@ export function createCardFace(
     .setName('influence-label');
   const gained = glyphMark(scene).setY(kindMiddle);
 
-  const span = (2 / 3) * size;
-  // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
-  let run!: Run;
-  const rules = addText(scene, 0, kind.y - kind.height - 0.45 * em, face.rules, {
-    fontFamily: UI_FONT,
-    fontSize: `${size}px`,
-    color: css(tone(palette.ink)),
-    align: 'center',
-    wordWrap: {
-      callback: (content, textObject) => {
-        const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
-        run = layOutRun(
-          content,
-          measure,
-          { width: right - left, glyph: span, bearing: size / 4, space: measure(' ') },
-          referenceName,
-        );
-        return run.content.split('\n');
-      },
-    },
-  })
+  const span = GLYPH_SHARE * size;
+  const ruled = addRun(
+    scene,
+    face.rules,
+    { fontFamily: UI_FONT, fontSize: `${size}px`, color: css(tone(palette.ink)), align: 'center' },
+    right - left,
+  );
+  const rules = ruled.label
+    .setPosition(0, kind.y - kind.height - 0.45 * em)
     .setOrigin(0.5, 1)
     .setName('rules');
 
@@ -386,25 +473,12 @@ export function createCardFace(
     }
 
     inked(rules, toned(paint.ink)).setText(next.rules);
-    const ownRules = ownBoxOf(rules);
-    const lineHeight = ownRules.height / run.widths.length;
-    const runTop = ownRules.y;
+    const marks = centredMarks(ruled, next.reading);
     glyphs.hide();
-    for (const glyph of run.glyphs) {
-      asGlyph(glyphs.take(), glyph.resource, span, { tone: toned }).setPosition(
-        glyph.x,
-        runTop + (glyph.line + 0.5) * lineHeight,
-      );
+    for (const glyph of marks.glyphs) {
+      asGlyph(glyphs.take(), glyph.resource, span, { tone: toned }).setPosition(glyph.x, glyph.y);
     }
-
-    names = run.names.map((named) => ({
-      reference: named.reference,
-      reading: next.reading,
-      x: (named.from + named.to) / 2,
-      y: runTop + (named.line + 0.5) * lineHeight,
-      width: named.to - named.from,
-      height: lineHeight,
-    }));
+    names = marks.names;
     root.setData({ card: next.id, names });
     layNameZones?.(names);
     if (footZones !== undefined) {
@@ -437,16 +511,10 @@ export function createCardFace(
       point.setVisible(on);
     },
     nameAt(x: number, y: number): Name | undefined {
-      const local = root.getLocalPoint(x, y);
-      return names.find(
-        (name) =>
-          Math.abs(local.x - name.x) <= name.width / 2 &&
-          Math.abs(local.y - name.y) <= name.height / 2,
-      );
+      return namedAt(root, names, x, y);
     },
     spotOf(name: Name): Spot {
-      const middle = root.getWorldTransformMatrix().transformPoint(name.x, name.y);
-      return { x: middle.x, top: middle.y - name.height / 2, bottom: middle.y + name.height / 2 };
+      return spotOn(root, name);
     },
     footAt(x: number, y: number): FootLabel | undefined {
       const local = root.getLocalPoint(x, y);

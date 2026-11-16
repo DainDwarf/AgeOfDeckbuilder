@@ -12,6 +12,7 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
+import { ANSWER_WIDTH, createAnswerPlate } from './answer-plate';
 import { type Bind, boundTo } from './bindings';
 import { badgedStackOf, standBrowser } from './browse';
 import { CARD_HEIGHT, CARD_WIDTH, createCardFace, type Name } from './card-face';
@@ -28,7 +29,8 @@ import {
   UI_FONT,
 } from './design-space';
 import { type EndingOf, standEnding } from './ending-screen';
-import { answerFace, capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
+import { type AnswerShown, answerShown, eventName } from './event-text';
+import { capstoneFace, cardFace, cardFaceAtStart, type Face } from './face';
 import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
@@ -36,10 +38,14 @@ import type { Held, Panel } from './panel';
 import { type PileKind, pileOf } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
-import { type Answers, answersOf } from './stack';
-import { buildingName, cardName, eventName, text } from './text';
+import { type Answers, answersOf, answersOfNames } from './stack';
+import { buildingName, cardName, text } from './text';
 
 const GRID_GAP = 26;
+
+/** Where a window's lore ends and its row starts, from the screen's top, whatever it deals. */
+const LORE_FOOT = 262;
+const ROW_TOP = 278;
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
@@ -60,36 +66,46 @@ export type Overlay = {
 };
 
 /**
- * One face offered on the scrim, what the entry costs the city — which its note says, whether or not
- * the face wears a chip for it — what it is drawn refused by, its copies, and the number a press on
- * it answers by.
+ * One entry offered on the scrim — an answer, or copies of a card — what it costs the city, which its
+ * note says, whether or not it wears a chip for it, what it is drawn refused by, and the number a
+ * press on it answers by.
  */
 type Offered = {
-  readonly face: Face;
   readonly costs: readonly Cost[];
   readonly refusal: Refusal;
-  readonly copies: number;
   readonly at: number;
-};
+} & (
+  | { readonly shows: 'answer'; readonly answer: AnswerShown }
+  | { readonly shows: 'card'; readonly face: Face; readonly copies: number }
+);
 
 /** Copies of a card of the deck offered: nothing refuses them, and the face wears its own cost. */
 function offeredCard(face: Face, at: number, copies: number): Offered {
-  return { face, costs: face.costs, refusal: NO_REFUSAL, copies, at };
+  return { shows: 'card', face, copies, costs: face.costs, refusal: NO_REFUSAL, at };
 }
 
 /**
- * Where one offered face was laid out — about its own bottom centre, as a card is drawn — everything
- * it draws, and the box it answers the pointer over and how.
+ * Where one offered entry was laid out: everything it draws, the box it answers the pointer over and
+ * how, and the box of the face or the answer itself, which a note stands over.
  */
 type Placed = Offered & {
-  readonly x: number;
-  readonly y: number;
   readonly part: Phaser.GameObjects.GameObject;
   readonly box: Box;
+  readonly own: Box;
   readonly answers: Answers;
 };
 
-/** A window's cards laid on its panel. */
+/**
+ * An entry drawn and not yet laid: how wide and how tall it stands alone, and its laying from a top
+ * left corner, as tall as its row.
+ */
+type Unlaid = {
+  readonly width: number;
+  readonly height: number;
+  lay(left: number, top: number, height: number): Omit<Placed, keyof Offered>;
+};
+
+/** A window's entries laid on its panel. */
 type Laid = { readonly panel: Panel; readonly placed: readonly Placed[] };
 
 /** A pile's browse on the scrim, which selects nothing. */
@@ -185,10 +201,9 @@ export function createOverlay({
   const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text =>
     carries(headingOf(scene, name, heading));
 
-  /** A window's lore, named after the window it stands in, just over the first row its cards laid. */
-  const raiseLore = (name: string, lore: string, laid: Laid): void => {
-    const rowTop = laid.placed[0].y - CARD_HEIGHT;
-    const line = addText(scene, DESIGN_WIDTH / 2, rowTop - 16, lore, {
+  /** A window's lore, named after the window it stands in, ending where its row starts. */
+  const raiseLore = (name: string, lore: string): void => {
+    const line = addText(scene, DESIGN_WIDTH / 2, LORE_FOOT, lore, {
       fontFamily: UI_FONT,
       fontSize: '20px',
       color: TITLE_INK,
@@ -201,15 +216,79 @@ export function createOverlay({
   };
 
   /**
-   * A window's cards on its panel, centred in its frame while they fit, several copies stacked, a left
-   * click on one running `pressed` while `live` holds: each face is named `<name>-card-<n>`, the first
-   * drawn first, and carries its card and the number it was offered as in its data.
+   * An entry drawn, named `<name>-card-<n>` after its window and its place `n`, carrying what it
+   * stands and the number it was offered as in its data: an answer as its plate, a card as its face,
+   * several copies stacked.
+   */
+  const unlaidOf = (offered: Offered, name: string, index: number): Unlaid => {
+    const named = `${name}-card-${index}`;
+    switch (offered.shows) {
+      case 'answer': {
+        const plate = createAnswerPlate(scene, offered.answer, offered.refusal);
+        plate.root.setName(named).setData('at', offered.at);
+        return {
+          width: ANSWER_WIDTH,
+          height: plate.height,
+          lay(left, top, height) {
+            plate.root.setPosition(left, top);
+            plate.standTall(height);
+            const box = { x: left, y: top, width: ANSWER_WIDTH, height };
+            return { part: plate.root, box, own: box, answers: answersOfNames(plate, inspecting) };
+          },
+        };
+      }
+      case 'card':
+        return {
+          width: CARD_WIDTH,
+          height: CARD_HEIGHT,
+          lay(left, top) {
+            if (offered.copies > 1) {
+              const { stacked, parts, box, answers } = badgedStackOf(
+                { scene, inspecting },
+                {
+                  shown: offered.face,
+                  copies: offered.copies,
+                  left,
+                  top,
+                  name: named,
+                  refusal: offered.refusal,
+                },
+              );
+              stacked.card.root.setData('at', offered.at);
+              return {
+                part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
+                box,
+                own: stacked.face,
+                answers,
+              };
+            }
+            const drawn = createCardFace(scene, offered.face, offered.refusal);
+            drawn.root
+              .setPosition(left + CARD_WIDTH / 2, top + CARD_HEIGHT)
+              .setName(named)
+              .setData('at', offered.at);
+            const box = { x: left, y: top, width: CARD_WIDTH, height: CARD_HEIGHT };
+            return {
+              part: drawn.root,
+              box,
+              own: box,
+              answers: answersOf(drawn, offered.face, inspecting),
+            };
+          },
+        };
+    }
+  };
+
+  /**
+   * A window's entries on its panel in rows from `ROW_TOP`, each row centred, every entry of a row as
+   * tall as its tallest, a left click on one running `pressed` while `live` holds; the first is drawn
+   * first.
    */
   const layWindow = (
     name: string,
-    cards: readonly Offered[],
+    entries: readonly Offered[],
     top: number,
-    pressed: (card: Placed) => void,
+    pressed: (entry: Placed) => void,
     live: () => boolean = () => true,
   ): Laid => {
     const frame = {
@@ -218,71 +297,41 @@ export function createOverlay({
       width: DESIGN_WIDTH - 2 * MARGIN,
       height: DESIGN_HEIGHT - MARGIN - top,
     };
-    const columns = Math.max(1, Math.floor((frame.width + GRID_GAP) / (CARD_WIDTH + GRID_GAP)));
-    const rows = Math.max(1, Math.ceil(cards.length / columns));
-    const spanY = rows * CARD_HEIGHT + (rows - 1) * GRID_GAP;
-    const firstY = top + Math.max(0, (frame.height - spanY) / 2);
+    const unlaid = entries.map((offered, index) => unlaidOf(offered, name, index));
+    const width = Math.max(...unlaid.map((each) => each.width));
+    const columns = Math.max(1, Math.floor((frame.width + GRID_GAP) / (width + GRID_GAP)));
 
-    const placed = cards.map((offered, index): Placed => {
-      const row = Math.floor(index / columns);
-      const column = index % columns;
-      const inRow = Math.min(columns, cards.length - row * columns);
-      const spanX = inRow * CARD_WIDTH + (inRow - 1) * GRID_GAP;
-      const x = (DESIGN_WIDTH - spanX) / 2 + column * (CARD_WIDTH + GRID_GAP) + CARD_WIDTH / 2;
-      const y = firstY + row * (CARD_HEIGHT + GRID_GAP) + CARD_HEIGHT;
-      const card = `${name}-card-${index}`;
-      if (offered.copies > 1) {
-        const { stacked, parts, box, answers } = badgedStackOf(
-          { scene, inspecting },
-          {
-            shown: offered.face,
-            copies: offered.copies,
-            left: x - CARD_WIDTH / 2,
-            top: y - CARD_HEIGHT,
-            name: card,
-            refusal: offered.refusal,
-          },
-        );
-        stacked.card.root.setData('at', offered.at);
-        return {
-          ...offered,
-          x,
-          y,
-          part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
-          box,
-          answers,
-        };
+    const placed: Placed[] = [];
+    let rowTop = ROW_TOP;
+    for (let first = 0; first < entries.length; first += columns) {
+      const row = unlaid.slice(first, first + columns);
+      const height = Math.max(...row.map((each) => each.height));
+      const spanX = row.length * width + (row.length - 1) * GRID_GAP;
+      for (const [column, each] of row.entries()) {
+        const left = (DESIGN_WIDTH - spanX) / 2 + column * (width + GRID_GAP);
+        placed.push({ ...entries[first + column], ...each.lay(left, rowTop, height) });
       }
-      const drawn = createCardFace(scene, offered.face, offered.refusal);
-      drawn.root.setPosition(x, y).setName(card).setData('at', offered.at);
-      return {
-        ...offered,
-        x,
-        y,
-        part: drawn.root,
-        box: { x: x - CARD_WIDTH / 2, y: y - CARD_HEIGHT, width: CARD_WIDTH, height: CARD_HEIGHT },
-        answers: answersOf(drawn, offered.face, inspecting),
-      };
-    });
+      rowTop += height + GRID_GAP;
+    }
 
     const panel = browser.lay({
       name,
       frame,
       parts: placed.map(({ part }) => part),
       held: placed.map(
-        (card): Held => ({
-          box: card.box,
-          answers: card.answers,
+        (entry): Held => ({
+          box: entry.box,
+          answers: entry.answers,
           get press() {
             return live()
               ? () => {
-                  pressed(card);
+                  pressed(entry);
                 }
               : undefined;
           },
         }),
       ),
-      foot: firstY + spanY,
+      foot: rowTop - GRID_GAP,
     });
     return { panel, placed };
   };
@@ -336,19 +385,19 @@ export function createOverlay({
       'deal',
       entries,
       title.y + title.height + MARGIN,
-      (card) => {
-        if (!playable(card.refusal)) {
-          const over = card.y - laid.panel.offset - CARD_HEIGHT;
-          note.overCard(refused(card.costs, card.refusal), card.x, over);
+      ({ costs, refusal, own, at }) => {
+        if (!playable(refusal)) {
+          const { x, y, width } = own;
+          note.overCard(refused(costs, refusal), x + width / 2, y - laid.panel.offset);
           return;
         }
         standingDeal = undefined;
         close();
-        take(card.at);
+        take(at);
       },
       () => dealing.whole,
     );
-    raiseLore('deal', lore, laid);
+    raiseLore('deal', lore);
     riseWhole(dealing);
   };
 
@@ -375,15 +424,10 @@ export function createOverlay({
 
     const face = capstoneFace(catalogue, announcement.on);
     const title = raiseTitle('capstone', text('capstone.title'));
-    const laid = layWindow(
-      'capstone',
-      [{ face, costs: [], refusal: NO_REFUSAL, copies: 1, at: 0 }],
-      title.y + title.height + MARGIN,
-      () => {
-        closeCapstone(announcement);
-      },
-    );
-    raiseLore('capstone', capstoneLore(face.id, announcement.raised), laid);
+    layWindow('capstone', [offeredCard(face, 0, 1)], title.y + title.height + MARGIN, () => {
+      closeCapstone(announcement);
+    });
+    raiseLore('capstone', capstoneLore(face.id, announcement.raised));
   };
 
   /** The ending screen raised as the chronicle ends: it stands on the scrim for good. */
@@ -486,8 +530,8 @@ export function createOverlay({
 
 /**
  * What the deal window reads of a deal: the name and lore of the event or of the building captured
- * over it, and its entries in the order dealt — an answer drawn unaffordable where the chronicle
- * cannot pay it, a reward as the card of the deck it is, in its copies.
+ * over it, and its entries in the order dealt — an answer as it reads on the chronicle, with what
+ * refuses it there, a reward as the card of the deck it is, in its copies.
  */
 function dealt(
   catalogue: Catalogue,
@@ -502,10 +546,10 @@ function dealt(
         lore: eventLore(deal.event),
         entries: ids.map(
           (id, at): Offered => ({
-            face: answerFace(catalogue, chronicle, deal.event, id),
+            shows: 'answer',
+            answer: answerShown(catalogue, chronicle, deal.event, id),
             costs: answerCost(catalogue, chronicle, answerOf(catalogue, deal.event, id)),
             refusal: answerRefusal(catalogue, chronicle, deal.event, id),
-            copies: 1,
             at,
           }),
         ),

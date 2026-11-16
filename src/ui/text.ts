@@ -1,10 +1,13 @@
 import type { MadeCard } from '../rules/state';
 import type { Reference } from './text-run';
 
-// A `rules.`, `answer-rules.`, `capstone-rules.` or `goal.` entry, `plate.cards` and `plate.building`
-// may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind `REFERENCE_KINDS` lists, which
-// only a card face and a plate draw: elsewhere the mark shows.
-/** Every player-facing sentence but the lore (`lore.ts`), one entry each. English is the only language. */
+// A `rules.`, `capstone-rules.` or `goal.` entry, `plate.cards` and `plate.building`, and an
+// answer's text (`event-text.ts`) may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind
+// `REFERENCE_KINDS` lists, which only a card face, a plate and an answer draw: elsewhere the mark shows.
+/**
+ * Every player-facing sentence but the lore (`lore.ts`) and the events' (`event-text.ts`), one entry
+ * each. English is the only language.
+ */
 const TEXT = {
   'label.food': 'Food',
   'label.production': 'Prod',
@@ -96,7 +99,6 @@ const TEXT = {
   'kind.hazard': 'Hazard',
   'kind.trophy': 'Trophy',
   'kind.challenge': 'Challenge',
-  'kind.event': 'Event',
   'kind.capstone': 'Capstone',
   'kind-tooltip.settle': 'Played on the settle phase only',
   'kind-tooltip.unit': 'One idle population becomes the unit',
@@ -108,7 +110,6 @@ const TEXT = {
   'kind-tooltip.trophy': 'Played, it is banished. Kept to the ending, it gains its influence',
   'kind-tooltip.challenge':
     'Cannot be played. Strikes each turn it stays in your hand. Gains its influence if you win the age',
-  'kind-tooltip.event': 'Choose one answer',
   'kind-tooltip.capstone': "The age's trial. Pass it to win the age",
   'unit.worker': 'Worker',
   'unit.warrior': 'Warrior',
@@ -240,99 +241,6 @@ const TEXT = {
   'rules.thieves': 'Takes 2[money]',
   'card.weary-builders': 'Weary builders',
   'rules.weary-builders': 'Takes 2[production]',
-  'event.lean-season': 'Lean season',
-  'answer.share': 'Share food',
-  'answer-rules.share': 'Add [card:hunger] to the top of the draw pile. It takes {food}[food]',
-  'answer.ration': 'Keep to yourself',
-  'answer-rules.ration': 'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
-  'event.rival-band': 'A rival band',
-  'answer.make-room': 'Make room',
-  'answer-rules.make-room.camp':
-    'A [building:{camp}] with {warriors} [enemy:warrior] is placed near your [building:{building}]',
-  'answer-rules.make-room.raid':
-    'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
-  'answer.show-your-spears': 'Show your spears',
-  'answer-rules.show-your-spears': 'Pay {military}[military]',
-  'event.wildfire': 'Wildfire',
-  'answer.let-the-fields-burn': 'Let the fields burn', // glossary exception: burn
-  'answer-rules.let-the-fields-burn': 'Lose {food}[food]', // glossary exception: burn
-  'answer.firebreak': 'Cut a firebreak',
-  'answer-rules.firebreak': 'Pay {production}[production]',
-  'event.stone-wildfire': 'Wildfire',
-  'answer.stone-let-the-fields-burn': 'Let the fields burn', // glossary exception: burn
-  'answer-rules.stone-let-the-fields-burn': 'Lose {food}[food]', // glossary exception: burn
-  'answer.stone-firebreak': 'Cut a firebreak',
-  'answer-rules.stone-firebreak': 'Pay {production}[production]',
-  'answer.burn-the-forest': 'Burn the forest', // glossary exception: burn
-  'answer-rules.burn-the-forest': // glossary exception: burn
-    'Add [card:embers] to the discard pile. Each turn it stays in your hand, it burns one [terrain:forest] near your city into [terrain:plain]',
-  'event.departure': 'Departure',
-  'answer.let-them-go': 'Let them go',
-  'answer-rules.let-them-go': 'Lose one population',
-  'answer.keep-them': 'Keep them',
-  'answer-rules.keep-them': 'Pay {culture}[culture]',
-  'event.flood': 'Flood',
-  'answer.lose-the-fields': 'Lose the fields',
-  'answer-rules.lose-the-fields':
-    'The flood removes {improvements} improvement near your city, {buildings} building and {city} city',
-  'answer.settle-the-floodplain': 'Settle the floodplain',
-  'answer-rules.settle-the-floodplain': 'Add [card:floodplain] to the discard pile',
-  'answer.dig-channels': 'Dig channels',
-  'answer-rules.dig-channels': 'Pay {production}[production]',
-  'event.bad-air': 'Bad air and angry spirits',
-  'answer.bury-the-dead': 'Bury the dead', // glossary exception: dead
-  'answer-rules.bury-the-dead': 'Kills {population} population',
-  'answer.live-with-it': 'Live with it',
-  'answer-rules.live-with-it':
-    'Add [card:sickness] to the discard pile. Each turn it stays in your hand, it kills one population',
-  'answer.help-the-healers': 'Help the healers',
-  'answer-rules.help-the-healers': 'Pay {science}[science]',
-  'event.strangers': 'Strangers',
-  'answer.take-them-in': 'Take them in',
-  'answer-rules.take-them-in':
-    'Gain {population} population. Add [card:misunderstandings] to the discard pile. Each turn it stays in your hand, it takes 3[culture]',
-  'answer.refuse-them': 'Refuse them',
-  'answer-rules.refuse-them': 'Nothing happens',
-  'event.predators': 'Predators',
-  'answer.abandon-a-herd': 'Abandon a herd',
-  'answer-rules.abandon-a-herd':
-    'The wolves remove {deer} [feature:deer] and {cattle} [feature:cattle] near your city',
-  'answer.let-the-farmers-handle-it': 'Let the farmers handle it',
-  'answer-rules.let-the-farmers-handle-it':
-    'Add [card:wolves] to the discard pile. Each turn it stays in your hand, it kills one population',
-  'answer.defend-the-herds': 'Defend the herds',
-  'answer-rules.defend-the-herds': 'Pay {military}[military]',
-  'event.drought': 'Drought',
-  'answer.rain-dance': 'Rain dance',
-  'answer-rules.rain-dance':
-    'Add [card:rain-dance] to the discard pile. Each turn it stays in your hand, it dries one [terrain:plain] or [terrain:forest] near your city into [terrain:desert]',
-  'answer.rationing': 'Rationing',
-  'answer-rules.rationing': 'Pay {food}[food]',
-  'answer.buy-grain': 'Buy grain',
-  'answer-rules.buy-grain': 'Pay {money}[money]',
-  'event.travellers': 'Travellers',
-  'answer.trade-with-them': 'Trade with them',
-  'answer-rules.trade-with-them': 'Gain {money}[money]',
-  'answer.share-stories': 'Share stories',
-  'answer-rules.share-stories': 'Gain {culture}[culture]',
-  'event.grievance': 'A grievance',
-  'answer.escalate': 'Escalate',
-  'answer-rules.escalate.war': 'Declare war',
-  'answer-rules.escalate.camp':
-    'A [building:{camp}] with {warriors} [enemy:warrior] is placed near your [building:{building}]',
-  'answer-rules.escalate.raid':
-    'Your [building:{building}] is attacked by {warriors} [enemy:warrior]',
-  'answer.pay-tribute': 'Pay tribute',
-  'answer-rules.pay-tribute':
-    'Add [card:tribute] to the discard pile. Each turn it stays in your hand, it takes {food}[food] and {production}[production], more each time',
-  'answer.send-gifts': 'Send gifts',
-  'answer-rules.send-gifts': 'Pay {culture}[culture]',
-  'event.herd': 'The herd',
-  'answer.hunt-it': 'Hunt it',
-  'answer-rules.hunt-it': 'Gain {food}[food]',
-  'answer.follow-it': 'Follow it',
-  'answer-rules.follow-it':
-    'Near your city, one [terrain:forest] gains [feature:deer] or one [terrain:plain] gains [feature:cattle]',
   'capstone-name.first-shelter': 'The first shelter',
   'capstone-rules.first-shelter': 'Add [card:shelter] to the top of the draw pile',
   'capstone-name.long-winter': 'The long winter',
@@ -568,7 +476,16 @@ export type TextKey = keyof typeof TEXT;
 
 /** The entry a key names, each `{name}` filled with its value; a placeholder handed no value is refused. */
 export function text(key: TextKey, values: Record<string, string | number> = {}): string {
-  return TEXT[key].replace(/\{(\w+)\}/g, (_, name: string) => {
+  return withValues(TEXT[key], values, key);
+}
+
+/** An entry held under that key, each `{name}` filled with its value; a placeholder handed no value is refused. */
+export function withValues(
+  entry: string,
+  values: Record<string, string | number>,
+  key: string,
+): string {
+  return entry.replace(/\{(\w+)\}/g, (_, name: string) => {
     const value = values[name];
     if (value === undefined) throw new Error(`no value fills {${name}} in ${key}`);
     return String(value);
@@ -632,33 +549,6 @@ export function referenceName(reference: Reference): string {
 export function cardRules(card: MadeCard, city: string | undefined): string {
   const values = city === undefined ? card.counters : { ...card.counters, building: city };
   return named('rules', card.id, 'the card', values);
-}
-
-/** What an event is named on the screen; an event no entry names is refused. */
-export function eventName(event: string): string {
-  return named('event', event, 'the event');
-}
-
-/** What an answer is named on the screen; an answer no entry names is refused. */
-export function answerName(answer: string): string {
-  return named('answer', answer, 'the answer');
-}
-
-/**
- * What an answer's rules entry reads on the screen, with its numbers: the entry of the case handed,
- * and its one entry where none is; an answer, or a case of it, no entry names is refused.
- */
-export function answerRules(
-  answer: string,
-  values: Record<string, string | number>,
-  which: string | undefined,
-): string {
-  return named(
-    'answer-rules',
-    which === undefined ? answer : `${answer}.${which}`,
-    'the answer',
-    values,
-  );
 }
 
 /** What a capstone is named on the screen; a capstone no entry names is refused. */

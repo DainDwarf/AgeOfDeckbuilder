@@ -1,13 +1,16 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { apply, outcome } from '../src/rules/chronicle';
 import { type TileCoords, tileKey } from '../src/rules/map';
-import { cardFace, kindTooltip } from '../src/ui/face';
+import { offered } from '../src/rules/schedule';
+import { cardFace, cardFaceAtStart, kindTooltip } from '../src/ui/face';
 import { text } from '../src/ui/text';
 import {
   bareTile,
   besideTheDeal,
   besideTiles,
   budget,
+  campBeside,
   cardOnFace,
   chronicleOf,
   cursorOverCanvas,
@@ -27,6 +30,7 @@ import {
   tileOnScreen,
   tooltipText,
   tooltipUp,
+  WARRIOR,
   waitGameClock,
   watch,
 } from './chronicle-screen';
@@ -362,18 +366,24 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
   expect(problems).toEqual([]);
 });
 
-test("an answer's kind label on the deal window raises the overlay's bubble reading what an event is", async ({
+test("a reward's kind label on a capture's window raises the overlay's bubble reading what its kind is", async ({
   page,
 }) => {
   const problems = watch(page);
+  const { chronicle } = campBeside((tile) => ({ type: WARRIOR, faction: 'player', tile }));
+  const captured = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+  const [deal] = captured.deals;
+  if (deal?.of !== 'capture') throw new Error('the camp is not captured');
+  const [reward] = offered(CATALOGUE, deal);
+  const { kind } = cardFaceAtStart(CATALOGUE, reward, captured.citySection.building);
 
-  await openSaved(page, firstDealt(1));
+  await openSaved(page, captured);
   await restedOnDeal(page);
 
   const label = await kindLabelOnScreen(page, 'deal-card-0');
   await page.mouse.move(label.x, label.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-overlay')).toBe(kindTooltip('event'));
+  expect(await tooltipText(page, 'tooltip-overlay')).toBe(kindTooltip(kind));
 
   const beside = await besideTheDeal(page);
   await page.mouse.move(beside.x, beside.y, { steps: 5 });

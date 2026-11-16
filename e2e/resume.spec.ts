@@ -2,8 +2,8 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { CENTRE, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
+import { eventName } from '../src/ui/event-text';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
-import { eventName } from '../src/ui/text';
 import {
   aimed,
   budget,

@@ -110,12 +110,13 @@ import type { Point } from '../src/ui/border-loops';
 import type { Name } from '../src/ui/card-face';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
+import { eventName } from '../src/ui/event-text';
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import type { PileKind } from '../src/ui/piles';
 import { refused, type Said } from '../src/ui/refusal-lines';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
-import { ageName, cardName, eventName, referenceName, regionName, text } from '../src/ui/text';
+import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference } from '../src/ui/text-run';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 
@@ -143,6 +144,7 @@ type PageReading = {
   scale: Answer<number>;
   ringed: Answer<boolean>;
   rules: Answer<string>;
+  answerText: Answer<string>;
   names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
   frame: Answer<string>;
@@ -790,6 +792,9 @@ export async function readNames(page: Page): Promise<void> {
         }),
         rules: answer(
           () => (part('rules', `${name} is no card face`) as Phaser.GameObjects.Text).text,
+        ),
+        answerText: answer(
+          () => (part('text', `${name} is no answer`) as Phaser.GameObjects.Text).text,
         ),
         names: answer(() => {
           const { camera } = found();
@@ -1518,6 +1523,8 @@ export type Reading = {
   readonly ringed: boolean;
   /** The face's rules entry, its marks as written. */
   readonly rules: string;
+  /** The answer's text, its marks as written, a list's lines one to a line. */
+  readonly answerText: string;
   /** Whether the face's rules entry draws a name. */
   readonly drawsName: boolean;
   /** What each name the face's rules entry draws names, in the order it draws them. */
@@ -1581,6 +1588,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get rules() {
       return owed(name, answered?.rules);
+    },
+    get answerText() {
+      return owed(name, answered?.answerText);
     },
     get drawsName() {
       return owed(name, answered?.names).length > 0;
@@ -3671,7 +3681,7 @@ export function offeredOn(chronicle: Chronicle): readonly string[] {
 
 /**
  * The event's deal standing on the chronicle read in one question with the names beside it, its
- * title, lore and answers' faces asserted; the reading of a name beside it.
+ * title, lore and answers asserted; the reading of a name beside it.
  */
 export async function eventDealRead(
   page: Page,
@@ -3680,11 +3690,11 @@ export async function eventDealRead(
   beside: readonly string[],
 ): Promise<(name: string) => Reading> {
   const answers = offeredOn(chronicle);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
-  const shown = await readings(page, ['deal-title', 'deal-lore', ...beside, ...faces]);
+  const drawn = answers.map((_, place) => `deal-card-${place}`);
+  const shown = await readings(page, ['deal-title', 'deal-lore', ...beside, ...drawn]);
   expect(shown('deal-title').text).toBe(eventName(event));
   expect(shown('deal-lore').text).toBe(eventLore(event));
-  expect(faces.map((face) => shown(face).card)).toEqual(answers);
+  expect(drawn.map((each) => shown(each).card)).toEqual(answers);
   return shown;
 }
 

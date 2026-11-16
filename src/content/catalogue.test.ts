@@ -34,7 +34,7 @@ import {
 import type { Landed } from '../rules/stages';
 import { type Chronicle, keysDealt, type Rewards } from '../rules/state';
 import { yieldParts } from '../rules/yields';
-import { answerFace, answerFaceOfCase } from '../ui/face';
+import { answerLinesOfCase, answerName, answerShown, eventName } from '../ui/event-text';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -50,7 +50,6 @@ import {
 import {
   achievementGoal,
   ageName,
-  answerName,
   buildingName,
   capstoneName,
   capstoneRules,
@@ -58,7 +57,6 @@ import {
   cardRules,
   civilizationName,
   defeatLine,
-  eventName,
   featureName,
   improvementName,
   referenceName,
@@ -174,16 +172,18 @@ test('every card of the catalogue has a name, and a rules entry read at the coun
 });
 
 /**
- * Every rules entry an answer's face reads on the chronicle: the entry of each case it declares, or
- * its one entry where it declares none.
+ * Every line an answer's text reads on the chronicle, those its numbers leave out included: the lines
+ * of each case it declares, or of its one text where it declares none.
  */
 function answerEntries(chronicle: Chronicle, event: string, answer: string): string[] {
   const { cases } = answerOf(CATALOGUE, event, answer);
   const named = cases === undefined ? [undefined] : cases.declared;
-  return named.map((which) => answerFaceOfCase(CATALOGUE, chronicle, event, answer, which).rules);
+  return named.flatMap((which) =>
+    answerLinesOfCase(CATALOGUE, chronicle, event, answer, which).map(({ line }) => line),
+  );
 }
 
-test('every rules entry and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
+test('every rules entry, every line of every answer’s text and every goal of the catalogue lays out, and every name on it resolves in the catalogue’s table of its kind', () => {
   const entries = Object.keys(CATALOGUE.cards).flatMap(rulesAsDrawn);
   for (const age of AGES) {
     entries.push(
@@ -461,7 +461,7 @@ test('every region’s schedule rolls a timeline', () => {
   }
 });
 
-test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a rules entry on the numbers it reads, of the case it names and of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield, counts below its need and is not failed, on a chronicle launched and settled in that region’s age', () => {
+test('every answer of every event of a region’s schedule costs, answers what blocks it, lands and reads a text on the numbers it reads, of the case it names and every line of every case it declares, and every capstone of its schedule lands, continues, answers its rule over every part of every tile’s yield, counts below its need and is not failed, on a chronicle launched and settled in that region’s age', () => {
   for (const age of AGES) {
     const chronicle = settledIn(age);
     const beside = tilesBeside(chronicle.tiles);
@@ -472,7 +472,7 @@ test('every answer of every event of a region’s schedule costs, answers what b
           expect(() => answerCost(CATALOGUE, chronicle, answer)).not.toThrow();
           expect(() => answerRefusal(CATALOGUE, chronicle, id, name)).not.toThrow();
           expect(() => answer.reads(CATALOGUE, chronicle)).not.toThrow();
-          expect(() => answerFace(CATALOGUE, chronicle, id, name)).not.toThrow();
+          expect(() => answerShown(CATALOGUE, chronicle, id, name)).not.toThrow();
           expect(() => answerEntries(chronicle, id, name)).not.toThrow();
           expect(() => answer.lands(CATALOGUE, chronicle)).not.toThrow();
         }

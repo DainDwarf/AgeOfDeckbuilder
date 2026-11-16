@@ -36,7 +36,7 @@ On the agent's report, check that the unit of work is whole:
 - the board line deleted and its dossier removed;
 - the board is no longer than you found it minus this line — a discovery is in the report, never on the board;
 - the report's _Deviations_ section is present, and every item in it is relayed to the user;
-- the report's _Authored_ section is present and complete: every entry the diff adds or changes in `src/ui/text.ts` and every sentence it adds or changes under `docs/` or in `DOGMAS.md` is either verbatim in the dossier's Spec or listed there; one that is neither is added to the list yourself before the hand-back.
+- the report's _Authored_ section is present and complete: every entry the diff adds or changes in `src/ui/text.ts` or `src/ui/event-text.ts` and every sentence it adds or changes under `docs/` or in `DOGMAS.md` is either verbatim in the dossier's Spec or listed there; one that is neither is added to the list yourself before the hand-back.
 
 Fix omissions yourself if they are mechanical (a missed doc line, a leftover dossier); anything that touches the design goes back to the user.
 

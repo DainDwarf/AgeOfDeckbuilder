@@ -1,16 +1,13 @@
 import type Phaser from 'phaser';
-import type { Name } from './card-face';
-import { addText, answersPress, onClick, onHover, ownBoxOf, UI_FONT } from './design-space';
+import { addRun, GLYPH_SHARE, type Name, spotOn } from './card-face';
+import { answersPress, onClick, onHover, ownBoxOf, UI_FONT } from './design-space';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Raiser } from './small-card';
-import { referenceName } from './text';
-import { layOutRun, type Run } from './text-run';
 
 const INK = css(LOOK.ink);
 const TEXT_SIZE = 14;
-/** A glyph a run marks, a side of its square. */
-const GLYPH = (2 / 3) * TEXT_SIZE;
+const GLYPH = GLYPH_SHARE * TEXT_SIZE;
 export const NAME_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
 export const TEXT_STYLE = { fontFamily: UI_FONT, fontSize: `${TEXT_SIZE}px`, color: INK };
 
@@ -33,40 +30,9 @@ export function paperOf(
     .setStrokeStyle(1, LOOK.panelEdge);
 }
 
-/** An entry drawn as a run wrapped at that width, its names and glyphs where the run stands them. */
-function addRun(
-  scene: Phaser.Scene,
-  entry: string,
-  width: number,
-): { label: Phaser.GameObjects.Text; run: Run } {
-  // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
-  let run!: Run;
-  const label = addText(scene, 0, 0, entry, {
-    ...TEXT_STYLE,
-    wordWrap: {
-      callback: (content, textObject) => {
-        const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
-        run = layOutRun(
-          content,
-          measure,
-          {
-            width,
-            glyph: GLYPH,
-            bearing: TEXT_SIZE / 4,
-            space: measure(' '),
-          },
-          referenceName,
-        );
-        return run.content.split('\n');
-      },
-    },
-  });
-  return { label, run };
-}
-
 /** How many lines an entry takes drawn as a run wrapped at that width. */
 export function linesOf(scene: Phaser.Scene, entry: string, width: number): number {
-  const { label, run } = addRun(scene, entry, width);
+  const { label, run } = addRun(scene, entry, TEXT_STYLE, width);
   label.destroy();
   return run.widths.length;
 }
@@ -94,7 +60,7 @@ export function drawRun(
   width: number,
   answers: RunNames,
 ): { label: Phaser.GameObjects.Text; lines: number; names: Name[] } {
-  const { label, run } = addRun(scene, entry, width);
+  const { label, run } = addRun(scene, entry, TEXT_STYLE, width);
   const lines = run.widths.length;
   const pitch = ownBoxOf(label).height / lines;
   const middleOf = (at: number): number => first.y + at * pitch;
@@ -121,13 +87,7 @@ export function drawRun(
       height: pitch,
     };
     names.push(each);
-    const raiser: Raiser = {
-      name: each,
-      where: () => {
-        const at = face.getWorldTransformMatrix().transformPoint(each.x, each.y);
-        return { x: at.x, top: at.y - each.height / 2, bottom: at.y + each.height / 2 };
-      },
-    };
+    const raiser: Raiser = { name: each, where: () => spotOn(face, each) };
     const zone = answersPress(
       scene.add.zone(each.x, each.y, each.width, each.height).setInteractive(),
     );

@@ -5,7 +5,7 @@ import { gained } from '../src/rules/cards';
 import { apply, outcome } from '../src/rules/chronicle';
 import { answerOf } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
-import { text } from '../src/ui/text';
+import { answerText } from '../src/ui/event-text';
 import {
   barReadingOn,
   budget,
@@ -61,8 +61,8 @@ test('the wildfire deals its answers, Let the fields burn reading the food the r
   await openSaved(page, dealt, campaign);
   await restedOnDeal(page);
   const shown = await eventDealRead(page, dealt, WILDFIRE, [stock]);
-  expect([shown(`deal-card-${at}`).rules, shown(stock).text]).toEqual([
-    text(`answer-rules.${LET_THE_FIELDS_BURN}`, reads),
+  expect([shown(`deal-card-${at}`).answerText, shown(stock).text]).toEqual([
+    answerText(LET_THE_FIELDS_BURN, reads, undefined),
     barReadingOn(dealt, 'food'),
   ]);
 

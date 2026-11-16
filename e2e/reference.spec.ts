@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { offered } from '../src/rules/schedule';
+import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
-import { answerFace } from '../src/ui/face';
+import { answerShown } from '../src/ui/event-text';
+import { cardFaceAtStart, namedCardFace } from '../src/ui/face';
 import {
   besideTheDeal,
+  browse,
   cardOnFace,
   chronicleOf,
   civilizationOpened,
@@ -16,10 +18,13 @@ import {
   nameOnScreen,
   onScreen,
   openSaved,
+  pileStacks,
+  readings,
   referenceOnFace,
   rested,
   restedOnDeal,
   ringed,
+  settledOn,
   shows,
   standing,
   waitGameClock,
@@ -36,8 +41,8 @@ const HAND = 'pointer';
 const PAST_HANDOVER = 400;
 
 /**
- * The first answer the deal standing offers whose rules entry names a card: the answer, where the
- * deal window lays it out, the card it names, and where that name stands among the entry's names.
+ * The first answer the deal standing offers whose text names a card: the answer, where the deal
+ * window lays it out, the card it names, and where that name stands among the text's names.
  */
 function namingAnswer(dealt: Chronicle): {
   answer: string;
@@ -48,20 +53,38 @@ function namingAnswer(dealt: Chronicle): {
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   for (const [at, answer] of offered(CATALOGUE, deal).entries()) {
-    const names = namedIn(answerFace(CATALOGUE, dealt, deal.event, answer).rules);
+    const names = namedIn(answerShown(CATALOGUE, dealt, deal.event, answer).text);
     const name = names.findIndex((reference) => reference.kind === 'card');
     if (name !== -1) return { answer, at, named: names[name].id, name };
   }
   throw new Error(`the ${deal.event} offers no answer naming a card`);
 }
 
-test('a card named on a card raises it small at a rest and shows it large at a right click on the name or on the small card', async ({
+/**
+ * Seed 1's turn 1, settled bare, the first card of the catalogue whose rules entry names a card added
+ * to its draw pile's top: that chronicle, the card, the card it names, and where that name stands
+ * among the entry's names.
+ */
+function namingInDrawPile(): { holding: Chronicle; naming: string; named: string; name: number } {
+  const opened = settledOn(1);
+  for (const naming of Object.keys(CATALOGUE.cards)) {
+    const names = namedIn(cardFaceAtStart(CATALOGUE, naming, opened.citySection.building).rules);
+    const name = names.findIndex((reference) => reference.kind === 'card');
+    if (name === -1) continue;
+    const holding = addedToDrawPileTop(CATALOGUE, opened, naming).chronicle;
+    return { holding, naming, named: names[name].id, name };
+  }
+  throw new Error('no card of the catalogue names a card');
+}
+
+test('a card named in an answer’s text raises it small at a rest and shows it large at a right click on the name or on the small card', async ({
   page,
 }) => {
   const problems = watch(page);
   const dealt = firstDealtAlone(LEAN_SEASON);
   const { answer, at, named, name: naming } = namingAnswer(dealt);
   const answering = `deal-card-${at}`;
+  const { reading } = answerShown(CATALOGUE, dealt, LEAN_SEASON, answer);
 
   await openSaved(page, dealt);
   await restedOnDeal(page);
@@ -70,6 +93,8 @@ test('a card named on a card raises it small at a rest and shows it large at a r
   const name = await nameOnScreen(page, answering, naming);
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
+  const raised = await readings(page, ['small-card-0']);
+  expect(raised('small-card-0').rules).toBe(namedCardFace(CATALOGUE, named, reading).rules);
 
   const menu = await onScreen(page, 'menu-button');
   await page.mouse.move(menu.x, menu.y);
@@ -117,17 +142,16 @@ test('a card named on a card shown large stands over it at a right click on the 
   page,
 }) => {
   const problems = watch(page);
-  const dealt = firstDealtAlone(LEAN_SEASON);
-  const { answer, at, named, name: naming } = namingAnswer(dealt);
-  const answering = `deal-card-${at}`;
+  const { holding, naming: host, named, name: naming } = namingInDrawPile();
+  const at = pileStacks(holding.drawPile).findIndex(({ card }) => card.id === host);
 
-  await openSaved(page, dealt);
-  await restedOnDeal(page);
-  expect(await cardOnFace(page, answering)).toBe(answer);
+  await openSaved(page, holding);
+  await browse(page, 'draw-pile');
+  await rested(page);
 
-  const card = await onScreen(page, answering);
+  const card = await onScreen(page, `browse-card-${at}`);
   await page.mouse.click(card.x, card.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(answer);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(host);
   await rested(page);
 
   const large = await onScreen(page, 'inspection');
@@ -139,7 +163,7 @@ test('a card named on a card shown large stands over it at a right click on the 
 
   await page.mouse.click(own.x, own.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named);
-  expect(await cardOnFace(page, 'inspection-0')).toBe(answer);
+  expect(await cardOnFace(page, 'inspection-0')).toBe(host);
   await rested(page);
 
   // Measured on the faces: two different cards place their names differently.
@@ -150,11 +174,11 @@ test('a card named on a card shown large stands over it at a right click on the 
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection-0')).toBe(false);
-  expect(await cardOnFace(page, 'inspection')).toBe(answer);
+  expect(await cardOnFace(page, 'inspection')).toBe(host);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
-  expect(await standing(page, 'deal')).toBe(true);
+  expect(await standing(page, 'browse')).toBe(true);
 
   expect(problems).toEqual([]);
 });

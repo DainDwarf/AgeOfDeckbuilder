@@ -58,8 +58,8 @@ type Link = {
 /** The name the pointer rests on, the rest's timer, and where the rest began. */
 type Resting = { readonly raiser: Raiser; timer: Phaser.Time.TimerEvent; x: number; y: number };
 
-/** A name of a face that holds nothing lifted while its small card stands. */
-export function raiserOf(face: CardFace, name: Name): Raiser {
+/** A name of a face or an answer that holds nothing lifted while its small card stands. */
+export function raiserOf(face: Pick<CardFace, 'spotOf'>, name: Name): Raiser {
   return { name, where: () => face.spotOf(name) };
 }
 

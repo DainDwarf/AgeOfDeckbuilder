@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Event answers as text** — the deal window draws each answer of an event as its name over its text on the panel's paper, side by side, and no answer as a card; a card an answer names still raises its small card, at the answer's numbers; a capture's rewards stay cards; the lore and what is dealt meet at one height in the deal's window and the capstone's; every event's name, every answer's name and every answer's text stands outside `src/ui/text.ts`; `e2e/flood.spec.ts` reads Lose the fields with its lines of nought left out; the pages named say so. Doc-impact: `docs/GLOSSARY.md`, `docs/SCHEDULE.md`, `docs/CHRONICLE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/ages/NOMADIC.md`, `docs/ages/STONE.md`. [board/event-answers-as-text.md](board/event-answers-as-text.md)
 - **The capstone's window as text** — the capstone's window reads the capstone as the deal window reads an answer, as text and no longer as a card.
 - **The card face** — the face's layout in the look, in the hand and shown large: the art box, the name, the cost, the text, the kind label and the influence, its states and the card back, with room for what a building's and a unit's card will read.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.

@@ -313,30 +313,46 @@ export type Answers = {
 };
 
 /**
- * The rest on a name raises its small card, and on a label of the foot that label's bubble; the
- * right click on a name shows the named thing large, and on the rest of the card the face itself.
+ * The rest on a name raises its small card, and the right click on a name shows the named thing
+ * large; nothing answers off the names.
  */
-export function answersOf(
-  card: CardFace,
-  shown: Face,
-  { small, footBubble, large }: Inspecting,
+export function answersOfNames(
+  drawn: Pick<CardFace, 'nameAt' | 'spotOf'>,
+  { small, large }: Inspecting,
 ): Answers {
   return {
     point(at) {
-      const named = at === undefined ? undefined : card.nameAt(at.x, at.y);
-      small.over(named === undefined ? undefined : raiserOf(card, named));
+      const named = at === undefined ? undefined : drawn.nameAt(at.x, at.y);
+      small.over(named === undefined ? undefined : raiserOf(drawn, named));
+    },
+    rests(at) {
+      return drawn.nameAt(at.x, at.y) !== undefined;
+    },
+    inspect(at) {
+      const named = drawn.nameAt(at.x, at.y);
+      if (named !== undefined) large.named(named);
+    },
+  };
+}
+
+/**
+ * The names answer as `answersOfNames` has them, the rest on a label of the foot raises that label's
+ * bubble, and the right click on the rest of the card shows the face itself.
+ */
+export function answersOf(card: CardFace, shown: Face, inspecting: Inspecting): Answers {
+  const names = answersOfNames(card, inspecting);
+  const { footBubble, large } = inspecting;
+  return {
+    point(at) {
+      names.point(at);
       footBubble.over(card, at === undefined ? undefined : card.footAt(at.x, at.y));
     },
     rests(at) {
-      return card.nameAt(at.x, at.y) !== undefined || card.footAt(at.x, at.y) !== undefined;
+      return names.rests(at) || card.footAt(at.x, at.y) !== undefined;
     },
     inspect(at) {
-      const named = card.nameAt(at.x, at.y);
-      if (named !== undefined) {
-        large.named(named);
-        return;
-      }
-      if (card.cardAt(at.x, at.y)) large.show(shown);
+      if (names.rests(at)) names.inspect(at);
+      else if (card.cardAt(at.x, at.y)) large.show(shown);
     },
   };
 }

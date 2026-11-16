@@ -8,8 +8,7 @@ import { warDeclared } from '../src/rules/city';
 import { answerCase, answerCost, answerOf } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { relationsOf } from '../src/rules/units';
-import { answerFace } from '../src/ui/face';
-import { text } from '../src/ui/text';
+import { answerShown, answerText } from '../src/ui/event-text';
 import {
   barReadingOn,
   budget,
@@ -43,17 +42,17 @@ const TRIBUTE = 'tribute';
 const SEND_GIFTS = 'send-gifts';
 
 /**
- * The deal standing on the chronicle read on screen: its title, its lore, and each answer's face
- * reading the rules entry of the case it names on that chronicle; what Escalate's face reads.
+ * The deal standing on the chronicle read on screen: its title, its lore, and each answer reading
+ * the text of the case it names on that chronicle; what Escalate reads.
  */
 async function escalateRead(page: Page, chronicle: Chronicle): Promise<string> {
   const answers = offeredOn(chronicle);
-  const faces = answers.map((_, at) => `deal-card-${at}`);
+  const drawn = answers.map((_, at) => `deal-card-${at}`);
   const shown = await eventDealRead(page, chronicle, GRIEVANCE, []);
-  expect(faces.map((face) => shown(face).rules)).toEqual(
-    answers.map((answer) => answerFace(CATALOGUE, chronicle, GRIEVANCE, answer).rules),
+  expect(drawn.map((each) => shown(each).answerText)).toEqual(
+    answers.map((answer) => answerShown(CATALOGUE, chronicle, GRIEVANCE, answer).text),
   );
-  return shown(faces[answers.indexOf(ESCALATE)]).rules;
+  return shown(drawn[answers.indexOf(ESCALATE)]).answerText;
 }
 
 test('the grievance deals its answers, Escalate reading Declare war while the neutral’s city stands at peace, and taking it turns the neutral hostile with no warning', async ({
@@ -70,7 +69,7 @@ test('the grievance deals its answers, Escalate reading Declare war while the ne
 
   await openSaved(page, dealt, campaign);
   await restedOnDeal(page);
-  expect(await escalateRead(page, dealt)).toBe(text('answer-rules.escalate.war'));
+  expect(await escalateRead(page, dealt)).toBe(answerText(ESCALATE, {}, 'war'));
 
   await take(page, at);
 
@@ -95,11 +94,15 @@ test('the grievance dealt with the neutral hostile reads Escalate as a camp plac
   await openSaved(page, hostile, campaign);
   await restedOnDeal(page);
   expect(await escalateRead(page, hostile)).toBe(
-    text('answer-rules.escalate.camp', {
-      camp: ageOf(CATALOGUE, hostile.age).camp.building,
-      warriors,
-      building: hostile.citySection.building,
-    }),
+    answerText(
+      ESCALATE,
+      {
+        camp: ageOf(CATALOGUE, hostile.age).camp.building,
+        warriors,
+        building: hostile.citySection.building,
+      },
+      'camp',
+    ),
   );
 
   await take(page, at);

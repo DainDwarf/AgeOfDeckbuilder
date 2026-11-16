@@ -8,6 +8,7 @@ import { improvementKind } from '../src/rules/map-kinds';
 import { answerOf } from '../src/rules/schedule';
 import { followed } from '../src/rules/stages';
 import { type Chronicle, holderOf } from '../src/rules/state';
+import { answerLinesOfCase, answerShown } from '../src/ui/event-text';
 import {
   budget,
   chronicleOf,
@@ -68,7 +69,7 @@ function flooding(campaign: Campaign): { dealt: Chronicle; city: TileCoords } {
   });
 }
 
-test('the flood deals its answers, and losing the fields removes the clay pit standing on the city’s tile', async ({
+test('the flood deals its answers, Lose the fields reading its one line whose number the rules read above nought, and losing the fields removes the clay pit standing on the city’s tile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -79,11 +80,15 @@ test('the flood deals its answers, and losing the fields removes the clay pit st
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at }));
   const mark = `improvement-${CLAY_PIT}-${tileKey(city)}`;
   expect(tileAt(after.tiles, city)?.improvements).not.toContain(CLAY_PIT);
+  const { text } = answerShown(CATALOGUE, dealt, FLOOD, LOSE_THE_FIELDS);
+  const lines = answerLinesOfCase(CATALOGUE, dealt, FLOOD, LOSE_THE_FIELDS, undefined);
+  expect(lines.length).toBeGreaterThan(1);
+  expect(lines.filter(({ kept }) => kept).map(({ line }) => line)).toEqual([text]);
 
   await openSaved(page, dealt, campaign);
   await restedOnDeal(page);
   const shown = await eventDealRead(page, dealt, FLOOD, [mark]);
-  expect(shown(mark).standing).toBe(true);
+  expect([shown(`deal-card-${at}`).answerText, shown(mark).standing]).toEqual([text, true]);
 
   await take(page, at);
 

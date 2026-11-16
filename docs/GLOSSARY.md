@@ -4,7 +4,7 @@ The **closed vocabulary** of gameplay. Every concept has exactly one term, and t
 
 The vocabulary covers player-facing terms and the code that represents and manipulates those player-facing objects; development internals (the machinery under the game, such as `apply`'s command) are outside it.
 
-So is lore, the fiction a window reads over its cards: prose the lint does not read, free to say tribe and hunter.
+So is lore, the fiction a window reads over what it deals, an event's name and its answers' names among it: prose the lint does not read, free to say tribe and hunter. An answer's text is no lore, and the lint does not read it either: it says what choosing the answer does, and intake and review hold it to this vocabulary.
 
 The meaning names what the term englobes, enough to tell it from its neighbours and from the word's other uses, and nothing more: the rules, the cases, the rendering and the reasons live on the design pages. A term a meaning needs is a row of its own, never a bold inside another's cell.
 
@@ -56,7 +56,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **enemy** | A unit of the faction that enters from camps and in raids, and attacks. | barbarian, raider, invader, foe |
 | **killed** | What befalls a unit or a population: the unit leaves the map, the population its city. | destroyed, slain, dead, lost |
 | **event** | One entry of the region's schedule: a problem the chronicle throws at the player's city, dealt with its answers. | disaster, threat, crisis, encounter |
-| **answer** | One of the cards an event deals: a way out of its problem with a cost of its own, of which the player chooses one. | option, response, reply, solution |
+| **answer** | One of the ways out an event deals for its problem, each with a cost of its own, of which the player chooses one. | option, response, reply, solution |
 | **capstone** | The age's final trial, drawn at the opening among the region's; passing it is victory. | boss, finale, objective |
 | **schedule** | A region's events and capstones, with their odds and tempo; what a timeline is rolled from. | calendar |
 | **timeline** | One chronicle's roll of its schedule: the turns its events and its capstone land on. | forecast, agenda, itinerary |

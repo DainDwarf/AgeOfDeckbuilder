@@ -8,7 +8,6 @@ import { refused } from '../src/ui/refusal-lines';
 import {
   besideTheDeal,
   budget,
-  cardOnFace,
   chronicleOf,
   click,
   cursorAt,
@@ -17,9 +16,7 @@ import {
   firstDealtAlone,
   firstEntriesTaken,
   firstSeed,
-  loreOf,
   offeredOn,
-  onScreen,
   openSaved,
   readings,
   refusalLines,
@@ -69,33 +66,34 @@ test('the events phase deals a choice, and the turn plays on from the one a left
   test.setTimeout(budget(1));
   const dealt = firstDealtAlone(LEAN_SEASON);
   const answers = offeredOn(dealt);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
   const ration = answers.indexOf(RATION);
   if (ration === -1) throw new Error(`the ${LEAN_SEASON} offers no ${RATION}`);
   const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: ration }));
 
   await openSaved(page, dealt);
   await restedOnDeal(page);
-  await eventDealRead(page, dealt, LEAN_SEASON, []);
+  const shown = await eventDealRead(page, dealt, LEAN_SEASON, []);
 
-  const first = await onScreen(page, 'deal-card-0');
-  const second = await onScreen(page, 'deal-card-1');
+  const first = shown('deal-card-0').onScreen;
+  const second = shown('deal-card-1').onScreen;
   expect(await cursorAt(page, { x: (first.x + second.x) / 2, y: first.y })).toBe('');
   expect(await cursorAt(page, second)).toBe(HAND);
 
-  await page.mouse.click(second.x, second.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(answers[1]);
-  expect(await standing(page, 'deal')).toBe(true);
-  expect(await standing(page, 'deal-card-1')).toBe(true);
-  expect(await loreOf(page, 'deal')).toBe(eventLore(LEAN_SEASON));
+  // Inside the answer's padding over its name, where no name of its text lies.
+  const offNames = { x: second.x, y: shown('deal-card-1').boundsOnScreen.y + 6 * second.unit };
+  await page.mouse.click(offNames.x, offNames.y, { button: 'right' });
+  await rested(page);
+  const inspected = await readings(page, ['inspection', 'deal', 'deal-card-1', 'deal-lore']);
+  expect(inspected('inspection').standing).toBe(false);
+  expect(inspected('deal').standing).toBe(true);
+  expect(inspected('deal-card-1').standing).toBe(true);
+  expect(inspected('deal-lore').text).toBe(eventLore(LEAN_SEASON));
 
   const beside = await besideTheDeal(page);
   await page.mouse.click(beside.x, beside.y);
-  await expect.poll(() => standing(page, 'inspection')).toBe(false);
-  const left = await readings(page, ['deal', 'deal-lore', ...faces]);
-  expect(left('deal').standing).toBe(true);
-  expect(left('deal-lore').text).toBe(eventLore(LEAN_SEASON));
-  expect(faces.map((face) => left(face).ringed)).toEqual(faces.map(() => false));
+  await rested(page);
+  expect(await standing(page, 'deal')).toBe(true);
+  expect(await chronicleOf(page)).toEqual(dealt);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
@@ -112,7 +110,7 @@ test('the events phase deals a choice, and the turn plays on from the one a left
   expect(problems).toEqual([]);
 });
 
-test('a left click on an answer the city cannot pay for says why over the card, takes and pays nothing and rings nothing, and the inspection key then shows nothing', async ({
+test('a left click on an answer the city cannot pay for says why over it, takes and pays nothing, and the inspection key then shows nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -120,9 +118,7 @@ test('a left click on an answer the city cannot pay for says why over the card, 
   const { dealt, answer } = unpaid();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const answers = offered(CATALOGUE, deal);
-  const faces = answers.map((_, place) => `deal-card-${place}`);
-  const at = answers.indexOf(answer);
+  const at = offered(CATALOGUE, deal).indexOf(answer);
   const said = refused(
     answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, deal.event, answer)),
     answerRefusal(CATALOGUE, dealt, deal.event, answer),
@@ -133,9 +129,7 @@ test('a left click on an answer the city cannot pay for says why over the card, 
 
   await click(page, `deal-card-${at}`);
   await expect.poll(() => refusalLines(page)).toEqual(said);
-  const left = await readings(page, ['deal', ...faces]);
-  expect(left('deal').standing).toBe(true);
-  expect(faces.map((face) => left(face).ringed)).toEqual(faces.map(() => false));
+  expect(await standing(page, 'deal')).toBe(true);
   expect(await chronicleOf(page)).toEqual(dealt);
 
   await page.keyboard.press('i');
