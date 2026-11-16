@@ -1162,9 +1162,15 @@ export function rested(page: Page): Promise<void> {
   );
 }
 
-/** Waits for the deal's window to stand, then for a drawn frame, so a press finds its cards. */
+/**
+ * Waits for the deal's window to stand whole, its rise ended on the scrim's stratum drawn at full
+ * strength, then for a drawn frame: a left click on an entry before it is whole takes nothing.
+ */
 export async function restedOnDeal(page: Page): Promise<void> {
-  await expect.poll(() => standing(page, 'deal')).toBe(true);
+  await page.waitForFunction(() => {
+    const stratum = window.named?.('scrim')?.object as Phaser.GameObjects.Layer | undefined;
+    return window.readName?.('deal').standing === true && stratum?.alpha === 1;
+  });
   await rested(page);
 }
 
@@ -3620,9 +3626,9 @@ export async function endTurn(page: Page): Promise<void> {
   await playedOut(page);
 }
 
-/** Takes the entry the deal window offers in that place: one press rings it, a second takes it. */
+/** Takes the entry the deal window offers in that place, by one press once the window stands whole. */
 export async function take(page: Page, at: number): Promise<void> {
-  await click(page, `deal-card-${at}`);
+  await restedOnDeal(page);
   await click(page, `deal-card-${at}`);
   await playedOut(page);
 }

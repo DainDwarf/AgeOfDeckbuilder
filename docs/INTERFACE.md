@@ -58,15 +58,15 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 **The right click inspects and never selects.** It inspects the thing under it — a tile in the infopanel, a card shown large, a pile in its browse — and pressed again on the same thing steps its cards on; a card has but the one, so a second right click on a card shown large does nothing, a name on it excepted, and neither does a left click on it: a press beside it, or the back key, takes it down. A press beside the things, where no scrim stands, drops the inspection and leaves the selection standing. It does this in every state the screen can be in, so nothing half done has to be undone to inspect a thing.
 
-**A press on a scrim is one step back, and the two clicks are one press there.** It takes down the newest card shown large, then drops a window's own selection, then closes the window, as the back key does, and never raises the menu. The deal window is closed by no press: a press on its scrim drops its selection and no more.
+**A press on a scrim is one step back, and the two clicks are one press there.** It takes down the newest card shown large, then closes the window, as the back key does, and never raises the menu. The deal window is closed by no press: a press on its scrim takes down a card shown large and nothing else.
 
-**The inspection key inspects the selection**, and moves the inspection there when a right click had put it elsewhere on the screen. With no selection, or while a card stands large, it does nothing; under a window it inspects the window's own selection and never the screen's.
+**The inspection key inspects the selection**, and moves the inspection there when a right click had put it elsewhere on the screen. With no selection, or while a card stands large, it does nothing; under a window it does nothing either, the screen's selection waiting there.
 
-**A window that offers things to select keeps a selection of its own**, which dies with the window; the screen's selection waits under it.
+**A window selects nothing**: what it offers is chosen by one left click, and the screen's selection waits under it.
 
-The **back key** walks these back in this order: the thing shown large, the newest of them where several stand, then a window's own selection and then the window, then the inspection, then the selection.
+The **back key** walks these back in this order: the thing shown large, the newest of them where several stand, then the window, then the inspection, then the selection.
 
-Two verbs cover it all. **Select** is the tile or the unit the map rings, the card lifted out of the hand, or the card ringed in a window; **inspect** is the tile in the infopanel, the card shown large and the pile in its browse. "Zoom" stays the map's word.
+Two verbs cover it all. **Select** is the tile or the unit the map rings, or the card lifted out of the hand; **inspect** is the tile in the infopanel, the card shown large and the pile in its browse. "Zoom" stays the map's word.
 
 ## A card's names and its label ✅
 
@@ -86,4 +86,4 @@ The **scrim** cuts that order in two. Everything named so far is under it, and w
 
 A **tooltip** stands over everything but the menu and the console, on the surface it was raised from: a hover reaches only what the pointer can reach, so a bubble is never drawn under the thing it was raised beside. The pointer is on the one thing that stands topmost under it, across every surface, at every moment: a thing rising, falling or coming live under a pointer that holds still is hovered or left as one the pointer moved onto or off. A scrim rising is, to whatever stands under it, the pointer leaving the game: every hover there ends, a standing tooltip among them, and once the scrim falls the pointer is on whatever stands under it again, before it moves. A press the pointer holds as a scrim rises is let go of where it stands, whatever raised the scrim: a card, a unit or a population being dragged comes home and nothing plays, nothing is selected, and the release that comes under the scrim lands as nothing.
 
-The **small card** a name raises stands where a tooltip does, on the surface it was raised from, and a scrim rising takes it down as it does a tooltip. Cards shown large stand where the one does, however many stand in the stack, on a scrim of their own: whatever they are shown over — a browse, a window, the ending screen — stands under that scrim as it stood, dimmed, its ring and its scroll kept, and they are taken down onto it where it stood. A card shown large is never drawn unaffordable: it is drawn plain, wherever it was shown large from.
+The **small card** a name raises stands where a tooltip does, on the surface it was raised from, and a scrim rising takes it down as it does a tooltip. Cards shown large stand where the one does, however many stand in the stack, on a scrim of their own: whatever they are shown over — a browse, a window, the ending screen — stands under that scrim as it stood, dimmed, its scroll kept, and they are taken down onto it where it stood. A card shown large is never drawn unaffordable: it is drawn plain, wherever it was shown large from.

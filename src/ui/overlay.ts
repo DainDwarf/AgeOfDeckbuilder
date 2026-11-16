@@ -14,7 +14,8 @@ import {
 } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
 import { badgedStackOf, standBrowser } from './browse';
-import { CARD_HEIGHT, CARD_WIDTH, type CardFace, createCardFace, type Name } from './card-face';
+import { CARD_HEIGHT, CARD_WIDTH, createCardFace, type Name } from './card-face';
+import { EASE, ended } from './card-motion';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
@@ -77,13 +78,12 @@ function offeredCard(face: Face, at: number, copies: number): Offered {
 }
 
 /**
- * Where one offered face was laid out — about its own bottom centre, as a card is drawn — its
- * drawing, everything it draws, and the box it answers the pointer over and how.
+ * Where one offered face was laid out — about its own bottom centre, as a card is drawn — everything
+ * it draws, and the box it answers the pointer over and how.
  */
 type Placed = Offered & {
   readonly x: number;
   readonly y: number;
-  readonly drawn: CardFace;
   readonly part: Phaser.GameObjects.GameObject;
   readonly box: Box;
   readonly answers: Answers;
@@ -97,15 +97,13 @@ type Browsing = { readonly stands: 'browse' };
 
 /**
  * The deal window on the scrim: the chronicle whose first deal it stands, which its answers read
- * their numbers and their refusal off, and which of its entries is ringed. It closes on the take
- * alone.
+ * their numbers and their refusal off, and whether it has risen whole. It closes on the take alone.
  */
 type Dealing = {
   readonly stands: 'deal';
   readonly on: Chronicle;
   readonly deal: Deal;
-  /** The number the ringed entry was offered as, and nothing while none is ringed. */
-  selected: number | undefined;
+  whole: boolean;
 };
 
 /**
@@ -147,8 +145,6 @@ export function createOverlay({
   const note = createRefusalNote(scene, scene.strata.note);
   /** What stands on the scrim, and nothing while the scrim is down. */
   let carried: Carried | undefined;
-  /** The cards of the window standing, and none while no window stands. */
-  let onWindow: readonly Placed[] = [];
   /** The deal standing, so no render raises its window twice; the take lets it go. */
   let standingDeal: Dealing | undefined;
   /** Whether the first render has opened the screen on the capstone's window. */
@@ -161,7 +157,6 @@ export function createOverlay({
       back();
     },
     down: () => {
-      onWindow = [];
       note.hide();
     },
     risingLarge: () => {
@@ -252,7 +247,6 @@ export function createOverlay({
           ...offered,
           x,
           y,
-          drawn: stacked.card,
           part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
           box,
           answers,
@@ -264,7 +258,6 @@ export function createOverlay({
         ...offered,
         x,
         y,
-        drawn,
         part: drawn.root,
         box: { x: x - CARD_WIDTH / 2, y: y - CARD_HEIGHT, width: CARD_WIDTH, height: CARD_HEIGHT },
         answers: answersOf(drawn, offered.face, inspecting),
@@ -286,14 +279,7 @@ export function createOverlay({
       ),
       foot: firstY + spanY,
     });
-    onWindow = placed;
     return { panel, placed };
-  };
-
-  /** The one entry of the deal ringed, and none ringed at all where nothing is selected. */
-  const ring = (dealing: Dealing, at: number | undefined): void => {
-    dealing.selected = at;
-    for (const card of onWindow) card.drawn.select(card.at === at);
   };
 
   /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
@@ -311,7 +297,30 @@ export function createOverlay({
     });
   };
 
-  /** The deal window raised. It closes on the take alone, and the landing plays out under the caller. */
+  /**
+   * The deal window risen out of nothing, everything the scrim's stratum holds fading in together, and
+   * whole once the fade has ended.
+   */
+  const riseWhole = (dealing: Dealing): void => {
+    const { layer } = scene.strata.scrim;
+    const fade = scene.tweens.add({
+      targets: layer.setAlpha(0),
+      alpha: 1,
+      duration: 1000 / 3,
+      ease: EASE,
+    });
+    // The overlay's tweens play at the animation speed (`chronicleScreenAtSpeed`), and the beat is
+    // the wall clock's.
+    fade.setTimeScale(1 / scene.tweens.timeScale);
+    void ended(fade).then(() => {
+      dealing.whole = true;
+    });
+  };
+
+  /**
+   * The deal window raised, taking a left click on an entry once it stands whole. It closes on the
+   * take alone, and the landing plays out under the caller.
+   */
   const showDeal = (dealing: Dealing): void => {
     raiseOnScrim(dealing);
     standingDeal = dealing;
@@ -319,10 +328,7 @@ export function createOverlay({
     const { heading, lore, entries } = dealt(catalogue, dealing.on, dealing.deal);
     const title = raiseTitle('deal', heading);
     const laid = layWindow('deal', entries, title.y + title.height + MARGIN, (card) => {
-      if (card.at !== dealing.selected) {
-        ring(dealing, card.at);
-        return;
-      }
+      if (!dealing.whole) return;
       if (!playable(card.refusal)) {
         const over = card.y - laid.panel.offset - CARD_HEIGHT;
         note.overCard(refused(card.costs, card.refusal), card.x, over);
@@ -333,7 +339,7 @@ export function createOverlay({
       take(card.at);
     });
     raiseLore('deal', lore, laid);
-    ring(dealing, dealing.selected);
+    riseWhole(dealing);
   };
 
   /**
@@ -381,7 +387,7 @@ export function createOverlay({
     if (chronicle.ending !== undefined && !endingScreen.raised)
       void raiseEnding(chronicle, chronicle.ending);
     else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
-      showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], selected: undefined });
+      showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], whole: false });
     else endingScreen.stand();
   };
 
@@ -391,34 +397,12 @@ export function createOverlay({
       case 'browse':
         close();
         return true;
-      case 'deal':
-        if (carried.selected === undefined) return false;
-        ring(carried, undefined);
-        return true;
       case 'capstone':
         closeCapstone(carried);
         return true;
+      case 'deal':
       case 'ending':
         return false;
-    }
-  };
-
-  /** The inspection key while a window stands: it shows the ringed entry of the deal large. */
-  const inspectSelection = (): void => {
-    if (carried === undefined) return;
-    switch (carried.stands) {
-      case 'deal': {
-        const entry =
-          carried.selected === undefined
-            ? undefined
-            : dealt(catalogue, carried.on, carried.deal).entries[carried.selected];
-        if (entry !== undefined) inspecting.large.show(entry.face);
-        return;
-      }
-      case 'browse':
-      case 'capstone':
-      case 'ending':
-        return;
     }
   };
 
@@ -450,13 +434,12 @@ export function createOverlay({
 
   /**
    * Every press the scrim holds while anything stands on it and no card stands large over it: the
-   * inspection key shows a ringed card large, the back key walks what stands back and raises the
-   * menu where it has nothing left to walk, and every other key is swallowed.
+   * back key walks what stands back and raises the menu where it has nothing left to walk, and every
+   * other key is swallowed.
    */
   const takes = (press: Bind): boolean => {
     if (carried === undefined) return false;
-    if (boundTo(press, 'inspect')) inspectSelection();
-    else if (boundTo(press, 'back') && !back()) raiseMenu(scene);
+    if (boundTo(press, 'back') && !back()) raiseMenu(scene);
     return true;
   };
 
