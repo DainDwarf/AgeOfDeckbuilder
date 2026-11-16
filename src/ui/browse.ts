@@ -24,10 +24,10 @@ import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createPanel, type Panel, type PanelOf, type Surface } from './panel';
 import {
-  type Answers,
-  answersAround,
   type Inspecting,
   layingOf,
+  type Reactions,
+  reactionsAround,
   type ShownLarge,
   standLarge,
 } from './stack';
@@ -89,13 +89,13 @@ function badgeOf(
 
 /**
  * A stack laid with its badge: its cards, everything it draws, the box it and its badge cover, and
- * what it answers the pointer with there.
+ * what it reacts to the pointer with there.
  */
 export type BadgedStack = {
   readonly stacked: StackedCards;
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly box: Box;
-  readonly answers: Answers;
+  readonly reactions: Reactions;
 };
 
 /**
@@ -129,7 +129,7 @@ export function badgedStackOf(
       new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height),
       new Phaser.Geom.Rectangle(badge.box.x, badge.box.y, badge.box.width, badge.box.height),
     ),
-    answers: answersAround(stacked.card, stacked.shown, inspecting, () => {
+    reactions: reactionsAround(stacked.card, stacked.shown, inspecting, () => {
       inspecting.large.show(stacked.shown);
     }),
   };
@@ -143,7 +143,7 @@ function stackCellOf(
 ): Cell {
   const { scene } = browser;
   return ({ left, top }) => {
-    const { stacked, parts, box, answers } = badgedStackOf(browser, {
+    const { stacked, parts, box, reactions } = badgedStackOf(browser, {
       shown: stack.shown,
       copies: stack.copies,
       left,
@@ -154,7 +154,7 @@ function stackCellOf(
     const root = scene.add.container(0, 0, [...edge, ...parts]).setName(`${name}-stack-${at}`);
     return {
       parts: [root],
-      held: [{ box, answers }],
+      held: [{ box, reactions }],
       bottom: stacked.foot,
     };
   };

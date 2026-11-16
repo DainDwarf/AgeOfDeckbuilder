@@ -34,7 +34,6 @@ import { offerEntries } from './debug-console';
 import { civilizationPanelOf, deckPanelOf } from './deck-panel';
 import {
   addText,
-  answersPress,
   awayUnder,
   type Box,
   COVERED,
@@ -44,6 +43,7 @@ import {
   MARGIN,
   onClick,
   ownBoxOf,
+  reactsToPress,
   stratumOf,
   UI_FONT,
 } from './design-space';
@@ -123,7 +123,7 @@ type Screen = Laying &
 /** A mode as it stands: its head, and its panels in order. */
 type Laid = { readonly head: Phaser.GameObjects.Container; readonly panels: readonly Panel[] };
 
-/** What a stack of the collection answers a left click with, and the box a press held on it lands in. */
+/** What a stack of the collection reacts to a left click with, and the box a press held on it lands in. */
 type StackMoves = {
   readonly pressOf: (stack: CollectionStack) => (() => void) | undefined;
   readonly lands: Box;
@@ -212,7 +212,7 @@ function civilizationsOf(
       browse(id);
     });
     parts.push(scene.add.container(0, 0, [...pile.parts]).setName(name));
-    held.push({ box: pile.box, answers: pile.answers, press: () => open(id) });
+    held.push({ box: pile.box, reactions: pile.reactions, press: () => open(id) });
     foot = pile.bottom;
     pileTop = pile.bottom + PILES_APART;
   }
@@ -238,7 +238,7 @@ function modeButtonOf(
     .setStrokeStyle(1, LOOK.modeButtonEdge)
     .setName(name)
     .setInteractive();
-  answersPress(face);
+  reactsToPress(face);
   return { face, parts: [face, words] };
 }
 

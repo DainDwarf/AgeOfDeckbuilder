@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { addRun, GLYPH_SHARE, type Name, spotOn } from './card-face';
-import { answersPress, onClick, onHover, ownBoxOf, UI_FONT } from './design-space';
+import { onClick, onHover, ownBoxOf, reactsToPress, UI_FONT } from './design-space';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Raiser } from './small-card';
@@ -38,8 +38,8 @@ export function linesOf(scene: Phaser.Scene, entry: string, width: number): numb
 }
 
 /**
- * What the names of a run answer: the pointer coming onto one and leaving it, the right click, and
- * the left click where they answer one.
+ * What the names of a run react to: the pointer coming onto one and leaving it, the right click,
+ * and the left click where they react to one.
  */
 export type RunNames = {
   over(raiser: Raiser, on: boolean): void;
@@ -50,7 +50,7 @@ export type RunNames = {
 /**
  * An entry drawn on the face as a run wrapped at that width, from the middle of its first line at
  * that point down, its glyphs where the run stands them and a zone over each of its names; the names
- * are answered.
+ * react.
  */
 export function drawRun(
   scene: Phaser.Scene,
@@ -58,7 +58,7 @@ export function drawRun(
   entry: string,
   first: { readonly x: number; readonly y: number },
   width: number,
-  answers: RunNames,
+  reactions: RunNames,
 ): { label: Phaser.GameObjects.Text; lines: number; names: Name[] } {
   const { label, run } = addRun(scene, entry, TEXT_STYLE, width);
   const lines = run.widths.length;
@@ -88,17 +88,17 @@ export function drawRun(
     };
     names.push(each);
     const raiser: Raiser = { name: each, where: () => spotOn(face, each) };
-    const zone = answersPress(
+    const zone = reactsToPress(
       scene.add.zone(each.x, each.y, each.width, each.height).setInteractive(),
     );
     onHover(
       zone,
-      () => answers.over(raiser, true),
-      () => answers.over(raiser, false),
+      () => reactions.over(raiser, true),
+      () => reactions.over(raiser, false),
     );
     // A press that dragged what the face stands on is released on the name.
-    onClick(zone, () => answers.inspect(each), 'right', 'within slack');
-    const { click } = answers;
+    onClick(zone, () => reactions.inspect(each), 'right', 'within slack');
+    const { click } = reactions;
     if (click !== undefined) onClick(zone, click, 'left', 'within slack');
     face.add(zone);
   }

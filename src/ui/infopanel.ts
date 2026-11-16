@@ -297,8 +297,8 @@ type Face = {
 /** Where the panel stands on the map, and what it measures in there, for the bubbles its rows raise. */
 type Box = { left: number; top: number; unit: number };
 
-/** What a row answers: the one bubble raised beside its own middle in the card or let go. */
-type RowAnswers = {
+/** What a row reacts with: the one bubble raised beside its own middle in the card or let go. */
+type RowReactions = {
   raise(centre: number, message: string): void;
   drop(): void;
 };
@@ -316,7 +316,7 @@ export function createInfoPanel(
   tooltip: Tooltip,
 ): InfoPanel {
   const ghosts = scene.add.graphics();
-  // Interactive, so no press reaches the map's catchers under it, and never marked as answering one.
+  // Interactive, so no press reaches the map's catchers under it, and never marked as reacting to one.
   const stop = scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0).setInteractive();
   const panel = scene.add.container(0, 0, [ghosts, stop]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
@@ -329,7 +329,7 @@ export function createInfoPanel(
   /** The face the panel is standing beside, and nothing while it stands nowhere. */
   let beside: TileFace | undefined;
 
-  const answers: RowAnswers = {
+  const reactions: RowReactions = {
     raise(centre: number, message: string): void {
       tooltip.beside(message, () => ({
         x: box.left + CARD_WIDTH * box.unit,
@@ -370,7 +370,7 @@ export function createInfoPanel(
   };
 
   const hide = (): void => {
-    answers.drop();
+    reactions.drop();
     settle();
     standing?.root.destroy();
     standing = undefined;
@@ -383,7 +383,7 @@ export function createInfoPanel(
     hide,
 
     show(cards: Card[], index: number, at: TileFace, cycling: boolean): void {
-      answers.drop();
+      reactions.drop();
       settle();
 
       behind = cards.length - 1;
@@ -392,7 +392,7 @@ export function createInfoPanel(
       const outgoing = standing;
       if (!cycling) outgoing?.root.destroy();
 
-      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, answers, factionSigns());
+      const face = buildFace(scene, catalogue, cards[index], CARD_WIDTH, reactions, factionSigns());
       // Under the card it replaces, so the dissolve uncovers it, and over the stop either way.
       panel.addAt(face.root, panel.getIndex(stop) + 1);
       standing = face;
@@ -418,7 +418,7 @@ export function createInfoPanel(
 
     rescale(): void {
       if (beside === undefined) return;
-      answers.drop();
+      reactions.drop();
       stand(beside);
     },
   };
@@ -426,15 +426,15 @@ export function createInfoPanel(
 
 /**
  * The card's head over its rows, laid out in the card's own type and spacing at `width`, from its
- * top-left corner; a row raises a bubble only where its answers are handed, and a unit's head wears
- * its faction's sign where `signed`.
+ * top-left corner; a row raises a bubble only where its reactions are handed, and a unit's head
+ * wears its faction's sign where `signed`.
  */
 function buildFace(
   scene: Phaser.Scene,
   catalogue: Catalogue,
   card: Drawing,
   width: number,
-  answers: RowAnswers | undefined,
+  reactions: RowReactions | undefined,
   signed: boolean,
 ): Face {
   const { em, pad } = metricsOf(width);
@@ -480,7 +480,7 @@ function buildFace(
 
   /** The box a term raises its bubble from, named so a spec finds the rows in the order drawn. */
   const listen = (x: number, rowTop: number, across: number, down: number, term: Term): void => {
-    if (answers === undefined) return;
+    if (reactions === undefined) return;
     const hover = scene.add
       .zone(x, rowTop, across, down)
       .setOrigin(0, 0)
@@ -488,8 +488,8 @@ function buildFace(
       .setInteractive();
     onHover(
       hover,
-      () => answers.raise(rowTop + down / 2, text(`tooltip.${term}`)),
-      () => answers.drop(),
+      () => reactions.raise(rowTop + down / 2, text(`tooltip.${term}`)),
+      () => reactions.drop(),
     );
     contents.push(hover);
     hovers.push(hover);

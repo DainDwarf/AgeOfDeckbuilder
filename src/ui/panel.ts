@@ -3,18 +3,18 @@ import { pressOf } from './bindings';
 import { dashAlong } from './card-face';
 import { SLIDE_HOME, stopMotion, travel } from './card-motion';
 import {
-  answersPress,
   type Box,
   onClick,
   onHover,
   onLetGoOffCanvas,
+  reactsToPress,
   type Stratum,
   thingUnder,
   whileUp,
 } from './design-space';
 import { LOOK } from './look';
 import { createScroll, heldAt, pointInBox, reachOf, thumbOf } from './scroll';
-import type { Answers, Point } from './stack';
+import type { Point, Reactions } from './stack';
 
 /**
  * What a press held on a thing carries: its copy, drawn where the thing stands unscrolled, and the
@@ -26,12 +26,13 @@ export type Carry = {
 };
 
 /**
- * A thing a panel holds that answers the pointer, its box as it stands unscrolled. A thing no left
- * click answers, or on a surface with no carrier, carries nothing, whatever carry it declares.
+ * A thing a panel holds that reacts to the pointer, its box as it stands unscrolled. A thing that
+ * reacts to no left click, or on a surface with no carrier, carries nothing, whatever carry it
+ * declares.
  */
 export type Held = {
   readonly box: Box;
-  readonly answers: Answers;
+  readonly reactions: Reactions;
   readonly press?: () => void;
   readonly carry?: Carry;
 };
@@ -143,7 +144,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
   };
 }
 
-/** What a panel draws from its frame's top, the things in it that answer, and where its last line ends. */
+/** What a panel draws from its frame's top, the things in it that react, and where its last line ends. */
 export type Filled = {
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly held: readonly Held[];
@@ -188,14 +189,14 @@ export type Panel = {
   holdStill(): void;
   /** Whether it is among the objects an input event of its scene hands as under the pointer. */
   under(over: readonly Phaser.GameObjects.GameObject[]): boolean;
-  /** Takes the panel down, and everything it answers with. */
+  /** Takes the panel down, and everything it reacts with. */
   down(): void;
 };
 
 /**
  * A panel cut at its frame and scrolled as a browse is, from the offset handed as far as it reaches,
- * every press on it answered through its frame by the thing under the pointer, and a press held on a
- * thing that carries handed to the carrier.
+ * the thing under the pointer reacting through its frame to every press on it, and a press held on
+ * a thing that carries handed to the carrier.
  */
 export function createPanel(
   { scene, on, follow, carrier }: Surface,
@@ -240,10 +241,10 @@ export function createPanel(
   root.setData('overflow', reach);
   scroll.reach(reach);
   scroll.stand(offset);
-  answersPress(zone, (pointer) => {
+  reactsToPress(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);
     const under = heldAt(frame, scroll.offset, held, at.x, at.y);
-    return under !== undefined && (under.press !== undefined || under.answers.rests(at));
+    return under !== undefined && (under.press !== undefined || under.reactions.rests(at));
   });
 
   /** The thing the pointer was last read on, and nothing while it is on none. */
@@ -257,9 +258,9 @@ export function createPanel(
         ? undefined
         : on.at(pointer.x, pointer.y);
     const under = at === undefined ? undefined : heldAt(frame, scroll.offset, held, at.x, at.y);
-    if (pointed !== under) pointed?.answers.point(undefined);
+    if (pointed !== under) pointed?.reactions.point(undefined);
     pointed = under;
-    under?.answers.point(at);
+    under?.reactions.point(at);
   };
 
   zone.on('pointerdown', () => {
@@ -301,7 +302,7 @@ export function createPanel(
       const at = on.at(pointer.x, pointer.y);
       const under = heldAt(frame, scroll.offset, held, at.x, at.y);
       if (under === undefined) beside?.();
-      else under.answers.inspect(at);
+      else under.reactions.inspect(at);
     },
     'right',
   );
@@ -365,7 +366,7 @@ type Scrollbar = { stand(offset: number): void; down(): void };
 
 /**
  * The scrollbar down the right edge of a panel's frame over a scroll reaching this far, drawn over
- * the panel and answering no press; none where the room holds the panel whole.
+ * the panel and reacting to no press; none where the room holds the panel whole.
  */
 function scrollbarOf(
   scene: Phaser.Scene,

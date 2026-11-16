@@ -10,13 +10,13 @@ import { EASE, ended, stopMotion } from './card-motion';
 import { thresholdOf } from './city-bar';
 import {
   addText,
-  answersPress,
   BAR_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
   ownBoxOf,
+  reactsToPress,
   type SizedStyle,
   type Stratum,
   UI_FONT,
@@ -98,7 +98,7 @@ export function createResourceBar(
   const { cityMode, toggleYield } = presses;
   const bar = scene.add.container(0, 0);
   on.layer.add(bar);
-  // Never marked as answering a press, or the pointer is the hand over the whole bar.
+  // Never marked as reacting to a press, or the pointer is the hand over the whole bar.
   const paper = scene.add
     .rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill)
     .setOrigin(0, 0)
@@ -125,7 +125,7 @@ export function createResourceBar(
 
   for (const entry of entries) {
     const { key } = entry;
-    onClick(answersPress(entry.hover), () => {
+    onClick(reactsToPress(entry.hover), () => {
       if (managesCity(key)) cityMode();
       else toggleYield(key);
     });

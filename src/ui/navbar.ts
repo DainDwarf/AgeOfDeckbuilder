@@ -2,12 +2,12 @@ import type Phaser from 'phaser';
 import { layOutBar } from './bar-layout';
 import {
   addText,
-  answersPress,
   BAR_HEIGHT,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  reactsToPress,
   type Stratum,
   stratumOf,
   UI_FONT,
@@ -103,7 +103,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
         .rectangle(middle, y + BUTTON_HEIGHT / 2, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.button)
         .setName(`navbar-${screen}`)
         .setInteractive();
-      answersPress(face);
+      reactsToPress(face);
       onClick(face, () => {
         overlayAhead(scene.scene);
         scene.scene.start(screen);

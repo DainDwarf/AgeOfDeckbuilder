@@ -16,12 +16,12 @@ import {
 } from './bindings';
 import {
   addText,
-  answersPress,
   BAR_HEIGHT,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
+  reactsToPress,
   type SizedStyle,
   UI_FONT,
   whileUp,
@@ -286,7 +286,7 @@ function pressable(
     .rectangle(at.x, at.y, at.width, at.height, LOOK.button)
     .setName(name)
     .setInteractive();
-  answersPress(face);
+  reactsToPress(face);
   onClick(face, pressed);
   const label = addText(scene, at.x, at.y, '', style).setOrigin(0.5).setName(`${name}-label`);
   return { face, label };
@@ -574,7 +574,7 @@ function linesHeight(lines: readonly Phaser.GameObjects.Text[]): number {
 /** A button of a window: its name, what it reads, and what pressing it does. */
 type Button = { readonly name: string; readonly reads: string; readonly pressed: () => void };
 
-/** The buttons a window lists on the screen standing, each answered by the window's presses. */
+/** The buttons a window lists on the screen standing, each reacting with the window's presses. */
 function buttonsOf(scene: Phaser.Scene, which: MenuWindow, on: Presses): Button[] {
   return listed(scene, which).map((press) => ({
     name: `${which}-${press}`,
@@ -698,7 +698,7 @@ function layWindow(
 
 /**
  * The window a refused save raises, centred on the design space: its title, the line under it, and
- * Back, which `back` answers. The box takes the pointer as a menu window's does.
+ * Back, which reacts with `back`. The box takes the pointer as a menu window's does.
  */
 export function createRefusedSaveWindow(
   scene: Phaser.Scene,
@@ -785,6 +785,6 @@ export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void
   const y = BAR_HEIGHT / 2;
   face.setPosition(x, y);
   label.setPosition(x, y);
-  answersPress(face.setInteractive());
+  reactsToPress(face.setInteractive());
   onClick(face, pressed);
 }

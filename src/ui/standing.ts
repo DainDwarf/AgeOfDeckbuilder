@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
-import { addText, answersPress, onClick, type Stratum, UI_FONT } from './design-space';
+import { addText, onClick, reactsToPress, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
@@ -27,7 +27,7 @@ export type Standing = { show(on: boolean): void };
 
 /**
  * What one standing is drawn for: the name its objects take, its colour, the word on its chip, and
- * what a press on that chip leaves — nothing on a chip that answers none.
+ * what a press on that chip leaves — nothing on a chip that reacts to none.
  */
 export type Stood = {
   readonly name: string;
@@ -73,14 +73,14 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
   label.setPosition(x + width / 2, y + height / 2);
 
   const leave = stood.leave;
-  if (leave !== undefined) onClick(answersPress(chip), leave);
+  if (leave !== undefined) onClick(reactsToPress(chip), leave);
 
   return {
     show(on: boolean): void {
       frame.setVisible(on);
       chip.setVisible(on);
       label.setVisible(on);
-      // Interactive while it stands, answering a press or not, so no press reaches the map under it.
+      // Interactive while it stands, reacting to a press or not, so no press reaches the map under it.
       if (on) chip.setInteractive();
       else chip.disableInteractive();
     },

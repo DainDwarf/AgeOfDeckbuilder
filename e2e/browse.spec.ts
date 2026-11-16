@@ -49,7 +49,7 @@ import {
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 const PAST_HANDOVER = 400;
 
-/** The cursor over something that answers a left click or a rest. */
+/** The cursor over something that reacts to a left click or a rest. */
 const HAND = 'pointer';
 
 const PILES: readonly PileKind[] = ['draw-pile', 'discard-pile', 'exhaust-pile'];
@@ -231,7 +231,7 @@ test('a card shown large holds a browse still under the two keys that pan the ma
   expect(problems).toEqual([]);
 });
 
-test('a left click on a pile opens nothing; a right click opens its browse, a stack per card that reads the same with its copies on a badge, in the order of the collection; a stack answers no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
+test('a left click on a pile opens nothing; a right click opens its browse, a stack per card that reads the same with its copies on a badge, in the order of the collection; a stack reacts to no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
   page,
 }) => {
   const problems = watch(page);

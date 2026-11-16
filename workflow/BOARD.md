@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The pointer's answers renamed** — in `src/ui/` and `e2e/` no identifier, comment or test title says "answer" for a thing on the screen reacting to an input, the family reading `Reactions`, `reactionsOf`, `reactionsOfNames`, `reactionsAround`, `Held.reactions`, `RowReactions` and `reactsToPress`; `npm run check`, `npm test` and `npm run lint` pass, and `e2e/browse.spec.ts` passes. Doc-impact: none. [board/the-pointers-answers-renamed.md](board/the-pointers-answers-renamed.md)
 - **The capstone's window as text** — the capstone's window reads the capstone as the deal window reads an answer, as text and no longer as a card.
 - **The card face** — the face's layout in the look, in the hand and shown large: the art box, the name, the cost, the text, the kind label and the influence, its states and the card back, with room for what a building's and a unit's card will read.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.

@@ -34,7 +34,7 @@ import {
 /** The event the first spec opens on. */
 const LEAN_SEASON = 'lean-season';
 
-/** The cursor over something that answers a press. */
+/** The cursor over something that reacts to a press. */
 const HAND = 'pointer';
 
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */

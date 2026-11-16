@@ -29,7 +29,7 @@ export class OverlayScene extends Phaser.Scene {
   /** Where whatever the screen under it raises on the overlay is added. */
   strata!: Strata;
 
-  /** What the widget drawn here answers a key or a mouse key with, and nothing while none is built. */
+  /** What the widget drawn here reacts to a key or a mouse key with, and nothing while none is built. */
   private taker: ((press: Bind) => boolean) | undefined;
 
   /** What the widget drawn here scrolls with, and nothing while none is built. */
@@ -49,7 +49,7 @@ export class OverlayScene extends Phaser.Scene {
       tooltip: stratumOf(this.add.layer().setName('tooltip'), camera),
     };
     // A restart keeps the instance and its fields (docs/PHASER.md), so the widget of the screen that
-    // has just gone down would answer keys and the wheel until the next one is built.
+    // has just gone down would react to keys and the wheel until the next one is built.
     this.taker = undefined;
     this.scroller = undefined;
     holdDesignSpace(this, camera);
@@ -87,7 +87,7 @@ export class OverlayScene extends Phaser.Scene {
 
 /**
  * The overlay started anew, before the screen about to open is started: its keyboard plugin then
- * hears a key first, and nothing the screen before built on it answers one (docs/PHASER.md).
+ * hears a key first, and nothing the screen before built on it reacts to one (docs/PHASER.md).
  */
 export function overlayAhead(scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager): void {
   // A scene's plugin queues the start, and its own `start` would stop the scene calling it.

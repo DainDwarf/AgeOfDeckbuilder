@@ -37,7 +37,7 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** The cursor over something that answers a press. */
+/** The cursor over something that reacts to a press. */
 const HAND = 'pointer';
 
 /** The chronicle opened and the play that wins it made: the ending screen rises from here. */
@@ -190,7 +190,7 @@ test('a defeat keeps on the ledger the challenge it kept, greyed, reading what i
   expect(problems).toEqual([]);
 });
 
-test('End chronicle answers no press and reads an arrow while the ending screen rises, and reads the hand under a pointer resting on it once the screen has risen', async ({
+test('End chronicle reacts to no press and reads an arrow while the ending screen rises, and reads the hand under a pointer resting on it once the screen has risen', async ({
   page,
 }) => {
   const problems = watch(page);

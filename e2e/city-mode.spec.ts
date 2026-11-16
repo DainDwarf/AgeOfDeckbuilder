@@ -38,10 +38,10 @@ import {
   playedOut,
   playerCityTile,
   type Reading,
+  reacted,
   readings,
   readingsAndUnitMarks,
   refusalLines,
-  rested,
   ringedTile,
   settledOn,
   shownCard,
@@ -165,12 +165,6 @@ async function inCityMode(page: Page): Promise<boolean> {
   return chip;
 }
 
-/** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
-async function answered(page: Page): Promise<void> {
-  await rested(page);
-  await rested(page);
-}
-
 /** What the tiles inside the border yield, point by point, and what every tile the map draws does. */
 async function yielded(page: Page): Promise<{ inside: Glyphs; drawn: Glyphs }> {
   const chronicle = await chronicleOf(page);
@@ -191,15 +185,15 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   await openSaved(page, launchedAs(1));
 
   await page.keyboard.press('c');
-  await answered(page);
+  await reacted(page);
   expect(await inCityMode(page)).toBe(false);
 
   await click(page, 'reading-culture');
-  await answered(page);
+  await reacted(page);
   expect(await inCityMode(page)).toBe(false);
 
   await click(page, 'reading-idle');
-  await answered(page);
+  await reacted(page);
   expect(await inCityMode(page)).toBe(false);
 
   expect(problems).toEqual([]);
@@ -280,7 +274,7 @@ test('a left click on the city’s own tile once selected enters city mode, and 
   await expect.poll(() => ringedTile(page)).toBe(tileKey(near));
 
   await page.mouse.click(at.x, at.y);
-  await answered(page);
+  await reacted(page);
   expect(await ringedTile(page)).toBe(tileKey(near));
   expect(await inCityMode(page)).toBe(false);
 
@@ -304,13 +298,13 @@ test('a right click in city mode inspects the tile under it without selecting, a
 
   // Its terrain card is the whole of it, so a further press leaves that card standing.
   await page.mouse.click(at.x, at.y, { button: 'right' });
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBeUndefined();
 
   // The first back key takes the infopanel down; the mode stands until the next one.
   await page.keyboard.press('Escape');
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBeUndefined();
   expect(await inCityMode(page)).toBe(true);
   await page.keyboard.press('Escape');
@@ -365,7 +359,7 @@ test('a press on culture or idle enters city mode, and the chip leaves it', asyn
   await expect.poll(() => inCityMode(page)).toBe(true);
 
   await click(page, 'reading-idle');
-  await answered(page);
+  await reacted(page);
   expect(await inCityMode(page)).toBe(true);
 
   await click(page, 'city-chip');
@@ -523,13 +517,13 @@ test('a drag in city mode let go anywhere else changes nothing and leaves the se
   await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
 
   await dragTiles(page, own, outside);
-  await answered(page);
+  await reacted(page);
   expect(await chronicleOf(page)).toEqual(chronicle);
   expect(await counted(page, 'assigned')).toBe(chronicle.assigned.length);
   expect(await ringedTile(page)).toBe(tileKey(own));
 
   await dragTiles(page, claimed, own);
-  await answered(page);
+  await reacted(page);
   expect(await chronicleOf(page)).toEqual(chronicle);
   expect(await counted(page, 'assigned')).toBe(chronicle.assigned.length);
   expect(await ringedTile(page)).toBe(tileKey(own));
@@ -613,7 +607,7 @@ test('a second click the city cannot pay for claims nothing and says so, and one
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(near.x, near.y);
-  await answered(page);
+  await reacted(page);
   expect(await refusalLines(page)).toEqual(unpaid);
   // The tile goes on wearing what the claim asks for, under the note.
   expect(await thresholdShown(page)).toBe(asked);
@@ -625,7 +619,7 @@ test('a second click the city cannot pay for claims nothing and says so, and one
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
-  await answered(page);
+  await reacted(page);
   expect(await ringedTile(page)).toBe(tileKey(farTile));
   expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
@@ -670,7 +664,7 @@ test('a second click the city can pay for claims the tile, which stays selected 
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
-  await answered(page);
+  await reacted(page);
   expect(await refusalLines(page)).toBeUndefined();
   expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(farTile));
 
@@ -834,7 +828,7 @@ test('a window standing over the chronicle screen takes the city key', async ({ 
   await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   await page.keyboard.press('c');
-  await answered(page);
+  await reacted(page);
   expect(await inCityMode(page)).toBe(false);
   expect(await standing(page, 'menu')).toBe(true);
 

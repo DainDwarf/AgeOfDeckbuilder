@@ -22,7 +22,7 @@ export function createShownEvent(
     .container(over.x, over.y - CLEAR - HEIGHT)
     .setName('shown-event')
     .setVisible(false);
-  // Interactive, so no press reaches the map under it, and never marked as answering one.
+  // Interactive, so no press reaches the map under it, and never marked as reacting to one.
   const stop = scene.add.zone(0, 0, width, HEIGHT).setOrigin(0, 0).setInteractive();
   const paper = paperOf(scene, width, HEIGHT, LOOK.panelFill);
   const line = addText(scene, width / 2, HEIGHT / 2, '', TEXT_STYLE)

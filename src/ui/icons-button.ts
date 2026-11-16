@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { answersPress, onClick, type Stratum } from './design-space';
+import { onClick, reactsToPress, type Stratum } from './design-space';
 import { createPaperButton } from './menu';
 import { createWell, placeWell, SUNK } from './resource-bar';
 import { CHIP_INSET } from './standing';
@@ -35,7 +35,7 @@ export function createIconsButton(
     .setOrigin(0, 0)
     .setName('icons-button')
     .setInteractive();
-  onClick(answersPress(press), pressed);
+  onClick(reactsToPress(press), pressed);
   on.layer.add([face, well, label, press]);
 
   const button = {

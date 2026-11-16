@@ -114,7 +114,7 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
         .setName(index === newest ? 'inspection' : `inspection-${index}`)
         .setPosition(left + index * BAND + WIDTH / 2, top + index * BAND + height)
         // The card is interactive so that both presses on it reach nothing beneath, the scrim
-        // included; only its names answer one.
+        // included; only its names react to one.
         .setInteractive({
           hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -height, WIDTH, height),
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
@@ -235,7 +235,7 @@ export function standLarge(
   };
 }
 
-/** What a face on a screen of the meta or in a browse answers the rest and the right click with. */
+/** What a face on a screen of the meta or in a browse reacts to the rest and the right click with. */
 export type Inspecting = {
   /** The stratum the pointer is read on over the screen's faces. */
   readonly on: Stratum;
@@ -244,7 +244,7 @@ export type Inspecting = {
   readonly large: ShownLarge;
 };
 
-/** What a screen lays its pieces with: its scene, the catalogue, and what their faces answer with. */
+/** What a screen lays its pieces with: its scene, the catalogue, and what their faces react with. */
 export type Laying = {
   readonly scene: Phaser.Scene;
   readonly catalogue: Catalogue;
@@ -300,10 +300,10 @@ export function layingOf(
 export type Point = { readonly x: number; readonly y: number };
 
 /**
- * What a face on a screen of the meta or in a browse answers the pointer with, read at a point of the
- * design space.
+ * What a face on a screen of the meta or in a browse reacts to the pointer with, read at a point of
+ * the design space.
  */
-export type Answers = {
+export type Reactions = {
   /** The pointer on the face's ground at this point, or off it. */
   point(at: Point | undefined): void;
   /** Whether the pointer resting at this point raises anything. */
@@ -314,12 +314,12 @@ export type Answers = {
 
 /**
  * The rest on a name raises its small card, and the right click on a name shows the named thing
- * large; nothing answers off the names.
+ * large; nothing reacts off the names.
  */
-export function answersOfNames(
+export function reactionsOfNames(
   drawn: Pick<CardFace, 'nameAt' | 'spotOf'>,
   { small, large }: Inspecting,
-): Answers {
+): Reactions {
   return {
     point(at) {
       const named = at === undefined ? undefined : drawn.nameAt(at.x, at.y);
@@ -336,11 +336,11 @@ export function answersOfNames(
 }
 
 /**
- * The names answer as `answersOfNames` has them, the rest on a label of the foot raises that label's
- * bubble, and the right click on the rest of the card shows the face itself.
+ * The names react as `reactionsOfNames` has them, the rest on a label of the foot raises that
+ * label's bubble, and the right click on the rest of the card shows the face itself.
  */
-export function answersOf(card: CardFace, shown: Face, inspecting: Inspecting): Answers {
-  const names = answersOfNames(card, inspecting);
+export function reactionsOf(card: CardFace, shown: Face, inspecting: Inspecting): Reactions {
+  const names = reactionsOfNames(card, inspecting);
   const { footBubble, large } = inspecting;
   return {
     point(at) {
@@ -358,16 +358,16 @@ export function answersOf(card: CardFace, shown: Face, inspecting: Inspecting): 
 }
 
 /**
- * The face's answers, a right click off its names doing what `elsewhere` does wherever it lands, on
- * the face and around it.
+ * The face's reactions, a right click off its names doing what `elsewhere` does wherever it lands,
+ * on the face and around it.
  */
-export function answersAround(
+export function reactionsAround(
   card: CardFace,
   shown: Face,
   inspecting: Inspecting,
   elsewhere: () => void,
-): Answers {
-  const { point, rests } = answersOf(card, shown, inspecting);
+): Reactions {
+  const { point, rests } = reactionsOf(card, shown, inspecting);
   return {
     point,
     rests,
@@ -379,30 +379,30 @@ export function answersAround(
   };
 }
 
-/** A zone laid over the box, answering the rest and the right click through it. */
+/** A zone laid over the box, reacting to the rest and the right click through it. */
 export function inspectedThrough(
   scene: Phaser.Scene,
   box: Box,
-  answers: Answers,
+  reactions: Reactions,
   on: Stratum,
 ): Phaser.GameObjects.Zone {
   const zone = scene.add
     .zone(box.x + box.width / 2, box.y + box.height / 2, box.width, box.height)
     .setInteractive();
   zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-    answers.point(on.at(pointer.x, pointer.y));
+    reactions.point(on.at(pointer.x, pointer.y));
   });
   onHover(
     zone,
     () => {},
     () => {
-      answers.point(undefined);
+      reactions.point(undefined);
     },
   );
   onClick(
     zone,
     (pointer) => {
-      answers.inspect(on.at(pointer.x, pointer.y));
+      reactions.inspect(on.at(pointer.x, pointer.y));
     },
     'right',
   );

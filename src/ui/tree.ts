@@ -5,11 +5,11 @@ import { type Control, type Press, pressOf } from './bindings';
 import { createFootBubble, type Name } from './card-face';
 import {
   addText,
-  answersPress,
   dragged,
   MARGIN,
   onClick,
   onLetGoOffCanvas,
+  reactsToPress,
   UI_FONT,
 } from './design-space';
 import { glyphOf } from './glyphs';
@@ -254,7 +254,7 @@ export function createTree(
           marking.setVisible(on);
           pinToggled(technology, on);
         };
-        const paper = answersPress(
+        const paper = reactsToPress(
           paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.panelFill).setInteractive(),
         );
         // The tree's drag begins on the scene's own press: one that dragged it ends on a plate.
@@ -309,7 +309,7 @@ export function createTree(
       );
     };
 
-    const answers: RunNames = {
+    const reactions: RunNames = {
       over: (raiser, on) => {
         if (on) hovered = raiser;
         else if (hovered === raiser) hovered = undefined;
@@ -320,7 +320,14 @@ export function createTree(
     };
     /** An entry drawn as a run from that line down, wrapped at that width; how many lines it took. */
     const run = (entry: string, line: number, named: string, width: number): number => {
-      const drawn = drawRun(scene, face, entry, { x: values, y: lineMiddle(line) }, width, answers);
+      const drawn = drawRun(
+        scene,
+        face,
+        entry,
+        { x: values, y: lineMiddle(line) },
+        width,
+        reactions,
+      );
       drawn.label.setName(named);
       names.push(...drawn.names);
       return drawn.lines;

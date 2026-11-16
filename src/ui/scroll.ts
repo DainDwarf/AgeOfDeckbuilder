@@ -1,4 +1,4 @@
-/** What scrolls on a screen computes before it draws: how far it moves, and what answers where. */
+/** What scrolls on a screen computes before it draws: how far it moves, and what reacts where. */
 
 import type { Box } from './design-space';
 

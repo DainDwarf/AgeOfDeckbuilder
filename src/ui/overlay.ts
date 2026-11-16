@@ -38,7 +38,7 @@ import type { Held, Panel } from './panel';
 import { type PileKind, pileOf } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
-import { type Answers, answersOf, answersOfNames } from './stack';
+import { type Reactions, reactionsOf, reactionsOfNames } from './stack';
 import { buildingName, cardName, text } from './text';
 
 const GRID_GAP = 26;
@@ -67,8 +67,8 @@ export type Overlay = {
 
 /**
  * One entry offered on the scrim — an answer, or copies of a card — what it costs the city, which its
- * note says, whether or not it wears a chip for it, what it is drawn refused by, and the number a
- * press on it answers by.
+ * note says, whether or not it wears a chip for it, what it is drawn refused by, and the number it
+ * reacts to a press with.
  */
 type Offered = {
   readonly costs: readonly Cost[];
@@ -85,14 +85,14 @@ function offeredCard(face: Face, at: number, copies: number): Offered {
 }
 
 /**
- * Where one offered entry was laid out: everything it draws, the box it answers the pointer over and
- * how, and the box of the face or the answer itself, which a note stands over.
+ * Where one offered entry was laid out: everything it draws, the box it reacts to the pointer over
+ * and how, and the box of the face or the answer itself, which a note stands over.
  */
 type Placed = Offered & {
   readonly part: Phaser.GameObjects.GameObject;
   readonly box: Box;
   readonly own: Box;
-  readonly answers: Answers;
+  readonly reactions: Reactions;
 };
 
 /**
@@ -146,7 +146,7 @@ type OverlayOf = EndingOf & {
 };
 
 /**
- * The scrim and what stands on it, on the overlay scene: nothing beneath answers a pointer while
+ * The scrim and what stands on it, on the overlay scene: nothing beneath reacts to a pointer while
  * anything stands, and `covering` is told as the scrim goes up and comes down. The ending screen
  * reads what `paid` answers once the chronicle has ended, and its button leaves through `leave`.
  */
@@ -233,7 +233,12 @@ export function createOverlay({
             plate.root.setPosition(left, top);
             plate.standTall(height);
             const box = { x: left, y: top, width: ANSWER_WIDTH, height };
-            return { part: plate.root, box, own: box, answers: answersOfNames(plate, inspecting) };
+            return {
+              part: plate.root,
+              box,
+              own: box,
+              reactions: reactionsOfNames(plate, inspecting),
+            };
           },
         };
       }
@@ -243,7 +248,7 @@ export function createOverlay({
           height: CARD_HEIGHT,
           lay(left, top) {
             if (offered.copies > 1) {
-              const { stacked, parts, box, answers } = badgedStackOf(
+              const { stacked, parts, box, reactions } = badgedStackOf(
                 { scene, inspecting },
                 {
                   shown: offered.face,
@@ -259,7 +264,7 @@ export function createOverlay({
                 part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
                 box,
                 own: stacked.face,
-                answers,
+                reactions,
               };
             }
             const drawn = createCardFace(scene, offered.face, offered.refusal);
@@ -272,7 +277,7 @@ export function createOverlay({
               part: drawn.root,
               box,
               own: box,
-              answers: answersOf(drawn, offered.face, inspecting),
+              reactions: reactionsOf(drawn, offered.face, inspecting),
             };
           },
         };
@@ -321,7 +326,7 @@ export function createOverlay({
       held: placed.map(
         (entry): Held => ({
           box: entry.box,
-          answers: entry.answers,
+          reactions: entry.reactions,
           get press() {
             return live()
               ? () => {

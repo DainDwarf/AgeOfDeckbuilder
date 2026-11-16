@@ -21,7 +21,7 @@ import { cardFaceAtStart, type Face, kindLabel } from './face';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Filled, Held } from './panel';
-import { type Answers, answersOf, type Inspecting, type Laying } from './stack';
+import { type Inspecting, type Laying, type Reactions, reactionsOf } from './stack';
 import { cardName, type TextKey, text } from './text';
 
 const SECTION_TOP = 6;
@@ -68,8 +68,8 @@ const KIND_STYLE = {
   letterSpacing: 0.12 * KIND_SIZE,
 };
 
-/** What a row answers: the right click shows its card large, and it raises nothing small. */
-function rowAnswersOf(face: Face, { large }: Inspecting): Answers {
+/** What a row reacts to: the right click shows its card large, and it raises nothing small. */
+function rowReactionsOf(face: Face, { large }: Inspecting): Reactions {
   return {
     point() {},
     rests() {
@@ -243,7 +243,7 @@ export function deckPanelOf(
     parts.push(rowOf(scene, face, copies, box, name));
     held.push({
       box,
-      answers: rowAnswersOf(face, inspecting),
+      reactions: rowReactionsOf(face, inspecting),
       press,
       carry: { copy: () => rowOf(scene, face, copies, box, 'carried-card'), lands },
     });
@@ -362,7 +362,7 @@ function cityCellOf(
     card.root.setPosition(x + CARD_WIDTH / 2, y + box.height).setName('civilization-city');
     return {
       parts: [cityEdgeOf(scene, box), card.root],
-      held: [{ box, answers: answersOf(card, shown, inspecting) }],
+      held: [{ box, reactions: reactionsOf(card, shown, inspecting) }],
       bottom: y + box.height + CITY_EDGE_OFF + CITY_EDGE,
     };
   };

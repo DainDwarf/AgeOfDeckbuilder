@@ -18,7 +18,6 @@ import { createPile } from './civilization-pile';
 import { offerEntries } from './debug-console';
 import {
   addText,
-  answersPress,
   awayUnder,
   COVERED,
   corners,
@@ -27,6 +26,7 @@ import {
   holdDesignSpace,
   MARGIN,
   onClick,
+  reactsToPress,
   UI_FONT,
 } from './design-space';
 import { ledgerRowsOf } from './ending-screen';
@@ -127,7 +127,7 @@ function polygonOn(
   return scene.add.polygon(x, y, corners(raw.flat()), fill);
 }
 
-/** A polygon answering a press on its own shape, not on the box around it. */
+/** A polygon reacting to a press on its own shape, not on the box around it. */
 function pressedOnShape(polygon: Phaser.GameObjects.Polygon): Phaser.GameObjects.Polygon {
   return polygon.setInteractive(polygon.geom, Phaser.Geom.Polygon.Contains);
 }
@@ -269,7 +269,7 @@ function pilesOf(
         browse(id);
       },
     );
-    const zone = inspectedThrough(scene, pile.box, pile.answers, inspecting.on);
+    const zone = inspectedThrough(scene, pile.box, pile.reactions, inspecting.on);
     return {
       row: 'civilization',
       option: id,
@@ -351,7 +351,7 @@ export class LaunchScreen extends Phaser.Scene {
       hits,
     }: Option): Phaser.GameObjects.Container => {
       for (const hit of hits) {
-        answersPress(hit);
+        reactsToPress(hit);
         onClick(hit, () => select(row, option));
       }
       return this.add
@@ -410,7 +410,7 @@ function buttonsOf(
     .rectangle(middle, launchY, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.button)
     .setName('launch-button')
     .setInteractive();
-  answersPress(launch);
+  reactsToPress(launch);
   onClick(launch, () => {
     const held = savedOpening();
     const unpaid = held === undefined ? [] : unpaidOf(catalogue, held.resumed);
@@ -447,7 +447,7 @@ function buttonsOf(
     .setName('launch-continue');
   if (saved !== undefined) {
     face.setInteractive();
-    answersPress(face);
+    reactsToPress(face);
     onClick(face, () => open(saved));
   }
   let y = top + (BUTTON_HEIGHT - label.height) / 2;

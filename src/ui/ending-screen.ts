@@ -65,7 +65,7 @@ export function standEnding(
   /** The screen still coming up, its button dead until `risen`. */
   let rising: Drawn | undefined;
 
-  /** The rise over, however it ended: the button answers from here. */
+  /** The rise over, however it ended: the button reacts from here. */
   const risen = (): void => {
     const drawn = rising;
     if (drawn === undefined) return;

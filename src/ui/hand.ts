@@ -27,11 +27,11 @@ import {
 import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
 import type { ChronicleFaces } from './chronicle-faces';
 import {
-  answersPress,
   type Hover,
   onClick,
   onHover,
   onLetGoOffCanvas,
+  reactsToPress,
   type Stratum,
 } from './design-space';
 import { cardFace } from './face';
@@ -96,12 +96,12 @@ export type Hand = {
   unselect(): boolean;
   /** Lets the card being aimed go as `unselect` does; a card selected and not being aimed stays. */
   unaim(): void;
-  /** Whether the object is a card of the hand, every left click on which the hand answers itself. */
+  /** Whether the object is a card of the hand: the hand itself reacts to every left click on it. */
   owns(object: Phaser.GameObjects.GameObject): boolean;
 };
 
 /**
- * What the presses on the hand are answered by. Each aim is handed the card and what to call when
+ * What the hand reacts to its presses with. Each aim is handed the card and what to call when
  * it comes down, and answers the way to take it down from outside.
  */
 export type HandPresses = {
@@ -169,7 +169,7 @@ export function createHand(
   let selected: Selected | undefined;
   /** The card the hand has let go of, waiting on the stages its play resolves as. */
   let letGo: CardRecord | undefined;
-  /** Whether the hand answers the pointer; a play-out puts it down for as long as it runs. */
+  /** Whether the hand reacts to the pointer; a play-out puts it down for as long as it runs. */
   let taking = true;
 
   // A dead card stays interactive, so a press on it stops there, and no leave comes as the hand dies:
@@ -446,12 +446,12 @@ export function createHand(
         };
       })
       .on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        const answering = taking && dragged === undefined;
-        small.over(answering ? nameUnder(record, pointer) : undefined);
-        footBubble.over(face, answering ? onFoot(record, pointer) : undefined);
+        const reacting = taking && dragged === undefined;
+        small.over(reacting ? nameUnder(record, pointer) : undefined);
+        footBubble.over(face, reacting ? onFoot(record, pointer) : undefined);
       });
 
-    answersPress(root, () => taking);
+    reactsToPress(root, () => taking);
 
     onClick(root, () => {
       if (!taking) return;
@@ -479,7 +479,7 @@ export function createHand(
     return record;
   };
 
-  /** The card out of the hand: it answers the pointer no more, and its bubble comes down. */
+  /** The card out of the hand: it reacts to the pointer no more, and its bubble comes down. */
   const letLeave = ({ face }: CardRecord): void => {
     stopMotion(scene, face.root);
     footBubble.over(face, undefined);

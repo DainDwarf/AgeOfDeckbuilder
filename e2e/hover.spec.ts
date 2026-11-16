@@ -41,7 +41,7 @@ const WINDOW = { width: 1280, height: 900 };
 /** Longer than the rest a tooltip waits out, so one that were coming has had every chance to. */
 const PAST_REST = 800;
 
-/** The cursor over something that answers a press. */
+/** The cursor over something that reacts to a press. */
 const HAND = 'pointer';
 
 test('a pointer that leaves the canvas over a resource raises no tooltip behind it', async ({

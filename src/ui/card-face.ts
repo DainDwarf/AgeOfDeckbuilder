@@ -3,7 +3,6 @@ import type { Resource } from '../rules/resources';
 import { playable, type Refusal } from '../rules/state';
 import {
   addText,
-  answersPress,
   corners,
   DESIGN_HEIGHT,
   hexagon,
@@ -11,6 +10,7 @@ import {
   onClick,
   onHover,
   ownBoxOf,
+  reactsToPress,
   type SizedStyle,
   UI_FONT,
 } from './design-space';
@@ -206,7 +206,7 @@ export type FootLabel = 'kind' | 'influence';
 
 /**
  * What a face handed these lays a zone over every name for: the pointer on it or off it, and the
- * right click. Handed `footOver`, it lays one over each label of its foot too, which answers no
+ * right click. Handed `footOver`, it lays one over each label of its foot too, which reacts to no
  * press.
  */
 export type NamePresses = {
@@ -254,7 +254,7 @@ function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjec
 
 /** An interactive zone of a face that a pool or a re-read gives its place and its size. */
 function faceZone(scene: Phaser.Scene): Phaser.GameObjects.Zone {
-  return answersPress(scene.add.zone(0, 0, 1, 1).setInteractive());
+  return reactsToPress(scene.add.zone(0, 0, 1, 1).setInteractive());
 }
 
 /** The zones over a face's names: handed the names, it lays one over each. */
@@ -289,7 +289,7 @@ function nameZonesOf(
   };
 }
 
-/** The zone over a label of a face's foot, answering no press. */
+/** The zone over a label of a face's foot, reacting to no press. */
 function footZoneOf(
   scene: Phaser.Scene,
   label: FootLabel,
@@ -307,7 +307,8 @@ function footZoneOf(
 /**
  * A face, drawn about its own bottom centre so a container's angle fans it from that corner, every
  * colour of it through the tone. The refusal marks the costs the city cannot pay, and any refusal
- * at all draws the face unplayable. Its width and whether its names answer presses are its for life.
+ * at all draws the face unplayable. Its width and whether its names react to presses are its for
+ * life.
  */
 export function createCardFace(
   scene: Phaser.Scene,

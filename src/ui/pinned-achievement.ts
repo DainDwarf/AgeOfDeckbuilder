@@ -74,7 +74,7 @@ function createPinnedAchievement(
   const nameHeight = 2 * PAD_Y + NAME_LINE;
   const fullHeight = nameHeight + TEXT_LINE * linesOf(scene, goal, inner);
   const root = scene.add.container(MAP_FRAME.x + CHIP_INSET, 0).setName(plate);
-  // Interactive, so no press reaches the map under it, and never marked as answering one.
+  // Interactive, so no press reaches the map under it, and never marked as reacting to one.
   const stop = scene.add
     .zone(0, 0, PLATE_WIDTH, fullHeight)
     .setOrigin(0, 0)

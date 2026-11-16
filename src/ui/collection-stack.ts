@@ -13,7 +13,7 @@ import { cardFaceAtStart, type Face } from './face';
 import { css, LOOK, overPage, type Tone, unworn } from './look';
 import type { Filled, Held } from './panel';
 import { chipAt, READING_GLYPH } from './resource-bar';
-import { type Answers, answersOf, type Laying } from './stack';
+import { type Laying, type Reactions, reactionsOf } from './stack';
 import { text } from './text';
 
 const UNDER_MOST = 3;
@@ -38,7 +38,7 @@ const GREYED_BUTTON_STYLE = { ...BUTTON_STYLE, color: css(LOOK.greyedInk) };
 /** What a stack reads under it, and whether it stands dimmed. */
 export type Reading = { readonly reads: string; readonly dimmed: boolean };
 
-/** What a cell of a line draws, the things in it that answer, and where it ends. */
+/** What a cell of a line draws, the things in it that react, and where it ends. */
 export type Drawn = {
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly held: readonly Held[];
@@ -53,8 +53,8 @@ function dimmed(colour: number): number {
   return overPage(colour, LOOK.whollyHeld);
 }
 
-/** What a button on a reading line answers: no rest and no right click. */
-const ANSWERS_NOTHING: Answers = {
+/** What a button on a reading line reacts to: no rest and no right click. */
+const REACTS_TO_NOTHING: Reactions = {
   point() {},
   rests() {
     return false;
@@ -94,7 +94,7 @@ export function linesOf(
   return { parts, held, foot };
 }
 
-/** A stack laid: its container, its face's answers where the face stands, its reading line, and its foot. */
+/** A stack laid: its container, its face's reactions where the face stands, its reading line, and its foot. */
 export type LaidStack = {
   /** What a piece laid on the stack joins. */
   readonly root: Phaser.GameObjects.Container;
@@ -212,7 +212,7 @@ export function stackOf(
       .container(0, 0, [...unders, card.root, count])
       .setName(`${name}-stack-${id}`)
       .setData('dimmed', reading.dimmed),
-    face: { box: face, answers: answersOf(card, shown, inspecting) },
+    face: { box: face, reactions: reactionsOf(card, shown, inspecting) },
     reading: count,
     line: { top: lineTop, middle, left, right: left + CARD_WIDTH + UNDER_REACH },
     bottom: lineTop + LINE_HEIGHT,
@@ -262,7 +262,7 @@ export function signButtonOf(
     .setOrigin(0.5)
     .setName(`${name}-sign`);
   root.add([ground, signed]);
-  return { box: button, answers: ANSWERS_NOTHING, press };
+  return { box: button, reactions: REACTS_TO_NOTHING, press };
 }
 
 /**
@@ -313,5 +313,5 @@ export function priceButtonOf(
     .setOrigin(0, 0)
     .setName(`${name}-buy`);
   root.add([ground, chip, priced]);
-  return { box: button, answers: ANSWERS_NOTHING, press: buy };
+  return { box: button, reactions: REACTS_TO_NOTHING, press: buy };
 }

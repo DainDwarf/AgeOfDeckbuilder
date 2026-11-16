@@ -30,7 +30,6 @@ import { createChronicleFaces } from './chronicle-faces';
 import { offerEntries, resetConsole } from './debug-console';
 import {
   addText,
-  answersPress,
   awayUnder,
   type Box,
   COVERED,
@@ -39,6 +38,7 @@ import {
   onClick,
   onHover,
   onLetGoOffCanvas,
+  reactsToPress,
   type Scrim,
   type Stratum,
   stopsThePointer,
@@ -726,7 +726,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       return { place: { kind: 'thing', on }, onMap: false };
     };
 
-    /** The one door every left click takes, after the thing it lands on has answered its own. */
+    /** The one door every left click takes, after the thing it lands on has reacted to its own. */
     const leftClicked = (place: Place): void => {
       switch (place.kind) {
         case 'thing':
@@ -745,7 +745,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       throw new Error(`no place is ${JSON.stringify(unlisted)}`);
     };
 
-    /** The one door every right click takes, after the thing it lands on has answered its own. */
+    /** The one door every right click takes, after the thing it lands on has reacted to its own. */
     const rightClicked = (place: Place): void => {
       switch (place.kind) {
         case 'thing':
@@ -807,7 +807,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     });
 
     // A window on the overlay takes every key ahead of this scene, so nothing here is gated on what
-    // stands over the screen; the map's own reader answers the pan and zoom keys.
+    // stands over the screen; the map's own reader reacts to the pan and zoom keys.
     onKeyDown(this, (press) => {
       if (boundTo(press, 'city')) {
         if (!leaveCityMode()) enterCityMode();
@@ -944,7 +944,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     let wanted = true;
     let standing = false;
     const live = (): boolean => wanted && standing;
-    answersPress(button, live);
+    reactsToPress(button, live);
 
     let turn = 1;
     let settlePhase = false;

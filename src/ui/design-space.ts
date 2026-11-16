@@ -446,20 +446,20 @@ export function awayUnder(scene: Phaser.Scene): (scrim: Scrim, up: boolean) => b
 type Hovering = { hovered: boolean; readonly enter: () => void; readonly leave: () => void };
 
 const hovers = new Map<Phaser.GameObjects.GameObject, Hovering[]>();
-const answering = new WeakMap<
+const reacting = new WeakMap<
   Phaser.GameObjects.GameObject,
   (pointer: Phaser.Input.Pointer) => boolean
 >();
 
 /**
- * The object marked as answering a press where `where` says it does, everywhere on it unless told:
- * the pointer there is the hand, read each frame.
+ * The object marked as reacting to a press where `where` says it does, everywhere on it unless
+ * told: the pointer there is the hand, read each frame.
  */
-export function answersPress<T extends Phaser.GameObjects.GameObject>(
+export function reactsToPress<T extends Phaser.GameObjects.GameObject>(
   object: T,
   where: (pointer: Phaser.Input.Pointer) => boolean = () => true,
 ): T {
-  answering.set(object, where);
+  reacting.set(object, where);
   return object;
 }
 
@@ -522,7 +522,7 @@ export function followPointer(game: Phaser.Game): void {
         hovering.enter();
       }
     }
-    const where = under === undefined ? undefined : answering.get(under);
+    const where = under === undefined ? undefined : reacting.get(under);
     const pointing = where?.(game.input.activePointer) === true;
     if (pointing === pointed) return;
     pointed = pointing;

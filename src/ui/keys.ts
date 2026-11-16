@@ -133,8 +133,8 @@ function carries(press: Bind): boolean {
 /**
  * Every key pressed while the scene is up, from the keyboard and from the mouse alike. A key the
  * game binds keeps the browser out of it — Tab would move the focus off the canvas, the arrows and
- * the space bar would scroll the page. Read after the press has been answered: a slot of the
- * Controls window binds the very key that opened it, and that key is the game's from then on.
+ * the space bar would scroll the page. Read after the screen has reacted to the press: a slot of
+ * the Controls window binds the very key that opened it, and that key is the game's from then on.
  */
 export function onKeyDown(scene: Phaser.Scene, pressed: (press: Bind) => void): void {
   scene.input.keyboard?.on('keydown', (event: KeyboardEvent) => {

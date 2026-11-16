@@ -214,7 +214,7 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
       if (boundTo(press, 'back')) back();
     };
 
-    // The Menu button answers no wheel, and the chronicle screen zooms under it.
+    // The Menu button reacts to no wheel, and the chronicle screen zooms under it.
     stopsThePointer(
       this,
       () => (covered ? 'every' : 'no button held'),
@@ -258,8 +258,8 @@ function download(name: string, text: string): void {
   setTimeout(() => URL.revokeObjectURL(address), 60_000);
 }
 
-// The browser opens its file window only inside a press of the player's: a button's release is
-// answered from inside the DOM's own mouseup (phaser/src/input/mouse/MouseManager.js:412,
+// The browser opens its file window only inside a press of the player's: the screen reacts to a
+// button's release from inside the DOM's own mouseup (phaser/src/input/mouse/MouseManager.js:412,
 // phaser/src/input/InputPlugin.js:2041), so nothing between the release and the click may await.
 /** The browser's own file window, and the text of the file chosen in it once read; none chosen, nothing. */
 function chooseFile(chosen: (text: string) => void): void {

@@ -23,11 +23,11 @@ import { blockLength, SHUFFLE, stopMotion, TURN_OVER, travel, turnOver } from '.
 import type { ChronicleFaces } from './chronicle-faces';
 import {
   addText,
-  answersPress,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
+  reactsToPress,
   type Stratum,
   UI_FONT,
 } from './design-space';
@@ -71,7 +71,7 @@ export type Piles = {
   play(stage: Stage): Promise<void> | undefined;
 };
 
-/** What the presses on the piles are answered by. */
+/** What the piles react to their presses with. */
 export type PilePresses = {
   /** The pile's browse raised. */
   browse(pile: PileKind): void;
@@ -98,10 +98,16 @@ export function createPiles(
   },
   presses: PilePresses,
 ): Piles {
-  const answers = { small, footBubble, presses };
+  const reactions = { small, footBubble, presses };
   const back = createCardBack(scene);
-  const drawn = createPile(scene, on.resting, 'draw-pile', back.root, answers);
-  const discarded = createPile(scene, on.resting, 'discard-pile', createEmptySlot(scene), answers);
+  const drawn = createPile(scene, on.resting, 'draw-pile', back.root, reactions);
+  const discarded = createPile(
+    scene,
+    on.resting,
+    'discard-pile',
+    createEmptySlot(scene),
+    reactions,
+  );
   const exhausted = createTab(scene, on.resting, presses);
 
   /** What the shuffle flies: the face it takes off with comes to stand over this back. */
@@ -284,9 +290,9 @@ type Pile = {
 };
 
 /**
- * One pile: a right click on it raises its browse, a name on its top card excepted, which answers
- * the rest and the right click as a name does anywhere, and the labels of the top card's foot answer
- * the rest. `blank` stands at its place under no face.
+ * One pile: a right click on it raises its browse, a name on its top card excepted, which reacts to
+ * the rest and the right click as a name does anywhere, and the labels of the top card's foot react
+ * to the rest. `blank` stands at its place under no face.
  */
 function createPile(
   scene: Phaser.Scene,
@@ -332,7 +338,7 @@ function createPile(
     return shown?.footAt(at.x, at.y);
   };
 
-  answersPress(
+  reactsToPress(
     press,
     (pointer) => nameUnder(pointer) !== undefined || onFoot(pointer) !== undefined,
   );

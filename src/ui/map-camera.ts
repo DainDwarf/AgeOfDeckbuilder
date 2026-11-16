@@ -51,7 +51,7 @@ function boxOf(tiles: readonly Tile[]): {
   };
 }
 
-/** What a catcher's press answers to. */
+/** What a catcher reacts to a press with. */
 export type PressTaker = {
   /**
    * Whether this press may carry the map: one that takes hold of something answers false. Asked

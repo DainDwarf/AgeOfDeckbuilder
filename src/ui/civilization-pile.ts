@@ -6,7 +6,7 @@ import { countsOf } from './collection-layout';
 import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
 import { css, LOOK } from './look';
-import { type Answers, answersAround, type Laying } from './stack';
+import { type Laying, type Reactions, reactionsAround } from './stack';
 import { text } from './text';
 
 const PILE_BACKS = 3;
@@ -28,8 +28,8 @@ export type Pile = {
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   /** Over the whole pile and its counts. */
   readonly box: Box;
-  /** What the pile answers the rest and the right click with, over its whole box. */
-  readonly answers: Answers;
+  /** What the pile reacts to the rest and the right click with, over its whole box. */
+  readonly reactions: Reactions;
   /** Where its counts end. */
   readonly bottom: number;
 };
@@ -78,7 +78,7 @@ export function createPile(
   return {
     parts: [...backs, face, counts],
     box: bounds,
-    answers: answersAround(card, shown, inspecting, browse),
+    reactions: reactionsAround(card, shown, inspecting, browse),
     bottom: bounds.bottom,
   };
 }

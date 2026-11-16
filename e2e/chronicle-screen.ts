@@ -1167,6 +1167,12 @@ export function rested(page: Page): Promise<void> {
   );
 }
 
+/** Two frames, so the chronicle screen has reacted to whatever the last gesture handed it. */
+export async function reacted(page: Page): Promise<void> {
+  await rested(page);
+  await rested(page);
+}
+
 /**
  * Waits for the deal's window to stand whole, its rise ended on the scrim's stratum drawn at full
  * strength, then for a drawn frame: a left click on an entry before it is whole takes nothing.

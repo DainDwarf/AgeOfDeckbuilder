@@ -12,7 +12,7 @@ import {
   latched,
   noGlyphs,
   openSaved,
-  rested,
+  reacted,
   settledOn,
   shows,
   standing,
@@ -23,12 +23,6 @@ import {
   yieldOwed,
   yieldShown,
 } from './chronicle-screen';
-
-/** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
-async function answered(page: Page): Promise<void> {
-  await rested(page);
-  await rested(page);
-}
 
 /** What the map shows of the yield with nothing on the overlay: no glyph, and no patch. */
 const NOTHING: YieldShown = { glyphs: noGlyphs(), patched: [] };
@@ -148,7 +142,7 @@ test('the overlay is a display, not a mode: city mode and the back key leave it 
   expect(await yieldShown(page)).toEqual(shown);
 
   await page.keyboard.press('Escape');
-  await answered(page);
+  await reacted(page);
   expect(await latched(page)).toEqual([...RESOURCES]);
   expect(await yieldShown(page)).toEqual(shown);
 
@@ -205,7 +199,7 @@ test('the overlay stands on the turn the map stands on, with no glyph and no pat
   await expect.poll(() => latched(page)).toEqual([...RESOURCES]);
 
   await endTurn(page);
-  await answered(page);
+  await reacted(page);
 
   expect(await yieldShown(page)).toEqual(await only(page, ...RESOURCES));
 
@@ -221,7 +215,7 @@ test('a window standing over the chronicle screen takes the yield key', async ({
   await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   await page.keyboard.press('Tab');
-  await answered(page);
+  await reacted(page);
   expect(await latched(page)).toEqual([]);
   expect(await yieldShown(page)).toEqual(NOTHING);
   expect(await standing(page, 'menu')).toBe(true);

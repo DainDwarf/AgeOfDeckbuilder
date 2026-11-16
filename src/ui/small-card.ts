@@ -11,13 +11,13 @@ import {
   type Spot,
 } from './card-face';
 import {
-  answersPress,
   COVERED,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
+  reactsToPress,
   type Stratum,
 } from './design-space';
 import { type AnswerReading, namedCardFace } from './face';
@@ -176,7 +176,7 @@ export function createSmallCards(
         hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
-    answersPress(root);
+    reactsToPress(root);
     onClick(root, () => inspect(raiser.name), 'right', 'within slack');
     onHover(
       root,

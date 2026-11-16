@@ -126,7 +126,7 @@ test('a panel holding more than its room wears a thumb as long as the room’s s
   expect(thumbOf(FRAME, reachOf(FRAME.height, FRAME.height - 20))).toBeUndefined();
 });
 
-test('a card scrolled out of its panel answers nothing at the place it would stand, and the card scrolled in answers where it stands', () => {
+test('a card scrolled out of its panel reacts to nothing at the place it would stand, and the card scrolled in reacts where it stands', () => {
   const first = { box: { x: 20, y: FRAME.y, width: 100, height: 140 } };
   const last = { box: { x: 20, y: FRAME.y + FRAME.height + 20, width: 100, height: 140 } };
   const cards = [first, last];

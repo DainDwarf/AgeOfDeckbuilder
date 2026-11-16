@@ -31,6 +31,7 @@ import {
   panelMovement,
   panelRows,
   playerCityTile,
+  reacted,
   reading,
   readings,
   rested,
@@ -68,12 +69,6 @@ function watchBrowserMenu(page: Page): Promise<void> {
 /** Whether the browser asked for a menu, and whether the game cancelled the one it asked for. */
 function browserMenu(page: Page): Promise<boolean | undefined> {
   return page.evaluate(() => window.browserMenu);
-}
-
-/** Two frames, so whatever the last gesture handed the chronicle screen has been answered. */
-async function answered(page: Page): Promise<void> {
-  await rested(page);
-  await rested(page);
 }
 
 /**
@@ -291,7 +286,7 @@ test('a tile a river runs along gives the river a row of the terrain card, and t
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBe(key);
 
@@ -337,7 +332,7 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
 
   // With nothing selected the inspection key has no tile to step.
   await page.keyboard.press('i');
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBeUndefined();
   expect(await ringedTile(page)).toBeUndefined();
 
@@ -375,12 +370,12 @@ test('a click selects a tile, the inspection key steps its cards, and the back k
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
   await page.keyboard.press('i');
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBe('terrain');
 
   // A click on the tile already selected selects nothing afresh, and the card stands.
   await page.mouse.click(bare.x, bare.y);
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBe(bareTile);
 
@@ -419,7 +414,7 @@ test('a right click inspects and never selects, shows no browser menu, and the i
 
   // Nothing stands on it and nothing is built on it: its terrain card is the whole of its cycle.
   await page.mouse.click(bare.x, bare.y, { button: 'right' });
-  await answered(page);
+  await reacted(page);
   expect(await shownCard(page)).toBe('terrain');
   expect(await ringedTile(page)).toBeUndefined();
 
@@ -482,7 +477,7 @@ test('a right press let go on the infopanel inspects nothing new, and a right cl
   await page.mouse.down({ button: 'right' });
   await page.mouse.move(edge + quarter, west.y);
   await page.mouse.up({ button: 'right' });
-  await answered(page);
+  await reacted(page);
   expect(await ringedLitAndInspecting(page)).toEqual(inspected);
 
   await page.mouse.click(band.x, band.y, { button: 'right' });

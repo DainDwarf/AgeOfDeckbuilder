@@ -36,7 +36,7 @@ import {
   wonCampaign,
 } from './chronicle-screen';
 
-/** The cursor over something that answers a left click or a rest. */
+/** The cursor over something that reacts to a left click or a rest. */
 const HAND = 'pointer';
 
 /** How many stacks a line holds in the civilization mode. */
@@ -272,7 +272,7 @@ test('in the civilization mode Collection » returns to the deck editing mode on
   expect(problems).toEqual([]);
 });
 
-test('in the civilization mode each stack’s reading stands centred between its buttons, − under a stack removes a copy, the reading, the section’s count and the save following, the last copy removed leaves the stack dimmed reading none over owned, − greyed, no hand and answering no press, + adds a copy back, undimmed, and a card at no copy stands no more once the mode is left and opened again', async ({
+test('in the civilization mode each stack’s reading stands centred between its buttons, − under a stack removes a copy, the reading, the section’s count and the save following, the last copy removed leaves the stack dimmed reading none over owned, − greyed, no hand and reacting to no press, + adds a copy back, undimmed, and a card at no copy stands no more once the mode is left and opened again', async ({
   page,
 }) => {
   const problems = watch(page);
