@@ -17,7 +17,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The card's states** — how a card reads selected, being aimed, lifted, unaffordable and worn on the painted face, today's marks having been carried over as they were.
+- **The card's states** — a card lifted out of the hand's lane stands upright at 110% over a shadow and wears no ring and no point, an unpaid cost's disc is red with the card otherwise plain, a card nothing plays wears the crossed circle on a red disc in its price's place on every face, a worn card is darkened by 50%, and the launch screen's selected pile wears its ring under its card's frame, the other piles dimmed as one thing; `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md` and `docs/META-SCREENS.md` say so, and the glyph stands in the cast with its licence record. Doc-impact: `docs/LOOK.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/META-SCREENS.md`, `public/assets/LICENSES.md`. [board/the-cards-states.md](board/the-cards-states.md)
 - **The texts overflowing the card face** — the card texts that overflow the painted face's text box (Hunt, Megalith, Tannery and Heal at three lines, Embark and Irrigation at four, the "WORKER ACTION" label wider than the box) are inspected one by one, and the text box is changed or given a scroll, through mockups.
 - **The card types reviewed** — a card's type does not say its family, a settle card placing a building and an action card placing an improvement or nothing, which is a design issue of the card types: review them.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
