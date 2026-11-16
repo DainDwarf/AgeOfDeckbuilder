@@ -201,15 +201,16 @@ export function createOverlay({
   };
 
   /**
-   * A window's cards on its panel, centred in its frame while they fit, several copies stacked, a
-   * left click on one running `pressed`: each face is named `<name>-card-<n>`, the first drawn first,
-   * and carries its card and the number it was offered as in its data.
+   * A window's cards on its panel, centred in its frame while they fit, several copies stacked, a left
+   * click on one running `pressed` while `live` holds: each face is named `<name>-card-<n>`, the first
+   * drawn first, and carries its card and the number it was offered as in its data.
    */
   const layWindow = (
     name: string,
     cards: readonly Offered[],
     top: number,
     pressed: (card: Placed) => void,
+    live: () => boolean = () => true,
   ): Laid => {
     const frame = {
       x: MARGIN,
@@ -272,8 +273,12 @@ export function createOverlay({
         (card): Held => ({
           box: card.box,
           answers: card.answers,
-          press: () => {
-            pressed(card);
+          get press() {
+            return live()
+              ? () => {
+                  pressed(card);
+                }
+              : undefined;
           },
         }),
       ),
@@ -327,17 +332,22 @@ export function createOverlay({
 
     const { heading, lore, entries } = dealt(catalogue, dealing.on, dealing.deal);
     const title = raiseTitle('deal', heading);
-    const laid = layWindow('deal', entries, title.y + title.height + MARGIN, (card) => {
-      if (!dealing.whole) return;
-      if (!playable(card.refusal)) {
-        const over = card.y - laid.panel.offset - CARD_HEIGHT;
-        note.overCard(refused(card.costs, card.refusal), card.x, over);
-        return;
-      }
-      standingDeal = undefined;
-      close();
-      take(card.at);
-    });
+    const laid = layWindow(
+      'deal',
+      entries,
+      title.y + title.height + MARGIN,
+      (card) => {
+        if (!playable(card.refusal)) {
+          const over = card.y - laid.panel.offset - CARD_HEIGHT;
+          note.overCard(refused(card.costs, card.refusal), card.x, over);
+          return;
+        }
+        standingDeal = undefined;
+        close();
+        take(card.at);
+      },
+      () => dealing.whole,
+    );
     raiseLore('deal', lore, laid);
     riseWhole(dealing);
   };
