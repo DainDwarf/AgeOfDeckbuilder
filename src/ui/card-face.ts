@@ -1,5 +1,4 @@
 import type Phaser from 'phaser';
-import type { Resource } from '../rules/resources';
 import type { Refusal } from '../rules/state';
 import {
   BACK,
@@ -16,6 +15,7 @@ import {
   paleOf,
   SHADOW,
 } from './card-frames';
+import type { CastSymbol } from './cast';
 import {
   addText,
   cutTexts,
@@ -47,7 +47,6 @@ import {
 } from './face';
 import { asGlyph, glyphMark } from './glyphs';
 import { css, LOOK, multiplied, type Tone, unworn } from './look';
-import type { CastSymbol } from './marks';
 import {
   GOES_ON_GAP,
   GOES_ON_SIZE,
@@ -245,13 +244,13 @@ export function addRun(
 
 /**
  * Where a run's glyphs and names stand about its label's own space, the label centred on its lines:
- * each glyph's resource and middle, and each name's box, the reading handed carried by every name.
+ * each glyph's symbol and middle, and each name's box, the reading handed carried by every name.
  */
 export function centredMarks(
   { label, run }: Pick<RunLabel, 'label' | 'run'>,
   reading: AnswerReading,
 ): {
-  glyphs: { readonly resource: Resource; readonly x: number; readonly y: number }[];
+  glyphs: { readonly symbol: CastSymbol; readonly x: number; readonly y: number }[];
   names: Name[];
 } {
   const own = ownBoxOf(label);
@@ -259,8 +258,8 @@ export function centredMarks(
   const centre = own.x + own.width / 2;
   const middleOf = (line: number): number => own.y + line * pitch + (pitch - label.lineSpacing) / 2;
   return {
-    glyphs: run.glyphs.map(({ resource, x, line }) => ({
-      resource,
+    glyphs: run.glyphs.map(({ symbol, x, line }) => ({
+      symbol,
       x: centre + x,
       y: middleOf(line),
     })),
@@ -799,7 +798,7 @@ export function createCardFace(
     const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {
-      asGlyph(glyphs.take(), glyph.resource, GLYPH_SHARE * type, { tone: toned }).setPosition(
+      asGlyph(glyphs.take(), glyph.symbol, GLYPH_SHARE * type, { tone: toned }).setPosition(
         glyph.x,
         glyph.y,
       );

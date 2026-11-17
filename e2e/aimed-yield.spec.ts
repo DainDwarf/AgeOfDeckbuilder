@@ -18,8 +18,8 @@ import { charted, inSight } from '../src/rules/sight';
 import { followed, unchanged } from '../src/rules/stages';
 import { type Chronicle, playable } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import { glyphFileOf } from '../src/ui/cast';
 import { LOOK } from '../src/ui/look';
-import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
   admits,

@@ -4,8 +4,8 @@ import { cardOf, placingOf, unitKind } from '../src/rules/catalogue';
 import { buildingKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resources } from '../src/rules/resources';
 import { BADGES } from '../src/ui/card-frames';
+import { glyphFileOf } from '../src/ui/cast';
 import { BADGE_STATS, BOX_STATS, type CardStat, statReading } from '../src/ui/face';
-import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
   campaignWith,

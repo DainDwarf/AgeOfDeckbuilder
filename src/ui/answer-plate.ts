@@ -77,8 +77,8 @@ export function createAnswerPlate(
   const height = own.y + own.height + PAD_Y;
 
   const marks = centredMarks(texted, shown.reading);
-  const glyphs = marks.glyphs.map(({ resource, x, y }) =>
-    glyphOf(scene, resource, GLYPH_SHARE * TEXT_SIZE).setPosition(x, y),
+  const glyphs = marks.glyphs.map(({ symbol, x, y }) =>
+    glyphOf(scene, symbol, GLYPH_SHARE * TEXT_SIZE).setPosition(x, y),
   );
   const paper = paperOf(scene, ANSWER_WIDTH, height, paint.fill);
   const root = scene.add

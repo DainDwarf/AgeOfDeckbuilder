@@ -3,8 +3,8 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
 import { chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
+import { glyphFileOf } from '../src/ui/cast';
 import { LOOK, multiplied } from '../src/ui/look';
-import { glyphFileOf } from '../src/ui/marks';
 import {
   campsOf,
   click,

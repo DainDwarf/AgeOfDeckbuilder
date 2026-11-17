@@ -10,8 +10,8 @@ import { chartedAt, inSight, unitShown } from '../src/rules/sight';
 import { followed } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import { glyphFileOf } from '../src/ui/cast';
 import { LOOK, multiplied } from '../src/ui/look';
-import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
   campKind,

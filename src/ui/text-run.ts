@@ -1,10 +1,10 @@
 /**
- * An entry read as a run: its words, a glyph wherever it marks `[resource]`, a name wherever it marks
+ * An entry read as a run: its words, a glyph wherever it marks `[<symbol>]`, a name wherever it marks
  * `[<kind>:<id>]` — `text` substitutes `{name}` from the values it is handed, so a brace here would
  * leave `undefined` on the screen of every caller that hands it none.
  */
 
-import { RESOURCES, type Resource } from '../rules/resources';
+import { type CastSymbol, isCastSymbol } from './cast';
 
 /**
  * What a name names: a card, a terrain, a feature, an improvement, a building, or a unit kind painted
@@ -28,7 +28,7 @@ export type Reference = {
 
 /** One glyph of a run: what it marks, and where it stands. */
 export type Glyph = {
-  readonly resource: Resource;
+  readonly symbol: CastSymbol;
   /** The middle of the spaces it stands in, from the middle of its own line. */
   readonly x: number;
   /** The line it stands on, counted from the top of the run. */
@@ -74,7 +74,7 @@ export type Metrics = {
 /** A word as it draws, and where each of its glyphs and names stands in what is drawn. */
 type Marked = {
   readonly drawn: string;
-  readonly glyphs: readonly { readonly resource: Resource; readonly at: number }[];
+  readonly glyphs: readonly { readonly symbol: CastSymbol; readonly at: number }[];
   readonly names: readonly {
     readonly reference: Reference;
     readonly at: number;
@@ -86,10 +86,9 @@ const NOTHING: Marked = { drawn: '', glyphs: [], names: [] };
 
 const MARK = /\[(?:(\w+):([\w-]+)|(\w+))\]/;
 
-function resourceOf(key: string): Resource {
-  const resource = RESOURCES.find((known) => known === key);
-  if (resource === undefined) throw new Error(`${key} is no resource a glyph is drawn for`);
-  return resource;
+function symbolOf(key: string): CastSymbol {
+  if (!isCastSymbol(key)) throw new Error(`${key} is no symbol of the cast a glyph is drawn for`);
+  return key;
 }
 
 function referenceOf(key: string, id: string): Reference {
@@ -99,21 +98,21 @@ function referenceOf(key: string, id: string): Reference {
 }
 
 function markedOf(word: string, spaces: number, nameOf: NameOf): Marked {
-  const glyphs: { resource: Resource; at: number }[] = [];
+  const glyphs: { symbol: CastSymbol; at: number }[] = [];
   const names: { reference: Reference; at: number; length: number }[] = [];
   let drawn = '';
   let rest = word;
   let token = MARK.exec(rest);
   while (token !== null) {
     drawn += rest.slice(0, token.index);
-    const [, kind, id, resource] = token;
+    const [, kind, id, symbol] = token;
     if (kind !== undefined) {
       const reference = referenceOf(kind, id);
       const name = `[${nameOf(reference)}]`;
       names.push({ reference, at: drawn.length, length: name.length });
       drawn += name;
     } else {
-      glyphs.push({ resource: resourceOf(resource), at: drawn.length });
+      glyphs.push({ symbol: symbolOf(symbol), at: drawn.length });
       drawn += ' '.repeat(spaces);
     }
     rest = rest.slice(token.index + token[0].length);
@@ -174,9 +173,9 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics, nam
   const widths = lines.map((line) => Math.ceil(measure(line.drawn)));
   for (const [index, line] of lines.entries()) {
     const width = widths[index];
-    for (const { resource, at } of line.glyphs) {
+    for (const { symbol, at } of line.glyphs) {
       const middle = measure(line.drawn.slice(0, at)) + (spaces * metrics.space) / 2;
-      glyphs.push({ resource, x: middle - width / 2, line: index });
+      glyphs.push({ symbol, x: middle - width / 2, line: index });
     }
     for (const { reference, at, length } of line.names) {
       names.push({

@@ -7,9 +7,9 @@ import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { type Faction, unitAt } from '../src/rules/units';
+import { glyphFileOf } from '../src/ui/cast';
 import { FACTION_SIGNS_ENTRY, serialiseFactionSigns } from '../src/ui/faction-signs';
 import { LOOK, multiplied } from '../src/ui/look';
-import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
   campBeside,

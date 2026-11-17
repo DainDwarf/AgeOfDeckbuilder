@@ -1,8 +1,6 @@
-import type { PreparedAs } from '../rules/enemies';
 import type { Corner, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
-import type { Resource } from '../rules/resources';
-import type { Faction } from '../rules/units';
+import { EVERY_GLYPH_FILE } from './cast';
 import { grownOf, haloOf } from './fade';
 import { css, LOOK, type Wash } from './look';
 import { aroundPicture, type Made, roomFor, type Sheet, type Square, washed } from './sheet';
@@ -359,56 +357,6 @@ export const UNIT_SHEET: Sheet = {
   side: 1024,
 };
 
-/**
- * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
- * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a faction, a
- * site, or a card nothing plays.
- */
-export type CastSymbol =
-  | Resource
-  | 'population'
-  | 'influence'
-  | 'health'
-  | 'range'
-  | 'move'
-  | 'action'
-  | 'sight'
-  | 'killed'
-  | PreparedAs
-  | Faction
-  | 'site'
-  | 'played-by-nothing';
-
-/** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
-const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
-  food: 'material-design-icons/food-apple.svg',
-  production: 'material-design-icons/hammer.svg',
-  military: 'material-design-icons/sword-cross.svg',
-  money: 'game-icons/two-coins.svg',
-  science: 'material-design-icons/lightbulb-on.svg',
-  culture: 'material-design-icons/music.svg',
-  population: 'material-design-icons/account.svg',
-  influence: 'material-design-icons/star.svg',
-  health: 'material-design-icons/heart.svg',
-  range: 'material-design-icons/target.svg',
-  move: 'material-design-icons/arrow-all.svg',
-  action: 'game-icons/fist.svg',
-  sight: 'material-design-icons/eye.svg',
-  killed: 'game-icons/death-skull.svg',
-  pillage: 'game-icons/fire.svg',
-  capture: 'material-design-icons/flag-variant.svg',
-  player: 'material-design-icons/crown.svg',
-  neutral: 'material-design-icons/scale-balance.svg',
-  enemy: 'material-design-icons/axe-battle.svg',
-  site: 'material-design-icons/star-four-points.svg',
-  'played-by-nothing': 'material-design-icons/block-helper.svg',
-};
-
-/** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */
-export function glyphFileOf(symbol: CastSymbol): string {
-  return GLYPH_FILES[symbol];
-}
-
 /** How many pixels a side a glyph is rasterised at: past what it covers at the closest zoom. */
 export const GLYPH_PIXELS = 128;
 
@@ -492,7 +440,7 @@ function paintPointer(context: CanvasRenderingContext2D): void {
 export const GLYPH_SHEET: Sheet = {
   key: 'glyphs',
   files: [],
-  rasterised: { files: Object.values(GLYPH_FILES), side: GLYPH_PIXELS },
+  rasterised: { files: EVERY_GLYPH_FILE, side: GLYPH_PIXELS },
   made: [
     {
       frame: YIELD_PATCH.frame,

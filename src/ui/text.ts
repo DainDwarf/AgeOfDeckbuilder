@@ -2,8 +2,8 @@ import type { MadeCard } from '../rules/state';
 import type { Reference } from './text-run';
 
 // A `rules.`, `face.` or `goal.` entry, `plate.cards` and `plate.building`, and an answer's or a
-// capstone's text (`event-text.ts`) may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind
-// `REFERENCE_KINDS` lists, which only a card face, a plate and an answer draw: elsewhere the mark shows.
+// capstone's text (`event-text.ts`) may mark a glyph `[<CastSymbol>]` and a name `[<kind>:<id>]`, a
+// kind `REFERENCE_KINDS` lists, which only a card face, a plate and an answer draw: elsewhere it shows.
 /**
  * Every player-facing sentence but the lore (`lore.ts`) and the events' (`event-text.ts`), one entry
  * each. English is the only language.

@@ -70,7 +70,7 @@ export function drawRun(
   const centreOf = (at: number): number => start + run.widths[at] / 2;
   for (const glyph of run.glyphs) {
     face.add(
-      glyphOf(scene, glyph.resource, GLYPH).setPosition(
+      glyphOf(scene, glyph.symbol, GLYPH).setPosition(
         centreOf(glyph.line) + glyph.x,
         middleOf(glyph.line),
       ),

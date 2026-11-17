@@ -6,8 +6,8 @@ import { MOVE_POINT, sameTile, type TileCoords, tileKey } from '../src/rules/map
 import { unitDamaged } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { type Landing, pathTo, type Unit, unitAt } from '../src/rules/units';
+import { glyphFileOf } from '../src/ui/cast';
 import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
-import { glyphFileOf } from '../src/ui/marks';
 import {
   type AimDrawn,
   aimDrawn,

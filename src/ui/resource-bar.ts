@@ -7,6 +7,7 @@ import { type Group, type Stage, walked } from '../rules/stages';
 import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
+import type { CastSymbol } from './cast';
 import { thresholdOf } from './city-bar';
 import {
   addText,
@@ -23,7 +24,6 @@ import {
 } from './design-space';
 import { type GlyphPaint, glyphOf } from './glyphs';
 import { type BarReading, css, LOOK } from './look';
-import type { CastSymbol } from './marks';
 import { menuRoom } from './menu';
 import { text } from './text';
 import type { Tooltip } from './tooltip';

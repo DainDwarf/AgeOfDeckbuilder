@@ -21,6 +21,7 @@ import type { MapContent } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
+import type { CastSymbol } from './cast';
 import type { CityBar, CityBarStock } from './city-bar';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
 import { inMovePoints } from './face';
@@ -34,7 +35,6 @@ import {
   type BuildingPiece,
   buildingPaintingsOf,
   CANOE,
-  type CastSymbol,
   clearingsOf,
   clearsItsTile,
   DISC_PITCH,

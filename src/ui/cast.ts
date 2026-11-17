@@ -1,0 +1,61 @@
+import type { PreparedAs } from '../rules/enemies';
+import type { Resource } from '../rules/resources';
+import type { Faction } from '../rules/units';
+
+/**
+ * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
+ * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a faction, a
+ * site, or a card nothing plays.
+ */
+export type CastSymbol =
+  | Resource
+  | 'population'
+  | 'influence'
+  | 'health'
+  | 'range'
+  | 'move'
+  | 'action'
+  | 'sight'
+  | 'killed'
+  | PreparedAs
+  | Faction
+  | 'site'
+  | 'played-by-nothing';
+
+/** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
+const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
+  food: 'material-design-icons/food-apple.svg',
+  production: 'material-design-icons/hammer.svg',
+  military: 'material-design-icons/sword-cross.svg',
+  money: 'game-icons/two-coins.svg',
+  science: 'material-design-icons/lightbulb-on.svg',
+  culture: 'material-design-icons/music.svg',
+  population: 'material-design-icons/account.svg',
+  influence: 'material-design-icons/star.svg',
+  health: 'material-design-icons/heart.svg',
+  range: 'material-design-icons/target.svg',
+  move: 'material-design-icons/arrow-all.svg',
+  action: 'game-icons/fist.svg',
+  sight: 'material-design-icons/eye.svg',
+  killed: 'game-icons/death-skull.svg',
+  pillage: 'game-icons/fire.svg',
+  capture: 'material-design-icons/flag-variant.svg',
+  player: 'material-design-icons/crown.svg',
+  neutral: 'material-design-icons/scale-balance.svg',
+  enemy: 'material-design-icons/axe-battle.svg',
+  site: 'material-design-icons/star-four-points.svg',
+  'played-by-nothing': 'material-design-icons/block-helper.svg',
+};
+
+/** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */
+export function glyphFileOf(symbol: CastSymbol): string {
+  return GLYPH_FILES[symbol];
+}
+
+/** Every symbol's glyph file. */
+export const EVERY_GLYPH_FILE: readonly string[] = Object.values(GLYPH_FILES);
+
+/** Whether a key names a symbol of the cast. */
+export function isCastSymbol(key: string): key is CastSymbol {
+  return Object.hasOwn(GLYPH_FILES, key);
+}

@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
+import { type CastSymbol, glyphFileOf } from './cast';
 import { grownOf } from './fade';
 import { LOOK, type Tone, unworn } from './look';
-import { type CastSymbol, GLYPH_PIXELS, GLYPH_SHEET, glyphFileOf } from './marks';
+import { GLYPH_PIXELS, GLYPH_SHEET } from './marks';
 import { aroundPicture, paintMade, washed } from './sheet';
 
 /** How wide the dark outline round a glyph is, in the units of the surface it is drawn on. */
