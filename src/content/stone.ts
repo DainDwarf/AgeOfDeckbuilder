@@ -15,6 +15,7 @@ import {
 } from '../rules/cards';
 import type {
   Age,
+  Aim,
   Answer,
   Card,
   Catalogue,
@@ -50,7 +51,14 @@ import {
   terraformedNear,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
-import { type Chronicle, capstoneLanded, cardsInPiles, cityRows, costsOf } from '../rules/state';
+import {
+  type CardId,
+  type Chronicle,
+  capstoneLanded,
+  cardsInPiles,
+  cityRows,
+  costsOf,
+} from '../rules/state';
 import { relationsOf } from '../rules/units';
 import { NOMADIC } from './nomadic';
 import {
@@ -257,6 +265,25 @@ const MONUMENT = ['foundations', 'great-stones', 'monument'];
 
 /** The terrains the monument's first building goes on, and so every one built over it. */
 const MONUMENT_GROUND = ['plain', 'hills', 'desert'];
+
+/**
+ * How a card of the monument's chain builds its building, over the one `over` names where it names
+ * one, and then adds the next card of the chain to the discard pile.
+ */
+function buildsThenAdds(
+  building: string,
+  over: string | undefined,
+  next: CardId,
+): Aim & { readonly aim: 'tile' } {
+  const builder = builds(building, over);
+  return {
+    ...builder,
+    effect: (catalogue, paid, at, through) =>
+      followed(builder.effect(catalogue, paid, at, through), (left) =>
+        rewarded(catalogue, left, next, 1),
+      ),
+  };
+}
 
 /** The hazards the monument adds, one a turn, each drawn alike. */
 const MONUMENT_HAZARDS = ['unrest', 'thieves', 'weary-builders'];
@@ -707,19 +734,17 @@ export const STONE: Slice = {
         strikes: (_catalogue, chronicle) => populationTaken(chronicle, 'player'),
       },
       foundations: {
-        kind: 'action',
+        kind: 'building',
         cost: { production: 8 },
-        becomes: 'great-stones',
-        ...builds('foundations'),
+        ...buildsThenAdds('foundations', undefined, 'great-stones'),
       },
       'great-stones': {
-        kind: 'action',
+        kind: 'building',
         cost: { production: 16 },
-        becomes: 'ornaments',
-        ...builds('great-stones', 'foundations'),
+        ...buildsThenAdds('great-stones', 'foundations', 'ornaments'),
       },
       ornaments: {
-        kind: 'action',
+        kind: 'building',
         cost: { money: 4, culture: 6 },
         ...builds('monument', 'great-stones'),
       },
@@ -1032,7 +1057,7 @@ export const STONE: Slice = {
       },
       foundations: { terrains: MONUMENT_GROUND, yields: {}, upkeep: { production: 1 } },
       'great-stones': { terrains: MONUMENT_GROUND, yields: {}, upkeep: { production: 1 } },
-      monument: { terrains: MONUMENT_GROUND, yields: {}, upkeep: { production: 1 } },
+      monument: { terrains: MONUMENT_GROUND, yields: {} },
       'stone-painted-cave': { terrains: ['hills'], yields: {} },
       'stone-old-cairn': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },
       'stone-beast-bones': { terrains: ['plain', 'forest', 'hills', 'desert'], yields: {} },

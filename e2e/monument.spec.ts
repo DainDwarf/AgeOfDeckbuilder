@@ -5,7 +5,7 @@ import { neighbours, type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { buildingKind } from '../src/rules/map-kinds';
 import { capstoneReading } from '../src/rules/schedule';
 import { walked } from '../src/rules/stages';
-import type { CardId, Chronicle } from '../src/rules/state';
+import { type CardId, type Chronicle, cardsInPiles } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { capstoneText } from '../src/ui/event-text';
 import { capstoneLore } from '../src/ui/lore';
@@ -13,7 +13,6 @@ import { victoryLine } from '../src/ui/text';
 import {
   admits,
   aimed,
-  becomes,
   beforeTheLanding,
   budget,
   chronicleOf,
@@ -87,6 +86,15 @@ function workedGround(landed: Chronicle): { chronicle: Chronicle; tile: TileCoor
   return undefined;
 }
 
+/** The card a play added to the discard pile: the one lying there under a key no pile held before. */
+function addedBy(before: Chronicle, after: Chronicle): CardId {
+  const held = new Set(cardsInPiles(before).map(({ key }) => key));
+  const added = after.discardPile.filter(({ key }) => !held.has(key));
+  if (added.length !== 1)
+    throw new Error(`the play added ${added.length} cards to the discard pile`);
+  return added[0].id;
+}
+
 /** The chain, walked: Ornaments in hand and paid for over Great stones, and the play that wins. */
 type Built = {
   readonly chronicle: Chronicle;
@@ -114,8 +122,9 @@ function builtFrom(landed: Chronicle): Built | undefined {
         const won = playedOn(paid.chronicle, paid.index, tile);
         return { chronicle: paid.chronicle, index: paid.index, tile, won };
       }
-      chronicle = playedOn(paid.chronicle, paid.index, tile);
-      next = becomes(next);
+      const played = playedOn(paid.chronicle, paid.index, tile);
+      next = addedBy(paid.chronicle, played);
+      chronicle = played;
     }
     chronicle = endedTurn(cleared(covered(chronicle)));
   }

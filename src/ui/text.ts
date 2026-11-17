@@ -227,10 +227,10 @@ const TEXT = {
   'rules.cold-night': 'Kills one population',
   'card.foundations': 'Foundations',
   'rules.foundations':
-    'Build [building:foundations] on [terrain:plain], [terrain:hills] or [terrain:desert].\nBecomes [card:great-stones]',
+    'Build [building:foundations] on [terrain:plain], [terrain:hills] or [terrain:desert].\nAdd [card:great-stones] to the discard pile',
   'card.great-stones': 'Great stones',
   'rules.great-stones':
-    'Build [building:great-stones] on [building:foundations].\nBecomes [card:ornaments]',
+    'Build [building:great-stones] on [building:foundations].\nAdd [card:ornaments] to the discard pile',
   'card.ornaments': 'Ornaments',
   'rules.ornaments': 'Build [building:monument] on [building:great-stones]. Win the Stone Age',
   'card.unrest': 'Unrest',
