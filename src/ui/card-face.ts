@@ -78,8 +78,32 @@ const SIGN_SIZE = 16.5;
 const DISC_GLYPH_SHARE = 0.72;
 const DISC_GAP = 0.1;
 
-/** How far below the plate's middle the text's box starts, in the pack's pixels. */
-const TEXT_BELOW_PLATE = 49;
+/**
+ * How wide the text wraps, how far under the plate's lower edge its room starts and over the kind
+ * label it ends, and how far over the paper's foot the label's capitals stand, in units of a card
+ * wherever it stands but large.
+ */
+const TEXT_WIDTH = 88.4;
+const TEXT_UNDER_PLATE = 1;
+const TEXT_OVER_LABEL = 1.5;
+const LABEL_OVER_FOOT = 1.5;
+
+/** How many lines of the text's type its room holds, its lines drawn closer where they would not fit. */
+const TEXT_LINES = 3;
+
+/**
+ * How far a text's capitals rise over its baseline. Measured a hundred times larger: the canvas
+ * rounds a measure at the text's own size up to the pixel.
+ */
+function capitalsOf(label: Phaser.GameObjects.Text): number {
+  const { context, style } = label;
+  const own = context.font;
+  const size = 100 * Number.parseFloat(String(style.fontSize));
+  context.font = `${style.fontStyle} ${size}px ${style.fontFamily}`;
+  const rise = context.measureText(label.text).actualBoundingBoxAscent / 100;
+  context.font = own;
+  return rise;
+}
 
 /**
  * A name a rules entry draws, which a face carries in its data as `names`: what it names, the
@@ -127,14 +151,10 @@ export function spotOn(container: Phaser.GameObjects.Container, name: Name): Spo
 /** A glyph a run marks, a side of its square, as a share of the run's type. */
 export const GLYPH_SHARE = 2 / 3;
 
-/**
- * A label drawn as a run, the run its entry was last laid out as, and the width it wraps at, which
- * a change lays it out again at.
- */
+/** A label drawn as a run, and the run its entry was last laid out as. */
 export type RunLabel = {
   readonly label: Phaser.GameObjects.Text;
   readonly run: Run;
-  wrapAt(width: number): void;
 };
 
 /**
@@ -148,7 +168,6 @@ export function addRun(
   width: number,
 ): RunLabel {
   const size = Number.parseFloat(style.fontSize);
-  let wrap = width;
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
   let run!: Run;
   const label = addText(scene, 0, 0, entry, {
@@ -159,7 +178,7 @@ export function addRun(
         run = layOutRun(
           content,
           measure,
-          { width: wrap, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
+          { width, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
           referenceName,
         );
         return run.content.split('\n');
@@ -170,11 +189,6 @@ export function addRun(
     label,
     get run() {
       return run;
-    },
-    wrapAt(next: number): void {
-      if (next === wrap) return;
-      wrap = next;
-      label.updateText();
     },
   };
 }
@@ -191,9 +205,9 @@ export function centredMarks(
   names: Name[];
 } {
   const own = ownBoxOf(label);
-  const pitch = own.height / run.widths.length;
+  const pitch = (own.height + label.lineSpacing) / run.widths.length;
   const centre = own.x + own.width / 2;
-  const middleOf = (line: number): number => own.y + (line + 0.5) * pitch;
+  const middleOf = (line: number): number => own.y + line * pitch + (pitch - label.lineSpacing) / 2;
   return {
     glyphs: run.glyphs.map(({ resource, x, line }) => ({
       resource,
@@ -458,7 +472,6 @@ export function createCardFace(
   const kind = addText(scene, 0, 0, kindLabel(face.kind).toUpperCase(), {
     fontFamily: UI_FONT,
     fontSize: `${type}px`,
-    letterSpacing: 0.14 * type,
   })
     .setOrigin(0.5, 1)
     .setAlpha(LOOK.cardKindLabel)
@@ -468,9 +481,11 @@ export function createCardFace(
     scene,
     face.rules,
     { fontFamily: UI_FONT, fontSize: `${type}px`, align: 'center' },
-    frontOf(face.family).paper.width * unit,
+    size(TEXT_WIDTH),
   );
   const rules = ruled.label.setOrigin(0.5).setName('rules');
+  const plateEdge = (row: number): number => plate.y + (row - plate.height / 2) * plate.scaleY;
+  const textTop = plateEdge(PLATE.edges.bottom) + size(TEXT_UNDER_PLATE);
 
   const influence = discMarkOf(scene, width, discNumber);
   influence.number.setName('influence-label');
@@ -529,14 +544,20 @@ export function createCardFace(
     const paper = placed(shape.paper);
     const paperMiddle = paper.x + (shape.paper.width * unit) / 2;
     const foot = paper.y + shape.paper.height * down;
-    inked(kind, textInk).setText(kindLabel(next.kind).toUpperCase()).setPosition(paperMiddle, foot);
-    kindMiddle = foot - kind.height / 2;
+    const capitals = foot - size(LABEL_OVER_FOOT);
+    inked(kind, textInk).setText(kindLabel(next.kind).toUpperCase()).setPosition(paperMiddle, 0);
+    const own = ownBoxOf(kind);
+    kind.setY(capitals + kind.getTextMetrics().descent - (own.y + own.height));
+    kindMiddle = kind.y - kind.height / 2;
+    const textBottom = capitals - capitalsOf(kind) - size(TEXT_OVER_LABEL);
+    const { ascent, descent } = rules.getTextMetrics();
+    const room = textBottom - textTop;
+    const spacing = Math.min(0, (room - TEXT_LINES * (ascent + descent)) / (TEXT_LINES - 1));
+    if (rules.lineSpacing !== spacing) rules.setLineSpacing(spacing);
 
-    const textTop = plate.y + TEXT_BELOW_PLATE * down;
-    ruled.wrapAt(shape.paper.width * unit);
     inked(rules, textInk)
       .setText(next.rules)
-      .setPosition(paperMiddle, (textTop + foot - kind.height) / 2);
+      .setPosition(0, (textTop + textBottom) / 2);
     const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {

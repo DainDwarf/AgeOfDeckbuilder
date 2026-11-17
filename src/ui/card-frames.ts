@@ -66,11 +66,15 @@ const FRONTS: Readonly<Record<FrontWindow, Front>> = {
 /** The back, and where its body's corner lies in its file. */
 export const BACK = { file: `${PACK}/0 - Back/Back - 2.png`, body: { x: 17, y: 15 } };
 
-/** The riveted plate the name stands on: its file, how wide it is drawn, and its middle's height. */
+/**
+ * The riveted plate the name stands on: its file, how wide it is drawn, and its middle's height; and
+ * how far down its file the wood's upper and lower edges stand, the shadow round it left out.
+ */
 export const PLATE = {
   file: `${PACK}/0 - Icons and stuffs/Strip - 3.png`,
   width: 600,
   middle: 475,
+  edges: { top: 27.5, bottom: 131.5 },
 };
 
 /**
