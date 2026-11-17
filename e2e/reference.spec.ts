@@ -31,6 +31,7 @@ import {
   standing,
   waitGameClock,
   watch,
+  windowOnScreen,
 } from './chronicle-screen';
 
 /** The event the first spec opens on. */
@@ -151,12 +152,12 @@ test('a card named on a card shown large stands over it at a right click on the 
   await browse(page, 'draw-pile');
   await rested(page);
 
-  const card = await onScreen(page, `browse-card-${at}`);
+  const card = await windowOnScreen(page, `browse-card-${at}`);
   await page.mouse.click(card.x, card.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(host);
   await rested(page);
 
-  const large = await onScreen(page, 'inspection');
+  const large = await windowOnScreen(page, 'inspection');
   await page.mouse.move(large.x, large.y);
   await expect.poll(() => cursorOverCanvas(page)).not.toBe(HAND);
   const own = await nameOnScreen(page, 'inspection', naming);

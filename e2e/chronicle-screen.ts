@@ -155,6 +155,7 @@ type PageReading = {
   onScreen: Answer<OnScreen>;
   frame: Answer<string>;
   kindLabelOnScreen: Answer<Spot>;
+  windowOnScreen: Answer<OnScreen>;
   influence: Answer<{ text: string; onScreen: Spot }>;
   stats: Answer<StatShown[]>;
   answerNameOnScreen: Answer<Spot>;
@@ -904,6 +905,19 @@ export async function readNames(page: Page): Promise<void> {
           return drawn.name;
         }),
         kindLabelOnScreen: answer(() => partOnScreen('kind-label', `${name} wears no kind label`)),
+        // The window is the face's one Rectangle (`src/ui/card-face.ts`), the marks of what its card
+        // goes on standing at its foot: its upper quarter lies off every name and every hover.
+        windowOnScreen: answer(() => {
+          const face = found().object as Partial<Phaser.GameObjects.Container>;
+          const glass = face.list?.find((child) => child.type === 'Rectangle') as
+            | Phaser.GameObjects.Rectangle
+            | undefined;
+          if (glass === undefined) throw new Error(`${name} is no card face`);
+          const at = glass
+            .getWorldTransformMatrix()
+            .transformPoint(glass.width / 2, glass.height / 4);
+          return onPage(found().camera, at.x, at.y);
+        }),
         influence: answer(() => {
           const complaint = `${name} wears no influence's disc`;
           const label = part('influence-label', complaint) as Phaser.GameObjects.Text;
@@ -1407,6 +1421,11 @@ export async function kindLabelOnScreen(page: Page, face: string): Promise<Spot>
   return (await reading(page, face)).kindLabelOnScreen;
 }
 
+/** A point of the named face's window on the page, off every name and every hover of the face. */
+export async function windowOnScreen(page: Page, face: string): Promise<OnScreen> {
+  return (await reading(page, face)).windowOnScreen;
+}
+
 /** The cursor the page shows over the canvas. */
 export function cursorOverCanvas(page: Page): Promise<string> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
@@ -1682,6 +1701,8 @@ export type Reading = {
   readonly frame: string;
   readonly nameOnScreen: Spot;
   readonly kindLabelOnScreen: Spot;
+  /** A point of a face's window, off every name and every hover of the face. */
+  readonly windowOnScreen: OnScreen;
   /**
    * The number on a face's influence disc, and where it sits on the page, its middle, and how tall it
    * stands there.
@@ -1775,6 +1796,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get kindLabelOnScreen() {
       return owed(name, answered?.kindLabelOnScreen);
+    },
+    get windowOnScreen() {
+      return owed(name, answered?.windowOnScreen);
     },
     get influence() {
       return owed(name, answered?.influence);
