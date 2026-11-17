@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The texts overflowing the card face** — a unit's card that reads a sentence draws its two rows of stats and its sentence closer, each gap by the same amount, until the three stand in the text's room, and a card's name wider at 12 units than the 96.5 between its plate's rivets is set at 11, so the Raft's text box and the name Misunderstandings stand in their rooms on a card of 124 and on a card shown large; `docs/LOOK.md` says both rules; `e2e/card-reads.spec.ts` passes. Doc-impact: `docs/LOOK.md`. [board/the-texts-overflowing-the-card-face.md](board/the-texts-overflowing-the-card-face.md)
 - **The card types reviewed** — a card's type does not say its family, a settle card placing a building and an action card placing an improvement or nothing, which is a design issue of the card types: review them.
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
 - **The Stone cards' paintings** — every card of the Stone Age wears one painting of his in its art box.

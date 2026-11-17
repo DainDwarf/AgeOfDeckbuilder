@@ -4,7 +4,7 @@ import { css, LOOK } from './look';
 
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
-const TYPE_FLOOR = 11;
+export const TYPE_FLOOR = 11;
 
 /** A box of the design space: its top-left corner and its size. */
 export type Box = {

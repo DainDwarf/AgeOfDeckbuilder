@@ -5,7 +5,7 @@ import { buildingKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resources } from '../src/rules/resources';
 import { BADGES } from '../src/ui/card-frames';
 import { glyphFileOf } from '../src/ui/cast';
-import { BADGE_STATS, BOX_STATS, type CardStat, statReading } from '../src/ui/face';
+import { BADGE_STATS, BOX_STATS, type CardStat, cardFace, statReading } from '../src/ui/face';
 import { text } from '../src/ui/text';
 import {
   campaignWith,
@@ -88,7 +88,7 @@ test('a card that builds a building reads at the foot of its window the terrains
   expect(problems).toEqual([]);
 });
 
-test('a card that places a unit reads no sentence, its unit’s damage and health on the badges at its foot and its move, action, range and sight as glyphs and numbers in its text box; a rest on a stat raises its name over its sentence', async ({
+test('a card that places a unit reads its unit’s damage and health on the badges at its foot and its move, action, range and sight as glyphs and numbers in its text box; a rest on a stat raises its name over its sentence', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -111,7 +111,9 @@ test('a card that places a unit reads no sentence, its unit’s damage and healt
   await openSaved(page, chronicle);
   const lying = await reading(page, face);
   expect(lying.card).toBe(WORKER);
-  expect(lying.rules).toBe('');
+  expect(lying.rules).toBe(
+    cardFace(CATALOGUE, chronicle.hand[index], chronicle.citySection.building).rules,
+  );
   expect(
     lying.stats.map(({ stat, sign, number }) => ({ stat, sign, number })).sort(byStat),
   ).toEqual(shown.sort(byStat));

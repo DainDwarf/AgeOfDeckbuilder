@@ -28,6 +28,7 @@ import {
   reactsToPress,
   resolutionAt,
   type SizedStyle,
+  TYPE_FLOOR,
   UI_FONT,
 } from './design-space';
 import {
@@ -59,6 +60,7 @@ import {
 } from './placed-marks';
 import { poolOf, rootedPoolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
+import { blockIn } from './text-room';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
 
@@ -117,17 +119,31 @@ const LABEL_OVER_FOOT = 1.5;
 const TEXT_LINES = 3;
 
 /**
- * How far a text's capitals rise over its baseline. Measured a hundred times larger: the canvas
- * rounds a measure at the text's own size up to the pixel.
+ * A measure of the content set at that size in a text's style. Measured a hundred times larger: the
+ * canvas rounds a measure at the text's own size up to the pixel.
  */
-function capitalsOf(label: Phaser.GameObjects.Text): number {
+function measureOf(
+  label: Phaser.GameObjects.Text,
+  content: string,
+  size: number,
+  read: (metrics: TextMetrics) => number,
+): number {
   const { context, style } = label;
   const own = context.font;
-  const size = 100 * Number.parseFloat(String(style.fontSize));
-  context.font = `${style.fontStyle} ${size}px ${style.fontFamily}`;
-  const rise = context.measureText(label.text).actualBoundingBoxAscent / 100;
+  context.font = `${style.fontStyle} ${100 * size}px ${style.fontFamily}`;
+  const measure = read(context.measureText(content)) / 100;
   context.font = own;
-  return rise;
+  return measure;
+}
+
+/** How far a text's capitals rise over its baseline. */
+function capitalsOf(label: Phaser.GameObjects.Text): number {
+  return measureOf(
+    label,
+    label.text,
+    Number.parseFloat(String(label.style.fontSize)),
+    (metrics) => metrics.actualBoundingBoxAscent,
+  );
 }
 
 /** How far over the plate's upper edge the middle of a mark of what a card goes on stands, in units of a card wherever it stands but large. */
@@ -586,6 +602,9 @@ export function createCardFace(
   const front = scene.add.image(0, 0, CARDS_SHEET_KEY);
   const plate = scene.add.image(0, -height + PLATE.middle * down, CARDS_SHEET_KEY, PLATE.file);
   plate.setScale((PLATE.width * unit) / plate.width);
+  /** The room between the plate's rivets, in units of a card wherever it stands but large. */
+  const nameRoom =
+    ((PLATE.rivets.right - PLATE.rivets.left) * PLATE.width * unitOf(CARD_WIDTH)) / plate.width;
 
   const name = addText(scene, 0, plate.y, face.name, {
     fontFamily: UI_FONT,
@@ -762,6 +781,8 @@ export function createCardFace(
       .setTint(tint);
     plate.setTint(tint);
 
+    const nameWide = measureOf(name, next.name, NAME_SIZE, (metrics) => metrics.width);
+    name.setFontSize(size(nameWide > nameRoom ? TYPE_FLOOR : NAME_SIZE));
     inked(name, toned(LOOK.cardNameInk)).setText(next.name);
 
     const paper = placed(shape.paper);
@@ -786,15 +807,22 @@ export function createCardFace(
     inked(rules, textInk)
       .setText(reading)
       .setVisible(reading !== '');
+    const statLines = next.stats === undefined ? 0 : BOX_STATS.length;
     const rowTall = rowShown ? numbers.height : 0;
-    const statsTall = next.stats === undefined ? 0 : BOX_STATS.length * statRow;
     const textTall = reading === '' ? 0 : ownBoxOf(rules).height;
-    const blockTop = (textTop + textBottom - rowTall - statsTall - textTall) / 2;
-    numbers.root.setVisible(rowShown).setPosition(0, blockTop + rowTall / 2);
-    if (rowShown) showNumbers(numbers, next.gives, next.takes, toned);
+    const starts = blockIn(textTop, textBottom, [
+      ...Array<number>(statLines).fill(statRow),
+      ...(rowTall + textTall === 0 ? [] : [rowTall + textTall]),
+    ]);
+    const rowTop = starts[statLines];
+    numbers.root.setVisible(rowShown);
+    if (rowShown) {
+      numbers.root.setPosition(0, rowTop + rowTall / 2);
+      showNumbers(numbers, next.gives, next.takes, toned);
+    }
     for (const { root: stat } of boxed) stat.setVisible(next.stats !== undefined);
-    if (next.stats !== undefined) layStats(next.stats, blockTop + rowTall, toned);
-    rules.setPosition(0, blockTop + rowTall + statsTall + textTall / 2);
+    if (next.stats !== undefined) layStats(next.stats, starts[0], starts[1] - starts[0], toned);
+    if (reading !== '') rules.setPosition(0, rowTop + rowTall + textTall / 2);
     const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {
@@ -889,9 +917,15 @@ export function createCardFace(
 
   /**
    * The stats of the text box laid out over the room from `top` down, a row to each line of their
-   * type, the columns' left edges `STAT_COLUMNS` apart and the block centred across.
+   * type, the rows' tops `pitch` apart, the columns' left edges `STAT_COLUMNS` apart and the block
+   * centred across.
    */
-  const layStats = (stats: NonNullable<Face['stats']>, top: number, toned: Tone): void => {
+  const layStats = (
+    stats: NonNullable<Face['stats']>,
+    top: number,
+    pitch: number,
+    toned: Tone,
+  ): void => {
     const cellOf = ({ number }: { number: Phaser.GameObjects.Text }): number =>
       statGlyph + size(STAT_GAP) + ownBoxOf(number).width;
     for (const { stat, number } of boxed) {
@@ -901,7 +935,7 @@ export function createCardFace(
     const across = Math.max(...boxed.map((cell) => cell.column * columns + cellOf(cell)));
     for (const cell of boxed) {
       const left = -across / 2 + cell.column * columns;
-      const middle = top + (cell.line + 0.5) * statRow;
+      const middle = top + cell.line * pitch + statRow / 2;
       asGlyph(cell.sign, cell.stat, statGlyph, {
         tone: toned,
         colour: LOOK.cardTextInk,
@@ -911,7 +945,7 @@ export function createCardFace(
       const own = ownBoxOf(cell.number.setPosition(0, middle));
       cell.number.setX(left + statGlyph + size(STAT_GAP) - own.x);
       const width = cellOf(cell);
-      statBoxes[cell.stat] = { x: left + width / 2, y: middle, width, height: statRow };
+      statBoxes[cell.stat] = { x: left + width / 2, y: middle, width, height: pitch };
     }
   };
   read(face, refusal, tone);
