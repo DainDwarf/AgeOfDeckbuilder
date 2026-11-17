@@ -8,8 +8,6 @@ import {
   builds,
   claimableTile,
   discarded,
-  disembarks,
-  embarks,
   enters,
   entersInside,
   entersOn,
@@ -232,7 +230,7 @@ export const WELL_GIVES = { terrain: 'plain', yields: { production: 2 } } as con
 /** The fixture's building that takes upkeep, and the card that builds it, for nothing. */
 export const SHRINE = 'PH_Shrine';
 
-/** The move of a unit the fixture's embark card embarks: none of the fixture's units has it ashore. */
+/** The move a test's camp has its enemies embarked on: none of the fixture's units has it ashore. */
 export const EMBARKED_MOVE = 3 * MOVE_POINT;
 
 /** The building every fixture age's neutral's city is. */
@@ -633,8 +631,6 @@ const TABLES: Omit<Tables, 'technologies'> = {
     PH_Smokehouse: { kind: 'building', cost: { production: 3 }, ...builds('PH_Smokehouse') },
     PH_Ditch: { kind: 'action', cost: { production: 2 }, ...placesImprovement('PH_Ditch') },
     PH_Weir: { kind: 'action', cost: {}, ...placesImprovement('PH_Weir') },
-    PH_Embark: { kind: 'action', cost: {}, ...embarks(EMBARKED_MOVE) },
-    PH_Disembark: { kind: 'action', cost: {}, ...disembarks() },
     PH_Mill: { kind: 'building', cost: { production: 3 }, ...builds('PH_Mill') },
     [SILO]: { kind: 'action', cost: { production: 3 }, ...builds(SILO, TILLAGE) },
     PH_Urbanisation: {
@@ -1769,6 +1765,19 @@ export function skiff(tile: TileCoords, stats: Partial<UnitStats> = {}): Standin
 }
 
 /**
+ * The chronicle with the unit of the player's of that number moved onto the unit on the tile, on the
+ * fixture's content unless the test hands in its own.
+ */
+export function embarkedOn(
+  chronicle: Chronicle,
+  unit: number,
+  tile: TileCoords,
+  catalogue: Catalogue = CATALOGUE,
+): Chronicle {
+  return outcome(apply(catalogue, chronicle, { type: 'move', unit, tile }));
+}
+
+/**
  * An enemy standing as `standing` stands it, the named camp's where one is, under `SCRIPT` unless
  * another is named, and embarked where a move is named, that move its move and its move points.
  */
@@ -1781,8 +1790,8 @@ export function enemyStanding(
     embarkedMove,
   }: { script?: string; stats?: Partial<UnitStats>; embarkedMove?: number } = {},
 ): Standing {
-  const afloat = embarkedMove === undefined ? stats : { ...stats, move: embarkedMove };
-  const enemy = standing('enemy', tile, afloat);
+  const embarkedStats = embarkedMove === undefined ? stats : { ...stats, move: embarkedMove };
+  const enemy = standing('enemy', tile, embarkedStats);
   const entering = { ...enemyEntering(enemy.stats.type, script, tile), embarkedMove, camp };
   return { ...enemy, entering };
 }

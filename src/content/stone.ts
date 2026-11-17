@@ -3,8 +3,6 @@ import {
   builds,
   claimableTile,
   discarded,
-  disembarks,
-  embarks,
   enters,
   entersInside,
   firstRefusal,
@@ -279,10 +277,8 @@ function buildsThenAdds(
   const builder = builds(building, over);
   return {
     ...builder,
-    effect: (catalogue, paid, at, through) =>
-      followed(builder.effect(catalogue, paid, at, through), (left) =>
-        rewarded(catalogue, left, next, 1),
-      ),
+    effect: (catalogue, paid, at) =>
+      followed(builder.effect(catalogue, paid, at), (left) => rewarded(catalogue, left, next, 1)),
   };
 }
 
@@ -377,7 +373,7 @@ const VILLAGE: BuildingKind = {
   yields: { military: 1, culture: 1 },
 };
 
-/** The move a unit has embarked: the Embark card's and the camp's enemies' alike. */
+/** The move the camp's enemies have embarked. */
 const EMBARKED_MOVE = MOVE_POINT;
 
 /** The Stone Age: what it owns, and what it brings to the tables every age shares. */
@@ -615,13 +611,6 @@ export const STONE: Slice = {
           firstRefusal(inside(chronicle, tile, 'player'), healthLost(catalogue, chronicle, tile)),
         effect: (catalogue, paid, at) => healed(catalogue, paid, at),
       },
-      embark: {
-        kind: 'action',
-        cost: { production: 1 },
-        becomes: 'disembark',
-        ...embarks(EMBARKED_MOVE),
-      },
-      disembark: { kind: 'action', cost: {}, becomes: 'embark', ...disembarks() },
       raft: { kind: 'unit', cost: { production: 3 }, ...entersInside('raft') },
       'food-trade': {
         kind: 'instant',
@@ -1025,7 +1014,7 @@ export const STONE: Slice = {
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
       raft: {
         needs: ['bow-and-arrow'],
-        unlocks: { cards: { embark: 1, raft: 1 }, region: 'archipelago' },
+        unlocks: { cards: { raft: 1 }, region: 'archipelago' },
       },
       megalith: { needs: ['calendar'], unlocks: { cards: { megalith: 1 } } },
       bartering: {

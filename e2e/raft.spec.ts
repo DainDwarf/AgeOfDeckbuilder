@@ -27,6 +27,7 @@ import {
   playedOn,
   playedOut,
   playerCityTile,
+  RAFT,
   readings,
   refusalLines,
   rested,
@@ -34,9 +35,6 @@ import {
   unitMarksOn,
   watch,
 } from './chronicle-screen';
-
-/** The unit card that enters a unit standing on the water alone, and the unit kind it enters. */
-const RAFT = 'raft';
 
 const CAMPAIGN = campaignWith([RAFT]);
 

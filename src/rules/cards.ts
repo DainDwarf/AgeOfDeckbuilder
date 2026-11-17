@@ -12,18 +12,14 @@ import {
   fullHealth,
   keywordOf,
   standsOnEntering,
-  standsOnWaterAlone,
   strikeOf,
   type UnitCard,
   type UnitEntry,
-  unitKind,
 } from './catalogue';
 import { claimable, declaredByLanding, populationTaken, retiled } from './city';
 import { neutralEnteredAround, neutralRoomAround } from './enemies';
 import {
-  distance,
   type FeatureId,
-  movementCost,
   neighbours,
   runsAlong,
   sameTile,
@@ -72,6 +68,7 @@ import {
   type TileBlock,
 } from './state';
 import {
+  changedWithCarrier,
   killed,
   refreshedMovePoints,
   spentAction,
@@ -264,48 +261,6 @@ export function refuses(
   }
 }
 
-/**
- * The units a card aimed at this tile could be played through, one of them named on the play where
- * there are several: those beside it that can be the one, for a card played through a unit beside
- * its tile, and none for any other card.
- */
-export function playedThrough(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  card: AimedCard,
-  tile: Tile,
-): Unit[] {
-  return chronicle.units.filter(
-    (unit) => throughRefusal(catalogue, chronicle, card, tile, unit.tile) === undefined,
-  );
-}
-
-/**
- * What a card aimed at this tile has against being played through the unit standing on `on`: a unit
- * of the player's there first, then one beside the tile, then the card's own reasons against it. A
- * card played through no unit refuses every one as not beside.
- */
-export function throughRefusal(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  card: AimedCard,
-  tile: Tile,
-  on: TileCoords,
-): TileBlock | undefined {
-  const unit = unitAt(chronicle.units, on);
-  if (unit?.faction !== 'player') return 'no-unit';
-  const through = card.aim === 'tile' ? card.through : undefined;
-  if (through === undefined || !playersBeside(chronicle, tile).includes(unit)) return 'not-beside';
-  return through(catalogue, chronicle, tile, unit);
-}
-
-/** The units of the player's standing beside the tile. */
-function playersBeside(chronicle: Chronicle, tile: TileCoords): Unit[] {
-  return chronicle.units.filter(
-    (unit) => unit.faction === 'player' && distance(unit.tile, tile) === 1,
-  );
-}
-
 /** The first check that refuses, in the order the aim hands them over: the one reason it answers. */
 export function firstRefusal(...checks: readonly (TileBlock | undefined)[]): TileBlock | undefined {
   return checks.find((reason) => reason !== undefined);
@@ -380,78 +335,6 @@ export function actionSpent(paid: Chronicle, at: TileCoords): Landed {
       paid,
     ),
   );
-}
-
-/** How a card embarks a unit of the player's ashore beside its tile: embarked, its move is `move`. */
-export function embarks(move: number): Aim & { readonly aim: 'tile' } {
-  return stepped(true, () => move);
-}
-
-/**
- * How a card disembarks an embarked unit of the player's beside its tile, never one whose kind stands
- * on the water alone: its move is its own again.
- */
-export function disembarks(): Aim & { readonly aim: 'tile' } {
-  return stepped(false, (catalogue, unit) => unitKind(catalogue, unit.stats.type).move);
-}
-
-/**
- * A unit of the player's beside the tile stepping onto it, embarking or disembarking, played through
- * that unit: the tile charted, of a terrain the step enters, and free; a unit beside it to step; one
- * of those standing on it once stepped, and holding action. It spends one, and moves on `move`.
- */
-function stepped(
-  embarking: boolean,
-  move: (catalogue: Catalogue, unit: Unit) => number,
-): Aim & { readonly aim: 'tile' } {
-  /**
-   * What a unit beside the tile passes to step onto it, in order: the reason refusing a unit that
-   * fails it, and the tile's where no unit beside passes it, when that one differs.
-   */
-  const checks: readonly {
-    readonly passes: (catalogue: Catalogue, unit: Unit, tile: Tile) => boolean;
-    readonly unit: TileBlock;
-    readonly tile?: TileBlock;
-  }[] = [
-    {
-      passes: (_catalogue, unit) => unit.embarked !== embarking,
-      unit: embarking ? 'unit-embarked' : 'unit-not-embarked',
-      tile: embarking ? 'no-unit-beside' : 'no-embarked-beside',
-    },
-    {
-      passes: (catalogue, unit, tile) =>
-        (embarking || !standsOnWaterAlone(catalogue, unit.stats.type)) &&
-        standsOn(catalogue, { ...unit.stats, move: move(catalogue, unit) }, embarking, tile),
-      unit: 'wrong-terrain',
-    },
-    { passes: (_catalogue, unit) => unit.action > 0, unit: 'unit-spent' },
-  ];
-  return {
-    aim: 'tile',
-    refuses: (catalogue, chronicle, tile) => {
-      const reason = firstRefusal(
-        chartedTile(chronicle, tile),
-        movementCost(catalogue, tile, embarking) === undefined ? 'wrong-terrain' : undefined,
-        unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
-      );
-      if (reason !== undefined) return reason;
-      let able = playersBeside(chronicle, tile);
-      for (const check of checks) {
-        able = able.filter((unit) => check.passes(catalogue, unit, tile));
-        if (able.length === 0) return check.tile ?? check.unit;
-      }
-      return undefined;
-    },
-    through: (catalogue, _chronicle, tile, unit) =>
-      checks.find(({ passes }) => !passes(catalogue, unit, tile))?.unit,
-    effect: (catalogue, paid, at, through) => {
-      const stepping = through === undefined ? undefined : unitAt(paid.units, through);
-      if (through === undefined || stepping === undefined) {
-        return landedAs(change('runtime-error', paid, paid));
-      }
-      return steppedOnto(paid, stepping, at, embarking, move(catalogue, stepping));
-    },
-  };
 }
 
 /**
@@ -1028,8 +911,8 @@ export function terraformed(
 }
 
 /**
- * The move points an instant refreshes, on the unit standing on the tile it was aimed at, and
- * nothing where they were already full.
+ * The move points an instant refreshes, on the unit standing on the tile it was aimed at and the unit
+ * carrying it, and nothing where they were already full.
  */
 export function refreshed(paid: Chronicle, at: TileCoords): Landed {
   const marching = unitAt(paid.units, at);
@@ -1043,7 +926,7 @@ export function refreshed(paid: Chronicle, at: TileCoords): Landed {
       {
         ...paid,
         units: paid.units.map((unit) =>
-          unit.id === marching.id ? refreshedMovePoints(unit) : unit,
+          unit.id === marching.id ? changedWithCarrier(unit, refreshedMovePoints) : unit,
         ),
       },
       paid,

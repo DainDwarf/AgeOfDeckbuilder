@@ -6,11 +6,9 @@ import {
   discarded,
   goesTo,
   lyingAs,
-  playedThrough,
   refuses,
   steppedOnto,
   struck,
-  throughRefusal,
   withBuilding,
 } from './cards';
 import {
@@ -145,7 +143,9 @@ import {
   actsAsEnemy,
   attackable,
   canAttack,
+  changedWithCarrier,
   crossedTo,
+  everyUnit,
   type Faction,
   FIRST_UNIT_NUMBER,
   type Landing,
@@ -1028,24 +1028,23 @@ function ticked(chronicle: Chronicle): Sequence<Group> {
  * nothing where all are.
  */
 function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
-  const full = (one: Unit): boolean =>
-    one.movePoints === one.stats.move && one.action === one.stats.action;
-  if (full(unit) && (unit.carrier === undefined || full(unit.carrier))) {
+  if (
+    unit.movePoints === unit.stats.move &&
+    everyUnit([unit]).every((one) => one.action === one.stats.action)
+  ) {
     return unchanged(chronicle);
   }
-  const fresh = (one: Unit): Unit => refreshedAction(refreshedMovePoints(one));
   return landedAs(
     changeOn(
       'refreshed',
       unit.tile,
       {
         ...chronicle,
-        units: chronicle.units.map((other) => {
-          if (other.id !== unit.id) return other;
-          return other.carrier === undefined
-            ? fresh(other)
-            : { ...fresh(other), carrier: fresh(other.carrier) };
-        }),
+        units: chronicle.units.map((other) =>
+          other.id === unit.id
+            ? changedWithCarrier(other, (one) => refreshedAction(refreshedMovePoints(one)))
+            : other,
+        ),
       },
       chronicle,
     ),
@@ -1195,9 +1194,7 @@ function aimedBy(command: PlayCommand): Aimed {
     case 'none':
       return { aim: 'none' };
     case 'tile':
-      return command.through === undefined
-        ? { aim: 'tile', tile: command.tile }
-        : { aim: 'tile', tile: command.tile, through: command.through };
+      return { aim: 'tile', tile: command.tile };
     case 'unit':
       return { aim: 'unit', tile: command.tile };
     case 'hand':
@@ -1221,20 +1218,9 @@ function aimedEffect(
       return command.aim === 'none' ? (paid) => card.effect(catalogue, paid) : undefined;
     case 'tile': {
       if (command.aim !== 'tile') return undefined;
-      const { tile, through: named } = command;
-      const at = admittedAt(catalogue, chronicle, card, tile);
-      if (at === undefined) return undefined;
-      if (card.through === undefined) {
-        return named === undefined ? (paid) => card.effect(catalogue, paid, tile) : undefined;
-      }
-      if (named !== undefined) {
-        if (throughRefusal(catalogue, chronicle, card, at, named) !== undefined) return undefined;
-        return (paid) => card.effect(catalogue, paid, tile, named);
-      }
-      const units = playedThrough(catalogue, chronicle, card, at);
-      if (units.length !== 1) return undefined;
-      const through = units[0].tile;
-      return (paid) => card.effect(catalogue, paid, tile, through);
+      const { tile } = command;
+      if (admittedAt(catalogue, chronicle, card, tile) === undefined) return undefined;
+      return (paid) => card.effect(catalogue, paid, tile);
     }
     case 'unit': {
       if (command.aim !== 'unit') return undefined;

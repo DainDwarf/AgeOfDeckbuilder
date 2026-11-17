@@ -13,7 +13,6 @@ import {
   click,
   dragOut,
   drawnFaces,
-  EMBARK,
   FISHERY,
   fisheryAdmitted,
   glyphs,
@@ -23,13 +22,14 @@ import {
   panelRows,
   playedOn,
   playedOut,
+  RAFT,
   readings,
   shownCard,
   upkeepRow,
   watch,
 } from './chronicle-screen';
 
-const CAMPAIGN = campaignWith([EMBARK]);
+const CAMPAIGN = campaignWith([RAFT]);
 
 /** What the Fishery gives the tiles beside it. */
 const GIVES = (() => {

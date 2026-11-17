@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { CATALOGUE } from '../content/catalogue';
 import type { Choices, Payment } from '../rules/campaign';
-import { entersOn, playedThrough, refuses, throughRefusal, triedAt } from '../rules/cards';
+import { entersOn, refuses, triedAt } from '../rules/cards';
 import { costOf, type Entering, entered } from '../rules/catalogue';
 import {
   admitted,
@@ -16,11 +16,11 @@ import {
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
-import { sameTile, type Tile, type TileCoords, tileAt, tileKey } from '../rules/map';
+import { sameTile, type TileCoords, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
-import { type Unit, unitOf } from '../rules/units';
+import { unitOf } from '../rules/units';
 import { chronicleScreenAtSpeed } from './animation-speed';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
@@ -519,12 +519,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
         });
       },
       dismiss,
-      aimTile: ({ key, id }, card, released, reaimed) => {
+      aimTile: ({ key, id }, card, released) => {
         // Nothing changes the chronicle while an aim stands, so the refusal it opens on is still the
         // rules' answer at the press that lands it, and no play is sent for one they would refuse.
         const refusal = refusalOf(CATALOGUE, this.current, id);
-        /** Whether the aim at the tile is coming down for the aim at the unit it is played through. */
-        let picking = false;
 
         /** What the card's play at a tile would give, tile by tile; nothing for a card aimed at a unit. */
         const gives: AimShown['gives'] = (tile, faces) => {
@@ -546,50 +544,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
           }
         };
 
-        /** The aim at a unit, among those the card at this tile could be played through. */
-        const throughOne = (played: TileCoords, at: Tile, units: readonly Unit[]): (() => void) =>
-          view.aimTile(
-            { tiles: [played], units: units.map((unit) => unit.tile), gives },
-            (tile) => {
-              const block = throughRefusal(CATALOGUE, this.current, card, at, tile);
-              if (block !== undefined) {
-                note.overTile(refusedAim(block), view.faceOf(tile));
-                return;
-              }
-              const command: PlayCommand = {
-                type: 'play',
-                key,
-                aim: 'tile',
-                tile: played,
-                through: tile,
-              };
-              warnedOrLanded(command, () => {
-                hand.unselect();
-                void playOut(command);
-              });
-            },
-            (found) => {
-              const block = throughRefusal(CATALOGUE, this.current, card, at, found.tile);
-              if (block === undefined) return;
-              note.overTile(refusedAim(block), found.at);
-            },
-            released,
-          );
-
-        let letGo = view.aimTile(
+        return view.aimTile(
           shownAs(admitted(CATALOGUE, this.current, card)),
           (tile) => {
             if (!playable(refusal)) {
               note.overTile(refused(costOf(CATALOGUE, id), refusal), view.faceOf(tile));
-              return;
-            }
-            const at = tileAt(this.current.tiles, tile);
-            const units = at === undefined ? [] : playedThrough(CATALOGUE, this.current, card, at);
-            if (at !== undefined && units.length > 1) {
-              picking = true;
-              letGo();
-              letGo = throughOne(tile, at, units);
-              reaimed('unit');
               return;
             }
             const command: PlayCommand = { type: 'play', key, aim: card.aim, tile };
@@ -605,13 +564,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
             if (block === undefined) return;
             note.overTile(refusedAim(block), found.at);
           },
-          () => {
-            if (!picking) released();
-          },
+          released,
         );
-        return () => {
-          letGo();
-        };
       },
       inspect: (card) => overlay.inspect(this.current, card),
       inspectNamed: (name) => overlay.inspectNamed(name),

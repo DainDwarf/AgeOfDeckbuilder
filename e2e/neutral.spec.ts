@@ -1,32 +1,21 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { ageOf, cardOf, neutralOf, neutralWorkerKind, unitKind } from '../src/rules/catalogue';
+import { ageOf, cardOf, neutralOf, neutralWorkerKind } from '../src/rules/catalogue';
 import { apply, byHand, declaresWar, outcome, type UnitCommand } from '../src/rules/chronicle';
 import { bordered, warDeclared, yielded } from '../src/rules/city';
-import {
-  movementCost,
-  neighbours,
-  type TileCoords,
-  tileAt,
-  tileKey,
-  tilesBeside,
-  water,
-} from '../src/rules/map';
+import { neighbours, type TileCoords, tileAt, tileKey, tilesBeside, water } from '../src/rules/map';
 import { neutralBuilding } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
 import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
 import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
-import { relationsOf, standsOn, unitAt } from '../src/rules/units';
+import { relationsOf, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
 import type { Point } from '../src/ui/border-loops';
 import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
 import {
-  admits,
-  aimed,
-  aimLine,
   type BorderStroke,
   borderColours,
   borderStretches,
@@ -38,9 +27,7 @@ import {
   chronicleOf,
   click,
   consoleKey,
-  disembarkingAt,
-  dragOut,
-  EMBARK,
+  embarkedOnRaft,
   endedTurn,
   endTurn,
   enter,
@@ -54,10 +41,9 @@ import {
   neutralCampaign,
   onScreen,
   openSaved,
-  paidFor,
   paintedOn,
-  playedOn,
   playedOut,
+  RAFT,
   readings,
   rested,
   restedOnDeal,
@@ -430,88 +416,67 @@ test('a unit of the player’s pressed onto the neutral’s city at peace raises
   expect(problems).toEqual([]);
 });
 
-/** A new campaign whose deck holds Embark. */
-const SAILING = campaignWith([EMBARK]);
+/** A new campaign whose deck holds the Raft. */
+const SAILING = campaignWith([RAFT]);
 
 /**
- * The first seed's turn with the neutral's city's tile free and a warrior of the player's embarked by
- * Embark beside it, Disembark in hand and paid for, admitting the city's tile; where Disembark lies,
- * and the city's tile.
+ * The first seed's turn after a warrior of the player's stepped onto a raft on the water beside the
+ * neutral's city, the city's tile freed: that chronicle, the raft's tile, and the move that
+ * disembarks the warrior onto the city's tile from where it stands.
  */
-function offTheNeutralCity(): { chronicle: Chronicle; index: number; city: TileCoords } {
-  const warrior = unitKind(CATALOGUE, WARRIOR);
-  return firstSeed(
-    `frees the neutral’s city with ${EMBARK} in hand beside water beside it`,
-    (seed) => {
-      const { chronicle: opened, city } = cityFreed(settledOn(seed, [], SAILING));
-      if (!idsOf(opened.hand).includes(EMBARK)) return undefined;
-      const free = (coord: TileCoords): boolean =>
-        unitAt(opened.units, coord) === undefined && holderOf(opened, coord) === undefined;
-      for (const water of neighbours(city)) {
-        if (
-          !free(water) ||
-          movementCost(CATALOGUE, tileAt(opened.tiles, water), true) === undefined
-        ) {
-          continue;
-        }
-        for (const bank of neighbours(water)) {
-          if (!free(bank) || !standsOn(CATALOGUE, warrior, false, tileAt(opened.tiles, bank))) {
-            continue;
-          }
-          const manned = unitEntered(opened, { type: WARRIOR, faction: 'player', tile: bank });
-          const paid = paidFor(manned, EMBARK);
-          if (!admits(paid.chronicle, paid.index, water)) continue;
-          const disembarking = disembarkingAt(paid, water, city, SAILING);
-          if (disembarking !== undefined) return { ...disembarking, city };
+function offTheNeutralCity(): { chronicle: Chronicle; raft: TileCoords; move: UnitCommand } {
+  return firstSeed(`frees the neutral’s city beside water a ${RAFT} stands on`, (seed) => {
+    const opened = settledOn(seed, [], SAILING);
+    const city = opened.neutral?.city;
+    if (city === undefined) return undefined;
+    const free = (coord: TileCoords): boolean =>
+      unitAt(opened.units, coord) === undefined && holderOf(opened, coord) === undefined;
+    for (const raft of neighbours(city).filter(free)) {
+      for (const bank of neighbours(raft).filter(free)) {
+        const embarked = embarkedOnRaft(opened, raft, bank, WARRIOR);
+        if (embarked === undefined) continue;
+        const { chronicle } = cityFreed(endedTurn(embarked));
+        const warrior = unitAt(chronicle.units, raft);
+        if (warrior === undefined || chronicle.ending !== undefined) continue;
+        const stepsOff = byHand(CATALOGUE, chronicle, warrior).steps.some(
+          (step) => tileKey(step.tile) === tileKey(city) && step.landing === undefined,
+        );
+        if (stepsOff) {
+          return { chronicle, raft, move: { type: 'move', unit: warrior.id, tile: city } };
         }
       }
-      return undefined;
-    },
-  );
+    }
+    return undefined;
+  });
 }
 
-test('a card played at peace that lands a unit of the player’s on the neutral’s city raises the Declare War warning, reading Play; Back leaves the card being aimed with nothing paid, and the press gone through plays it, the unit landed there and the neutral hostile', async ({
+test('a unit of the player’s on a raft pressed onto the neutral’s city at peace raises the Declare War warning, reading Move, and the press gone through disembarks it there, the neutral hostile and the raft on its tile', async ({
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, index, city } = offTheNeutralCity();
-  const { key } = chronicle.hand[index];
-  const play = { type: 'play', key, aim: 'tile', tile: city } as const;
-  const landed = playedOn(chronicle, index, city);
-  const warning = 'play-warning';
-  expect(declaresWar(CATALOGUE, chronicle, play)).toBe(true);
+  const { chronicle, raft, move } = offTheNeutralCity();
+  const landed = outcome(apply(CATALOGUE, chronicle, move));
+  expect(declaresWar(CATALOGUE, chronicle, move)).toBe(true);
   expect(relationsOf(landed)).toBe('hostile');
-  expect(unitAt(landed.units, city)?.faction).toBe('player');
+  expect(unitAt(landed.units, move.tile)?.id).toBe(move.unit);
+  expect(unitAt(landed.units, raft)?.stats.type).toBe(RAFT);
 
   await openSaved(page, chronicle, SAILING);
-  await broughtIn(page, city);
-  await dragOut(page, index);
-  await aimed(page);
-  const line = await aimLine(page);
-  expect(line).toBeDefined();
+  await broughtIn(page, move.tile);
+  const onRaft = await tileOnScreen(page, raft);
+  await page.mouse.click(onRaft.x, onRaft.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(raft));
+  await rested(page);
+  const city = await tileOnScreen(page, move.tile);
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => standing(page, WARNING)).toBe(true);
+  await rested(page);
+  const seen = await readings(page, [`${WARNING}-through-label`]);
+  expect(seen(`${WARNING}-through-label`).text).toBe(text('declare-war.move'));
 
-  const pressed = async (): Promise<void> => {
-    await aimed(page);
-    const at = await tileOnScreen(page, city);
-    await page.mouse.click(at.x, at.y);
-    await expect.poll(() => standing(page, warning)).toBe(true);
-    await rested(page);
-  };
-
-  await pressed();
-  const seen = await readings(page, [`${warning}-title`, `${warning}-through-label`]);
-  expect(seen(`${warning}-title`).text).toBe(text('declare-war.title'));
-  expect(seen(`${warning}-through-label`).text).toBe(text('declare-war.play'));
-
-  await click(page, `${warning}-back`);
-  await expect.poll(() => standing(page, warning)).toBe(false);
-  expect(await chronicleOf(page)).toEqual(chronicle);
-  expect(await aimLine(page)).toBe(line);
-
-  await pressed();
-  await click(page, `${warning}-through`);
+  await click(page, `${WARNING}-through`);
   await playedOut(page);
-  expect(await standing(page, warning)).toBe(false);
+  expect(await standing(page, WARNING)).toBe(false);
   expect(await chronicleOf(page)).toEqual(landed);
 
   expect(problems).toEqual([]);

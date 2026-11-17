@@ -1,7 +1,5 @@
 import { type CardKind, playedByNothing } from '../rules/cards';
 import {
-  type Aim,
-  actionGoesTo,
   type Card,
   type Catalogue,
   cardMade,
@@ -26,8 +24,11 @@ import type { CardId, Cost, MadeCard } from '../rules/state';
 import { cardName, cardRules, text } from './text';
 import type { Reference } from './text-run';
 
-/** What the label at a face's foot reads, and what its tooltip says. */
-export type FaceKind = CardKind | 'worker-action';
+/**
+ * What the label at a face's foot reads, and what its tooltip says: an action's names the worker, the
+ * one unit content plays an action through.
+ */
+export type FaceKind = Exclude<CardKind, 'action'> | 'worker-action';
 
 /** What the label at a face's foot reads. */
 export function kindLabel(kind: FaceKind): string {
@@ -43,7 +44,7 @@ export function kindTooltip(kind: FaceKind): string {
 export function labelledKind(card: Card): FaceKind {
   switch (card.kind) {
     case 'action':
-      return actionLabelled(card);
+      return 'worker-action';
     case 'settle':
     case 'unit':
     case 'building':
@@ -52,17 +53,6 @@ export function labelledKind(card: Card): FaceKind {
     case 'trophy':
     case 'challenge':
       return card.kind;
-  }
-}
-
-/** The kind an action card's face is labelled by: naming the worker where it is played through one. */
-function actionLabelled(aim: Aim): FaceKind {
-  switch (actionGoesTo(aim)) {
-    case 'worker':
-      return 'worker-action';
-    case 'any':
-    case 'none':
-      return 'action';
   }
 }
 

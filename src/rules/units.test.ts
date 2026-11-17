@@ -12,7 +12,6 @@ import {
 import { growthThreshold, warDeclared } from './city';
 import {
   actionOf,
-  aimedAt,
   aimedAtNothing,
   aimedAtUnit,
   attackOn,
@@ -23,7 +22,7 @@ import {
   CITY,
   cityOf,
   deepBut,
-  EMBARKED_MOVE,
+  embarkedOn,
   endedTurn,
   FOOD,
   field,
@@ -925,69 +924,6 @@ test('the same move on the same chronicle gives the same chronicle back', () => 
   expect(city).toEqual(untouched);
 });
 
-test('an embarked unit moves on the card’s move over the water embarked units enter, and crosses onto no land', () => {
-  const coast = [
-    { q: 1, r: 0 },
-    { q: 2, r: 0 },
-    { q: 3, r: 0 },
-  ];
-  const city = cityOf(['urban'], {
-    tiles: field(3, coast),
-    hand: ['PH_Embark'],
-    units: [standing('player', CITY, { sight: 4 })],
-  });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast[0])));
-  const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
-
-  expect(pointsOf(ticked, 1)).toBe(EMBARKED_MOVE);
-  expect(unitNamed(outcome(apply(CATALOGUE, ticked, moveTo(1, coast[2]))), 1).tile).toEqual(
-    coast[2],
-  );
-  expect(
-    byHand(CATALOGUE, ticked, unitNamed(ticked, 1))
-      .landings.map(({ tile }) => tileKey(tile))
-      .sort(),
-  ).toEqual([coast[1], coast[2]].map(tileKey));
-});
-
-test('an embarked unit attacks nothing, whatever its range and damage', () => {
-  const coast = { q: 1, r: 0 };
-  const city = cityOf(['urban'], {
-    tiles: field(3, [coast]),
-    hand: ['PH_Embark'],
-    units: [
-      standing('player', CITY, { damage: 2, range: 2 }),
-      standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 }),
-    ],
-  });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
-  const ticked = outcome(apply(CATALOGUE, embarked, { type: 'end-turn' }));
-
-  expect(actionOf(ticked, 1)).toBeGreaterThan(0);
-  expect(attackable(ticked.units, unitNamed(ticked, 1), relationsOf(ticked))).toEqual([]);
-  expect(stagedBy(ticked, attackOn(1, { q: 2, r: 0 }))).toEqual(['refused']);
-});
-
-test('a unit whose range is one attacks no embarked unit, and one of a longer range attacks it anywhere within its range', () => {
-  const coast = { q: 1, r: 0 };
-  const city = cityOf(['urban'], {
-    tiles: field(3, [coast]),
-    hand: ['PH_Embark'],
-    units: [
-      standing('player', CITY, { health: 5 }),
-      standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 }),
-      standing('enemy', { q: 1, r: 1 }, { move: 0, range: 2 }),
-      standing('enemy', { q: 3, r: 0 }, { move: 0, range: 2 }),
-    ],
-  });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
-
-  expect(attacksOf(embarked)).toEqual([
-    ['1,1', '1,0'],
-    ['3,0', '1,0'],
-  ]);
-});
-
 /** The tile a raft stands on, off the plain the city's warrior stands on beside it. */
 const RAFT = { q: 2, r: 0 };
 
@@ -998,21 +934,50 @@ const SHORE = { q: 1, r: 0 };
 const WATER = [RAFT, { q: 3, r: 0 }, { q: 3, r: -1 }, { q: 3, r: -2 }, { q: 2, r: -2 }];
 
 /** The city on a disc of plain out to three with `WATER` in it, these units standing on it. */
-function afloat(units: Standing[], carrying: Carrying = {}): Chronicle {
+function besideTheWater(units: Standing[], carrying: Carrying = {}): Chronicle {
   return cityOf(['urban'], { tiles: field(3, WATER), units, ...carrying });
 }
 
 /** The chronicle with the unit of that number stepped onto `RAFT`. */
-function aboard(chronicle: Chronicle, unit = 1): Chronicle {
-  return outcome(apply(CATALOGUE, chronicle, moveTo(unit, RAFT)));
+function embarkedOnRaft(chronicle: Chronicle, unit = 1): Chronicle {
+  return embarkedOn(chronicle, unit, RAFT);
 }
 
+test('an embarked unit attacks nothing, whatever its range and damage', () => {
+  const beside = { q: 2, r: -1 };
+  const city = besideTheWater([
+    standing('player', SHORE, { damage: 2, range: 2 }),
+    skiff(RAFT),
+    standing('enemy', beside, { move: 0, range: 1 }),
+  ]);
+  const ticked = endedTurn(embarkedOnRaft(city));
+
+  expect(actionOf(ticked, 1)).toBeGreaterThan(0);
+  expect(attackable(ticked.units, unitNamed(ticked, 1), relationsOf(ticked))).toEqual([]);
+  expect(stagedBy(ticked, attackOn(1, beside))).toEqual(['refused']);
+});
+
+test('a unit whose range is one attacks no embarked unit, and one of a longer range attacks it anywhere within its range', () => {
+  const city = besideTheWater([
+    standing('player', SHORE, { health: 5 }),
+    skiff(RAFT),
+    standing('enemy', { q: 2, r: -1 }, { move: 0, range: 1 }),
+    standing('enemy', { q: 1, r: 1 }, { move: 0, range: 2 }),
+    standing('enemy', { q: 1, r: -1 }, { move: 0, range: 2 }),
+  ]);
+
+  expect(attacksOf(embarkedOnRaft(city))).toEqual([
+    ['1,1', '2,0'],
+    ['1,-1', '2,0'],
+  ]);
+});
+
 test('a unit of the player’s embarks by a step onto a raft of the player’s beside it: one press spending its action and every move point it has left, however few, its move the raft’s from there; the unit on that tile is the embarked one, the raft commanded no more, and a unit holding no action embarks onto nothing', () => {
-  const city = afloat([standing('player', SHORE, {}, 0), skiff(RAFT)]);
+  const city = besideTheWater([standing('player', SHORE, {}, 0), skiff(RAFT)]);
   const raft = unitNamed(city, 2);
   const stages = apply(CATALOGUE, city, moveTo(1, RAFT));
   const after = outcome(stages);
-  const spent = afloat([standing('player', SHORE, {}, undefined, 0), skiff(RAFT)]);
+  const spent = besideTheWater([standing('player', SHORE, {}, undefined, 0), skiff(RAFT)]);
 
   expect(namesOf(stages)).toEqual(['action-spent', 'move']);
   expect(stages[1]).toMatchObject({ from: SHORE, to: RAFT });
@@ -1042,25 +1007,26 @@ test('a unit away from a raft embarks by one press: the walk to the landing besi
   expect(unitAt(outcome(stages).units, RAFT)).toMatchObject({ id: 1, embarked: true });
 });
 
-test('embarked, a unit moves on the raft’s move with it, each step spending the same of both units’ move points and taken only where both cover it', () => {
-  const city = afloat([standing('player', SHORE), skiff(RAFT)], { drawPile: ['PH_March'] });
+test('embarked, a unit moves on the raft’s move with it, each step spending the same of both units’ move points; walked out, a refresh on it refreshes both, and the two cross again that turn', () => {
+  const city = besideTheWater([standing('player', SHORE), skiff(RAFT)], { drawPile: ['PH_March'] });
   const { move } = unitKind(CATALOGUE, 'PH_Skiff');
-  const ticked = endedTurn(aboard(city));
-  const out = { q: 3, r: -1 };
-
-  expect(pointsOf(ticked, 1)).toBe(move);
+  const ticked = endedTurn(embarkedOnRaft(city));
+  const out = { q: 3, r: -2 };
+  const onward = { q: 2, r: -2 };
 
   const crossed = outcome(apply(CATALOGUE, ticked, moveTo(1, out)));
   const marched = outcome(apply(CATALOGUE, crossed, aimedAtUnit(crossed, out)));
+  const again = outcome(apply(CATALOGUE, marched, moveTo(1, onward)));
+  const ashore = outcome(apply(CATALOGUE, again, moveTo(1, { q: 2, r: -1 })));
 
+  expect(pointsOf(ticked, 1)).toBe(move);
+  expect(stagedBy(ticked, aimedAtUnit(ticked, RAFT))).toEqual(['refused']);
   expect(unitAt(crossed.units, out)?.id).toBe(1);
-  expect(pointsOf(crossed, 1)).toBe(move - MOVE_POINT);
+  expect(pointsOf(crossed, 1)).toBe(0);
+  expect(byHand(CATALOGUE, crossed, unitNamed(crossed, 1)).landings).toEqual([]);
   expect(pointsOf(marched, 1)).toBe(move);
-  expect(
-    byHand(CATALOGUE, marched, unitNamed(marched, 1))
-      .landings.map(({ tile }) => tileKey(tile))
-      .sort(),
-  ).toEqual(['2,0', '3,-2', '3,0']);
+  expect(unitAt(again.units, onward)?.id).toBe(1);
+  expect(unitNamed(ashore, 2)).toMatchObject({ tile: onward, movePoints: move - MOVE_POINT });
 });
 
 test('a unit disembarks by a step onto a free, charted tile beside it that its kind’s move covers ashore, spending its action, its move its own again; the raft stays on its tile with the health and the move points it holds, and moves on that turn', () => {
@@ -1071,7 +1037,7 @@ test('a unit disembarks by a step onto a free, charted tile beside it that its k
     tiles: madeOf(field(3, WATER), 'mountain', [peak]),
     units: [standing('player', SHORE), skiff(RAFT), standing('player', held)],
   });
-  const ticked = endedTurn(aboard(city));
+  const ticked = endedTurn(embarkedOnRaft(city));
 
   const stages = apply(CATALOGUE, ticked, moveTo(1, ashore));
   const after = outcome(stages);
@@ -1093,8 +1059,10 @@ test('a unit disembarks by a step onto a free, charted tile beside it that its k
 test('an embarked unit disembarks by one press at the end of a walk over the water, onto a tile beside the landing it charted, and the raft stays on that landing with what the walk left it of its move points', () => {
   const far = { q: 3, r: -3 };
   const landing = { q: 3, r: -2 };
-  const near = endedTurn(aboard(afloat([standing('player', SHORE), skiff(RAFT)])));
-  const seeing = endedTurn(aboard(afloat([standing('player', SHORE, { sight: 3 }), skiff(RAFT)])));
+  const near = endedTurn(embarkedOnRaft(besideTheWater([standing('player', SHORE), skiff(RAFT)])));
+  const seeing = endedTurn(
+    embarkedOnRaft(besideTheWater([standing('player', SHORE, { sight: 3 }), skiff(RAFT)])),
+  );
   const { move } = unitKind(CATALOGUE, 'PH_Skiff');
 
   const stages = apply(CATALOGUE, seeing, moveTo(1, far));
@@ -1110,40 +1078,41 @@ test('an embarked unit disembarks by one press at the end of a walk over the wat
 test('an attack on a raft’s tile lands on the unit it carries and never on the raft; the unit killed, the raft stands on its tile with the health it holds', () => {
   /** The city's warrior beside the raft, a slinger of the enemy’s of that damage ashore beside it. */
   const beset = (damage: number): Chronicle =>
-    afloat([
+    besideTheWater([
       standing('player', SHORE),
       skiff(RAFT),
       standing('enemy', { q: 2, r: -1 }, { move: 0, range: 2, damage }),
     ]);
   const { health } = unitNamed(beset(1), 1).stats;
   const killing = beset(health);
-  const stages = apply(CATALOGUE, aboard(killing), { type: 'end-turn' });
+  const stages = apply(CATALOGUE, embarkedOnRaft(killing), { type: 'end-turn' });
   const sunk = outcome(stages);
 
-  expect(unitNamed(endedTurn(aboard(beset(1))), 1).stats.health).toBe(health - 1);
+  expect(unitNamed(endedTurn(embarkedOnRaft(beset(1))), 1).stats.health).toBe(health - 1);
   expect(namesOf(stages).filter((name) => name === 'killed')).toHaveLength(1);
   expect(sunk.units.some(({ id }) => id === 1)).toBe(false);
   expect(unitAt(sunk.units, RAFT)).toEqual(unitNamed(killing, 2));
 });
 
-test('one unit to a raft: a raft carrying a unit is stepped onto by no other, an embarked unit steps onto no second raft, and a raft holding an action steps onto none', () => {
+test('one unit to a raft: a raft carrying a unit is stepped onto by no other, an embarked unit steps onto no second raft, and a raft holding an action steps onto none and off onto no land', () => {
   const second = { q: 3, r: 0 };
-  const city = afloat([
+  const city = besideTheWater([
     standing('player', SHORE),
     skiff(RAFT),
     standing('player', { q: 2, r: -1 }),
     skiff(second, { action: 1 }),
   ]);
-  const carrying = aboard(city);
+  const carrying = embarkedOnRaft(city);
 
   expect(stagedBy(carrying, moveTo(3, RAFT))).toEqual(['refused']);
   expect(stagedBy(endedTurn(carrying), moveTo(1, second))).toEqual(['refused']);
   expect(stagedBy(city, moveTo(4, RAFT))).toEqual(['refused']);
+  expect(stagedBy(city, moveTo(4, { q: 2, r: 1 }))).toEqual(['refused']);
 });
 
 test('a raft carrying a unit sees nothing of its own, the unit it carries seeing by its own sight, and counts toward the growth threshold as it did', () => {
-  const city = afloat([standing('player', SHORE, { sight: 0 }), skiff(RAFT)]);
-  const carrying = aboard(city);
+  const city = besideTheWater([standing('player', SHORE, { sight: 0 }), skiff(RAFT)]);
+  const carrying = embarkedOnRaft(city);
   const beyond = tileKey({ q: 3, r: 0 });
 
   expect(inSight(CATALOGUE, city).has(beyond)).toBe(true);
@@ -1155,9 +1124,12 @@ test('a unit of the player’s disembarking onto a tile the neutral holds declar
   const ashore = { q: 2, r: -1 };
   const { neutral, relations } = besideTheNeutral();
   if (neutral === undefined) throw new Error('the chronicle holds no neutral');
-  const opened = afloat([standing('player', { q: 1, r: 1 }), skiff(RAFT)], { neutral, relations });
+  const opened = besideTheWater([standing('player', { q: 1, r: 1 }), skiff(RAFT)], {
+    neutral,
+    relations,
+  });
   const city = withCityRows(opened, 'neutral', { held: [...neutral.held, ashore] });
-  const ticked = endedTurn(aboard(city));
+  const ticked = endedTurn(embarkedOnRaft(city));
 
   const stages = apply(CATALOGUE, ticked, moveTo(1, ashore));
 

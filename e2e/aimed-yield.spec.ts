@@ -28,7 +28,6 @@ import {
   campaignWith,
   dragOut,
   drawnFaces,
-  EMBARK,
   FISHERY,
   firstSeed,
   fisheryAdmitted,
@@ -39,6 +38,7 @@ import {
   openSaved,
   playerCityTile,
   pointAt,
+  RAFT,
   settledOn,
   TRAPPING,
   watch,
@@ -156,7 +156,7 @@ test('the Fishery aimed at the coast its worker stands on plates what it would g
   page,
 }) => {
   const problems = watch(page);
-  const campaign = campaignWith([EMBARK]);
+  const campaign = campaignWith([RAFT]);
   const { chronicle, tile, index, beside } = fisheryAdmitted(campaign, fisheryBeside);
   const gives = wouldGive(chronicle, index, tile);
 

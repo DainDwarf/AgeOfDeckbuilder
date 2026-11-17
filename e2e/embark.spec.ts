@@ -1,167 +1,224 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { unitKind } from '../src/rules/catalogue';
 import {
-  distance,
-  movementCost,
-  neighbours,
-  type TileCoords,
-  tileAt,
-  tileKey,
-} from '../src/rules/map';
+  anythingByHand,
+  apply,
+  byHand,
+  declaresWar,
+  outcome,
+  type Step,
+} from '../src/rules/chronicle';
+import { distance, neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
-import { standsOn, unitAt } from '../src/rules/units';
-import { cardName, text } from '../src/ui/text';
+import { pathTo, type Unit, unitAt } from '../src/rules/units';
+import { inMovePoints } from '../src/ui/face';
+import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
+import { CANOE } from '../src/ui/marks';
 import {
-  admits,
-  aimed,
-  aimLine,
-  becomes,
   campaignWith,
-  cardOnFace,
   chronicleOf,
   click,
-  disembarkingAt,
-  dragOut,
-  EMBARK,
+  embarkedOnRaft,
+  endedTurn,
   firstSeed,
-  idsOf,
+  litFor,
+  marksIn,
   openSaved,
-  paidFor,
-  playedOn,
+  paintedOn,
+  pathDrawn,
   playedOut,
   playerCityTile,
+  pointAt,
+  RAFT,
+  rafted,
+  rested,
+  ringedAndLit,
+  ringedTile,
   settledOn,
-  unitEntered,
+  unitMarksOn,
   WARRIOR,
   watch,
 } from './chronicle-screen';
 
-/** The card Embark becomes. */
-const DISEMBARK = becomes(EMBARK);
-
-const CAMPAIGN = campaignWith([EMBARK]);
+const CAMPAIGN = campaignWith([RAFT]);
 
 /**
- * A turn 1 with Embark in hand, a tile embarked units enter, free, and two free tiles beside it a
- * warrior stands on.
+ * What `made` makes of the first seed's turn 1 on a campaign that learned Raft, on the free tile
+ * nearest the city that it makes something of, no further south than one row below the city, clear
+ * of the line over the hand, each tile beside it it reads cleared the same way.
  */
-type Shore = {
-  readonly opened: Chronicle;
-  readonly water: TileCoords;
-  readonly banks: readonly [TileCoords, TileCoords];
-};
-
-/**
- * What `made` makes of the first seed's turn 1 with Embark in hand, on the shore nearest the city
- * whose tiles stand no further south than one row below the city, clear of the line over the hand.
- */
-function onShore<T>(made: (shore: Shore) => T | undefined): T {
-  const warrior = unitKind(CATALOGUE, WARRIOR);
-  return firstSeed(`opens turn 1 on ${EMBARK} in hand with a shore near its city`, (seed) => {
+function nearTheCity<T>(
+  complaint: string,
+  made: (
+    opened: Chronicle,
+    water: TileCoords,
+    clear: (coord: TileCoords) => boolean,
+  ) => T | undefined,
+): T {
+  return firstSeed(complaint, (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
-    if (!idsOf(opened.hand).includes(EMBARK)) return undefined;
     const city = playerCityTile(opened);
     const clear = (coord: TileCoords): boolean =>
       coord.r <= city.r + 1 && unitAt(opened.units, coord) === undefined;
     const nearest = [...opened.tiles].sort((a, b) => distance(a, city) - distance(b, city));
-    for (const water of nearest) {
-      if (movementCost(CATALOGUE, water, true) === undefined || !clear(water)) continue;
-      const banks = neighbours(water).filter(
-        (coord) => clear(coord) && standsOn(CATALOGUE, warrior, false, tileAt(opened.tiles, coord)),
-      );
-      if (banks.length < 2) continue;
-      const found = made({
-        opened,
-        water: { q: water.q, r: water.r },
-        banks: [banks[0], banks[1]],
-      });
+    for (const { q, r } of nearest) {
+      const water = { q, r };
+      if (!clear(water)) continue;
+      const found = made(opened, water, clear);
       if (found !== undefined) return found;
     }
     return undefined;
   });
 }
 
-/** The chronicle with a warrior of the player's entered on each tile. */
-function manned(chronicle: Chronicle, tiles: readonly TileCoords[]): Chronicle {
-  return tiles.reduce(
-    (standing, tile) => unitEntered(standing, { type: WARRIOR, faction: 'player', tile }),
-    chronicle,
+/** The step a unit takes by hand onto the tile, and nothing where it takes none. */
+function stepOnto(chronicle: Chronicle, unit: Unit, tile: TileCoords): Step | undefined {
+  return byHand(CATALOGUE, chronicle, unit).steps.find(
+    (step) => tileKey(step.tile) === tileKey(tile),
   );
 }
 
-test('Embark played at a tile beside one unit embarks that unit onto it, its action spent, and the discard pile’s top card reads the card Embark becomes', async ({
+test('a warrior beside a raft lights the raft’s tile, and a click there embarks it: its action spent, drawn on the raft’s tile in the canoe, and no mark of the raft’s left', async ({
   page,
 }) => {
   const problems = watch(page);
-  const ground = onShore(({ opened, water, banks: [bank] }) => {
-    const { chronicle, index } = paidFor(manned(opened, [bank]), EMBARK);
-    return admits(chronicle, index, water) ? { chronicle, index, water } : undefined;
-  });
-  const embarked = playedOn(ground.chronicle, ground.index, ground.water);
+  const { chronicle, unit, water } = nearTheCity(
+    `opens turn 1 with a ${WARRIOR} beside a ${RAFT} near its city`,
+    (opened, water, clear) => {
+      for (const bank of neighbours(water).filter(clear)) {
+        const manned = rafted(opened, water, bank, WARRIOR);
+        if (manned === undefined) continue;
+        const found = stepOnto(manned.chronicle, manned.unit, water);
+        if (found !== undefined && found.landing === undefined) {
+          return { ...manned, water };
+        }
+      }
+      return undefined;
+    },
+  );
+  const embarked = outcome(
+    apply(CATALOGUE, chronicle, { type: 'move', unit: unit.id, tile: water }),
+  );
+  const { lit } = litFor(chronicle, unit.tile);
+  expect(lit).toContain(tileKey(water));
+  expect(unitAt(embarked.units, water)).toMatchObject({ id: unit.id, embarked: true, action: 0 });
 
-  await openSaved(page, ground.chronicle, CAMPAIGN);
-  await dragOut(page, ground.index);
-  await aimed(page);
-  await click(page, `tile-${tileKey(ground.water)}`);
+  await openSaved(page, chronicle, CAMPAIGN);
+  const shown = await marksIn(page, 'units');
+  await click(page, `tile-${tileKey(unit.tile)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(unit.tile));
+  expect((await ringedAndLit(page)).lit).toEqual(lit);
+
+  await click(page, `tile-${tileKey(water)}`);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(embarked);
-  expect(unitAt(embarked.units, ground.water)).toMatchObject({ embarked: true, action: 0 });
-  expect(idsOf(embarked.discardPile).at(-1)).toBe(DISEMBARK);
-  await expect.poll(() => cardOnFace(page, 'discard-pile-top')).toBe(DISEMBARK);
+  const [mark] = await unitMarksOn(page, [water]);
+  expect(mark?.paintedAs).toBe(paintedOn(embarked, water));
+  expect(mark?.canoe).toBe(CANOE);
+  expect(await marksIn(page, 'units')).toBe(shown - 1);
   expect(problems).toEqual([]);
 });
 
-test('Embark played at a tile two units stand beside plays nothing and is aimed at a unit, and a click on one of the two embarks that one', async ({
+test('a warrior on a raft, a turn on, lights the tiles ashore beside it, and a click on one disembarks it there, the raft left on its tile in its halo', async ({
   page,
 }) => {
   const problems = watch(page);
-  const ground = onShore(({ opened, water, banks }) => {
-    const { chronicle, index } = paidFor(manned(opened, banks), EMBARK);
-    return admits(chronicle, index, water) ? { chronicle, index, water, banks } : undefined;
-  });
-  const { chronicle, index, water } = ground;
-  const [, picked] = ground.banks;
-  const sent = playedOn(chronicle, index, water, picked);
+  const { chronicle, warrior, water, ashore } = nearTheCity(
+    `opens turn 2 on a ${WARRIOR} embarked on a ${RAFT} near its city, beside a tile ashore`,
+    (opened, water, clear) => {
+      for (const bank of neighbours(water).filter(clear)) {
+        const embarked = embarkedOnRaft(opened, water, bank, WARRIOR);
+        if (embarked === undefined) continue;
+        const ticked = endedTurn(embarked);
+        const standing = unitAt(ticked.units, water);
+        if (ticked.ending !== undefined || standing?.stats.type !== WARRIOR) continue;
+        const off = byHand(CATALOGUE, ticked, standing).steps.find(
+          (step) => step.landing === undefined && clear(step.tile),
+        );
+        if (off !== undefined) {
+          return { chronicle: ticked, warrior: standing, water, ashore: off.tile };
+        }
+      }
+      return undefined;
+    },
+  );
+  const landed = outcome(
+    apply(CATALOGUE, chronicle, { type: 'move', unit: warrior.id, tile: ashore }),
+  );
+  const raft = unitAt(landed.units, water);
+  if (raft === undefined) throw new Error(`no ${RAFT} stays on ${tileKey(water)}`);
+  expect(raft.stats.type).toBe(RAFT);
+  expect(unitAt(landed.units, ashore)).toMatchObject({ id: warrior.id, embarked: false });
+  const { lit } = litFor(chronicle, water);
+  expect(lit).toContain(tileKey(ashore));
+  const dim = darkeningOf(LOOK.unitDim);
+  const halo = anythingByHand(CATALOGUE, landed, raft, false)
+    ? LOOK.civilization
+    : multiplied(LOOK.civilization, dim);
 
   await openSaved(page, chronicle, CAMPAIGN);
-  await dragOut(page, index);
-  await aimed(page);
+  const shown = await marksIn(page, 'units');
   await click(page, `tile-${tileKey(water)}`);
-  await expect.poll(() => aimLine(page)).toBe(text('aim.unit', { card: cardName(EMBARK) }));
-  expect(await chronicleOf(page)).toEqual(chronicle);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(water));
+  expect((await ringedAndLit(page)).lit).toEqual(lit);
 
-  await aimed(page);
-  await click(page, `tile-${tileKey(picked)}`);
+  await click(page, `tile-${tileKey(ashore)}`);
   await playedOut(page);
 
-  await expect.poll(() => chronicleOf(page)).toEqual(sent);
-  expect(unitAt(sent.units, water)?.id).toBe(unitAt(chronicle.units, picked)?.id);
+  await expect.poll(() => chronicleOf(page)).toEqual(landed);
+  const [onShore, onWater] = await unitMarksOn(page, [ashore, water]);
+  expect(onShore?.paintedAs).toBe(paintedOn(landed, ashore));
+  expect(onShore?.canoe).toBeUndefined();
+  expect(onWater?.paintedAs).toBe(paintedOn(landed, water));
+  expect(onWater?.halo).toBe(halo);
+  expect(await marksIn(page, 'units')).toBe(shown + 1);
   expect(problems).toEqual([]);
 });
 
-test('Disembark played at a tile beside an embarked unit puts it ashore there as itself, and the discard pile’s top card reads the card Disembark becomes', async ({
+test('a warrior a walk away from a raft reads its path to the raft’s tile with no move point left, and a click there walks it to the landing the rules name and embarks it', async ({
   page,
 }) => {
   const problems = watch(page);
-  const ground = onShore(({ opened, water, banks: [bank] }) => {
-    const paid = paidFor(manned(opened, [bank]), EMBARK);
-    if (!admits(paid.chronicle, paid.index, water)) return undefined;
-    const disembarking = disembarkingAt(paid, water, bank, CAMPAIGN);
-    return disembarking === undefined ? undefined : { ...disembarking, bank };
-  });
-  const ashore = playedOn(ground.chronicle, ground.index, ground.bank);
+  const { chronicle, unit, water, step } = nearTheCity(
+    `opens turn 1 with a ${WARRIOR} a walk away from a ${RAFT} near its city`,
+    (opened, water, clear) => {
+      const away = opened.tiles.filter((tile) => distance(tile, water) === 2 && clear(tile));
+      for (const { q, r } of away) {
+        const manned = rafted(opened, water, { q, r }, WARRIOR);
+        if (manned === undefined) continue;
+        const found = stepOnto(manned.chronicle, manned.unit, water);
+        const move = { type: 'move', unit: manned.unit.id, tile: water } as const;
+        if (found?.landing === undefined || declaresWar(CATALOGUE, manned.chronicle, move)) {
+          continue;
+        }
+        return { ...manned, water, step: found };
+      }
+      return undefined;
+    },
+  );
+  const { landing } = step;
+  if (landing === undefined) throw new Error(`the ${WARRIOR} walks to no landing`);
+  const walk = pathTo(CATALOGUE, chronicle, unit, landing.tile);
+  if (walk === undefined) throw new Error(`the ${WARRIOR}'s walk reaches no landing`);
+  const stages = apply(CATALOGUE, chronicle, { type: 'move', unit: unit.id, tile: water });
+  const embarked = outcome(stages);
+  expect(stages[0]).toMatchObject({ name: 'move', from: unit.tile, to: landing.tile });
+  expect(unitAt(embarked.units, water)).toMatchObject({ id: unit.id, embarked: true, action: 0 });
 
-  await openSaved(page, ground.chronicle, CAMPAIGN);
-  await dragOut(page, ground.index);
-  await aimed(page);
-  await click(page, `tile-${tileKey(ground.bank)}`);
+  await openSaved(page, chronicle, CAMPAIGN);
+  await click(page, `tile-${tileKey(unit.tile)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(unit.tile));
+  await rested(page);
+  await pointAt(page, water);
+  await expect
+    .poll(async () => (await pathDrawn(page))?.tiles)
+    .toEqual([...walk, water].map(tileKey));
+  expect((await pathDrawn(page))?.left.text).toBe(inMovePoints(0));
+
+  await click(page, `tile-${tileKey(water)}`);
   await playedOut(page);
 
-  await expect.poll(() => chronicleOf(page)).toEqual(ashore);
-  expect(unitAt(ashore.units, ground.bank)?.embarked).toBe(false);
-  expect(idsOf(ashore.discardPile).at(-1)).toBe(becomes(DISEMBARK));
-  await expect.poll(() => cardOnFace(page, 'discard-pile-top')).toBe(becomes(DISEMBARK));
+  await expect.poll(() => chronicleOf(page)).toEqual(embarked);
   expect(problems).toEqual([]);
 });

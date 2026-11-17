@@ -116,11 +116,10 @@ export function everyUnit(units: readonly Unit[]): Unit[] {
 }
 
 /**
- * The units with the one carrying this unit back among them on its tile, ahead of the first one
- * numbered after it, and as they stand where nothing carries it.
+ * The units with a unit that carried another back among them on its tile, ahead of the first one
+ * numbered after it, and as they stand where none is handed.
  */
-export function carrierBack(units: readonly Unit[], unit: Pick<Unit, 'carrier'>): Unit[] {
-  const { carrier } = unit;
+function carrierBack(units: readonly Unit[], carrier: Unit | undefined): Unit[] {
   if (carrier === undefined) return [...units];
   const after = units.findIndex((other) => other.id > carrier.id);
   const at = after === -1 ? units.length : after;
@@ -131,7 +130,7 @@ export function carrierBack(units: readonly Unit[], unit: Pick<Unit, 'carrier'>)
 export function killed(units: readonly Unit[], target: Unit): Unit[] {
   return carrierBack(
     units.filter((unit) => unit.id !== target.id),
-    target,
+    target.carrier,
   );
 }
 
@@ -148,32 +147,31 @@ export function stepTaken(
   move: number,
 ): Unit[] {
   const onto = embarking ? unitAt(units, to) : undefined;
+  let left: Unit | undefined;
   const taken = units.flatMap((unit): Unit[] => {
     if (unit.id === onto?.id) return [];
     if (unit.id !== stepping.id) return [unit];
-    const { carrier: _left, ...self } = unit;
+    const { carrier, ...self } = unit;
+    left = carrier;
     const moved = { ...self, embarked: embarking, stats: { ...self.stats, move }, tile: to };
     return [onto === undefined ? moved : { ...moved, carrier: onto }];
   });
-  return carrierBack(taken, stepping);
+  return carrierBack(taken, left);
 }
 
-/** The move points a unit's walk has left: its own, no more than those of the unit carrying it. */
-export function movePointsLeft(unit: Pick<Unit, 'movePoints' | 'carrier'>): number {
-  const { movePoints, carrier } = unit;
-  return carrier === undefined ? movePoints : Math.min(movePoints, carrier.movePoints);
+/** A unit changed as handed, and the unit carrying it changed alike. */
+export function changedWithCarrier(unit: Unit, change: (one: Unit) => Unit): Unit {
+  const changed = change(unit);
+  return unit.carrier === undefined ? changed : { ...changed, carrier: change(unit.carrier) };
 }
 
 /** A unit crossing to a landing, spending what it costs, and the unit carrying it with it. */
 export function crossedTo(unit: Unit, landing: Landing): Unit {
-  const crossing = <U extends Unit>(one: U): U => ({
+  return changedWithCarrier(unit, (one) => ({
     ...one,
     tile: landing.tile,
     movePoints: one.movePoints - landing.cost,
-  });
-  return unit.carrier === undefined
-    ? crossing(unit)
-    : { ...crossing(unit), carrier: crossing(unit.carrier) };
+  }));
 }
 
 /** Whether a unit acts against the player as an enemy does: an enemy, or the neutral's while hostile. */
@@ -247,9 +245,13 @@ export function passageFor(chronicle: Crossed, faction: Faction): (coord: TileCo
   }
 }
 
-/** A unit's walk: on the move points it has left, embarked or ashore as it stands. */
-function walkOf(unit: Pick<Unit, 'movePoints' | 'embarked' | 'carrier'>): Walk {
-  return { points: movePointsLeft(unit), embarked: unit.embarked };
+/**
+ * A unit's walk: on the move points it has left, embarked or ashore as it stands. An embarked unit's
+ * own never run above those of the unit carrying it: its embark spends them all, and every crossing
+ * and refresh after it changes the two alike (`changedWithCarrier`).
+ */
+function walkOf(unit: Pick<Unit, 'movePoints' | 'embarked'>): Walk {
+  return { points: unit.movePoints, embarked: unit.embarked };
 }
 
 /** The faction of the unit standing on each tile, by the tile's key. */
@@ -281,7 +283,7 @@ function unitPassage(
 export function reachable(
   catalogue: MapContent,
   chronicle: Crossed,
-  unit: Pick<Unit, 'tile' | 'faction' | 'movePoints' | 'embarked' | 'carrier'>,
+  unit: Pick<Unit, 'tile' | 'faction' | 'movePoints' | 'embarked'>,
 ): Landing[] {
   const standing = standingOn(chronicle);
   const spent = pathCosts(

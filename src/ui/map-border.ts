@@ -50,11 +50,11 @@ export type BorderView = {
   paint(worn: Readonly<Record<Faction, readonly WornAsDrawn[]>>): void;
 };
 
-/** A unit's landings and the tile it stands on. */
-export type Reach = { readonly own: TileCoords; readonly landings: readonly TileCoords[] };
+/** The tiles a unit's reach lights, its landings and its steps, and the tile it stands on. */
+export type Reach = { readonly own: TileCoords; readonly lit: readonly TileCoords[] };
 
 export type ReachView = {
-  /** The region of a unit's landings and its own tile, carrying the landings' keys; hidden where it has no landing. */
+  /** The region of the tiles a unit's reach lights and its own tile, carrying the lit tiles' keys; hidden where it lights none. */
   paint(reach: Reach | undefined): void;
 };
 
@@ -287,11 +287,11 @@ export function createReach(
 
   return {
     paint(reach): void {
-      const landings = reach?.landings ?? [];
-      layer.setData('landings', landings.map(tileKey));
-      layer.setVisible(landings.length > 0);
-      if (reach === undefined || landings.length === 0) return;
-      const region = [reach.own, ...landings];
+      const lit = reach?.lit ?? [];
+      layer.setData('lit', lit.map(tileKey));
+      layer.setVisible(lit.length > 0);
+      if (reach === undefined || lit.length === 0) return;
+      const region = [reach.own, ...lit];
       const from = region.map(tileKey).join(' ');
       if (from === drawnFrom) return;
       drawnFrom = from;

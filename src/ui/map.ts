@@ -8,6 +8,7 @@ import {
   byHand,
   outcome,
   reckoned,
+  type Step,
   type UnitCommand,
 } from '../rules/chronicle';
 import { claimable, givingYield, type ReassignCommand } from '../rules/city';
@@ -43,7 +44,15 @@ import {
   onSettlePhase,
   type Snapshot,
 } from '../rules/state';
-import { type Faction, type Landing, pathTo, type Unit, unitAt, unitOf } from '../rules/units';
+import {
+  everyUnit,
+  type Faction,
+  type Landing,
+  pathTo,
+  type Unit,
+  unitAt,
+  unitOf,
+} from '../rules/units';
 import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
@@ -302,9 +311,13 @@ type Marked = {
   readonly landing: Landing | undefined;
 };
 
-/** What the pointer reads of a unit being aimed: its path to one of its landings, or its attack on a unit it marks. */
+/**
+ * What the pointer reads of a unit being aimed: its path to one of its landings, its path to a tile
+ * it embarks or disembarks onto, or its attack on a unit it marks.
+ */
 type PointerReading =
   | { readonly kind: 'path'; readonly landing: Landing }
+  | { readonly kind: 'step'; readonly step: Step }
   | { readonly kind: 'attack'; readonly target: Marked };
 
 /** An attack the pointer reads: the unit it is read on, by its number, and the attacker's damage. */
@@ -315,6 +328,8 @@ function readOn(read: PointerReading): TileCoords {
   switch (read.kind) {
     case 'path':
       return read.landing.tile;
+    case 'step':
+      return read.step.tile;
     case 'attack':
       return read.target.tile;
   }
@@ -1031,13 +1046,14 @@ export function createMapView(
   const selectedUnit = (): TileCoords | undefined => (selection?.unit ? selection.tile : undefined);
 
   /**
-   * Which unit the map is lighting for, as it stood when lit, where its landings lie, the units it
+   * Which unit the map is lighting for, as it stood when lit, its landings, its steps, the units it
    * marks, and whether it is being aimed; nothing while none is lit.
    */
   let lit:
     | {
         readonly standing: Unit;
         readonly landings: Landing[];
+        readonly steps: Step[];
         readonly targets: Marked[];
         readonly aimed: boolean;
       }
@@ -1132,6 +1148,16 @@ export function createMapView(
         path.showPath(tiles, lit.standing.movePoints - read.landing.cost);
         return { attack: undefined };
       }
+      case 'step': {
+        const { landing, tile } = read.step;
+        const walk =
+          landing === undefined
+            ? [lit.standing.tile]
+            : pathTo(catalogue, current, lit.standing, landing.tile);
+        if (walk === undefined) return undefined;
+        path.showPath([...walk, tile], 0);
+        return { attack: undefined };
+      }
       case 'attack': {
         const { unit, tile, landing } = read.target;
         if (landing === undefined) {
@@ -1168,14 +1194,16 @@ export function createMapView(
   const readingOn = (tile: TileCoords): PointerReading | undefined => {
     const landing = lit?.landings.find((one) => sameTile(one.tile, tile));
     if (landing !== undefined) return { kind: 'path', landing };
+    const step = lit?.steps.find((one) => sameTile(one.tile, tile));
+    if (step !== undefined) return { kind: 'step', step };
     const target = lit?.targets.find((one) => sameTile(one.tile, tile));
     return target === undefined ? undefined : { kind: 'attack', target };
   };
 
   /**
-   * What the unit of the player's standing on a tile can do: every tile its move points reach drawn
-   * as one region with its own tile, and every unit it can attack marked with a ring in the attack's
-   * colour. Nothing is lit while the city marks stand, and a press commands only a unit lit here.
+   * What the unit of the player's on a tile can do: its landings and its steps drawn as one region
+   * with its own tile, each unit it can attack ringed in the attack's colour. Nothing is lit while
+   * the city marks stand, and a press commands only a unit lit here.
    */
   const lightUnit = (tile: TileCoords | undefined): void => {
     const current = shown;
@@ -1187,11 +1215,12 @@ export function createMapView(
     lit = undefined;
     let reached: Reach | undefined;
     if (current !== undefined && standing?.faction === 'player') {
-      const { landings, targets } = byHand(catalogue, current, standing);
+      const { landings, steps, targets } = byHand(catalogue, current, standing);
       const stepped = broughtInRange(catalogue, current, standing);
       lit = {
         standing,
         landings,
+        steps,
         targets: [
           ...targets.map((other) => ({ unit: other.id, tile: other.tile, landing: undefined })),
           ...stepped.map(({ target, landing }) => ({
@@ -1202,7 +1231,7 @@ export function createMapView(
         ],
         aimed: anythingByHand(catalogue, current, standing, true),
       };
-      reached = { own: standing.tile, landings: landings.map((landing) => landing.tile) };
+      reached = { own: standing.tile, lit: [...landings, ...steps].map(({ tile }) => tile) };
     }
     reach.paint(reached);
 
@@ -1320,12 +1349,20 @@ export function createMapView(
     return asUnit(marker, stats.type, faction, canoed, shade, prepares, bar, factionSigns());
   };
 
-  /** Every unit of a chronicle written, and the markers of the units gone destroyed. */
+  /**
+   * Every unit of a chronicle written, the marker of a unit carrying another hidden, and the markers
+   * of the units gone destroyed.
+   */
   const paintUnits = (current: Chronicle): void => {
     const standing = new Set(current.units.map((unit) => unit.id));
+    const kept = new Set(everyUnit(current.units).map((unit) => unit.id));
     for (const [id, marker] of unitMarkers) {
       if (standing.has(id)) continue;
       stopMotion(scene, unitMotionTargets(marker));
+      if (kept.has(id)) {
+        marker.setVisible(false);
+        continue;
+      }
       marker.destroy();
       unitMarkers.delete(id);
     }
@@ -1456,7 +1493,7 @@ export function createMapView(
       /** The step or the attack a release on a tile is for the unit the map has lit, and nothing else. */
       const commandUnitOn = (unit: number, on: TileCoords): boolean => {
         if (lit?.standing.id !== unit) return false;
-        if (lit.landings.some((landing) => sameTile(landing.tile, on))) {
+        if ([...lit.landings, ...lit.steps].some(({ tile }) => sameTile(tile, on))) {
           commanded({ type: 'move', unit, tile: on });
           return true;
         }

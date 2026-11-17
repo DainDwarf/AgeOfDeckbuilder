@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest';
 import { newCampaign } from '../rules/campaign';
-import { aimOf, playedThrough, struck } from '../rules/cards';
+import { aimOf, struck } from '../rules/cards';
 import {
   ageOf,
   capstoneOf,
@@ -263,15 +263,7 @@ function cheapestEffect(chronicle: Chronicle, id: string): Landed | undefined {
     case 'tile':
     case 'unit': {
       const [at] = admitted(CATALOGUE, chronicle, card);
-      const tile = at === undefined ? undefined : tileAt(chronicle.tiles, at);
-      if (at === undefined || tile === undefined) return undefined;
-      if (card.aim === 'unit' || card.through === undefined) {
-        return card.effect(CATALOGUE, chronicle, at);
-      }
-      const [through] = playedThrough(CATALOGUE, chronicle, card, tile);
-      return through === undefined
-        ? undefined
-        : card.effect(CATALOGUE, chronicle, at, through.tile);
+      return at === undefined ? undefined : card.effect(CATALOGUE, chronicle, at);
     }
     case 'hand':
       return chronicle.hand.length <= 1

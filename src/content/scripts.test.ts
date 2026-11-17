@@ -4,7 +4,6 @@ import { apply, outcome } from '../rules/chronicle';
 import { claimable, warDeclared } from '../rules/city';
 import {
   AGE,
-  aimedAt,
   attacksOf,
   besideTheNeutral,
   builtOn,
@@ -17,6 +16,7 @@ import {
   cityOf,
   deepBut,
   EMBARKED_MOVE,
+  embarkedOn,
   endedTurn,
   enemiesOf,
   enemyStanding,
@@ -34,6 +34,7 @@ import {
   SHRINE,
   SITE,
   type Standing,
+  skiff,
   standing,
   WELL,
   WELL_GIVES,
@@ -362,17 +363,14 @@ test('a guard whose range is one passes over an embarked unit as over one out of
   const guarded = (range: number): Chronicle =>
     cityOf(['urban'], {
       tiles: camped(field(4, [coast]), [camp]),
-      hand: ['PH_Embark'],
       units: [
         standing('player', { q: 0, r: 1 }),
+        skiff(coast),
         enemyStanding(camp, camp, { stats: { move: 0 } }),
         enemyStanding({ q: 4, r: -2 }, camp, { stats: { move: 2 * MOVE_POINT, range } }),
       ],
     });
-  const embarked = (range: number): Chronicle => {
-    const city = guarded(range);
-    return outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
-  };
+  const embarked = (range: number): Chronicle => embarkedOn(guarded(range), 1, coast);
 
   expect(asked(GUARDING, embarked(1))).toEqual(asked(GUARDING, guarded(1)));
   expect(movesOf(embarked(2), GUARDING)).toEqual([['4,-2', '3,0']]);
@@ -534,13 +532,20 @@ test('a raider whose embark is held embarks onto another free tile on a route as
   const north = { q: 1, r: -1 };
   const east = { q: 1, r: 0 };
   const beside = { q: 0, r: 1 };
-  const free = cityOf(['urban'], {
-    tiles: strait([shore, beside], [north, east]),
-    hand: ['PH_Embark', 'PH_Embark'],
-    units: [standing('player', CITY), standing('player', beside), standing('enemy', shore)],
-  });
-  const one = outcome(apply(CATALOGUE, free, aimedAt(free, north)));
-  const both = outcome(apply(CATALOGUE, one, aimedAt(one, east)));
+  /** The city, a raider on the shore, and a raft of the player's on each of the tiles named. */
+  const held = (rafts: TileCoords[]): Chronicle =>
+    cityOf(['urban'], {
+      tiles: strait([shore, beside], [north, east]),
+      units: [
+        standing('player', CITY),
+        standing('player', beside),
+        standing('enemy', shore),
+        ...rafts.map((tile) => skiff(tile)),
+      ],
+    });
+  const free = held([]);
+  const one = held([north]);
+  const both = held([north, east]);
   const content = camping({ embarkedMove: EMBARKED_MOVE }, RAIDING);
 
   expect(movesOf(free, content)).toEqual([[tileKey(shore), tileKey(north)]]);

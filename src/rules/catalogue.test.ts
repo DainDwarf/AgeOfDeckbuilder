@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { builds, embarks, enters, entersInside, entersOn, placesImprovement } from './cards';
+import { builds, enters, entersInside, entersOn, placesImprovement } from './cards';
 import {
   type Age,
   type Answer,
@@ -843,10 +843,6 @@ test('a catalogue whose neutral keeps a worker kind and names no workers, names 
     [workers({ script: 'retreat' }), 'no unit script is named retreat'],
     [workers({ cards: ['PH_Loot'] }), 'no card is named PH_Loot'],
     [
-      workers({ cards: ['PH_Embark'] }),
-      `the age ${AGE}'s neutral's workers play PH_Embark, which no worker's action goes to`,
-    ],
-    [
       workers({ cards: ['PH_Harvest'] }),
       `the age ${AGE}'s neutral's workers play PH_Harvest, which no worker's action goes to`,
     ],
@@ -1094,11 +1090,10 @@ test('a catalogue whose unit card enters a kind that stands on the water alone o
   }
 });
 
-test('a catalogue whose action no unit’s action goes to, or whose instant a worker’s or any unit’s action goes to, is refused', () => {
+test('a catalogue whose action no unit’s action goes to, or whose instant a worker’s action goes to, is refused', () => {
   const misfits: Readonly<Record<string, Card>> = {
     PH_Idle: { kind: 'action', cost: {}, aim: 'none', effect: (_c, paid) => unchanged(paid) },
     PH_Dug: { kind: 'instant', cost: {}, ...placesImprovement('PH_Mine') },
-    PH_Rowed: { kind: 'instant', cost: {}, ...embarks(0) },
   };
   for (const [id, card] of Object.entries(misfits)) {
     const content = changed({

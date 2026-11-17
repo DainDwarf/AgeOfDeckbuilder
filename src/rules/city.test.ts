@@ -1437,8 +1437,8 @@ test('a play answered with a card the neutral’s workers do not play, by an ene
   ];
   const resources = { ...FARM_COST, production: 10 };
   const rows = { held: [NEUTRAL_TILE, plain, coast], resources };
-  const afloat = neutralWorker(coast);
-  const embarked = { ...afloat, entering: { ...afloat.entering, embarkedMove: EMBARKED_MOVE } };
+  const onCoast = neutralWorker(coast);
+  const embarked = { ...onCoast, entering: { ...onCoast.entering, embarkedMove: EMBARKED_MOVE } };
 
   expect(
     enemyPhaseOf(workingBeside(rows, [neutralWorker(plain)]), everyWorkerPlays('PH_Lodge')),

@@ -38,6 +38,7 @@ import {
   type InfluenceCard,
   neutralOf,
   neutralScriptOf,
+  standsOnEntering,
   strikeOf,
   technologyOf,
   unitKind,
@@ -177,7 +178,7 @@ declare global {
     readName?: (name: string) => PageReading;
     /** The named Layer's or container's own objects that are shown. */
     shownIn?: (name: string) => Phaser.GameObjects.GameObject[] | undefined;
-    /** The keys of the tiles the map lights for a unit: the reach's landings. */
+    /** The keys of the tiles the map lights for a unit: the reach's landings and steps. */
     litKeys?: () => string[];
     /** Each ring the map shows: the key of the tile its unit stands on, and the colour it is tinted. */
     ringsShown?: () => RingShown[];
@@ -298,17 +299,9 @@ export function settledOn(
   return outcome(apply(CATALOGUE, settling, { type: 'end-turn' }));
 }
 
-/**
- * The chronicle the card at that place in the hand leaves, played on the tile, through the unit
- * standing on `through` where one is named; a refusal throws.
- */
-export function playedOn(
-  chronicle: Chronicle,
-  index: number,
-  tile: TileCoords,
-  through?: TileCoords,
-): Chronicle {
-  return playedAs(chronicle, index, { aim: 'tile', tile, through });
+/** The chronicle the card at that place in the hand leaves, played on the tile; a refusal throws. */
+export function playedOn(chronicle: Chronicle, index: number, tile: TileCoords): Chronicle {
+  return playedAs(chronicle, index, { aim: 'tile', tile });
 }
 
 /** The chronicle the card at that place in the hand leaves, played at nothing; a refusal throws. */
@@ -526,12 +519,12 @@ export async function readNames(page: Page): Promise<void> {
       return parent?.list.filter((child) => isShown(child as Parented));
     };
 
-    // The reach is one layer carrying its landings' keys.
+    // The reach is one layer carrying the keys of the tiles it lights.
     window.litKeys = () => {
       const lit = window.shownIn?.('lit');
       if (lit === undefined) throw new Error('the map is not on the chronicle screen');
       return lit.flatMap((mark) => {
-        const keys = mark.getData('landings') as string[] | undefined;
+        const keys = mark.getData('lit') as string[] | undefined;
         if (keys === undefined) throw new Error(`the lit ${mark.type} names no tile`);
         return keys;
       });
@@ -2684,39 +2677,46 @@ export const TRAPPING = 'trapping';
 /** The card that removes a tile's feature. */
 export const HUNT = 'hunt';
 
-/** The card that embarks a unit. */
-export const EMBARK = 'embark';
+/** The unit card that enters a raft, and the unit kind it enters. */
+export const RAFT = 'raft';
 
 /** The card that heals, aimed at a unit. */
 export const HEAL = 'heal';
 
-/** The card a card becomes; one that becomes none throws. */
-export function becomes(card: CardId): CardId {
-  const named = cardOf(CATALOGUE, card).becomes;
-  if (named === undefined) throw new Error(`${card} becomes no card`);
-  return named;
+/**
+ * The chronicle with a raft of the player's entered on the water tile and a unit of the player's of
+ * the kind entered on the other, and that unit; nothing where either stands on no such tile.
+ */
+export function rafted(
+  chronicle: Chronicle,
+  water: TileCoords,
+  at: TileCoords,
+  kind: string,
+): { readonly chronicle: Chronicle; readonly unit: Unit } | undefined {
+  const standsThere = (entering: string, tile: TileCoords): boolean =>
+    standsOnEntering(CATALOGUE, entering, tileAt(chronicle.tiles, tile));
+  if (!standsThere(RAFT, water) || !standsThere(kind, at)) return undefined;
+  const withRaft = unitEntered(chronicle, { type: RAFT, faction: 'player', tile: water });
+  const manned = unitEntered(withRaft, { type: kind, faction: 'player', tile: at });
+  const unit = unitAt(manned.units, at);
+  return unit === undefined ? undefined : { chronicle: manned, unit };
 }
 
 /**
- * Embark, in hand and paid for, played at the water, then turns ended until the card it becomes is in
- * hand, paid for and admitting the tile: that chronicle and where the card lies, and nothing where no
- * turn within as many as the campaign's deck holds cards does.
+ * The chronicle `rafted` makes with its unit stepped onto the raft by the move from the bank, and
+ * nothing where it makes none or the move is refused.
  */
-export function disembarkingAt(
-  paid: { readonly chronicle: Chronicle; readonly index: number },
+export function embarkedOnRaft(
+  chronicle: Chronicle,
   water: TileCoords,
-  at: TileCoords,
-  campaign: Campaign,
-): { readonly chronicle: Chronicle; readonly index: number } | undefined {
-  const { cards } = civilizationOpened(campaign);
-  // The deck cycles back to the card Embark lay as well within as many turns as it holds cards.
-  let embarked = playedOn(paid.chronicle, paid.index, water);
-  for (let turn = 0; turn < cards.length && embarked.ending === undefined; turn++) {
-    embarked = endedTurn(embarked);
-    const disembarking = paidFor(embarked, becomes(EMBARK));
-    if (admits(disembarking.chronicle, disembarking.index, at)) return disembarking;
-  }
-  return undefined;
+  bank: TileCoords,
+  kind: string,
+): Chronicle | undefined {
+  const manned = rafted(chronicle, water, bank, kind);
+  if (manned === undefined) return undefined;
+  const move = { type: 'move', unit: manned.unit.id, tile: water } as const;
+  const embarked = outcome(apply(CATALOGUE, manned.chronicle, move));
+  return embarked === manned.chronicle ? undefined : embarked;
 }
 
 /** The technology that unlocks the card; a card no technology unlocks throws. */
@@ -2893,9 +2893,9 @@ export function paidOnDeer(
 export const FISHERY = 'fishery';
 
 /**
- * Turn 2 of the first seed whose turn 1 holds Embark, two tiles beside the city and each other made
- * coast, the first claimed and a worker embarked onto it, the Fishery drawn and paid for, on what
- * `ground` makes of it: its tile, and the coast beside it outside the border.
+ * Turn 2 of the first seed with two tiles beside its free city made coast, the first claimed and a
+ * worker embarked on a raft there, the Fishery drawn and paid for, on what `ground` makes of it: its
+ * tile, and the coast beside it outside the border.
  */
 export function fisheryAdmitted(
   campaign: Campaign,
@@ -2906,12 +2906,10 @@ export function fisheryAdmitted(
   const { terrains, givesBeside } = buildingKind(CATALOGUE, FISHERY);
   if (givesBeside === undefined) throw new Error(`${FISHERY} gives nothing beside it`);
   const [shore] = terrains;
-  return firstSeed(`opens turn 1 on ${EMBARK} in hand with ground to make coast`, (seed) => {
+  return firstSeed('opens turn 1 with ground to make coast beside a free city', (seed) => {
     const opened = settledOn(seed, [], campaign);
     const city = playerCityTile(opened);
-    if (!idsOf(opened.hand).includes(EMBARK) || unitAt(opened.units, city) !== undefined) {
-      return undefined;
-    }
+    if (unitAt(opened.units, city) !== undefined) return undefined;
     for (const tile of neighbours(city)) {
       for (const beside of neighbours(city).filter((other) => distance(other, tile) === 1)) {
         const wet = followed(terraformed(CATALOGUE, opened, tile, shore), (left) =>
@@ -2921,10 +2919,8 @@ export function fisheryAdmitted(
         if (tileAt(wet.tiles, beside)?.terrain !== givesBeside.terrain) continue;
         const claimed = claimedAt(wet, tile);
         if (claimed === undefined) continue;
-        const manned = unitEntered(claimed, { type: WORKER, faction: 'player', tile: city });
-        const embarking = paidFor(manned, EMBARK);
-        if (!admits(embarking.chronicle, embarking.index, tile)) continue;
-        const embarked = playedOn(embarking.chronicle, embarking.index, tile);
+        const embarked = embarkedOnRaft(claimed, tile, city, WORKER);
+        if (embarked === undefined) continue;
         const next = endedTurn(addedToDrawPileTop(CATALOGUE, embarked, FISHERY).chronicle);
         if (next.ending !== undefined) continue;
         const paid = paidFor(next, FISHERY);
@@ -3391,10 +3387,10 @@ export function litFor(
 ): { lit: string[]; marked: string[] } {
   const unit = unitAt(chronicle.units, tile);
   if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
-  const { landings, targets } = byHand(CATALOGUE, chronicle, unit);
+  const { landings, steps, targets } = byHand(CATALOGUE, chronicle, unit);
   const stepped = broughtInRange(CATALOGUE, chronicle, unit).map(({ target }) => target);
   return {
-    lit: landings.map((landing) => tileKey(landing.tile)).sort(),
+    lit: [...landings, ...steps].map(({ tile }) => tileKey(tile)).sort(),
     marked: [...targets, ...stepped].map((target) => tileKey(target.tile)).sort(),
   };
 }

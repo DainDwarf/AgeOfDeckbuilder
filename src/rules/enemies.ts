@@ -409,11 +409,11 @@ function aroundDoor(
   faction: ScriptedFaction,
 ): { readonly reach: Tile[]; readonly embarkedMove: number | undefined } {
   const { ashore, embarked } = entrant.moves;
-  const afloat = embarkedOnly(catalogue, entrant, tileAt(chronicle.tiles, door));
-  const moves = afloat ? { embarked } : { ashore };
+  const entersEmbarked = embarkedOnly(catalogue, entrant, tileAt(chronicle.tiles, door));
+  const moves = entersEmbarked ? { embarked } : { ashore };
   return {
-    reach: reached(catalogue, chronicle, { ...entrant, moves }, door, afloat, faction),
-    embarkedMove: afloat ? embarked : undefined,
+    reach: reached(catalogue, chronicle, { ...entrant, moves }, door, entersEmbarked, faction),
+    embarkedMove: entersEmbarked ? embarked : undefined,
   };
 }
 

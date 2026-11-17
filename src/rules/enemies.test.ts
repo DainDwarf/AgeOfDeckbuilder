@@ -32,6 +32,7 @@ import {
   dealing,
   deepBut,
   EMBARKED_MOVE,
+  embarkedOn,
   endedTurn,
   enemiesOf,
   enemyPhaseOf,
@@ -68,6 +69,7 @@ import {
   SITES,
   SLOW_SLINGER,
   type Standing,
+  skiff,
   stagedBy,
   standing,
   unitNamed,
@@ -1404,10 +1406,9 @@ test('an enemy whose range is one attacks no embarked unit: one its script names
   const enemy = standing('enemy', { q: 2, r: 0 }, { move: 0, range: 1 });
   const city = cityOf(['urban'], {
     tiles: field(3, [coast]),
-    hand: ['PH_Embark'],
-    units: [standing('player', CITY), enemy],
+    units: [standing('player', CITY), skiff(coast), enemy],
   });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
+  const embarked = embarkedOn(city, 1, coast);
   const ashore = cityOf(['urban'], {
     tiles: field(3),
     units: [standing('player', coast), enemy],

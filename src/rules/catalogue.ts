@@ -159,23 +159,7 @@ export type Aim =
         tile: Tile,
         whose: CityFaction,
       ) => TileBlock | undefined;
-      /**
-       * For a card played through a unit beside the tile, the one reason it refuses this unit of the
-       * player's beside it, and nothing for one that can be the one; the play hands the effect the
-       * tile of the one it went through.
-       */
-      readonly through?: (
-        catalogue: Catalogue,
-        chronicle: Chronicle,
-        tile: Tile,
-        unit: Unit,
-      ) => TileBlock | undefined;
-      readonly effect: (
-        catalogue: Catalogue,
-        paid: Chronicle,
-        at: TileCoords,
-        through?: TileCoords,
-      ) => Landed;
+      readonly effect: (catalogue: Catalogue, paid: Chronicle, at: TileCoords) => Landed;
     }
   | {
       readonly aim: 'unit';
@@ -403,15 +387,11 @@ export type Counter = (name: string) => number;
 /** How a card the player picks a tile for is played: what the hand aims and the map lights for. */
 export type AimedCard = Extract<Aim, { readonly aim: 'tile' | 'unit' }>;
 
-/**
- * Whose action a card aimed so goes to: the worker standing on the tile it is aimed at, any unit of
- * the player's beside that tile, or no unit's.
- */
-export function actionGoesTo(aim: Aim): 'worker' | 'any' | 'none' {
+/** Whose action a card aimed so goes to: the worker standing on the tile it is aimed at, or no unit's. */
+export function actionGoesTo(aim: Aim): 'worker' | 'none' {
   switch (aim.aim) {
     case 'tile':
-      if (aim.worker === true) return 'worker';
-      return aim.through === undefined ? 'none' : 'any';
+      return aim.worker === true ? 'worker' : 'none';
     case 'none':
     case 'unit':
     case 'hand':
@@ -478,7 +458,6 @@ function entryMisfit(content: Catalogue, card: UnitCard): string | undefined {
 function unitActs(aim: Aim): boolean {
   switch (actionGoesTo(aim)) {
     case 'worker':
-    case 'any':
       return true;
     case 'none':
       return false;

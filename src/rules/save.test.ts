@@ -162,7 +162,7 @@ test('a chronicle saved with a unit embarked on a raft reads back with both as t
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
-  expect(embarked.units.map(({ id, embarked: afloat }) => [id, afloat])).toEqual([[1, true]]);
+  expect(embarked.units.map((unit) => [unit.id, unit.embarked])).toEqual([[1, true]]);
   expect(read.chronicle).toEqual(save);
   if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
   const disembarked = outcome(apply(CATALOGUE, read.chronicle.chronicle, ashore));

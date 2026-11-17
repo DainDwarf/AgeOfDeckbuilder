@@ -43,7 +43,7 @@ Its fall to the player deals three trophies, each several copies of one card, an
 - **Calendar** needs Irrigation. Its goal counts a deed: the times the draw pile is emptied, its last card drawn. It unlocks the card **Calendar** and pays influence.
 - **Bread** needs Irrigation. Its goal reads the chronicle as it stands: the player's city's population, idle and assigned alike, a unit never counted. It unlocks the card **Bread** and pays influence.
 - **Tanning** needs Domestication. Its goal reads the chronicle as it stands: the tiles inside the border carrying a Pasture or a Trapping, the player's city's own tile counted when it carries one. It unlocks the card **Tannery** and pays influence.
-- **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the cards **Embark** and **Raft** and the archipelago region and pays influence.
+- **Raft** needs Bow and arrow. Its goal reads the chronicle as it stands: the coast tiles charted, the centre part's among them. It unlocks the card **Raft** and the archipelago region and pays influence.
 - **Megalith** needs Calendar. Its goal reads the chronicle as it stands: how far the furthest tile inside the border lies from the player's city's own, counted in tiles. It unlocks the card **Megalith** and pays influence.
 - **Bartering** needs Tanning and Bread. Its goal reads the chronicle as it stands: the money in the player's city's stock. It unlocks the cards **Food trade** and **Goods trade** and pays influence.
 - **Fishing** needs Raft. Its goal counts a deed: the food gained from coast tiles, at income and through Gather alike. It unlocks the card **Fishery** and pays influence.
@@ -52,7 +52,7 @@ Its fall to the player deals three trophies, each several copies of one card, an
 
 - **The archer** attacks over a range the warrior does not have and holds less health: it is the unit that attacks from behind another.
 - **The leader** holds more health and more damage than the warrior and carries a bonus: it adds to the damage of the units of its band beside it. No card enters it; it comes with the siege.
-- **The raft** stands on the water alone and attacks nothing: it crosses the coast slowly and holds little health.
+- **The raft** stands on the water alone and attacks nothing: it crosses the coast slowly, holds little health and carries one unit.
 
 ## The cards 🔧
 
@@ -67,9 +67,7 @@ Its fall to the player deals three trophies, each several copies of one card, an
 - **Calendar**, an instant costing science, aimed at nothing: the turn of the next event is shown until that turn comes, the capstone's turn read as an event's where it lands first, and the card is refused while a turn is shown.
 - **Bread**, an instant costing food, aimed at nothing: the player's city gains culture, so food is either kept for the next population or paid toward the next claim.
 - **Tannery**, a building giving money, built through a worker for production and taking production as its upkeep, on a tile carrying deer or cattle and nowhere else. It goes with the feature, so a Hunt played there removes both.
-- **Embark**, an action card costing production, aimed at a coast tile beside a unit: the unit embarks onto it, spending its action. It becomes Disembark. An embarked unit crosses the coast slowly, whatever it was ashore, so the copies a deck holds are how many units are on the water at once, and the deck's cycle is how long a crossing takes.
-- **Disembark**, the action card Embark becomes, costing nothing, aimed at a tile beside an embarked unit that the unit stands on ashore: the unit disembarks onto it, spending its action. It becomes Embark.
-- **Raft**, costing production: one population leaves the tiles to become a raft, on a coast tile inside the border.
+- **Raft**, costing production: one population leaves the tiles to become a raft, on a coast tile inside the border. A unit embarks onto a raft and crosses the coast as slowly as the raft does, so the rafts the player's city has are how many of its units are on the water at once.
 - **Megalith**, a building on plain, hills or desert giving culture, built through a worker for production and taking production as its upkeep.
 - **Food trade**, an instant costing money, aimed at nothing: the player's city gains food.
 - **Goods trade**, an instant costing money, aimed at nothing: the player's city gains production. Money is paid in the two trades, each for one good, so which good a deck's money goes to is chosen when the deck is built.

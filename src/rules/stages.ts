@@ -59,12 +59,7 @@ export type Stage = Change | Group;
 /** What a card is played at: nothing, a tile, a unit or a card of the hand. */
 export type Aimed =
   | { readonly aim: 'none' }
-  | {
-      readonly aim: 'tile';
-      readonly tile: TileCoords;
-      /** The tile of the unit a card played through a unit beside its tile names, among several. */
-      readonly through?: TileCoords;
-    }
+  | { readonly aim: 'tile'; readonly tile: TileCoords }
   | {
       readonly aim: 'unit';
       /** The tile the unit it is aimed at stands on: a unit is played at through the map. */

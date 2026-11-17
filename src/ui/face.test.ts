@@ -23,11 +23,10 @@ import {
 import { text } from './text';
 
 describe('a card’s face', () => {
-  it('is labelled by its card’s kind, an action card’s naming the worker where it is played through one and no unit where it is played through any', () => {
+  it('is labelled by its card’s kind, an action card’s naming the worker it is played through', () => {
     const labelled = (id: string) => labelledKind(cardOf(CATALOGUE, id));
 
     expect(labelled('PH_Mine')).toBe('worker-action');
-    expect(labelled('PH_Embark')).toBe('action');
     expect(labelled('PH_Farm')).toBe('building');
     expect(labelled('PH_Harvest')).toBe('instant');
   });
@@ -44,7 +43,7 @@ describe('a card’s face', () => {
     expect(family('PH_Hunger')).toBe('hazard');
     expect(family('PH_Ordeal')).toBe('challenge');
     expect(family('PH_Spoils')).toBe('trophy');
-    expect(family('PH_Embark')).toBe('thing-done');
+    expect(family('PH_Hunt')).toBe('thing-done');
     expect(family('PH_Stores')).toBe('thing-done');
   });
 });

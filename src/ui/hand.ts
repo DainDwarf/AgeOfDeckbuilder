@@ -11,7 +11,7 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import { type AimedAt, createAimLine } from './aim-line';
+import { createAimLine } from './aim-line';
 import { pressOf } from './bindings';
 import {
   CARD_BASELINE,
@@ -111,16 +111,8 @@ export type HandPresses = {
   play(key: number, aimed: Extract<Aimed, { readonly aim: 'none' | 'hand' }>): void;
   /** The hand has taken the selection: whatever else the screen selects or inspects goes. */
   dismiss(): void;
-  /**
-   * The map lit for the card's aim; `released` says the aim is off it and the card let go of, and
-   * `reaimed` that the card is being aimed at another kind of thing from then.
-   */
-  aimTile(
-    held: ChronicleCard,
-    card: AimedCard,
-    released: () => void,
-    reaimed: (aim: AimedAt) => void,
-  ): () => void;
+  /** The map lit for the card's aim; `released` says the aim is off it and the card let go of. */
+  aimTile(held: ChronicleCard, card: AimedCard, released: () => void): () => void;
   inspect(card: ChronicleCard): void;
   /** What a name on a card of the hand names, shown large. */
   inspectNamed(name: Name): void;
@@ -285,9 +277,7 @@ export function createHand(
         break;
       case 'tile':
       case 'unit':
-        standing.cancel = presses.aimTile(record.card, card, releasing(record), (aim) => {
-          if (selected?.record === record) line.show(record.card.id, aim);
-        });
+        standing.cancel = presses.aimTile(record.card, card, releasing(record));
         line.show(record.card.id, card.aim);
         break;
     }

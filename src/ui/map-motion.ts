@@ -12,7 +12,7 @@ import {
 } from '../rules/map';
 import { type Change, type Group, type Stage, walked } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
-import { type Unit, unitAt } from '../rules/units';
+import { type Unit, unitAt, unitOf } from '../rules/units';
 import { EASE, ended } from './card-motion';
 import {
   asTerrain,
@@ -135,21 +135,28 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     if (flight === token) view.render(chronicle);
   };
 
-  /** The marker standing on a tile, and nothing where the map shows none. */
-  const markerOn = (coord: TileCoords): Phaser.GameObjects.Container | undefined => {
+  /** The unit the map shows on a tile, by its number, with its marker; nothing where it shows none. */
+  const shownOn = (
+    coord: TileCoords,
+  ): { readonly unit: number; readonly marker: Phaser.GameObjects.Container } | undefined => {
     const shown = view.shown();
     const standing = shown === undefined ? undefined : unitAt(shown.units, coord);
     const marker = standing === undefined ? undefined : view.markerOf(standing.id);
-    return marker?.visible === true ? marker : undefined;
+    return standing !== undefined && marker?.visible === true
+      ? { unit: standing.id, marker }
+      : undefined;
   };
 
+  /** The marker standing on a tile, and nothing where the map shows none. */
+  const markerOn = (coord: TileCoords): Phaser.GameObjects.Container | undefined =>
+    shownOn(coord)?.marker;
+
   /**
-   * A unit's marker bumped where it stands on a tile, as an attack's target is, its health bar taking
-   * what the chronicle leaves the unit there as the bump starts.
+   * A unit's marker bumped where it stands, as an attack's target is, its health bar taking what the
+   * chronicle leaves the unit as the bump starts.
    */
   const bump = (
-    marker: Phaser.GameObjects.Container,
-    coord: TileCoords,
+    { unit, marker }: { readonly unit: number; readonly marker: Phaser.GameObjects.Container },
     chronicle: Chronicle,
     delay: number,
   ): Promise<void> => {
@@ -163,7 +170,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         ease: EASE,
         yoyo: true,
         onStart: () => {
-          taken = healthTaken(marker, coord, chronicle);
+          taken = healthTaken(marker, unit, chronicle);
         },
       }),
     );
@@ -171,16 +178,16 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   };
 
   /**
-   * The health bar of a marker taking the health of the unit a chronicle leaves on its tile: its fill
-   * at once, the bar fading in as a badge does where it was not worn and out where the unit is healed
-   * to full; a unit killed keeps the bar it wore, to shrink with.
+   * The health bar of a marker taking the health a chronicle leaves its unit: its fill at once, the
+   * bar fading in as a badge does where it was not worn and out where the unit is healed to full; a
+   * unit killed keeps the bar it wore, to shrink with.
    */
   const healthTaken = (
     marker: Phaser.GameObjects.Container,
-    coord: TileCoords,
+    unit: number,
     chronicle: Chronicle,
   ): Promise<void> => {
-    const standing = unitAt(chronicle.units, coord);
+    const standing = unitOf(chronicle.units, unit);
     if (standing === undefined) return Promise.resolve();
     const bar = unitHealthBarOf(marker);
     const worn = bar.visible;
@@ -198,14 +205,13 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
 
   /** What a target does: a bump where it was attacked, and a shrink off the map if it was killed. */
   const bumped = async (
-    marker: Phaser.GameObjects.Container,
-    coord: TileCoords,
+    hit: { readonly unit: number; readonly marker: Phaser.GameObjects.Container },
     chronicle: Chronicle,
     token: symbol,
   ): Promise<void> => {
-    await bump(marker, coord, chronicle, 150);
-    if (unitAt(chronicle.units, coord) !== undefined || flight !== token) return;
-    await shrink(marker, 200);
+    await bump(hit, chronicle, 150);
+    if (unitOf(chronicle.units, hit.unit) !== undefined || flight !== token) return;
+    await shrink(hit.marker, 200);
   };
 
   /** One attack: the attacker lunges halfway at the tile it aimed at, and what stands there takes it. */
@@ -216,7 +222,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   ): Promise<void> | undefined => {
     const lunging = markerOn(attacker);
     if (lunging === undefined) return undefined;
-    const hit = markerOn(target);
+    const hit = shownOn(target);
     const token = takeOff();
 
     const from = positionOf(attacker);
@@ -231,7 +237,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         yoyo: true,
       }),
     );
-    const taken = hit === undefined ? Promise.resolve() : bumped(hit, target, chronicle, token);
+    const taken = hit === undefined ? Promise.resolve() : bumped(hit, chronicle, token);
 
     return Promise.all([lunge, taken]).then(() => settle(token, chronicle));
   };
@@ -295,10 +301,10 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
 
   /** The unit on a tile damaged or healed by no attacker: its marker bumps as an attack's target does. */
   const bumpedOn = (coord: TileCoords, chronicle: Chronicle): Promise<void> | undefined => {
-    const marker = markerOn(coord);
-    if (marker === undefined) return undefined;
+    const hit = shownOn(coord);
+    if (hit === undefined) return undefined;
     const token = takeOff();
-    return bump(marker, coord, chronicle, 0).then(() => settle(token, chronicle));
+    return bump(hit, chronicle, 0).then(() => settle(token, chronicle));
   };
 
   /** The unit on a tile killed by no attacker: its marker shrinks off the map as one an attack killed does. */
