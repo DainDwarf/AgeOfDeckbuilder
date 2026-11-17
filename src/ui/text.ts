@@ -409,7 +409,6 @@ const TEXT = {
     'Are you sure you want to declare war? Their band will answer in kind: its warriors will hunt yours and come for your city, and there will be no peace again.',
   'declare-war.move': 'Move',
   'declare-war.attack': 'Attack',
-  'declare-war.play': 'Play',
   'pile.counts': 'Cards: {cards}\nSettle: {settle}',
   'collection.collection': 'Collection',
   'collection.civilizations': 'Civilizations',

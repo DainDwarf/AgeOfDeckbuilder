@@ -32,14 +32,13 @@ type Standing = { readonly which: MenuWindow; readonly laid: Opened };
 /** What the menu says on the game's emitter as the first of its scrims rises and the last falls. */
 const COVERED = 'menu-covered';
 
-/** The presses that may declare war: a unit's step, its attack, and a card's play. */
-type WarPress = Extract<Command['type'], 'move' | 'attack' | 'play'>;
+/** The presses that may declare war: a unit's step, and its attack. */
+type WarPress = Extract<Command['type'], 'move' | 'attack'>;
 
 /** The warning each press raises where it declares war. */
 const WAR_WARNINGS: Record<WarPress, Warning> = {
   move: 'move-warning',
   attack: 'attack-warning',
-  play: 'play-warning',
 };
 
 /**

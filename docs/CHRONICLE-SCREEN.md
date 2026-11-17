@@ -16,7 +16,7 @@ The capstone gets a **window of its own**, raised twice: when the chronicle scre
 
 ## The war warning ✅
 
-A press that would land a unit of the player's on a tile the neutral holds or attack a unit of its, while the neutral is at peace, raises a **warning** before it lands, a window of the menu on its scrim titled Declare War: one line asking whether the player is sure and saying what follows, then the press itself, Move, Attack or Play, and Back. Back, the back key or a press on the scrim takes it down and nothing moves, the unit selected and lit as it was, a card being aimed still being aimed with nothing paid; the press gone through lands as it would have. Hostile, the press lands with no warning. An answer that declares war raises none: its text says so, and the choice is the press.
+A press that would land a unit of the player's on a tile the neutral holds or attack a unit of its, while the neutral is at peace, raises a **warning** before it lands, a window of the menu on its scrim titled Declare War: one line asking whether the player is sure and saying what follows, then the press itself, Move or Attack, and Back. Back, the back key or a press on the scrim takes it down and nothing moves, the unit selected and lit as it was; the press gone through lands as it would have. Hostile, the press lands with no warning. An answer that declares war raises none: its text says so, and the choice is the press.
 
 ## The ending screen ✅
 

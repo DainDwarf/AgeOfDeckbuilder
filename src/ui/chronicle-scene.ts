@@ -11,7 +11,6 @@ import {
   declaresWar,
   launchedFromCampaign,
   outcome,
-  type PlayCommand,
   refusalOf,
   type UnitCommand,
 } from '../rules/chronicle';
@@ -442,7 +441,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     };
 
     /** The press landed, or, where it declares war, the warning raised that lands it gone through. */
-    const warnedOrLanded = (command: UnitCommand | PlayCommand, land: () => void): void => {
+    const warnedOrLanded = (command: UnitCommand, land: () => void): void => {
       if (declaresWar(CATALOGUE, this.current, command)) warnOfWar(this, command, land);
       else land();
     };
@@ -513,10 +512,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
 
     const hand = createHand(this, ui, faces, CATALOGUE, {
       play: (key, aimed) => {
-        const command: PlayCommand = { type: 'play', key, ...aimed };
-        warnedOrLanded(command, () => {
-          void playOut(command);
-        });
+        void playOut({ type: 'play', key, ...aimed });
       },
       dismiss,
       aimTile: ({ key, id }, card, released) => {
@@ -551,11 +547,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
               note.overTile(refused(costOf(CATALOGUE, id), refusal), view.faceOf(tile));
               return;
             }
-            const command: PlayCommand = { type: 'play', key, aim: card.aim, tile };
-            warnedOrLanded(command, () => {
-              hand.unselect();
-              void playOut(command);
-            });
+            hand.unselect();
+            void playOut({ type: 'play', key, aim: card.aim, tile });
           },
           (found) => {
             const tile = tileAt(this.current.tiles, found.tile);

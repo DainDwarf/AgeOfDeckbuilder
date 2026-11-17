@@ -36,8 +36,7 @@ export type Warning =
   | 'clear-warning'
   | 'launch-warning'
   | 'move-warning'
-  | 'attack-warning'
-  | 'play-warning';
+  | 'attack-warning';
 
 /** Every window the menu opens. */
 export type MenuWindow = 'menu' | 'settings' | 'controls' | 'graphics' | 'manage-save' | Warning;
@@ -80,7 +79,6 @@ const THROUGH: Record<Warning, TextKey> = {
   'launch-warning': 'launch.button',
   'move-warning': 'declare-war.move',
   'attack-warning': 'declare-war.attack',
-  'play-warning': 'declare-war.play',
 };
 
 /**
@@ -126,11 +124,6 @@ const WINDOWS: Record<
     buttons: ['back'],
   },
   'attack-warning': {
-    title: 'declare-war.title',
-    lines: ['declare-war.warning'],
-    buttons: ['back'],
-  },
-  'play-warning': {
     title: 'declare-war.title',
     lines: ['declare-war.warning'],
     buttons: ['back'],
