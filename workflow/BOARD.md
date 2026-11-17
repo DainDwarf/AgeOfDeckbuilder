@@ -17,7 +17,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A unit's card reads its unit** — a unit card reads on its face its unit's stats, health, move, range and the rest, with a place for the terrains the unit crosses, in place of a sentence naming it.
+- **A unit's card reads its unit** — a card that places a unit, the two settle cards among them, reads its unit's damage and its health on the pack's crossed swords and heart at the foot's two corners and its move, action, range and sight as glyphs and numbers in its text box, in place of a sentence naming it, each stat raising its name and its sentence under the pointer; `e2e/card-reads.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`. [board/a-units-card-reads-its-unit.md](board/a-units-card-reads-its-unit.md)
 - **The other cards' texts** — the text of every card that places nothing gone through one by one with the user, population, influence and a unit's stat marked as glyphs where they read better.
 - **The texts overflowing the card face** — the card texts that still pass the three lines a face's text has, Floodplain the longest, and a name wider than its plate ("Misunderstandings") are inspected one by one, and the text is rewritten, the box changed or given a scroll, through mockups.
 - **The card types reviewed** — a card's type does not say its family, a settle card placing a building and an action card placing an improvement or nothing, which is a design issue of the card types: review them.
