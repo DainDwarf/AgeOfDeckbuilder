@@ -65,7 +65,8 @@ function outlineOf(scene: Phaser.Scene, symbol: CastSymbol, square: number): str
   const picture = {
     sheet: GLYPH_SHEET.key,
     file,
-    side: GLYPH_PIXELS,
+    width: GLYPH_PIXELS,
+    height: GLYPH_PIXELS,
     pixels: GLYPH_PIXELS / square,
   };
   paintMade(

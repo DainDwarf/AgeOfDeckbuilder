@@ -114,6 +114,7 @@ import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { eventName } from '../src/ui/event-text';
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
+import { unitPaintingOf } from '../src/ui/marks';
 import type { PileKind } from '../src/ui/piles';
 import { refused, type Said } from '../src/ui/refusal-lines';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
@@ -374,11 +375,14 @@ type Scrolled = { offset: number; overflow: number };
 
 /**
  * What a unit's mark shows: the tints of its halo and its painting, nothing where one is untinted,
- * its faction's sign, its badge and its health bar, nothing where it wears none.
+ * the frame its painting draws, the frame his canoe under it draws, its faction's sign, its badge and
+ * its health bar, nothing where it wears none.
  */
 export type UnitMarkShown = {
   halo: number | undefined;
   painting: number | undefined;
+  paintedAs: string;
+  canoe: string | undefined;
   sign: DiscShown | undefined;
   badge: DiscShown | undefined;
   bar: BarShown | undefined;
@@ -685,9 +689,14 @@ export async function readNames(page: Page): Promise<void> {
       if (bar?.type !== 'Container') throw new Error(`the unit mark on ${key} holds no health bar`);
       const { filled, past } = barPartsOf(bar);
       const foot = glyphIn(bar.list[4]);
+      // His canoe is the mark's first image (`unitMarker` in `src/ui/map-marks.ts`).
+      const [canoe] = images;
+      const painting = framed('#lined');
       return {
         halo: tintOf(framed('#halo')),
-        painting: tintOf(framed('#lined')),
+        painting: tintOf(painting),
+        paintedAs: painting.frame.name,
+        canoe: canoe.visible ? canoe.frame.name : undefined,
         sign: discShown(sign),
         badge: discShown(badge),
         bar: bar.visible
@@ -1905,6 +1914,13 @@ export function panelHeadSign(page: Page): Promise<DiscShown | undefined> {
       face.list[face.list.indexOf(name) - 1] as Phaser.GameObjects.Container,
     );
   });
+}
+
+/** The frame the painting of the unit standing on the tile is drawn from; a tile no unit stands on throws. */
+export function paintedOn(chronicle: Chronicle, tile: TileCoords): string {
+  const unit = unitAt(chronicle.units, tile);
+  if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
+  return unitPaintingOf(unit.stats.type).painting;
 }
 
 /** What the unit mark standing on each tile handed shows, in one question to the page; nothing on a tile no mark stands on. */

@@ -86,6 +86,7 @@ import {
   IMPROVEMENT_DISC,
   improvementLyingOf,
   improvementMarksOn,
+  inCanoe,
   type Lying,
   lyingOf,
   type Mark,
@@ -922,14 +923,14 @@ export function createMapView(
     if (seen.live.has(key)) return painted;
     const standing = unitShown(chronicle.units, drawing);
     if (standing !== undefined) {
-      const { stats, faction, embarked } = standing;
+      const { stats, faction } = standing;
       const prepares = preparedAs(chronicle, standing);
       const bar = barOf(standing, undefined);
       const kept = asUnit(
         fogUnitPool.take(),
         stats.type,
         faction,
-        embarked,
+        inCanoe(catalogue, standing),
         'fog',
         prepares,
         bar,
@@ -1311,11 +1312,12 @@ export function createMapView(
     const { x, y } = positionOf(unit.tile);
     stopMotion(scene, unitMotionTargets(marker));
     asPainted(marker).setPosition(x, y).setName(`unit-${key}`).setVisible(seen.live.has(key));
-    const { stats, faction, embarked } = unit;
+    const { stats, faction } = unit;
     const prepares = preparedAs(chronicle, unit);
     const bar = barOf(unit, damageReadOn(unit));
     const shade = shadeOf(chronicle, unit);
-    return asUnit(marker, stats.type, faction, embarked, shade, prepares, bar, factionSigns());
+    const canoed = inCanoe(catalogue, unit);
+    return asUnit(marker, stats.type, faction, canoed, shade, prepares, bar, factionSigns());
   };
 
   /** Every unit of a chronicle written, and the markers of the units gone destroyed. */

@@ -1,5 +1,12 @@
 import Phaser from 'phaser';
-import { bonusOf, type Catalogue, damageOf, fullHealth, unitKind } from '../rules/catalogue';
+import {
+  bonusOf,
+  type Catalogue,
+  damageOf,
+  fullHealth,
+  standsOnWaterAlone,
+  unitKind,
+} from '../rules/catalogue';
 import { type PreparedAs, preparedAs } from '../rules/enemies';
 import { groundCost, movementCost, runsAlong, type TilesBeside } from '../rules/map';
 import { buildingKind, featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
@@ -19,6 +26,7 @@ import {
   buildingMark,
   featureMark,
   improvementMark,
+  inCanoe,
   type Mark,
   paintedBoundsOf,
   riverMark,
@@ -136,7 +144,7 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
         faction: thing.kind,
         movePoints: stats.move,
         action: stats.action,
-        embarked: false,
+        embarked: standsOnWaterAlone(catalogue, thing.id),
         damage: stats.damage,
       };
       return { kind: 'unit', unit };
@@ -496,7 +504,7 @@ function buildFace(
   const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name];
 
   let ruleY = Math.round(middle + 1.15 * em);
-  const state = card.kind === 'unit' ? stateOf(card.unit) : undefined;
+  const state = card.kind === 'unit' ? stateOf(catalogue, card.unit) : undefined;
   if (state !== undefined) {
     const line = addText(scene, name.x, 0, state, style.label)
       .setOrigin(0, 0.5)
@@ -651,16 +659,16 @@ function headOf(
   signed: boolean,
 ): { mark: Mark; fittedBy?: readonly Mark[]; name: string } {
   if (card.kind === 'unit') {
-    const { stats, faction, embarked } = card.unit;
-    const mark = unitMark(scene, stats.type, faction, embarked, signed);
+    const { stats, faction } = card.unit;
+    const mark = unitMark(scene, stats.type, faction, inCanoe(catalogue, card.unit), signed);
     return { mark, fittedBy: unitFittedBy(mark), name: unitName(stats.type) };
   }
   return { mark: markOf(scene, catalogue, card.rows[0]), name: nameOf(card.rows[0]) };
 }
 
 /** What the line under a unit card's name reads: the unit's states joined, and nothing for none. */
-function stateOf(unit: UnitReading): string | undefined {
-  const states = unit.embarked ? [text('unit-state.raft')] : [];
+function stateOf(catalogue: Catalogue, unit: UnitReading): string | undefined {
+  const states = inCanoe(catalogue, unit) ? [text('unit-state.raft')] : [];
   switch (unit.prepares) {
     case 'capture':
       states.push(text('unit-state.capturing'));

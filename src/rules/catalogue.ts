@@ -972,13 +972,6 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
     rewardsHeld(content, rewards, `the age ${id}'s neutral`);
     if (ratio.length === 0) refuse(content, `the age ${id}'s neutral's ratio holds no row`);
     for (const { card, kind, share } of ratio) {
-      const placing = placingOf(cardOf(content, card));
-      if (placing?.thing === 'unit' && standsOnWaterAlone(content, placing.unit)) {
-        refuse(
-          content,
-          `the age ${id}'s neutral enters ${card}, whose unit ${placing.unit} stands on the water alone`,
-        );
-      }
       unitCardOf(content, card);
       unitKind(content, kind);
       if (!Number.isInteger(share) || share < 1) {

@@ -55,6 +55,7 @@ import {
   onScreen,
   openSaved,
   paidFor,
+  paintedOn,
   playedOn,
   playedOut,
   readings,
@@ -191,7 +192,9 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   await consoleKey(page);
   await broughtIn(page, city);
 
-  expect(await unitMarksOn(page, [city])).toEqual([{ halo: LOOK.neutral, painting: undefined }]);
+  expect(await unitMarksOn(page, [city])).toEqual([
+    { halo: LOOK.neutral, painting: undefined, paintedAs: paintedOn(guarded, city) },
+  ]);
 
   const at = await tileOnScreen(page, city);
   await page.mouse.click(at.x, at.y, { button: 'right' });

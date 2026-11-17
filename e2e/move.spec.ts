@@ -13,6 +13,7 @@ import {
   firstSeed,
   freeFor,
   openSaved,
+  paintedOn,
   playedOut,
   playerCityTile,
   playersOf,
@@ -132,8 +133,16 @@ test('a warrior that spends its last move points with no unit in its attack’s 
   await expect
     .poll(() => unitMarksOn(page, [warriorTo, workerTo]))
     .toEqual([
-      { halo: multiplied(LOOK.civilization, dim), painting: dim },
-      { halo: LOOK.civilization, painting: undefined },
+      {
+        halo: multiplied(LOOK.civilization, dim),
+        painting: dim,
+        paintedAs: paintedOn(both, warriorTo),
+      },
+      {
+        halo: LOOK.civilization,
+        painting: undefined,
+        paintedAs: paintedOn(both, workerTo),
+      },
     ]);
   expect(problems).toEqual([]);
 });

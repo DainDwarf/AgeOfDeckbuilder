@@ -6,6 +6,7 @@ import {
   disembarks,
   embarks,
   enters,
+  entersInside,
   firstRefusal,
   gained,
   healed,
@@ -557,6 +558,17 @@ export const STONE: Slice = {
         sight: 2,
         bonus: 1,
       },
+      raft: {
+        type: 'raft',
+        worker: false,
+        health: 2,
+        damage: 0,
+        range: 0,
+        move: MOVE_POINT,
+        action: 0,
+        sight: 2,
+        onWaterAlone: true,
+      },
     },
     scripts: {
       [SIEGE_SCRIPT]: SIEGE_RAIDER,
@@ -610,6 +622,7 @@ export const STONE: Slice = {
         ...embarks(EMBARKED_MOVE),
       },
       disembark: { kind: 'action', cost: {}, becomes: 'embark', ...disembarks() },
+      raft: { kind: 'unit', cost: { production: 3 }, ...entersInside('raft') },
       'food-trade': {
         kind: 'instant',
         cost: { money: 2 },
@@ -1012,7 +1025,7 @@ export const STONE: Slice = {
       tanning: { needs: ['domestication'], unlocks: { cards: { tannery: 1 } } },
       raft: {
         needs: ['bow-and-arrow'],
-        unlocks: { cards: { embark: 1 }, region: 'archipelago' },
+        unlocks: { cards: { embark: 1, raft: 1 }, region: 'archipelago' },
       },
       megalith: { needs: ['calendar'], unlocks: { cards: { megalith: 1 } } },
       bartering: {

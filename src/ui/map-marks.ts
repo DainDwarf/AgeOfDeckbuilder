@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { type Catalogue, standsOnWaterAlone } from '../rules/catalogue';
 import type { PreparedAs } from '../rules/enemies';
 import {
   type BuildingTypeId,
@@ -20,7 +21,7 @@ import {
 import type { MapContent } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
-import type { Faction } from '../rules/units';
+import type { Faction, Unit } from '../rules/units';
 import type { CastSymbol } from './cast';
 import type { CityBar, CityBarStock } from './city-bar';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
@@ -35,6 +36,7 @@ import {
   type BuildingPiece,
   buildingPaintingsOf,
   CANOE,
+  CANOE_WIDTH,
   clearingsOf,
   clearsItsTile,
   DISC_PITCH,
@@ -124,12 +126,11 @@ const CITY_BADGE_INKS: Record<CityFaction, number> = {
 };
 
 /**
- * How far below its tile's middle a unit's painting stands, how far below the painting's middle his
- * canoe's stands, and how wide the canoe is drawn, in the map's units.
+ * How far below its tile's middle a unit's painting stands, and how far below the painting's middle
+ * his canoe's stands, in the map's units.
  */
 const UNIT_DROP = 8;
 const CANOE_DROP = 8;
-const CANOE_WIDTH = 30;
 
 /** How far above a tile's middle the row of its feature and its improvements stands. */
 export const ROW_RISE = 15;
@@ -1052,16 +1053,24 @@ function asUnitDisc(
   }
 }
 
+/** Whether a unit stands in his canoe: embarked, and of a kind that does not stand on the water alone. */
+export function inCanoe(
+  catalogue: Catalogue,
+  { stats, embarked }: Pick<Unit, 'stats' | 'embarked'>,
+): boolean {
+  return embarked && !standsOnWaterAlone(catalogue, stats.type);
+}
+
 /**
  * A `unitMarker` made to draw a unit: its kind's painting low on its tile in a halo of its faction's
- * colour, in his canoe while embarked, its faction's sign where `signed`, the badge of what its
+ * colour, in his canoe where `canoed`, its faction's sign where `signed`, the badge of what its
  * prepare lands as, and the health bar it is handed where it is handed one, darkened by the shade.
  */
 export function asUnit(
   mark: Phaser.GameObjects.Container,
   type: string,
   faction: Faction,
-  embarked: boolean,
+  canoed: boolean,
   shade: UnitShade,
   prepares: PreparedAs | undefined,
   bar: HealthBar | undefined,
@@ -1079,7 +1088,7 @@ export function asUnit(
     .setScale(CANOE_WIDTH / canoe.frame.width)
     .setPosition(0, UNIT_DROP + CANOE_DROP)
     .setTint(tint)
-    .setVisible(embarked);
+    .setVisible(canoed);
   paintingImage
     .setTexture(UNIT_SHEET.key, painting)
     .setScale(scale)
@@ -1091,7 +1100,7 @@ export function asUnit(
   return mark;
 }
 
-/** What a unit's mark is fitted to a box by: its painting, and his canoe while it stands embarked. */
+/** What a unit's mark is fitted to a box by: its painting, and his canoe while it stands in it. */
 export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObjects.Image[] {
   const [canoe, , painting] = mark.list as Phaser.GameObjects.Image[];
   return canoe.visible ? [canoe, painting] : [painting];
@@ -1099,20 +1108,20 @@ export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObj
 
 /**
  * A unit off the map, undarkened and wearing neither badge nor health bar, its faction's sign where
- * `signed`, its painting and his canoe centred on the container's point.
+ * `signed`, its painting and his canoe where `canoed` centred on the container's point.
  */
 export function unitMark(
   scene: Phaser.Scene,
   type: string,
   faction: Faction,
-  embarked: boolean,
+  canoed: boolean,
   signed: boolean,
 ): Phaser.GameObjects.Container {
   const mark = asUnit(
     unitMarker(scene),
     type,
     faction,
-    embarked,
+    canoed,
     'clear',
     undefined,
     undefined,

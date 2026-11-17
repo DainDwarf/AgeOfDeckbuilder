@@ -81,31 +81,32 @@ export function washed(
 }
 
 /**
- * A square picture of a sheet: the sheet's key, its file, how many pixels a side it is, and how many
+ * A picture of a sheet: the sheet's key, its file, how many pixels wide and tall it is, and how many
  * of them make one unit where it is drawn.
  */
-export type Square = {
+export type Picture = {
   readonly sheet: string;
   readonly file: string;
-  readonly side: number;
+  readonly width: number;
+  readonly height: number;
   readonly pixels: number;
 };
 
 /**
- * The room a frame painted off a square picture keeps round it on every side to reach that many units
- * past it, in the picture's pixels, that many of them to the unit.
+ * The room a frame painted off a picture keeps round it on every side to reach that many units past
+ * it, in the picture's pixels, that many of them to the unit.
  */
 export function roomFor(reach: number, pixels: number): number {
   return Math.ceil(reach * pixels) + 1;
 }
 
 /**
- * A frame a square picture is painted off, the picture in its middle with room round it to reach that
- * many units past it: `paint` is handed a canvas of the frame's size, the picture's alpha on it, how
- * many pixels a unit is, and the way to draw the picture onto it.
+ * A frame a picture is painted off, the picture in its middle with room round it to reach that many
+ * units past it: `paint` is handed a canvas of the frame's size, the picture's alpha on it, how many
+ * pixels a unit is, and the way to draw the picture onto it.
  */
 export function aroundPicture(
-  { sheet, file, side: pictured, pixels }: Square,
+  { sheet, file, width: pictured, height: tall, pixels }: Picture,
   frame: string,
   reach: number,
   paint: (
@@ -116,14 +117,15 @@ export function aroundPicture(
   ) => void,
 ): Made {
   const room = roomFor(reach, pixels);
-  const side = pictured + 2 * room;
+  const width = pictured + 2 * room;
+  const height = tall + 2 * room;
   return {
     frame,
-    width: side,
-    height: side,
+    width,
+    height,
     paint: (context, paintingIn) => {
       const from = paintingIn(sheet, file);
-      const on = blankCanvas(side, side);
+      const on = blankCanvas(width, height);
       const picture = (): void =>
         on.drawImage(
           from.canvas,
@@ -137,8 +139,8 @@ export function aroundPicture(
           from.height,
         );
       picture();
-      const { data } = on.getImageData(0, 0, side, side);
-      const alpha = Uint8ClampedArray.from({ length: side * side }, (_, at) => data[4 * at + 3]);
+      const { data } = on.getImageData(0, 0, width, height);
+      const alpha = Uint8ClampedArray.from({ length: width * height }, (_, at) => data[4 * at + 3]);
       paint(on, alpha, pixels, picture);
       context.drawImage(on.canvas, 0, 0);
     },

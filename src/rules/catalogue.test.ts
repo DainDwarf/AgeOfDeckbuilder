@@ -771,7 +771,7 @@ function neutralWith(laid: Partial<Neutral>): Catalogue {
   return aged({ neutral: { ...neutralOf(CATALOGUE, AGE), ...laid } });
 }
 
-test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, a ratio naming a card no unit card, a unit card whose unit stands on the water alone, a kind it does not hold or a share not a whole number above nought, or a reward it does not hold, in copies below one or none at all, is refused, and one naming no wave is not', () => {
+test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, a ratio naming a card no unit card, a unit card aimed at a tile, as one whose unit stands on the water alone is, a kind it does not hold or a share not a whole number above nought, or a reward it does not hold, in copies below one or none at all, is refused, and one naming no wave is not', () => {
   const { scripts, ratio } = neutralOf(CATALOGUE, AGE);
   const [row] = ratio;
   const refusals: [Catalogue, string][] = [
@@ -793,7 +793,7 @@ test('a catalogue whose neutral names a guard’s or a wave’s script it does n
     [neutralWith({ ratio: [{ ...row, card: 'PH_Farm' }] }), 'the card PH_Farm is no unit card'],
     [
       neutralWith({ ratio: [{ ...row, card: 'PH_Skiff' }] }),
-      `the age ${AGE}'s neutral enters PH_Skiff, whose unit PH_Skiff stands on the water alone`,
+      'the unit card PH_Skiff is aimed at a tile',
     ],
     [neutralWith({ ratio: [{ ...row, card: 'PH_Loot' }] }), 'no card is named PH_Loot'],
     [neutralWith({ ratio: [{ ...row, kind: 'PH_Giant' }] }), 'no unit kind is named PH_Giant'],

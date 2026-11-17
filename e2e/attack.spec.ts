@@ -24,6 +24,7 @@ import {
   litFor,
   onScreen,
   openSaved,
+  paintedOn,
   playerCityTile,
   playersOf,
   pointAt,
@@ -165,8 +166,17 @@ test('a warrior dragged onto an enemy attacks it, the enemy wearing its health b
   await expect
     .poll(() => unitMarksOn(page, [warrior.tile, enemy.tile]))
     .toEqual([
-      { halo: multiplied(LOOK.civilization, dim), painting: dim },
-      { halo: LOOK.enemy, painting: undefined, bar: barOf(hurt, undefined) },
+      {
+        halo: multiplied(LOOK.civilization, dim),
+        painting: dim,
+        paintedAs: paintedOn(attacked, warrior.tile),
+      },
+      {
+        halo: LOOK.enemy,
+        painting: undefined,
+        paintedAs: paintedOn(attacked, enemy.tile),
+        bar: barOf(hurt, undefined),
+      },
     ]);
   // The warrior is selected again where it stands, so one more press is its next command.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(warrior.tile));
