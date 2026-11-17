@@ -123,11 +123,12 @@ export type ScriptAct =
 
 /**
  * What a card is played at, and what it does with what it was played at. An aim of `none` lands
- * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim answers the
- * first reason it refuses a tile for and nothing at all on one it admits, and hands its effect the
- * tile that was chosen; a `unit` aim is the same over the tiles a unit of the player's stands on,
- * which it is asked of before its own reasons; a `hand` aim hands its effect where in the hand the
- * card chosen lies on the chronicle the card's cost is paid on, which the effect takes.
+ * whole, and names what blocks it where the map or the city can hold it up; a `tile` aim names what
+ * blocks it before any tile is read, for the city named, answers the first reason it refuses a tile
+ * for and nothing at all on one it admits, and hands its effect the tile that was chosen; a `unit`
+ * aim is the same over the tiles a unit of the player's stands on, which it is asked of before its
+ * own reasons; a `hand` aim hands its effect where in the hand the card chosen lies on the chronicle
+ * the card's cost is paid on, which the effect takes.
  */
 export type Aim =
   | {
@@ -147,6 +148,11 @@ export type Aim =
        * helper that writes the effect writes it.
        */
       readonly places?: Placing;
+      readonly blocked?: (
+        catalogue: Catalogue,
+        chronicle: Chronicle,
+        whose: CityFaction,
+      ) => Block[];
       readonly refuses: (
         catalogue: Catalogue,
         chronicle: Chronicle,
@@ -236,20 +242,29 @@ export function strikeOf(card: Card): Strike | undefined {
   }
 }
 
-/** What a unit card is past its cost: its keyword, and how it enters its unit for a city. */
-export type UnitCard = { readonly kind: 'unit' } & Keyword & UnitEntry;
+/**
+ * What a unit card is past its cost: its keyword, and how it enters its unit, on its city's tile or,
+ * for a kind that stands on the water alone, at the tile it is aimed at.
+ */
+export type UnitCard = { readonly kind: 'unit' } & Keyword & (UnitEntry | AimedUnitEntry);
 
 /**
- * How a unit card enters its unit for the city named: what blocks it there, and its effect on the
- * chronicle that city has paid the card's cost on.
+ * How a unit card enters its unit on the tile of the city named: what blocks it there, and its effect
+ * on the chronicle that city has paid the card's cost on.
  */
 export type UnitEntry = {
+  readonly aim?: never;
   readonly blocked: (catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction) => Block[];
   readonly effect: (catalogue: Catalogue, paid: Chronicle, whose: CityFaction) => Landed;
   /**
    * The unit the play places: it must name the kind the effect enters, so the helper that writes the
    * effect writes it.
    */
+  readonly places: UnitPlacing;
+};
+
+/** How a unit card enters its unit at the tile it is aimed at, the unit it places named. */
+export type AimedUnitEntry = Extract<Aim, { readonly aim: 'tile' }> & {
   readonly places: UnitPlacing;
 };
 
@@ -437,6 +452,25 @@ function kindMisfit(card: Card): string | undefined {
     case 'trophy':
     case 'challenge':
       return undefined;
+  }
+}
+
+/**
+ * What keeps a unit card's way of entering out of its unit's kind, and nothing where it fits: a kind
+ * that stands on the water alone enters at the tile its card is aimed at, any other on its city's.
+ */
+function entryMisfit(content: Catalogue, card: UnitCard): string | undefined {
+  const { unit } = card.places;
+  const alone = standsOnWaterAlone(content, unit);
+  switch (card.aim) {
+    case 'tile':
+      return alone
+        ? undefined
+        : `is aimed at a tile and enters ${unit}, which does not stand on the water alone`;
+    case undefined:
+      return alone
+        ? `enters ${unit}, which stands on the water alone, on its city's tile`
+        : undefined;
   }
 }
 
@@ -639,10 +673,10 @@ export type Catalogue = MapContent & {
 export type Tables = Omit<Catalogue, 'version' | 'ages' | 'cardAges'>;
 
 /**
- * A unit kind: the stats a unit of it enters with, and the bonus it carries, a kind naming none
- * carrying none.
+ * A unit kind: the stats a unit of it enters with, the bonus it carries, a kind naming none carrying
+ * none, and whether it stands on the water alone.
  */
-export type UnitKind = UnitStats & { readonly bonus?: number };
+export type UnitKind = UnitStats & { readonly bonus?: number; readonly onWaterAlone?: true };
 
 /** The steps past the centre part's reach within which no region keeps its camps. */
 export const FIRST_STEPS = 2;
@@ -791,6 +825,10 @@ export function catalogued(content: Catalogue): Catalogue {
     const misfit = kindMisfit(card);
     if (misfit !== undefined) refuse(content, `the card ${id} ${misfit}`);
     placingHeld(content, placingOf(card));
+    if (card.kind === 'unit') {
+      const entry = entryMisfit(content, card);
+      if (entry !== undefined) refuse(content, `the unit card ${id} ${entry}`);
+    }
     const influence = influenceOf(card);
     if (influence !== undefined && (!Number.isInteger(influence) || influence < 0)) {
       refuse(content, `the ${card.kind} ${id} gains ${influence} influence`);
@@ -934,6 +972,13 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
     rewardsHeld(content, rewards, `the age ${id}'s neutral`);
     if (ratio.length === 0) refuse(content, `the age ${id}'s neutral's ratio holds no row`);
     for (const { card, kind, share } of ratio) {
+      const placing = placingOf(cardOf(content, card));
+      if (placing?.thing === 'unit' && standsOnWaterAlone(content, placing.unit)) {
+        refuse(
+          content,
+          `the age ${id}'s neutral enters ${card}, whose unit ${placing.unit} stands on the water alone`,
+        );
+      }
       unitCardOf(content, card);
       unitKind(content, kind);
       if (!Number.isInteger(share) || share < 1) {
@@ -1272,12 +1317,33 @@ function freeWhateverTheChronicle(cost: Answer['cost']): boolean {
 }
 
 /**
- * The stats a unit of that kind enters the map with, its bonus never among them; a kind the
- * catalogue does not hold is refused.
+ * The stats a unit of that kind enters the map with, its bonus and whether it stands on the water
+ * alone never among them; a kind the catalogue does not hold is refused.
  */
 export function unitKind(catalogue: Catalogue, id: string): UnitStats {
-  const { bonus: _bonus, ...stats } = entryOf(catalogue, catalogue.units, id, 'unit kind');
+  const {
+    bonus: _bonus,
+    onWaterAlone: _alone,
+    ...stats
+  } = entryOf(catalogue, catalogue.units, id, 'unit kind');
   return stats;
+}
+
+/** Whether a unit of that kind stands on the water alone; a kind the catalogue does not hold is refused. */
+export function standsOnWaterAlone(catalogue: Catalogue, id: string): boolean {
+  return entryOf(catalogue, catalogue.units, id, 'unit kind').onWaterAlone === true;
+}
+
+/**
+ * Whether a unit of that kind entering stands on the tile: embarked on its kind's move where the kind
+ * stands on the water alone, and ashore otherwise.
+ */
+export function standsOnEntering(
+  catalogue: Catalogue,
+  id: string,
+  tile: Tile | undefined,
+): boolean {
+  return standsOn(catalogue, unitKind(catalogue, id), standsOnWaterAlone(catalogue, id), tile);
 }
 
 /** A unit's full health: its kind's, read off the catalogue by the type the unit carries. */
@@ -1326,11 +1392,19 @@ export function cardOf(catalogue: Catalogue, id: string): Card {
   return entryOf(catalogue, catalogue.cards, id, 'card');
 }
 
-/** The unit card an id names; a card the catalogue does not hold, or one of another kind, is refused. */
-export function unitCardOf(catalogue: Catalogue, id: string): UnitCard {
+/**
+ * The unit card an id names, entering its unit on its city's tile; a card the catalogue does not
+ * hold, one of another kind, and one aimed at a tile are refused.
+ */
+export function unitCardOf(catalogue: Catalogue, id: string): UnitCard & UnitEntry {
   const card = cardOf(catalogue, id);
   if (card.kind !== 'unit') refuse(catalogue, `the card ${id} is no unit card`);
-  return card;
+  switch (card.aim) {
+    case 'tile':
+      return refuse(catalogue, `the unit card ${id} is aimed at a tile`);
+    case undefined:
+      return card;
+  }
 }
 
 /** What a card costs, resource by resource, in the order the resource bar reads. */
@@ -1615,20 +1689,23 @@ export type Entering = {
 );
 
 /**
- * The one way a unit enters the map: it takes the next number the chronicle deals a unit, carries
- * its own copy of its kind's stats, and stands ashore, or embarked on the move it enters with, its
- * move points and its action full.
+ * The one way a unit enters the map: the next number dealt, its own copy of its kind's stats, ashore
+ * or embarked on the move it enters with, a kind on the water alone always embarked on its own move,
+ * its move points and its action full.
  */
 export function entered(catalogue: Catalogue, chronicle: Chronicle, entering: Entering): Landed {
   const kind = unitKind(catalogue, entering.type);
-  const stats = { ...kind, move: entering.embarkedMove ?? kind.move };
+  const embarkedMove = standsOnWaterAlone(catalogue, entering.type)
+    ? kind.move
+    : entering.embarkedMove;
+  const stats = { ...kind, move: embarkedMove ?? kind.move };
   const carried = {
     id: chronicle.nextUnit,
     stats,
     tile: entering.tile,
     movePoints: stats.move,
     action: stats.action,
-    embarked: entering.embarkedMove !== undefined,
+    embarked: embarkedMove !== undefined,
   };
   const dealt = (unit: Unit): Landed =>
     landedAs(

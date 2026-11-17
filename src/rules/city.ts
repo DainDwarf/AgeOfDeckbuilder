@@ -684,7 +684,8 @@ export function neutralPlayed(
     return landedAs(change('runtime-error', chronicle, chronicle));
   }
   if (aim.refuses(catalogue, chronicle, tile, 'neutral') !== undefined) return unchanged(chronicle);
-  const playing = neutralPaid(catalogue, chronicle, id, [], (left) =>
+  const blocked = aim.blocked?.(catalogue, chronicle, 'neutral') ?? [];
+  const playing = neutralPaid(catalogue, chronicle, id, blocked, (left) =>
     aim.effect(catalogue, left, at),
   );
   return playing === undefined

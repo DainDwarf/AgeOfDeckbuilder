@@ -1126,6 +1126,7 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
     case 'hand':
       return chronicle.hand.length <= 1 ? ['hand'] : [];
     case 'tile':
+      return card.blocked?.(catalogue, chronicle, 'player') ?? [];
     case 'unit':
       return [];
   }

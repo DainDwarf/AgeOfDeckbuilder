@@ -2540,6 +2540,54 @@ test('a tile several embarked units could disembark onto is refused through a un
   expect(unitNamed(played, 3)).toEqual(unitNamed(ticked, 3));
 });
 
+test('a unit card of a kind that stands on the water alone is refused for the population before any tile, and aimed at a tile inside the border its unit stands on with no unit on it, refused for the terrain, then the border, then the unit standing; played there, one idle population becomes the unit, embarked on its kind’s move from the moment it enters, and no card disembarks it', () => {
+  const coast = { q: 1, r: 0 };
+  const onward = { q: 2, r: 0 };
+  const beyond = { q: 2, r: -1 };
+  const plain = { q: 0, r: 1 };
+  const city = cityOf(['urban', 'coast', 'coast'], {
+    tiles: field(3, [coast, onward, beyond]),
+    hand: ['PH_Skiff', 'PH_Disembark'],
+    population: 4,
+    resources: production(1),
+  });
+  const full = { ...city, population: 3 };
+  const kind = CATALOGUE.units.PH_Skiff;
+
+  expect(idle(full)).toBe(0);
+  expect(refusalOf(CATALOGUE, full, 'PH_Skiff').blocked).toEqual(['idle']);
+  expect(refusedFor(full, 'PH_Skiff', coast)).toBeUndefined();
+  expect(stagedBy(full, aimedAt(full, coast))).toEqual(['refused']);
+  expect(refusalOf(CATALOGUE, city, 'PH_Skiff').blocked).toEqual([]);
+  expect(refusedFor(city, 'PH_Skiff', plain)).toBe('wrong-terrain');
+  expect(refusedFor(city, 'PH_Skiff', beyond)).toBe('outside-border');
+  expect(refusedFor(city, 'PH_Skiff', coast)).toBeUndefined();
+
+  const stages = apply(CATALOGUE, city, aimedAt(city, coast));
+  const after = outcome(stages);
+  const skiff = unitNamed(after, 1);
+
+  expect(namesOf(stages)).toEqual(['played', 'discarded', 'stock', 'population', 'enter']);
+  expect(after.population).toBe(city.population - 1);
+  expect(after.assigned).toEqual(city.assigned);
+  expect(skiff).toEqual({
+    id: 1,
+    faction: 'player',
+    stats: unitKind(CATALOGUE, 'PH_Skiff'),
+    tile: coast,
+    movePoints: kind.move,
+    action: kind.action,
+    embarked: true,
+  });
+  expect(refusedFor(after, 'PH_Skiff', coast)).toBe('unit-standing');
+  expect(refusedFor(after, 'PH_Disembark', plain)).toBe('wrong-terrain');
+
+  const sailed = outcome(apply(CATALOGUE, after, { type: 'move', unit: 1, tile: beyond }));
+
+  expect(unitNamed(sailed, 1)).toMatchObject({ tile: beyond, embarked: true });
+  expect(refusedFor(sailed, 'PH_Skiff', beyond)).toBe('outside-border');
+});
+
 /** What the card played through the worker on the tile would give, tile by tile. */
 function givenBy(chronicle: Chronicle, card: CardId, at: TileCoords): GivenTo[] {
   const aim = workerAim(cardOf(CATALOGUE, card));

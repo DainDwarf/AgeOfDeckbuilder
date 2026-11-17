@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { builds, embarks, enters, entersOn, placesImprovement } from './cards';
+import { builds, embarks, enters, entersInside, entersOn, placesImprovement } from './cards';
 import {
   type Age,
   type Answer,
@@ -771,7 +771,7 @@ function neutralWith(laid: Partial<Neutral>): Catalogue {
   return aged({ neutral: { ...neutralOf(CATALOGUE, AGE), ...laid } });
 }
 
-test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, a ratio naming a card no unit card, a kind it does not hold or a share not a whole number above nought, or a reward it does not hold, in copies below one or none at all, is refused, and one naming no wave is not', () => {
+test('a catalogue whose neutral names a guard’s or a wave’s script it does not hold, a wave gathering or sending below one or sending more than it gathers, a ratio holding no row, a ratio naming a card no unit card, a unit card whose unit stands on the water alone, a kind it does not hold or a share not a whole number above nought, or a reward it does not hold, in copies below one or none at all, is refused, and one naming no wave is not', () => {
   const { scripts, ratio } = neutralOf(CATALOGUE, AGE);
   const [row] = ratio;
   const refusals: [Catalogue, string][] = [
@@ -791,6 +791,10 @@ test('a catalogue whose neutral names a guard’s or a wave’s script it does n
     ],
     [neutralWith({ ratio: [] }), `the age ${AGE}'s neutral's ratio holds no row`],
     [neutralWith({ ratio: [{ ...row, card: 'PH_Farm' }] }), 'the card PH_Farm is no unit card'],
+    [
+      neutralWith({ ratio: [{ ...row, card: 'PH_Skiff' }] }),
+      `the age ${AGE}'s neutral enters PH_Skiff, whose unit PH_Skiff stands on the water alone`,
+    ],
     [neutralWith({ ratio: [{ ...row, card: 'PH_Loot' }] }), 'no card is named PH_Loot'],
     [neutralWith({ ratio: [{ ...row, kind: 'PH_Giant' }] }), 'no unit kind is named PH_Giant'],
     [
@@ -1058,6 +1062,27 @@ test('a catalogue whose card places a unit kind, a building or an improvement it
     });
 
     expect(() => catalogued(content)).toThrow(`fixture: no ${noun} is named PH_Unheld`);
+  }
+});
+
+test('a catalogue whose unit card enters a kind that stands on the water alone on its city’s tile, or is aimed at a tile and enters a kind that does not, is refused', () => {
+  const misfits: Readonly<Record<string, [Card, string]>> = {
+    PH_Moored: [
+      { kind: 'unit', cost: {}, ...enters('PH_Skiff') },
+      "enters PH_Skiff, which stands on the water alone, on its city's tile",
+    ],
+    PH_Ferried: [
+      { kind: 'unit', cost: {}, ...entersInside('PH_Warrior') },
+      'is aimed at a tile and enters PH_Warrior, which does not stand on the water alone',
+    ],
+  };
+  for (const [id, [card, misfit]] of Object.entries(misfits)) {
+    const content = changed({
+      cards: { ...CATALOGUE.cards, [id]: card },
+      cardAges: { ...CATALOGUE.cardAges, [id]: AGE },
+    });
+
+    expect(() => catalogued(content)).toThrow(`fixture: the unit card ${id} ${misfit}`);
   }
 });
 

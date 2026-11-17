@@ -1,6 +1,7 @@
 import {
   type Aim,
   type AimedCard,
+  type AimedUnitEntry,
   ageOf,
   type Card,
   type Catalogue,
@@ -10,7 +11,10 @@ import {
   entered,
   fullHealth,
   keywordOf,
+  standsOnEntering,
+  standsOnWaterAlone,
   strikeOf,
+  type UnitCard,
   type UnitEntry,
   unitKind,
 } from './catalogue';
@@ -94,11 +98,7 @@ export function aimOf(card: Card): Aim {
     case 'settle':
       return charted(card);
     case 'unit':
-      return {
-        aim: 'none',
-        blocked: (catalogue, chronicle) => card.blocked(catalogue, chronicle, 'player'),
-        effect: (catalogue, paid) => card.effect(catalogue, paid, 'player'),
-      };
+      return unitAim(card);
     case 'building':
     case 'action':
     case 'instant':
@@ -108,6 +108,20 @@ export function aimOf(card: Card): Aim {
       return { aim: 'none', effect: (_catalogue, paid) => unchanged(paid) };
     case 'challenge':
       return PLAYED_BY_NOTHING;
+  }
+}
+
+/** A unit card's aim, played by the player: at the tile it is aimed at, or at nothing for its city's tile. */
+function unitAim(card: UnitCard): Aim {
+  switch (card.aim) {
+    case 'tile':
+      return card;
+    case undefined:
+      return {
+        aim: 'none',
+        blocked: (catalogue, chronicle) => card.blocked(catalogue, chronicle, 'player'),
+        effect: (catalogue, paid) => card.effect(catalogue, paid, 'player'),
+      };
   }
 }
 
@@ -365,7 +379,10 @@ export function embarks(move: number): Aim & { readonly aim: 'tile' } {
   return stepped(true, () => move);
 }
 
-/** How a card disembarks an embarked unit of the player's beside its tile: its move is its own again. */
+/**
+ * How a card disembarks an embarked unit of the player's beside its tile, never one whose kind stands
+ * on the water alone: its move is its own again.
+ */
 export function disembarks(): Aim & { readonly aim: 'tile' } {
   return stepped(false, (catalogue, unit) => unitKind(catalogue, unit.stats.type).move);
 }
@@ -395,6 +412,7 @@ function stepped(
     },
     {
       passes: (catalogue, unit, tile) =>
+        (embarking || !standsOnWaterAlone(catalogue, unit.stats.type)) &&
         standsOn(catalogue, { ...unit.stats, move: move(catalogue, unit) }, embarking, tile),
       unit: 'wrong-terrain',
     },
@@ -638,6 +656,15 @@ export function healthLost(
     : 'health-full';
 }
 
+/** What the city's population holds against a unit card: its last population kept, and one idle needed. */
+function populationBlocks(chronicle: Chronicle, whose: CityFaction): Block[] {
+  const city = cityRows(chronicle, whose);
+  const blocks: Block[] = [];
+  if ((city?.population ?? 0) <= 1) blocks.push('population');
+  if (city === undefined || idle(city) <= 0) blocks.push('idle');
+  return blocks;
+}
+
 /**
  * How a unit card enters its unit for a city, the block and the effect as one pair so neither is
  * written without the other: the city keeps its last population, needs one idle to turn into the
@@ -646,11 +673,8 @@ export function healthLost(
 export function enters(type: string): UnitEntry {
   return {
     blocked: (catalogue, chronicle, whose) => {
-      const city = cityRows(chronicle, whose);
       const tile = cityTileOf(chronicle, whose);
-      const blocks: Block[] = [];
-      if ((city?.population ?? 0) <= 1) blocks.push('population');
-      if (city === undefined || idle(city) <= 0) blocks.push('idle');
+      const blocks = populationBlocks(chronicle, whose);
       const landing =
         tile === undefined ? undefined : landingBlock(catalogue, chronicle, whose, type, tile);
       if (landing !== undefined) blocks.push(landing);
@@ -706,6 +730,29 @@ function cityLanded(
 }
 
 /**
+ * How a unit card of a kind that stands on the water alone enters its unit: blocked by the population
+ * as `enters` is, aimed at a tile the unit stands on inside the border with no unit on it, where one
+ * idle population becomes the unit.
+ */
+export function entersInside(type: string): AimedUnitEntry {
+  return {
+    aim: 'tile',
+    blocked: (_catalogue, chronicle, whose) => populationBlocks(chronicle, whose),
+    refuses: (catalogue, chronicle, tile, whose) =>
+      firstRefusal(
+        standsOnEntering(catalogue, type, tile) ? undefined : 'wrong-terrain',
+        inside(chronicle, tile, whose),
+        unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
+      ),
+    effect: (catalogue, paid, at) =>
+      followed(populationTaken(paid, 'player'), (left) =>
+        entered(catalogue, left, { type, faction: 'player', tile: { q: at.q, r: at.r } }),
+      ),
+    places: { thing: 'unit', unit: type },
+  };
+}
+
+/**
  * How a settle card enters its unit, the refusal and the effect as one pair so neither is written
  * without the other: aimed at a tile the unit can stand on with no unit standing there, the unit
  * enters on it, the player's, and takes no population.
@@ -715,7 +762,7 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
     aim: 'tile',
     refuses: (catalogue, chronicle, tile) =>
       firstRefusal(
-        standsOn(catalogue, unitKind(catalogue, type), false, tile) ? undefined : 'wrong-terrain',
+        standsOnEntering(catalogue, type, tile) ? undefined : 'wrong-terrain',
         unitAt(chronicle.units, tile) === undefined ? undefined : 'unit-standing',
       ),
     effect: (catalogue, paid, at) =>
