@@ -39,6 +39,10 @@ function colourOf(symbol: CastSymbol): number {
     case 'range':
     case 'played-by-nothing':
       return LOOK.cardDiscInk;
+    case 'move':
+    case 'action':
+    case 'sight':
+      return LOOK.cardTextInk;
   }
 }
 

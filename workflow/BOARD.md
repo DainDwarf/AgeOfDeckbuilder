@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A unit's card reads its unit** — a card that places a unit, the two settle cards among them, reads its unit's damage and its health on the pack's crossed swords and heart at the foot's two corners and its move, action, range and sight as glyphs and numbers in its text box, in place of a sentence naming it, each stat raising its name and its sentence under the pointer; `e2e/card-reads.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`. [board/a-units-card-reads-its-unit.md](board/a-units-card-reads-its-unit.md)
 - **The other cards' texts** — a number of population reads in a text as the number and population's glyph, on a card, an answer and a plate; a card doing two things reads a line to each; a trophy reads Gain before its amounts; Floodplain and Tribute read their shorter texts; `e2e/bad-air.spec.ts` passes. Doc-impact: `docs/LOOK.md`. [board/the-other-cards-texts.md](board/the-other-cards-texts.md)
 - **Embarking changed** — the way a unit embarks and disembarks is changed, on feedback the user holds, and the Embark and Disembark cards leave.
 - **The texts overflowing the card face** — the card texts that still pass the three lines a face's text has and a name wider than its plate ("Misunderstandings") are inspected one by one, and the text is rewritten, the box changed or given a scroll, through mockups.

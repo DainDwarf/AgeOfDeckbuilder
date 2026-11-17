@@ -10,6 +10,7 @@ import { relationsOf, type Unit } from '../rules/units';
 import { builtYield, type YieldSource, yieldParts } from '../rules/yields';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
+import { inMovePoints } from './face';
 import { factionSigns } from './faction-signs';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
@@ -18,7 +19,6 @@ import {
   buildingMark,
   featureMark,
   improvementMark,
-  inMovePoints,
   type Mark,
   paintedBoundsOf,
   riverMark,

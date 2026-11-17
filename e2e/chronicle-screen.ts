@@ -151,6 +151,7 @@ type PageReading = {
   frame: Answer<string>;
   kindLabelOnScreen: Answer<Spot>;
   influence: Answer<{ text: string; onScreen: Spot }>;
+  stats: Answer<StatShown[]>;
   answerNameOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
   across: Answer<Across>;
@@ -349,6 +350,12 @@ type Spot = { x: number; y: number; height: number };
 
 /** A name a face draws: where it sits on the page, and what it names. */
 type DrawnName = { spot: Spot; reference: Reference };
+
+/**
+ * A stat a unit's card reads: the stat, the frame its sign draws, a badge's or a glyph's, its number,
+ * and where its number sits on the page.
+ */
+export type StatShown = { stat: string; sign: string; number: string; onScreen: Spot };
 
 /** An object's left and right ends and its middle across, in design units. */
 type Across = { left: number; right: number; middle: number };
@@ -730,9 +737,8 @@ export async function readNames(page: Page): Promise<void> {
         if (inside === undefined) throw new Error(complaint);
         return inside;
       };
-      /** Where a Text the object holds sits on the page, its middle, and how tall it stands there. */
-      const partOnScreen = (named: string, complaint: string): Spot => {
-        const label = part(named, complaint) as Phaser.GameObjects.Text;
+      /** Where a Text sits on the page, its middle, and how tall it stands there. */
+      const textOnScreen = (label: Phaser.GameObjects.Text): Spot => {
         const middle = label
           .getWorldTransformMatrix()
           .transformPoint(
@@ -742,6 +748,9 @@ export async function readNames(page: Page): Promise<void> {
         const shown = onPage(found().camera, middle.x, middle.y);
         return { x: shown.x, y: shown.y, height: label.height * shown.unit };
       };
+      /** Where a Text the object holds sits on the page, its middle, and how tall it stands there. */
+      const partOnScreen = (named: string, complaint: string): Spot =>
+        textOnScreen(part(named, complaint) as Phaser.GameObjects.Text);
       const standingCount = shownOf(all).length;
       return {
         standing: standingCount > 0,
@@ -850,6 +859,30 @@ export async function readNames(page: Page): Promise<void> {
           const complaint = `${name} wears no influence's disc`;
           const label = part('influence-label', complaint) as Phaser.GameObjects.Text;
           return { text: label.text, onScreen: partOnScreen('influence-label', complaint) };
+        }),
+        // A stat is `badgeOf`'s or `boxStatOf`'s in `src/ui/card-face.ts`: its badge's image or its
+        // `glyphMark`, then its number.
+        stats: answer(() => {
+          const face = found().object as Partial<Phaser.GameObjects.Container>;
+          if (!Array.isArray(face.list)) throw new Error(`${name} is no card face`);
+          const glyphIn = window.glyphIn;
+          if (glyphIn === undefined) throw new Error('the page reads no glyph');
+          return (face.list as Phaser.GameObjects.Container[])
+            .filter((child) => child.name.startsWith('stat-') && isShown(child as Parented))
+            .map((stat) => {
+              const [sign, number] = stat.list as [
+                Phaser.GameObjects.Image | Phaser.GameObjects.Container,
+                Phaser.GameObjects.Text,
+              ];
+              const drawn =
+                sign.type === 'Image' ? (sign as Phaser.GameObjects.Image) : glyphIn(sign);
+              return {
+                stat: stat.name.slice('stat-'.length),
+                sign: drawn.frame.name,
+                number: number.text,
+                onScreen: textOnScreen(number),
+              };
+            });
         }),
         answerNameOnScreen: answer(() => partOnScreen('name', `${name} is no answer`)),
         boundsOnScreen: answer(() => {
@@ -1272,22 +1305,31 @@ export async function nameOnScreen(page: Page, face: string, at = 0): Promise<Sp
  * A name of a card of the hand, the first of the first card unless told, read once the card has come
  * to rest lifted under the pointer: the lift carries the name up off where it lay.
  */
-export async function liftedName(
+export function liftedName(
   page: Page,
   lying: { x: number; y: number },
   face = 'hand-0',
   at = 0,
 ): Promise<{ x: number; y: number }> {
-  let name = lying;
+  return liftedPart(page, () => nameOnScreen(page, face, at), lying);
+}
+
+/** A part of a card of the hand, read by `at`, once the card has come to rest lifted out of the hand. */
+export async function liftedPart(
+  page: Page,
+  at: () => Promise<{ x: number; y: number }>,
+  lying: { x: number; y: number },
+): Promise<{ x: number; y: number }> {
+  let part = lying;
   await expect
     .poll(async () => {
-      const was = await nameOnScreen(page, face, at);
+      const was = await at();
       await rested(page);
-      name = await nameOnScreen(page, face, at);
-      return name.y < lying.y && name.y === was.y;
+      part = await at();
+      return part.y < lying.y && part.y === was.y;
     })
     .toBe(true);
-  return name;
+  return part;
 }
 
 /** Where the named face's kind label sits on the page, and how tall it stands there. */
@@ -1568,6 +1610,8 @@ export type Reading = {
    * stands there.
    */
   readonly influence: { readonly text: string; readonly onScreen: Spot };
+  /** Each stat a face shows of its unit, in the order it draws them; nothing on a face showing none. */
+  readonly stats: readonly StatShown[];
   /** Where the answer's name sits on the page, its middle, and how tall it stands there. */
   readonly answerNameOnScreen: Spot;
   /** Where the object's bounds stand on the page. */
@@ -1651,6 +1695,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get influence() {
       return owed(name, answered?.influence);
+    },
+    get stats() {
+      return owed(name, answered?.stats);
     },
     get answerNameOnScreen() {
       return owed(name, answered?.answerNameOnScreen);
@@ -3015,6 +3062,21 @@ export function tooltipText(page: Page, name: string): Promise<string> {
       | undefined;
     if (label === undefined) throw new Error(`${target} holds no text`);
     return label.text;
+  }, name);
+}
+
+/**
+ * What each Text the named bubble shows reads, top to bottom, and whether it is set bold: a title
+ * stands over the message where one was handed.
+ */
+export function tooltipLines(page: Page, name: string): Promise<{ text: string; bold: boolean }[]> {
+  return page.evaluate((target) => {
+    const bubble = window.named?.(target)?.object as Phaser.GameObjects.Container | undefined;
+    if (bubble === undefined) throw new Error(`there is no ${target}`);
+    return (bubble.list.filter((part) => part.type === 'Text') as Phaser.GameObjects.Text[])
+      .filter((label) => label.visible)
+      .sort((one, other) => one.y - other.y)
+      .map((label) => ({ text: label.text, bold: label.style.fontStyle === 'bold' }));
   }, name);
 }
 

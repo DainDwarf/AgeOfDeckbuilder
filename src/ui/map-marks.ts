@@ -8,7 +8,6 @@ import {
   edgesAlong,
   type FeatureId,
   type ImprovementId,
-  MOVE_POINT,
   neighbours,
   type River,
   type Terrain,
@@ -24,6 +23,7 @@ import type { CityFaction, Cost } from '../rules/state';
 import type { Faction } from '../rules/units';
 import type { CityBar, CityBarStock } from './city-bar';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
+import { inMovePoints } from './face';
 import { asGlyph, glyphMark, glyphOf } from './glyphs';
 import type { HealthBar } from './health-bar';
 import { css, darkeningOf, LOOK, multiplied, type Tone, type Wash } from './look';
@@ -1296,11 +1296,6 @@ export function showGiven(
     .setPosition(x, y)
     .setAlpha(already ? LOOK.givenAlready : 1)
     .setVisible(true);
-}
-
-/** A count of hundredths as the move points it is worth: what every card reads one by. */
-export function inMovePoints(hundredths: number): string {
-  return (hundredths / MOVE_POINT).toString();
 }
 
 export function movePointsLeftMark(scene: Phaser.Scene): PlatedNumber {

@@ -3,6 +3,7 @@ import type { Resource } from '../rules/resources';
 import type { Refusal } from '../rules/state';
 import {
   BACK,
+  BADGES,
   BODY,
   BODY_RADIUS,
   CARD_WIDTH,
@@ -31,11 +32,18 @@ import {
 } from './design-space';
 import {
   type AnswerReading,
+  BADGE_STATS,
+  type BadgeStat,
+  BOX_STATS,
+  type BoxStat,
   type CardFamily,
+  type CardStat,
   type Face,
   kindLabel,
   kindTooltip,
   numbersRun,
+  statReading,
+  statTooltip,
 } from './face';
 import { asGlyph, glyphMark } from './glyphs';
 import { css, LOOK, multiplied, type Tone, unworn } from './look';
@@ -44,6 +52,8 @@ import {
   GOES_ON_GAP,
   GOES_ON_SIZE,
   goesOnMarkOf,
+  NUMBERS_GLYPH,
+  NUMBERS_TYPE,
   numbersRowOf,
   showGoesOn,
   showNumbers,
@@ -123,6 +133,15 @@ function capitalsOf(label: Phaser.GameObjects.Text): number {
 
 /** How far over the plate's upper edge the middle of a mark of what a card goes on stands, in units of a card wherever it stands but large. */
 const GOES_ON_OVER_PLATE = 10.5;
+
+/**
+ * How far past its letters the outline of a badge's number reaches, how far after a glyph in a unit's
+ * card's text box its number stands, and how far apart the left edges of the two columns of those
+ * stand, in units of a card wherever it stands but large.
+ */
+const BADGE_OUTLINE = 1.2;
+const STAT_GAP = 1.7;
+const STAT_COLUMNS = 32;
 
 /**
  * A name a rules entry draws, or a mark at the foot of a face's window, which a face carries in its
@@ -265,8 +284,22 @@ function inlineOf({ gives, takes, rules }: Face): string {
   return [...runs, rules].join(' ');
 }
 
-/** What stands at a face's foot and raises a tooltip: the kind label, and the influence it gains. */
-export type FootLabel = 'kind' | 'influence';
+/**
+ * What stands at a face's foot and raises a tooltip: the kind label, the influence it gains, and a
+ * stat a unit's card reads, on a badge at the foot or in the text box.
+ */
+export type FootLabel = 'kind' | 'influence' | CardStat;
+
+const FOOT_LABELS = Object.keys({
+  kind: true,
+  influence: true,
+  damage: true,
+  health: true,
+  move: true,
+  action: true,
+  range: true,
+  sight: true,
+} satisfies Record<FootLabel, true>) as FootLabel[];
 
 /**
  * What a face handed these lays a zone over every name for: the pointer on it or off it, and the
@@ -410,10 +443,70 @@ type DiscMark = {
   readonly number: Phaser.GameObjects.Text;
 };
 
+/** How much the pack's steel disc is scaled by on a card that wide, and a badge with it. */
+function discScaleOf(scene: Phaser.Scene, width: number): number {
+  return (DISC.width * unitOf(width)) / scene.textures.getFrame(CARDS_SHEET_KEY, DISC.file).width;
+}
+
 /** The pack's steel disc for a card that wide, about its middle. */
 function discOf(scene: Phaser.Scene, width: number): Phaser.GameObjects.Image {
-  const disc = scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file);
-  return disc.setScale((DISC.width * unitOf(width)) / disc.width);
+  return scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file).setScale(discScaleOf(scene, width));
+}
+
+/** A stat a unit's card reads: its sign, a badge or a glyph, and its number, named after the stat. */
+type StatMark<Sign> = {
+  readonly root: Phaser.GameObjects.Container;
+  readonly sign: Sign;
+  readonly number: Phaser.GameObjects.Text;
+};
+
+/** A badge drawn at that scale reading nothing yet, about its number's middle, its number set that large. */
+function badgeOf(
+  scene: Phaser.Scene,
+  stat: BadgeStat,
+  scale: number,
+  numberSize: number,
+): StatMark<Phaser.GameObjects.Image> {
+  const { frame, number: middle } = BADGES[stat];
+  const sign = scene.add
+    .image(0, 0, CARDS_SHEET_KEY, frame)
+    .setScale(scale)
+    .setDisplayOrigin(middle.x, middle.y);
+  const number = addText(scene, 0, 0, '', {
+    fontFamily: UI_FONT,
+    fontSize: `${numberSize}px`,
+    fontStyle: 'bold',
+  }).setOrigin(0.5);
+  const root = scene.add.container(0, 0, [sign, number]).setName(`stat-${stat}`);
+  return { root, sign, number };
+}
+
+/** A stat of a unit's card's text box reading nothing yet, its number set that large. */
+function boxStatOf(
+  scene: Phaser.Scene,
+  stat: BoxStat,
+  numberSize: number,
+): StatMark<Phaser.GameObjects.Container> {
+  const sign = glyphMark(scene);
+  const number = addText(scene, 0, 0, '0', {
+    fontFamily: UI_FONT,
+    fontSize: `${numberSize}px`,
+  }).setOrigin(0, 0.5);
+  const root = scene.add.container(0, 0, [sign, number]).setName(`stat-${stat}`);
+  return { root, sign, number };
+}
+
+/** A box on a face, its middle and its size. */
+type FaceBox = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+/** Whether a point stands inside a box. */
+function insideBox({ x, y }: { x: number; y: number }, box: FaceBox): boolean {
+  return Math.abs(x - box.x) <= box.width / 2 && Math.abs(y - box.y) <= box.height / 2;
 }
 
 /** A disc drawing nothing yet, for a card that wide, its number set that large. */
@@ -530,6 +623,50 @@ export function createCardFace(
   const signGlyph = glyphMark(scene);
   const sign = scene.add.container(0, 0, [signDisc, signGlyph]);
 
+  const influenceAt = placed(DISC.influence);
+  const painted = DISC.painted * unit;
+  const badgeAt: Readonly<Record<BadgeStat, { x: number; y: number }>> = {
+    damage: placed({ x: BODY.width - DISC.influence.x, y: DISC.influence.y }),
+    health: influenceAt,
+  };
+  const badgeScale = discScaleOf(scene, width);
+  const badges = BADGE_STATS.map((stat) => ({
+    stat,
+    ...badgeOf(scene, stat, badgeScale, discNumber),
+  }));
+  const boxed = BOX_STATS.flatMap((stats, line) =>
+    stats.map((stat, column) => ({
+      stat,
+      line,
+      column,
+      ...boxStatOf(scene, stat, size(NUMBERS_TYPE)),
+    })),
+  );
+  const statRow = ownBoxOf(boxed[0].number).height;
+  const statGlyph = size(NUMBERS_GLYPH);
+  /** Where a badge's picture stands on the face. */
+  const badgeBox = (stat: BadgeStat): FaceBox => {
+    const { x, y } = badgeAt[stat];
+    const { painted: picture, number: middle } = BADGES[stat];
+    return {
+      x: x + (picture.x + picture.width / 2 - middle.x) * badgeScale,
+      y: y + (picture.y + picture.height / 2 - middle.y) * badgeScale,
+      width: picture.width * badgeScale,
+      height: picture.height * badgeScale,
+    };
+  };
+  for (const { stat, root: badge } of badges) badge.setPosition(badgeAt[stat].x, badgeAt[stat].y);
+  const unlaid: FaceBox = { x: 0, y: 0, width: 0, height: 0 };
+  /** Where each stat stands on the face: its badge's picture, or its glyph and its number as last laid out. */
+  const statBoxes: Record<CardStat, FaceBox> = {
+    damage: badgeBox('damage'),
+    health: badgeBox('health'),
+    move: unlaid,
+    action: unlaid,
+    range: unlaid,
+    sight: unlaid,
+  };
+
   root.add([
     shadow,
     window,
@@ -538,9 +675,11 @@ export function createCardFace(
     name,
     rules,
     numbers.root,
+    ...boxed.map(({ root: stat }) => stat),
     kind,
     influence.root,
     range.root,
+    ...badges.map(({ root: badge }) => badge),
     sign,
   ]);
 
@@ -559,17 +698,12 @@ export function createCardFace(
   const costs = rootedPoolOf(underSign, () => discMarkOf(scene, width, discNumber));
   const glyphs = poolOf(underSign, () => glyphMark(scene));
   const layNameZones = presses === undefined ? undefined : nameZonesOf(root, presses);
+  const footOver = presses?.footOver;
   const footZones =
-    presses?.footOver === undefined
-      ? undefined
-      : {
-          kind: footZoneOf(scene, 'kind', presses.footOver),
-          influence: footZoneOf(scene, 'influence', presses.footOver),
-        };
-  if (footZones !== undefined) root.add([footZones.kind, footZones.influence]);
-
-  const influenceAt = placed(DISC.influence);
-  const painted = DISC.painted * unit;
+    footOver === undefined
+      ? []
+      : FOOT_LABELS.map((label) => ({ label, zone: footZoneOf(scene, label, footOver) }));
+  root.add(footZones.map(({ zone }) => zone));
 
   /** What the face reads now. */
   let reads = face;
@@ -577,6 +711,40 @@ export function createCardFace(
   let names: Name[] = [];
   /** The middle of its kind label. */
   let kindMiddle = 0;
+
+  /** Whether the face as it reads now shows the label. */
+  const shows = (label: FootLabel): boolean => {
+    switch (label) {
+      case 'kind':
+        return true;
+      case 'influence':
+        return reads.influence !== 0;
+      case 'damage':
+      case 'health':
+      case 'move':
+      case 'action':
+      case 'range':
+      case 'sight':
+        return reads.stats !== undefined;
+    }
+  };
+
+  /** Where the label stands on the face as it was last laid out, its middle and its size. */
+  const boxOf = (label: FootLabel): FaceBox => {
+    switch (label) {
+      case 'kind':
+        return { x: kind.x, y: kindMiddle, width: kind.width, height: kind.height };
+      case 'influence':
+        return { x: influenceAt.x, y: influenceAt.y, width: painted, height: painted };
+      case 'damage':
+      case 'health':
+      case 'move':
+      case 'action':
+      case 'range':
+      case 'sight':
+        return statBoxes[label];
+    }
+  };
 
   const read = (next: Face, refused: Refusal, toned: Tone = unworn): void => {
     reads = next;
@@ -620,11 +788,14 @@ export function createCardFace(
       .setText(reading)
       .setVisible(reading !== '');
     const rowTall = rowShown ? numbers.height : 0;
+    const statsTall = next.stats === undefined ? 0 : BOX_STATS.length * statRow;
     const textTall = reading === '' ? 0 : ownBoxOf(rules).height;
-    const blockTop = (textTop + textBottom - rowTall - textTall) / 2;
+    const blockTop = (textTop + textBottom - rowTall - statsTall - textTall) / 2;
     numbers.root.setVisible(rowShown).setPosition(0, blockTop + rowTall / 2);
     if (rowShown) showNumbers(numbers, next.gives, next.takes, toned);
-    rules.setPosition(0, blockTop + rowTall + textTall / 2);
+    for (const { root: stat } of boxed) stat.setVisible(next.stats !== undefined);
+    if (next.stats !== undefined) layStats(next.stats, blockTop + rowTall, toned);
+    rules.setPosition(0, blockTop + rowTall + statsTall + textTall / 2);
     const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {
@@ -702,12 +873,46 @@ export function createCardFace(
       });
     }
 
-    if (footZones !== undefined) {
-      footZones.kind.setPosition(kind.x, kindMiddle).setSize(kind.width, kind.height);
-      footZones.influence
-        .setVisible(gains)
-        .setPosition(influenceAt.x, influenceAt.y)
-        .setSize(painted, painted);
+    for (const { stat, root: badge, sign: picture, number } of badges) {
+      badge.setVisible(next.stats !== undefined);
+      if (next.stats === undefined) continue;
+      picture.setTint(tint);
+      inked(number, toned(LOOK.cardDiscInk))
+        .setStroke(css(toned(LOOK.mapOutline)), size(2 * BADGE_OUTLINE))
+        .setText(statReading(stat, next.stats[stat]));
+    }
+
+    for (const { label, zone } of footZones) {
+      const box = boxOf(label);
+      zone.setVisible(shows(label)).setPosition(box.x, box.y).setSize(box.width, box.height);
+    }
+  };
+
+  /**
+   * The stats of the text box laid out over the room from `top` down, a row to each line of their
+   * type, the columns' left edges `STAT_COLUMNS` apart and the block centred across.
+   */
+  const layStats = (stats: NonNullable<Face['stats']>, top: number, toned: Tone): void => {
+    const cellOf = ({ number }: { number: Phaser.GameObjects.Text }): number =>
+      statGlyph + size(STAT_GAP) + ownBoxOf(number).width;
+    for (const { stat, number } of boxed) {
+      inked(number, toned(LOOK.cardTextInk)).setText(statReading(stat, stats[stat]));
+    }
+    const columns = size(STAT_COLUMNS);
+    const across = Math.max(...boxed.map((cell) => cell.column * columns + cellOf(cell)));
+    for (const cell of boxed) {
+      const left = -across / 2 + cell.column * columns;
+      const middle = top + (cell.line + 0.5) * statRow;
+      asGlyph(cell.sign, cell.stat, statGlyph, {
+        tone: toned,
+        colour: LOOK.cardTextInk,
+        outlined: false,
+      });
+      cell.sign.setPosition(left + statGlyph / 2, middle);
+      const own = ownBoxOf(cell.number.setPosition(0, middle));
+      cell.number.setX(left + statGlyph + size(STAT_GAP) - own.x);
+      const width = cellOf(cell);
+      statBoxes[cell.stat] = { x: left + width / 2, y: middle, width, height: statRow };
     }
   };
   read(face, refusal, tone);
@@ -729,31 +934,37 @@ export function createCardFace(
     },
     footAt(x: number, y: number): FootLabel | undefined {
       const local = root.getLocalPoint(x, y);
-      if (
-        Math.abs(local.y - kindMiddle) <= kind.height / 2 &&
-        Math.abs(local.x - kind.x) <= kind.width / 2
-      ) {
-        return 'kind';
-      }
-      if (
-        reads.influence !== 0 &&
-        Math.abs(local.x - influenceAt.x) <= painted / 2 &&
-        Math.abs(local.y - influenceAt.y) <= painted / 2
-      ) {
-        return 'influence';
-      }
-      return undefined;
+      return FOOT_LABELS.find((label) => shows(label) && insideBox(local, boxOf(label)));
     },
     cardAt(x: number, y: number): boolean {
       const local = root.getLocalPoint(x, y);
       return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
     },
     explainFoot(tooltip: Tooltip, label: FootLabel): void {
-      const besideAt = (saying: string, at: () => { x: number; y: number }): void => {
-        tooltip.beside(saying, () => {
-          const { x, y } = at();
-          return root.getWorldTransformMatrix().transformPoint(x, y);
-        });
+      if (!shows(label)) return;
+      const besideAt = (
+        saying: string,
+        at: () => { x: number; y: number },
+        title?: string,
+      ): void => {
+        tooltip.beside(
+          saying,
+          () => {
+            const { x, y } = at();
+            return root.getWorldTransformMatrix().transformPoint(x, y);
+          },
+          title,
+        );
+      };
+      const besideBox = (saying: string, title?: string): void => {
+        besideAt(
+          saying,
+          () => {
+            const box = boxOf(label);
+            return { x: box.x + box.width / 2, y: box.y };
+          },
+          title,
+        );
       };
       switch (label) {
         case 'kind':
@@ -763,13 +974,18 @@ export function createCardFace(
           });
           return;
         case 'influence':
-          if (reads.influence !== 0) {
-            besideAt(text('tooltip.influence'), () => ({
-              x: influenceAt.x + painted / 2,
-              y: influenceAt.y,
-            }));
-          }
+          besideBox(text('tooltip.influence'));
           return;
+        case 'damage':
+        case 'health':
+        case 'move':
+        case 'action':
+        case 'range':
+        case 'sight': {
+          const { name: titled, sentence } = statTooltip(label);
+          besideBox(sentence, titled);
+          return;
+        }
       }
       const unlisted: never = label;
       throw new Error(`no label of the foot is ${JSON.stringify(unlisted)}`);

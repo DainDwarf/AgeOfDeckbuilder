@@ -1,5 +1,5 @@
 import type { Resource } from '../rules/resources';
-import type { CardFamily } from './face';
+import type { BadgeStat, CardFamily } from './face';
 
 /**
  * A family's colour as a card's frame wears it: the hue its paper is turned to, in degrees, the
@@ -153,8 +153,10 @@ export type Look = {
   readonly cardTextInk: number;
   /** The strength a card's kind label stands at in its text's ink. */
   readonly cardKindLabel: number;
-  /** What reads on a card's disc: its cost's, its influence's or its range's number and glyph, and the sign of a card nothing plays. */
+  /** What reads on a card's disc: its cost's, its influence's or its range's number and glyph, and the sign of a card nothing plays; and the number on a unit's card's badge. */
   readonly cardDiscInk: number;
+  /** How far round, in degrees, a unit's card turns the hue of the pack's badge it reads each stat on. */
+  readonly cardStatBadge: Readonly<Record<BadgeStat, number>>;
   /** The strength the line round a terrain marked at the foot of a card's window stands at, in the map's outline. */
   readonly cardTerrainOutline: number;
   /** The tint a cost's disc is multiplied by where the player's city cannot pay it, and the disc of a card nothing plays. */
@@ -294,6 +296,7 @@ export const LOOK: Look = {
   cardTextInk: 0x2a2010,
   cardKindLabel: 0.72,
   cardDiscInk: 0xf2f6ff,
+  cardStatBadge: { health: 15, damage: 260 },
   cardTerrainOutline: 0.85,
   unaffordableDisc: 0xff6b66,
   liftedCard: 1.1,

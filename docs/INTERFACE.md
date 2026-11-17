@@ -76,6 +76,8 @@ Two verbs cover it all. **Select** is the tile or the unit the map rings, or the
 
 **A mark of what a card goes on reacts as a name does.** The pointer resting on a terrain, a feature or a building marked at the window's foot of a card raises that thing small, and a right click on it shows it large, each as a name of that thing in the card's text would; the river's mark raises nothing, the river having no card.
 
+**A stat on a unit's card raises its tooltip.** The pointer resting on a stat a card reads of its unit, a badge at its foot or a glyph and its number in its text box, raises a tooltip beside it as the kind label's is raised: the stat's name on a line, in bold, over the sentence the infopanel's row of that stat raises. A stat reacts to no press of its own.
+
 **A card's kind label reacts to the rest.** The pointer resting on the label at a card face's foot raises the one bubble of the surface the face stands on, beside the label, reading in one line what the kind is; the pointer leaving the label takes it down. Every card face reacts so — in the hand, on the discard pile, in a browse, on the deal window, on a pile of the launch screen, on a stack and on a pile of the collection screen, in a civilization's browse, shown large and small alike — and the label reacts to no press of its own: a click on it is the card's.
 
 **A card that gains influence wears it on a disc at its foot's right corner**, influence's glyph and the number, on every face; a card gaining none wears no disc there. The pointer resting on it raises the influence reading's tooltip, as the bar's reading does.

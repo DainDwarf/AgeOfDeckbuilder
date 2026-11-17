@@ -12,7 +12,9 @@ import {
   type Placing,
   placedBy,
   placingOf,
+  unitKind,
 } from '../rules/catalogue';
+import { MOVE_POINT } from '../rules/map';
 import {
   type BuildingKind,
   buildingKind,
@@ -88,6 +90,46 @@ export function familyOf(card: Card): CardFamily {
 /** The numbers an answer's text or the capstone's reads of the chronicle, by name. */
 export type AnswerReading = Readonly<Record<string, number>>;
 
+/** The stats a unit's card reads of its unit on badges at its foot, the left corner's first. */
+export const BADGE_STATS = ['damage', 'health'] as const;
+
+export type BadgeStat = (typeof BADGE_STATS)[number];
+
+/** The stats a unit's card reads of its unit in its text box, row by row and each row left to right. */
+export const BOX_STATS = [
+  ['move', 'action'],
+  ['range', 'sight'],
+] as const;
+
+export type BoxStat = (typeof BOX_STATS)[number][number];
+
+/** A stat a unit's card reads of its unit. */
+export type CardStat = BadgeStat | BoxStat;
+
+/** A count of hundredths as the move points it is worth: what every card reads one by. */
+export function inMovePoints(hundredths: number): string {
+  return (hundredths / MOVE_POINT).toString();
+}
+
+/** What a stat a unit's card reads reads: its number, the move in move points. */
+export function statReading(stat: CardStat, amount: number): string {
+  switch (stat) {
+    case 'move':
+      return inMovePoints(amount);
+    case 'damage':
+    case 'health':
+    case 'action':
+    case 'range':
+    case 'sight':
+      return String(amount);
+  }
+}
+
+/** What the tooltip of a stat a unit's card reads says: the stat's name, over its sentence. */
+export function statTooltip(stat: CardStat): { readonly name: string; readonly sentence: string } {
+  return { name: text(`label.${stat}`), sentence: text(`tooltip.${stat}`) };
+}
+
 /** A mark of what a card's thing goes on: a terrain, a feature or a building, or the river. */
 export type GoesOn =
   | Extract<Reference, { readonly kind: 'terrain' | 'feature' | 'building' }>
@@ -112,6 +154,8 @@ export type Face = {
   readonly gives: readonly Resource[];
   readonly takes: readonly Resource[];
   readonly range: number;
+  /** The stats of the unit the card places, its kind's, and nothing on a card that places none. */
+  readonly stats: Readonly<Record<CardStat, number>> | undefined;
 };
 
 /** The range a building that gives to the tiles beside it gives over. */
@@ -192,6 +236,14 @@ export function placedReading(
   return { goesOn, gives: [], takes: [], range: BESIDE_RANGE, leads };
 }
 
+/** The stats a card reads of the unit it places, its kind's, and nothing for a card placing none. */
+export function cardStats(catalogue: Catalogue, card: Card): Face['stats'] {
+  const placing = placingOf(card);
+  if (placing?.thing !== 'unit') return undefined;
+  const { damage, health, move, action, range, sight } = unitKind(catalogue, placing.unit);
+  return { damage, health, move, action, range, sight };
+}
+
 /** Numbers as a text runs them: the sign, then one glyph to each point. */
 export function numbersRun(sign: 'gives' | 'takes', points: readonly Resource[]): string {
   return `${text(`face.${sign}`)}${points.map((resource) => `[${resource}]`).join('')}`;
@@ -216,6 +268,7 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     influence: influenceOf(content) ?? 0,
     playedByNothing: playedByNothing(content),
     ...placed,
+    stats: cardStats(catalogue, content),
   };
 }
 

@@ -149,8 +149,8 @@ export function showGoesOn(mark: GoesOnMark, goesOn: GoesOn, tone: Tone): void {
  * The numbers' type, their glyph's width, the gap after a sign, and how far after the last glyph
  * given the sign of what is taken stands, in units of a card wherever it stands but large.
  */
-const NUMBERS_TYPE = 13;
-const NUMBERS_GLYPH = 10;
+export const NUMBERS_TYPE = 13;
+export const NUMBERS_GLYPH = 10;
 const SIGN_GAP = 2;
 const TAKES_AFTER = 11.7;
 

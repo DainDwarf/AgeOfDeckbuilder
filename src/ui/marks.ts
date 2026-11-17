@@ -361,7 +361,8 @@ export const UNIT_SHEET: Sheet = {
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
- * an attack that would kill, what a prepare lands as, a faction, a site, or a card nothing plays.
+ * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a faction, a
+ * site, or a card nothing plays.
  */
 export type CastSymbol =
   | Resource
@@ -369,6 +370,9 @@ export type CastSymbol =
   | 'influence'
   | 'health'
   | 'range'
+  | 'move'
+  | 'action'
+  | 'sight'
   | 'killed'
   | PreparedAs
   | Faction
@@ -387,6 +391,9 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   influence: 'material-design-icons/star.svg',
   health: 'material-design-icons/heart.svg',
   range: 'material-design-icons/target.svg',
+  move: 'material-design-icons/arrow-all.svg',
+  action: 'game-icons/fist.svg',
+  sight: 'material-design-icons/eye.svg',
   killed: 'game-icons/death-skull.svg',
   pillage: 'game-icons/fire.svg',
   capture: 'material-design-icons/flag-variant.svg',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { builds } from '../rules/cards';
-import { type Card, cardOf, catalogued } from '../rules/catalogue';
+import { type Card, cardOf, catalogued, unitKind } from '../rules/catalogue';
 import {
   CATALOGUE,
   changed,
@@ -12,7 +12,14 @@ import {
   TILLAGE,
 } from '../rules/fixtures';
 import { answerOf } from '../rules/schedule';
-import { familyOf, labelledKind, namedCardMade, numbersRun, placedReading } from './face';
+import {
+  cardStats,
+  familyOf,
+  labelledKind,
+  namedCardMade,
+  numbersRun,
+  placedReading,
+} from './face';
 import { text } from './text';
 
 describe('a card’s face', () => {
@@ -95,6 +102,20 @@ describe('a face of a card that places a thing on the ground', () => {
         takes: numbersRun('takes', ['money']),
       }),
     });
+  });
+});
+
+describe('a face of a card that places a unit', () => {
+  it('reads the stats of the kind its card places, a unit card’s and a settle card’s alike, and a card placing no unit reads none', () => {
+    const statsOf = (kind: string) => {
+      const { damage, health, move, action, range, sight } = unitKind(CATALOGUE, kind);
+      return { damage, health, move, action, range, sight };
+    };
+    const stats = (id: string) => cardStats(CATALOGUE, cardOf(CATALOGUE, id));
+
+    expect(stats('PH_Warrior')).toEqual(statsOf('PH_Warrior'));
+    expect(stats('PH_Band')).toEqual(statsOf('PH_Worker'));
+    expect(stats('PH_Farm')).toBeUndefined();
   });
 });
 

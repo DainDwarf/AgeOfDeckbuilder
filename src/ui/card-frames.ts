@@ -1,6 +1,6 @@
-import type { CardFamily } from './face';
+import type { BadgeStat, CardFamily } from './face';
 import { type FamilyColour, LOOK } from './look';
-import { blankCanvas, type Made, type Sheet } from './sheet';
+import { blankCanvas, type InSheet, type Made, type Sheet } from './sheet';
 
 /** The folder chicogames' pack stands in, under the assets folder. */
 const PACK = 'store/nice-card-game-template-2';
@@ -87,6 +87,44 @@ export const DISC = {
   painted: 121,
   below: 101,
   influence: { x: 500, y: 758 },
+};
+
+/**
+ * One of the pack's badges a unit's card reads a stat on: its file and its size, the frame its turned
+ * colours are drawn as, the box its picture is painted in, and the point its number's middle stands
+ * on, in its file's pixels.
+ */
+type Badge = {
+  readonly file: string;
+  readonly width: number;
+  readonly height: number;
+  readonly frame: string;
+  readonly painted: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly number: { readonly x: number; readonly y: number };
+};
+
+export const BADGES: Readonly<Record<BadgeStat, Badge>> = {
+  damage: {
+    file: `${PACK}/0 - Icons and stuffs/Spades.png`,
+    width: 304,
+    height: 298,
+    frame: 'badge-damage',
+    painted: { x: 18, y: 36, width: 268, height: 226 },
+    number: { x: 152, y: 150 },
+  },
+  health: {
+    file: `${PACK}/0 - Icons and stuffs/Health.png`,
+    width: 304,
+    height: 298,
+    frame: 'badge-health',
+    painted: { x: 36, y: 32, width: 230, height: 236 },
+    number: { x: 151, y: 142 },
+  },
 };
 
 /** How far the highest-rising front's rim rises above its body. */
@@ -306,8 +344,22 @@ function turned(pixels: Uint8ClampedArray, paper: Uint8Array, colour: FamilyColo
   });
 }
 
-/** The key of the sheet every front, the back, the plate and the disc are drawn into. */
+/** The key of the sheet every front, the back, the plate, the disc and the badges are drawn into. */
 export const CARDS_SHEET_KEY = 'cards';
+
+/** A painting of a sheet drawn from the context's top-left corner, its pixels changed by `change` first. */
+function paintChanged(
+  context: CanvasRenderingContext2D,
+  from: InSheet,
+  change: (pixels: Uint8ClampedArray) => void,
+): void {
+  const on = blankCanvas(from.width, from.height);
+  on.drawImage(from.canvas, from.x, from.y, from.width, from.height, 0, 0, from.width, from.height);
+  const image = on.getImageData(0, 0, from.width, from.height);
+  change(image.data);
+  on.putImageData(image, 0, 0);
+  context.drawImage(on.canvas, 0, 0);
+}
 
 /** The plain front of each family, its paper turned to the family's colour off the pack's file. */
 function frontsMade(): Made[] {
@@ -320,33 +372,77 @@ function frontsMade(): Made[] {
       height,
       paint: (context, paintingIn) => {
         const from = paintingIn(CARDS_SHEET_KEY, file);
-        const on = blankCanvas(from.width, from.height);
-        on.drawImage(
-          from.canvas,
-          from.x,
-          from.y,
-          from.width,
-          from.height,
-          0,
-          0,
-          from.width,
-          from.height,
-        );
-        const image = on.getImageData(0, 0, from.width, from.height);
-        const paper = papers.get(file) ?? paperOf(image.data, from.width, from.height, body);
-        papers.set(file, paper);
-        turned(image.data, paper, LOOK.cardFamily[family]);
-        on.putImageData(image, 0, 0);
-        context.drawImage(on.canvas, 0, 0);
+        paintChanged(context, from, (pixels) => {
+          const paper = papers.get(file) ?? paperOf(pixels, from.width, from.height, body);
+          papers.set(file, paper);
+          turned(pixels, paper, LOOK.cardFamily[family]);
+        });
       },
     };
   });
 }
 
-/** The sheet the pack's files and every family's front are drawn into. */
+/**
+ * Every pixel's hue turned round by that many degrees, as SVG's `hueRotate` colour matrix turns it, on
+ * the values as they are stored.
+ */
+function hueTurned(pixels: Uint8ClampedArray, degrees: number): void {
+  const angle = (degrees * Math.PI) / 180;
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const matrix = [
+    [
+      0.213 + cos * 0.787 - sin * 0.213,
+      0.715 - cos * 0.715 - sin * 0.715,
+      0.072 - cos * 0.072 + sin * 0.928,
+    ],
+    [
+      0.213 - cos * 0.213 + sin * 0.143,
+      0.715 + cos * 0.285 + sin * 0.14,
+      0.072 - cos * 0.072 - sin * 0.283,
+    ],
+    [
+      0.213 - cos * 0.213 - sin * 0.787,
+      0.715 - cos * 0.715 + sin * 0.715,
+      0.072 + cos * 0.928 + sin * 0.072,
+    ],
+  ];
+  for (let at = 0; at < pixels.length; at += 4) {
+    const rgb = [pixels[at], pixels[at + 1], pixels[at + 2]];
+    for (const [channel, [red, green, blue]] of matrix.entries()) {
+      pixels[at + channel] = red * rgb[0] + green * rgb[1] + blue * rgb[2];
+    }
+  }
+}
+
+/** Each badge a unit's card reads a stat on, its hue turned as the look turns it off the pack's file. */
+function badgesMade(): Made[] {
+  return (Object.keys(BADGES) as BadgeStat[]).map((stat) => {
+    const { file, width, height, frame } = BADGES[stat];
+    return {
+      frame,
+      width,
+      height,
+      paint: (context, paintingIn) => {
+        paintChanged(context, paintingIn(CARDS_SHEET_KEY, file), (pixels) =>
+          hueTurned(pixels, LOOK.cardStatBadge[stat]),
+        );
+      },
+    };
+  });
+}
+
+/** The sheet the pack's files, every family's front and the badges are drawn into. */
 export const CARDS_SHEET: Sheet = {
   key: CARDS_SHEET_KEY,
-  files: [FRONTS.arched.file, FRONTS.oval.file, BACK.file, PLATE.file, DISC.file],
-  made: [...frontsMade(), ...shadowsMade()],
+  files: [
+    FRONTS.arched.file,
+    FRONTS.oval.file,
+    BACK.file,
+    PLATE.file,
+    DISC.file,
+    ...Object.values(BADGES).map(({ file }) => file),
+  ],
+  made: [...frontsMade(), ...shadowsMade(), ...badgesMade()],
   side: 4096,
 };

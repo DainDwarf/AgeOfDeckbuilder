@@ -18,11 +18,11 @@ import {
   firstDealt,
   influenceCardGaining,
   kindLabelOnScreen,
+  liftedPart,
   offCanvas,
   onScreen,
   openSaved,
   reading,
-  rested,
   restedOnDeal,
   ringedTile,
   settledOn,
@@ -316,24 +316,6 @@ test('a hand card the pointer leaves the canvas over settles back into the hand'
 
   expect(problems).toEqual([]);
 });
-
-/** A part of a card of the hand, read by `at`, once the card has come to rest lifted out of the hand. */
-async function liftedPart(
-  page: Page,
-  at: () => Promise<{ x: number; y: number }>,
-  lying: { x: number; y: number },
-): Promise<{ x: number; y: number }> {
-  let part = lying;
-  await expect
-    .poll(async () => {
-      const was = await at();
-      await rested(page);
-      part = await at();
-      return part.y < lying.y && part.y === was.y;
-    })
-    .toBe(true);
-  return part;
-}
 
 /** The first card's kind label once the card has come to rest lifted out of the hand. */
 function liftedLabel(
