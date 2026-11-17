@@ -28,6 +28,7 @@ import {
   checkContent,
   costOf,
   damageOf,
+  standsOnWaterAlone,
   technologyOf,
   unitKind,
   unitScript,
@@ -66,6 +67,7 @@ import {
   type FeatureId,
   generateMap,
   type HexMap,
+  landable,
   offLine,
   runsAlong,
   type Terrain,
@@ -143,15 +145,18 @@ import {
   actsAsEnemy,
   attackable,
   canAttack,
+  crossedTo,
   type Faction,
   FIRST_UNIT_NUMBER,
   type Landing,
+  passageFor,
   pathTo,
   reachable,
   refreshedAction,
   refreshedMovePoints,
   relationsOf,
   type ScriptedFaction,
+  standsOn,
   type Unit,
   unitAt,
   unitOf,
@@ -1018,20 +1023,29 @@ function ticked(chronicle: Chronicle): Sequence<Group> {
   return grouped({ name: 'turn' }, tick);
 }
 
-/** One unit's move points and action brought back up to full, and nothing where both are. */
+/**
+ * One unit's move points and action brought back up to full, and those of the unit carrying it, and
+ * nothing where all are.
+ */
 function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
-  if (unit.movePoints === unit.stats.move && unit.action === unit.stats.action) {
+  const full = (one: Unit): boolean =>
+    one.movePoints === one.stats.move && one.action === one.stats.action;
+  if (full(unit) && (unit.carrier === undefined || full(unit.carrier))) {
     return unchanged(chronicle);
   }
+  const fresh = (one: Unit): Unit => refreshedAction(refreshedMovePoints(one));
   return landedAs(
     changeOn(
       'refreshed',
       unit.tile,
       {
         ...chronicle,
-        units: chronicle.units.map((other) =>
-          other.id === unit.id ? refreshedAction(refreshedMovePoints(other)) : other,
-        ),
+        units: chronicle.units.map((other) => {
+          if (other.id !== unit.id) return other;
+          return other.carrier === undefined
+            ? fresh(other)
+            : { ...fresh(other), carrier: fresh(other.carrier) };
+        }),
       },
       chronicle,
     ),
@@ -1251,23 +1265,91 @@ function admittedAt(
   return tileAt(chronicle.tiles, tile);
 }
 
+/**
+ * An embark or a disembark a unit takes by hand: the tile it steps onto, the landing it walks to
+ * first, none where it steps from where it stands, and the move it has once stepped.
+ */
+export type Step = { readonly tile: TileCoords; readonly landing?: Landing; readonly move: number };
+
+/**
+ * What a unit does by hand: the landings it crosses to, the embarks and the disembarks it takes, and
+ * the units in sight its attack reaches.
+ */
 export function byHand(
   catalogue: Catalogue,
   chronicle: Chronicle,
   unit: Unit,
-): { readonly landings: Landing[]; readonly targets: Unit[] } {
-  if (onSettlePhase(chronicle)) return { landings: [], targets: [] };
+): { readonly landings: Landing[]; readonly steps: Step[]; readonly targets: Unit[] } {
+  if (onSettlePhase(chronicle)) return { landings: [], steps: [], targets: [] };
   const seen = inSight(catalogue, chronicle);
   const targets = attackable(chronicle.units, unit, relationsOf(chronicle));
+  const landings = reachable(catalogue, chronicle, unit);
   return {
-    landings: reachable(catalogue, chronicle, unit),
+    landings,
+    steps: stepsOf(catalogue, chronicle, unit, landings),
     targets: targets.filter((target) => seen.has(tileKey(target.tile))),
   };
 }
 
 /**
- * Whether a unit has anything to do by hand: a landing, or a unit its attack reaches, an attack that
- * would declare war counting only where `warCounted` asks for it.
+ * Every embark and disembark of a unit of the player's holding an action, of a kind that does not
+ * stand on the water alone: onto each tile `steppedOn` names, from where it stands where the tile is
+ * beside it, and otherwise from the landing beside it `walkedToward` takes.
+ */
+function stepsOf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+  landings: readonly Landing[],
+): Step[] {
+  if (
+    unit.faction !== 'player' ||
+    unit.action <= 0 ||
+    standsOnWaterAlone(catalogue, unit.stats.type)
+  ) {
+    return [];
+  }
+  return steppedOn(catalogue, chronicle, unit).flatMap(({ tile, move }): Step[] => {
+    if (distance(unit.tile, tile) === 1) return [{ tile, move }];
+    const beside = landings.filter((landing) => distance(landing.tile, tile) === 1);
+    const landing = walkedToward(catalogue, chronicle, unit, beside, tile);
+    return landing === undefined ? [] : [{ tile, landing, move }];
+  });
+}
+
+/**
+ * The tiles a unit of the player's steps onto, each with the move it has there: ashore, the tile of
+ * each unit of the player's whose kind stands on the water alone, at that unit's move; embarked, each
+ * free tile its walk may end on that its kind's move covers ashore, at that move.
+ */
+function steppedOn(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+): { readonly tile: TileCoords; readonly move: number }[] {
+  if (!unit.embarked) {
+    return chronicle.units
+      .filter(
+        (other) => other.faction === 'player' && standsOnWaterAlone(catalogue, other.stats.type),
+      )
+      .map((other) => ({ tile: other.tile, move: other.stats.move }));
+  }
+  const { move } = unitKind(catalogue, unit.stats.type);
+  const passage = passageFor(chronicle, 'player');
+  const standing = new Set(chronicle.units.map((other) => tileKey(other.tile)));
+  return chronicle.tiles
+    .filter(
+      (tile) =>
+        !standing.has(tileKey(tile)) &&
+        landable(passage(tile)) &&
+        standsOn(catalogue, { ...unit.stats, move }, false, tile),
+    )
+    .map(({ q, r }) => ({ tile: { q, r }, move }));
+}
+
+/**
+ * Whether a unit has anything to do by hand: a landing, an embark or a disembark, or a unit its
+ * attack reaches, an attack that would declare war counting only where `warCounted` asks for it.
  */
 export function anythingByHand(
   catalogue: Catalogue,
@@ -1275,8 +1357,8 @@ export function anythingByHand(
   unit: Unit,
   warCounted: boolean,
 ): boolean {
-  const { landings, targets } = byHand(catalogue, chronicle, unit);
-  if (landings.length > 0) return true;
+  const { landings, steps, targets } = byHand(catalogue, chronicle, unit);
+  if (landings.length > 0 || steps.length > 0) return true;
   return targets.some(
     ({ tile }) =>
       warCounted || !declaresWar(catalogue, chronicle, { type: 'attack', unit: unit.id, tile }),
@@ -1302,27 +1384,43 @@ export function broughtInRange(
   return chronicle.units.flatMap((target) => {
     if (!seen.has(tileKey(target.tile))) return [];
     if (canAttack(unit, target, distance(unit.tile, target.tile), relations)) return [];
-    const off = offLine(unit.tile, target.tile);
-    let kept = landings.filter(({ tile }) =>
+    const inRange = landings.filter(({ tile }) =>
       canAttack(unit, target, distance(tile, target.tile), relations),
     );
-    // Past the four ties the page names, the first landing in the map's order is taken, as
-    // `pathBetween` takes the first way.
-    for (const measure of [
-      (landing: Landing) =>
-        declaredByLanding(chronicle, unit, landing.tile).stages.length > 0 ? 1 : 0,
-      (landing: Landing) => landing.cost,
-      (landing: Landing) =>
-        pathTo(catalogue, chronicle, unit, landing.tile)?.length ?? Number.POSITIVE_INFINITY,
-      (landing: Landing) => off(landing.tile),
-    ]) {
-      const measured = kept.map(measure);
-      const least = Math.min(...measured);
-      kept = kept.filter((_, at) => measured[at] === least);
-    }
-    const [landing] = kept;
+    const landing = walkedToward(catalogue, chronicle, unit, inRange, target.tile);
     return landing === undefined ? [] : [{ target, landing }];
   });
+}
+
+/**
+ * Of the landings, the one a unit walks to before it acts on a tile: one that declares no war first,
+ * then the cheapest, then the one its path reaches over the fewest tiles, then the one nearest the
+ * straight line to the tile; nothing among none.
+ */
+function walkedToward(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  unit: Unit,
+  landings: readonly Landing[],
+  toward: TileCoords,
+): Landing | undefined {
+  const off = offLine(unit.tile, toward);
+  let kept = [...landings];
+  // Past the four ties the page names, the first landing in the map's order is taken, as
+  // `pathBetween` takes the first way.
+  for (const measure of [
+    (landing: Landing) =>
+      declaredByLanding(chronicle, unit, landing.tile).stages.length > 0 ? 1 : 0,
+    (landing: Landing) => landing.cost,
+    (landing: Landing) =>
+      pathTo(catalogue, chronicle, unit, landing.tile)?.length ?? Number.POSITIVE_INFINITY,
+    (landing: Landing) => off(landing.tile),
+  ]) {
+    const measured = kept.map(measure);
+    const least = Math.min(...measured);
+    kept = kept.filter((_, at) => measured[at] === least);
+  }
+  return kept[0];
 }
 
 /** Whether a command declares war: whether what it resolves as raises the neutral's `relations`. */
@@ -1347,9 +1445,7 @@ function crossed(chronicle: Chronicle, unit: Unit, landing: Landing): Landed {
       chronicle: {
         ...left,
         units: left.units.map((other) =>
-          other.id === unit.id
-            ? { ...other, tile: landing.tile, movePoints: other.movePoints - landing.cost }
-            : other,
+          other.id === unit.id ? crossedTo(other, landing) : other,
         ),
       },
     }),
@@ -1357,18 +1453,27 @@ function crossed(chronicle: Chronicle, unit: Unit, landing: Landing): Landed {
 }
 
 /**
- * One unit of the player's crossing to a tile its move points reach at the cheapest route there;
- * any other unit's, or a move `byHand` does not offer, is `refused`.
+ * One unit of the player's crossing to a tile its move points reach at the cheapest route there, or
+ * embarking or disembarking onto one after the walk `byHand` names for it; any other unit's, or a
+ * move `byHand` does not offer, is `refused`.
  */
 function move(catalogue: Catalogue, chronicle: Chronicle, command: UnitCommand): Sequence {
   const unit = unitOf(chronicle.units, command.unit);
   if (unit === undefined || unit.faction !== 'player') return refused(chronicle);
 
-  const landing = byHand(catalogue, chronicle, unit).landings.find(
-    (reached) => tileKey(reached.tile) === tileKey(command.tile),
+  const on = ({ tile }: { readonly tile: TileCoords }): boolean =>
+    tileKey(tile) === tileKey(command.tile);
+  const { landings, steps } = byHand(catalogue, chronicle, unit);
+  const landing = landings.find(on);
+  if (landing !== undefined) return crossed(chronicle, unit, landing);
+  const step = steps.find(on);
+  if (step === undefined) return refused(chronicle);
+  const { landing: walk } = step;
+  const walking = walk === undefined ? unchanged(chronicle) : crossed(chronicle, unit, walk);
+  const there = walk === undefined ? unit : crossedTo(unit, walk);
+  return followed(walking, (left) =>
+    steppedOnto(left, there, step.tile, !unit.embarked, step.move),
   );
-  if (landing === undefined) return refused(chronicle);
-  return crossed(chronicle, unit, landing);
 }
 
 /**

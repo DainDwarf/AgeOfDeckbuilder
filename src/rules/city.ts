@@ -34,7 +34,7 @@ import {
   unaffordable,
   withCityRows,
 } from './state';
-import { type Relations, relationsOf, type Unit, unitAt } from './units';
+import { everyUnit, type Relations, relationsOf, type Unit, unitAt } from './units';
 import { tileYield } from './yields';
 
 /**
@@ -213,7 +213,7 @@ export function costPaid(chronicle: Chronicle, whose: CityFaction, costs: readon
  */
 export function growthThreshold(chronicle: Chronicle, whose: CityFaction): number {
   const population = cityRows(chronicle, whose)?.population ?? 0;
-  const fielded = chronicle.units.filter((unit) => unit.faction === whose).length;
+  const fielded = everyUnit(chronicle.units).filter((unit) => unit.faction === whose).length;
   return 2 * (population + fielded);
 }
 

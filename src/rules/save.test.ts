@@ -46,6 +46,7 @@ import {
   SITE,
   SURVEY,
   SURVEYED,
+  skiff,
   standing,
   surveying,
   TITHE,
@@ -147,20 +148,29 @@ test('a chronicle saved and read back keeps every achievement’s tally, and cou
   expect(achievementIn(counted, SURVEY).reached).toBe(true);
 });
 
-test('a chronicle saved with a unit embarked reads back with it embarked', () => {
-  const coast = { q: 1, r: 0 };
+test('a chronicle saved with a unit embarked on a raft reads back with both as they stand, and the unit disembarks from it as it would have', () => {
+  const raft = { q: 1, r: 0 };
   const city = cityOf(['urban'], {
-    tiles: field(2, [coast]),
-    hand: ['PH_Embark'],
-    units: [standing('player', CITY)],
+    tiles: field(2, [raft]),
+    units: [standing('player', CITY), skiff(raft)],
   });
-  const embarked = outcome(apply(CATALOGUE, city, aimedAt(city, coast)));
+  const embarked = endedTurn(
+    outcome(apply(CATALOGUE, city, { type: 'move', unit: 1, tile: raft })),
+  );
   const save = { chronicle: embarked, civilization: CIVILIZATION_ID };
+  const ashore: Command = { type: 'move', unit: 1, tile: { q: 1, r: -1 } };
 
   const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
 
-  expect(embarked.units[0].embarked).toBe(true);
+  expect(embarked.units.map(({ id, embarked: afloat }) => [id, afloat])).toEqual([[1, true]]);
   expect(read.chronicle).toEqual(save);
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  const disembarked = outcome(apply(CATALOGUE, read.chronicle.chronicle, ashore));
+  expect(disembarked).toEqual(outcome(apply(CATALOGUE, embarked, ashore)));
+  expect(disembarked.units.map(({ id, tile }) => [id, tile])).toEqual([
+    [1, { q: 1, r: -1 }],
+    [2, raft],
+  ]);
 });
 
 test('a chronicle saved with a unit of a kind carrying a bonus reads back whole: the bonus is the kind’s, never the unit’s', () => {

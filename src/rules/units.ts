@@ -55,6 +55,11 @@ export type Unit = {
   readonly movePoints: number;
   readonly action: number;
   readonly embarked: boolean;
+  /**
+   * The unit carrying it, on its tile: no row of the units while it carries, so every reader of the
+   * unit on that tile reads this one.
+   */
+  readonly carrier?: Unit;
 } & (
   | { readonly faction: 'player' }
   | {
@@ -94,7 +99,7 @@ export function refreshedAction(unit: Unit): Unit {
 
 /**
  * A unit with one of its action spent, and the move points it had left with it: what an attack
- * spends, and a card played through a worker.
+ * spends, an embark or a disembark, and a card played through a worker.
  */
 export function spentAction<U extends Unit>(unit: U): U {
   return { ...unit, action: unit.action - 1, movePoints: 0 };
@@ -103,6 +108,72 @@ export function spentAction<U extends Unit>(unit: U): U {
 /** The one unit standing on a tile, if one does. */
 export function unitAt(units: readonly Unit[], coord: TileCoords): Unit | undefined {
   return units.find((unit) => sameTile(unit.tile, coord));
+}
+
+/** Every unit on the map, each unit carrying another beside the one it carries. */
+export function everyUnit(units: readonly Unit[]): Unit[] {
+  return units.flatMap((unit) => (unit.carrier === undefined ? [unit] : [unit, unit.carrier]));
+}
+
+/**
+ * The units with the one carrying this unit back among them on its tile, ahead of the first one
+ * numbered after it, and as they stand where nothing carries it.
+ */
+export function carrierBack(units: readonly Unit[], unit: Pick<Unit, 'carrier'>): Unit[] {
+  const { carrier } = unit;
+  if (carrier === undefined) return [...units];
+  const after = units.findIndex((other) => other.id > carrier.id);
+  const at = after === -1 ? units.length : after;
+  return [...units.slice(0, at), carrier, ...units.slice(at)];
+}
+
+/** The units with one of them killed, the unit carrying it left on its tile. */
+export function killed(units: readonly Unit[], target: Unit): Unit[] {
+  return carrierBack(
+    units.filter((unit) => unit.id !== target.id),
+    target,
+  );
+}
+
+/**
+ * The units with one of them stepped onto a tile beside it, embarked or ashore on `move` as named:
+ * embarking onto a unit standing there, that unit carries it; stepping off the unit carrying it, that
+ * one stays on the tile it left.
+ */
+export function stepTaken(
+  units: readonly Unit[],
+  stepping: Unit,
+  to: TileCoords,
+  embarking: boolean,
+  move: number,
+): Unit[] {
+  const onto = embarking ? unitAt(units, to) : undefined;
+  const taken = units.flatMap((unit): Unit[] => {
+    if (unit.id === onto?.id) return [];
+    if (unit.id !== stepping.id) return [unit];
+    const { carrier: _left, ...self } = unit;
+    const moved = { ...self, embarked: embarking, stats: { ...self.stats, move }, tile: to };
+    return [onto === undefined ? moved : { ...moved, carrier: onto }];
+  });
+  return carrierBack(taken, stepping);
+}
+
+/** The move points a unit's walk has left: its own, no more than those of the unit carrying it. */
+export function movePointsLeft(unit: Pick<Unit, 'movePoints' | 'carrier'>): number {
+  const { movePoints, carrier } = unit;
+  return carrier === undefined ? movePoints : Math.min(movePoints, carrier.movePoints);
+}
+
+/** A unit crossing to a landing, spending what it costs, and the unit carrying it with it. */
+export function crossedTo(unit: Unit, landing: Landing): Unit {
+  const crossing = <U extends Unit>(one: U): U => ({
+    ...one,
+    tile: landing.tile,
+    movePoints: one.movePoints - landing.cost,
+  });
+  return unit.carrier === undefined
+    ? crossing(unit)
+    : { ...crossing(unit), carrier: crossing(unit.carrier) };
 }
 
 /** Whether a unit acts against the player as an enemy does: an enemy, or the neutral's while hostile. */
@@ -177,8 +248,8 @@ export function passageFor(chronicle: Crossed, faction: Faction): (coord: TileCo
 }
 
 /** A unit's walk: on the move points it has left, embarked or ashore as it stands. */
-function walkOf(unit: Pick<Unit, 'movePoints' | 'embarked'>): Walk {
-  return { points: unit.movePoints, embarked: unit.embarked };
+function walkOf(unit: Pick<Unit, 'movePoints' | 'embarked' | 'carrier'>): Walk {
+  return { points: movePointsLeft(unit), embarked: unit.embarked };
 }
 
 /** The faction of the unit standing on each tile, by the tile's key. */
@@ -210,7 +281,7 @@ function unitPassage(
 export function reachable(
   catalogue: MapContent,
   chronicle: Crossed,
-  unit: Pick<Unit, 'tile' | 'faction' | 'movePoints' | 'embarked'>,
+  unit: Pick<Unit, 'tile' | 'faction' | 'movePoints' | 'embarked' | 'carrier'>,
 ): Landing[] {
   const standing = standingOn(chronicle);
   const spent = pathCosts(
@@ -286,11 +357,9 @@ export function attackable(units: readonly Unit[], attacker: Unit, relations: Re
 
 /** A unit losing health by an amount, whatever took it: at zero health or below it is killed. */
 export function damaged(units: readonly Unit[], target: Unit, amount: number): Unit[] {
-  return units.flatMap((unit) => {
-    if (unit.id !== target.id) return [unit];
-    const health = unit.stats.health - amount;
-    if (health <= 0) return [];
-    const hurt: Unit = { ...unit, stats: { ...unit.stats, health } };
-    return [hurt];
-  });
+  const health = target.stats.health - amount;
+  if (health <= 0) return killed(units, target);
+  return units.map((unit) =>
+    unit.id === target.id ? { ...unit, stats: { ...unit.stats, health } } : unit,
+  );
 }

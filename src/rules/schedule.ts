@@ -51,7 +51,7 @@ import {
   turnShown,
   unaffordable,
 } from './state';
-import { damaged, unitAt } from './units';
+import { damaged, unitAt, unitOf } from './units';
 
 /**
  * A region's schedule rolled into the timeline a chronicle opens on, the generator handed in its own
@@ -259,7 +259,7 @@ export function unitDamaged(chronicle: Chronicle, at: TileCoords, amount: number
   const target = unitAt(chronicle.units, at);
   if (target === undefined) return unchanged(chronicle);
   const units = damaged(chronicle.units, target, amount);
-  const killed = units.length < chronicle.units.length;
+  const killed = unitOf(units, target.id) === undefined;
   return landedAs(changeOn(killed ? 'killed' : 'damaged', at, { ...chronicle, units }, chronicle));
 }
 

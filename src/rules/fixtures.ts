@@ -54,6 +54,7 @@ import {
   type UnitEntryRow,
   type UnitEntryTable,
   type UnitScript,
+  unitKind,
   workerAim,
 } from './catalogue';
 import {
@@ -1760,6 +1761,11 @@ export function standing(
         entering: { type: carried.type, faction: 'neutral', script: GUARD_SCRIPT, tile },
       };
   }
+}
+
+/** A unit of the player's of the fixture's kind that stands on the water alone, as it enters. */
+export function skiff(tile: TileCoords, stats: Partial<UnitStats> = {}): Standing {
+  return standing('player', tile, { ...unitKind(CATALOGUE, 'PH_Skiff'), ...stats });
 }
 
 /**

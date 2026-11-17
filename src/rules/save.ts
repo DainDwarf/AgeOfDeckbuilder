@@ -502,7 +502,12 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
   );
   dealtOnce(
     catalogue,
-    units.map(({ slot: item, unit }) => ({ slot: item, number: unit.id })),
+    units.flatMap(({ slot: item, unit }) => [
+      { slot: item, number: unit.id },
+      ...(unit.carrier === undefined
+        ? []
+        : [{ slot: record(catalogue, item)('carrier'), number: unit.carrier.id }]),
+    ]),
     nextUnit,
     { next: 'the next unit number', numbered: 'unit' },
   );
@@ -811,6 +816,7 @@ function unitOf(catalogue: Catalogue, slot: Slot): Unit {
     ),
     tile: coordsIn(catalogue, record(catalogue, field('tile'))),
     ...selfOf(catalogue, slot),
+    carrier: optional(field('carrier'), (item) => unitOf(catalogue, item)),
   };
   const faction = factionOf(catalogue, field('faction'));
   switch (faction) {

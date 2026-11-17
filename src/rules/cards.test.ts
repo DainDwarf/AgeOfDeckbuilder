@@ -527,6 +527,7 @@ test('a unit entered on the settle phase neither moves nor attacks, and nothing 
   for (const id of [1, 3]) {
     expect(byHand(CATALOGUE, entered, unitNamed(entered, id))).toEqual({
       landings: [],
+      steps: [],
       targets: [],
     });
     expect(stagedBy(entered, { type: 'move', unit: id, tile: onto })).toEqual(['refused']);

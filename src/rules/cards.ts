@@ -71,7 +71,15 @@ import {
   type NeutralFallCause,
   type TileBlock,
 } from './state';
-import { refreshedMovePoints, spentAction, standsOn, type Unit, unitAt } from './units';
+import {
+  killed,
+  refreshedMovePoints,
+  spentAction,
+  standsOn,
+  stepTaken,
+  type Unit,
+  unitAt,
+} from './units';
 import { worthOf, type YieldPart, yieldParts } from './yields';
 
 /** The declared order of the kinds, which is the order a sorted list of cards reads in. */
@@ -448,7 +456,8 @@ function stepped(
 
 /**
  * A unit embarking or disembarking onto a tile beside it, whatever took it there: what its landing
- * declares, one of its action spent, then the `move` change, leaving it embarked or ashore on `move`.
+ * declares, one of its action spent, then the `move` change, leaving it embarked or ashore on `move`,
+ * as `stepTaken` steps it.
  */
 export function steppedOnto(
   paid: Chronicle,
@@ -470,11 +479,7 @@ export function steppedOnto(
         before: left,
         chronicle: {
           ...left,
-          units: left.units.map((unit) =>
-            unit.id === stepping.id
-              ? { ...unit, embarked: embarking, stats: { ...unit.stats, move }, tile }
-              : unit,
-          ),
+          units: stepTaken(left.units, stepping, tile, embarking, move),
         },
       }),
   );
@@ -1008,7 +1013,7 @@ export function terraformed(
   const relaid = retiled(paid, at, (tile) =>
     relayered(catalogue, { ...tile, terrain: to, feature: undefined }),
   );
-  return followed(relaid, (left) => {
+  const killedOff = (left: Chronicle): Landed => {
     const standing = unitAt(left.units, at);
     if (
       standing === undefined ||
@@ -1016,18 +1021,10 @@ export function terraformed(
     ) {
       return unchanged(left);
     }
-    return landedAs(
-      changeOn(
-        'killed',
-        at,
-        {
-          ...left,
-          units: left.units.filter((unit) => unit.id !== standing.id),
-        },
-        left,
-      ),
-    );
-  });
+    const units = killed(left.units, standing);
+    return followed(landedAs(changeOn('killed', at, { ...left, units }, left)), killedOff);
+  };
+  return followed(relaid, killedOff);
 }
 
 /**
