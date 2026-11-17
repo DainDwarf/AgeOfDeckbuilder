@@ -186,7 +186,7 @@ export type Card = {
   readonly becomes?: CardId;
 } & (
   | ({ readonly kind: 'settle' | 'building' } & Aim)
-  | ({ readonly kind: 'action' | 'instant' } & Keyword & Aim)
+  | ({ readonly kind: 'improvement' | 'action' | 'instant' } & Keyword & Aim)
   | UnitCard
   | { readonly kind: 'hazard'; readonly strikes: Strike }
   | ({ readonly kind: 'trophy'; readonly influence: number } & Aim)
@@ -219,6 +219,7 @@ export function strikeOf(card: Card): Strike | undefined {
     case 'settle':
     case 'unit':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
     case 'trophy':
@@ -261,6 +262,7 @@ type Keyword =
 export function keywordOf(card: Card): 'exhaust' | 'banish' | undefined {
   switch (card.kind) {
     case 'unit':
+    case 'improvement':
     case 'action':
     case 'instant':
       if (card.exhaust === true) return 'exhaust';
@@ -286,6 +288,7 @@ export function influenceCardOf(card: Card): InfluenceCard | undefined {
     case 'settle':
     case 'unit':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
     case 'hazard':
@@ -322,6 +325,7 @@ export function placingOf(card: Card): Placing | undefined {
       return card.places;
     case 'settle':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
     case 'trophy':
@@ -404,6 +408,7 @@ export function workerAim(card: Card): Extract<Aim, { readonly aim: 'tile' }> | 
   switch (card.kind) {
     case 'settle':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
     case 'trophy':
@@ -416,11 +421,15 @@ export function workerAim(card: Card): Extract<Aim, { readonly aim: 'tile' }> | 
 }
 
 /**
- * What keeps a card out of the kind it declares, and nothing where it stands under it: an action is
- * a card a unit's action goes to, and an instant one no unit's action goes to.
+ * What keeps a card out of the kind it declares, and nothing where it stands under it: an improvement
+ * is a card that places an improvement and a worker's action goes to, an action one a unit's action
+ * goes to, and an instant one no unit's action goes to.
  */
 function kindMisfit(card: Card): string | undefined {
   switch (card.kind) {
+    case 'improvement':
+      if (placingOf(card)?.thing !== 'improvement') return 'is an improvement that places none';
+      return unitActs(card) ? undefined : "is an improvement no worker's action goes to";
     case 'action':
       return unitActs(card) ? undefined : "is an action no unit's action goes to";
     case 'instant':
@@ -1500,6 +1509,7 @@ function kindHeldByNoDeck(kind: Card['kind']): boolean {
     case 'settle':
     case 'unit':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
       return false;

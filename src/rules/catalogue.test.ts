@@ -1057,7 +1057,7 @@ test('a catalogue whose card places a unit kind, a building or an improvement it
     PH_Landing: [{ kind: 'settle', cost: {}, ...entersOn('PH_Unheld') }, 'unit kind'],
     PH_Raise: [{ kind: 'building', cost: {}, ...builds('PH_Unheld') }, 'building'],
     PH_Raze: [{ kind: 'action', cost: {}, ...builds('PH_Farm', 'PH_Unheld') }, 'building'],
-    PH_Dig: [{ kind: 'action', cost: {}, ...placesImprovement('PH_Unheld') }, 'improvement'],
+    PH_Dig: [{ kind: 'improvement', cost: {}, ...placesImprovement('PH_Unheld') }, 'improvement'],
   };
   for (const [id, [card, noun]] of Object.entries(unheld)) {
     const content = changed({
@@ -1090,9 +1090,16 @@ test('a catalogue whose unit card enters a kind that stands on the water alone o
   }
 });
 
-test('a catalogue whose action no unit’s action goes to, or whose instant a worker’s action goes to, is refused', () => {
+test('a catalogue whose action no unit’s action goes to, whose improvement places none or no worker’s action goes to, or whose instant a worker’s action goes to, is refused', () => {
   const misfits: Readonly<Record<string, Card>> = {
     PH_Idle: { kind: 'action', cost: {}, aim: 'none', effect: (_c, paid) => unchanged(paid) },
+    PH_Raised: { kind: 'improvement', cost: {}, ...builds('PH_Farm') },
+    PH_Unworked: {
+      kind: 'improvement',
+      cost: {},
+      ...placesImprovement('PH_Mine'),
+      worker: undefined,
+    },
     PH_Dug: { kind: 'instant', cost: {}, ...placesImprovement('PH_Mine') },
   };
   for (const [id, card] of Object.entries(misfits)) {

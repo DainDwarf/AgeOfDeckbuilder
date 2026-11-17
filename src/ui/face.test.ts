@@ -26,7 +26,8 @@ describe('a card’s face', () => {
   it('is labelled by its card’s kind, an action card’s naming the worker it is played through', () => {
     const labelled = (id: string) => labelledKind(cardOf(CATALOGUE, id));
 
-    expect(labelled('PH_Mine')).toBe('worker-action');
+    expect(labelled('PH_Hunt')).toBe('worker-action');
+    expect(labelled('PH_Mine')).toBe('improvement');
     expect(labelled('PH_Farm')).toBe('building');
     expect(labelled('PH_Harvest')).toBe('instant');
   });

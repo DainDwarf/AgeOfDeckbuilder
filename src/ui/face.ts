@@ -48,6 +48,7 @@ export function labelledKind(card: Card): FaceKind {
     case 'settle':
     case 'unit':
     case 'building':
+    case 'improvement':
     case 'instant':
     case 'hazard':
     case 'trophy':
@@ -71,6 +72,7 @@ export function familyOf(card: Card): CardFamily {
     case 'settle':
     case 'unit':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
       return 'thing-done';

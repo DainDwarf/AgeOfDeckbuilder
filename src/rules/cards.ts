@@ -84,6 +84,7 @@ export const CARD_KINDS = [
   'settle',
   'unit',
   'building',
+  'improvement',
   'action',
   'instant',
   'hazard',
@@ -105,6 +106,7 @@ export function aimOf(card: Card): Aim {
     case 'unit':
       return unitAim(card);
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
     case 'trophy':
@@ -181,6 +183,7 @@ export function goesTo(card: Card): 'discard-pile' | 'exhaust-pile' | 'nowhere' 
     case 'challenge':
       return 'nowhere';
     case 'unit':
+    case 'improvement':
     case 'action':
     case 'instant':
       switch (keywordOf(card)) {
@@ -826,7 +829,7 @@ export function withBuilding(
     : { ...tile, building, waitsFrom: undefined };
 }
 
-/** The improvement an action card places: the tile carries it from now on, and the worker stays put. */
+/** The improvement an improvement card places: the tile carries it from now on, and the worker stays put. */
 export function improvementPlaced(
   catalogue: Catalogue,
   paid: Chronicle,

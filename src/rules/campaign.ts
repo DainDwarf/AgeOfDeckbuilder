@@ -279,6 +279,7 @@ function sectionOf(catalogue: Catalogue, card: CardId): 'settle' | 'cards' {
       return 'settle';
     case 'unit':
     case 'building':
+    case 'improvement':
     case 'action':
     case 'instant':
     case 'hazard':
