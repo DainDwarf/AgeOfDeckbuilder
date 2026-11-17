@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { embarks, placesImprovement } from './cards';
+import { builds, embarks, enters, entersOn, placesImprovement } from './cards';
 import {
   type Age,
   type Answer,
@@ -1041,6 +1041,24 @@ test('a catalogue whose card becomes one it does not hold is refused', () => {
   });
 
   expect(() => catalogued(content)).toThrow('fixture: no card is named PH_Unheld');
+});
+
+test('a catalogue whose card places a unit kind, a building or an improvement it does not hold, or builds over a building it does not hold, is refused', () => {
+  const unheld: Readonly<Record<string, [Card, string]>> = {
+    PH_Recruit: [{ kind: 'unit', cost: {}, ...enters('PH_Unheld') }, 'unit kind'],
+    PH_Landing: [{ kind: 'settle', cost: {}, ...entersOn('PH_Unheld') }, 'unit kind'],
+    PH_Raise: [{ kind: 'building', cost: {}, ...builds('PH_Unheld') }, 'building'],
+    PH_Raze: [{ kind: 'action', cost: {}, ...builds('PH_Farm', 'PH_Unheld') }, 'building'],
+    PH_Dig: [{ kind: 'action', cost: {}, ...placesImprovement('PH_Unheld') }, 'improvement'],
+  };
+  for (const [id, [card, noun]] of Object.entries(unheld)) {
+    const content = changed({
+      cards: { ...CATALOGUE.cards, [id]: card },
+      cardAges: { ...CATALOGUE.cardAges, [id]: AGE },
+    });
+
+    expect(() => catalogued(content)).toThrow(`fixture: no ${noun} is named PH_Unheld`);
+  }
 });
 
 test('a catalogue whose action no unit’s action goes to, or whose instant a worker’s or any unit’s action goes to, is refused', () => {

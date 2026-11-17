@@ -663,6 +663,7 @@ export function enters(type: string): UnitEntry {
         cityLanded(catalogue, left, whose, type, tile),
       );
     },
+    places: { thing: 'unit', unit: type },
   };
 }
 
@@ -719,7 +720,7 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
       ),
     effect: (catalogue, paid, at) =>
       entered(catalogue, paid, { type, faction: 'player', tile: { q: at.q, r: at.r } }),
-    places: { thing: 'unit' },
+    places: { thing: 'unit', unit: type },
   };
 }
 

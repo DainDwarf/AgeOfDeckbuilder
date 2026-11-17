@@ -4,6 +4,7 @@ import {
   buildingKind,
   entryOf,
   featureKind,
+  improvementKind,
   type LayerKind,
   type MapContent,
   type MapRegion,
@@ -245,6 +246,11 @@ export type UnitCard = { readonly kind: 'unit' } & Keyword & UnitEntry;
 export type UnitEntry = {
   readonly blocked: (catalogue: Catalogue, chronicle: Chronicle, whose: CityFaction) => Block[];
   readonly effect: (catalogue: Catalogue, paid: Chronicle, whose: CityFaction) => Landed;
+  /**
+   * The unit the play places: it must name the kind the effect enters, so the helper that writes the
+   * effect writes it.
+   */
+  readonly places: UnitPlacing;
 };
 
 /** The keyword a card of the kinds that carry one declares, exhaust or banish, or neither. */
@@ -296,13 +302,16 @@ export function influenceOf(card: Card): number | undefined {
 /** What a card's play can place: a unit, a building or an improvement. */
 export type PlacedThing = 'unit' | 'building' | 'improvement';
 
+/** A unit a card's play places, of that kind. */
+export type UnitPlacing = { readonly thing: 'unit'; readonly unit: string };
+
 /**
- * What a card's play places, and which: a unit; a building of that kind, built over the one `over`
- * names where it names one; the city section's building, which the chronicle names; or an improvement
- * of that kind.
+ * What a card's play places, and which: a unit of that kind; a building of that kind, built over the
+ * one `over` names where it names one; the city section's building, which the chronicle names; or an
+ * improvement of that kind.
  */
 export type Placing =
-  | { readonly thing: 'unit' }
+  | UnitPlacing
   | { readonly thing: 'building'; readonly building: string; readonly over?: string }
   | { readonly thing: 'city' }
   | { readonly thing: 'improvement'; readonly improvement: string };
@@ -311,7 +320,7 @@ export type Placing =
 export function placingOf(card: Card): Placing | undefined {
   switch (card.kind) {
     case 'unit':
-      return { thing: 'unit' };
+      return card.places;
     case 'settle':
     case 'building':
     case 'action':
@@ -321,6 +330,25 @@ export function placingOf(card: Card): Placing | undefined {
     case 'hazard':
     case 'challenge':
       return undefined;
+  }
+}
+
+/** A placing whose kinds the content holds; one naming a kind it does not hold is refused. */
+function placingHeld(content: Catalogue, placing: Placing | undefined): void {
+  if (placing === undefined) return;
+  switch (placing.thing) {
+    case 'unit':
+      unitKind(content, placing.unit);
+      return;
+    case 'building':
+      buildingKind(content, placing.building);
+      if (placing.over !== undefined) buildingKind(content, placing.over);
+      return;
+    case 'city':
+      return;
+    case 'improvement':
+      improvementKind(content, placing.improvement);
+      return;
   }
 }
 
@@ -762,6 +790,7 @@ export function catalogued(content: Catalogue): Catalogue {
     ageOf(content, content.cardAges[id]);
     const misfit = kindMisfit(card);
     if (misfit !== undefined) refuse(content, `the card ${id} ${misfit}`);
+    placingHeld(content, placingOf(card));
     const influence = influenceOf(card);
     if (influence !== undefined && (!Number.isInteger(influence) || influence < 0)) {
       refuse(content, `the ${card.kind} ${id} gains ${influence} influence`);
