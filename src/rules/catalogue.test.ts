@@ -318,11 +318,15 @@ test('a catalogue whose technology needs one earned in a later age is refused, a
   ).not.toThrow();
 });
 
-test('a catalogue whose camp’s opening or roll holds no row, a row of a kind or a script it does not hold, or a row at a weight not above nought is refused', () => {
+test('a catalogue whose camp’s opening or roll holds no row, a row of a kind or a script it does not hold, a row of a kind that stands on the water alone, or a row at a weight not above nought is refused', () => {
   const [row] = CAMP.roll;
   const refusals = (owner: string): [UnitEntryTable, string][] => [
     [[], `${owner} holds no row`],
     [[row, { ...row, kind: 'PH_Scout' }], 'no unit kind is named PH_Scout'],
+    [
+      [row, { ...row, kind: 'PH_Skiff' }],
+      `${owner} enters PH_Skiff, which stands on the water alone`,
+    ],
     [[row, { ...row, script: 'retreat' }], 'no unit script is named retreat'],
     [[row, { ...row, weight: 0 }], `${owner} enters ${row.kind} as ${row.script} at a weight of 0`],
     [
@@ -859,7 +863,7 @@ test('a catalogue whose neutral keeps a worker kind and names no workers, names 
   expect(catalogued(workers({})).version).toBe('fixture');
 });
 
-test('a catalogue whose neutral opens with a kind it does not hold, with a worker kind and names no workers, or first with a kind that does not stand on every terrain its city stands on is refused, and one whose first kind stands on them all is not', () => {
+test('a catalogue whose neutral opens with a kind it does not hold, with a kind that stands on the water alone, with a worker kind and names no workers, or first with a kind that does not stand on every terrain its city stands on is refused, and one whose first kind stands on them all is not', () => {
   const slow = (opening: string[]): Catalogue => ({
     ...neutralWith({ opening }),
     units: SLOW_SLINGER.units,
@@ -867,6 +871,10 @@ test('a catalogue whose neutral opens with a kind it does not hold, with a worke
   expect(buildingKind(CATALOGUE, NEUTRAL).terrains).toContain('forest');
   const refusals: [Catalogue, string][] = [
     [neutralWith({ opening: ['PH_Giant'] }), 'no unit kind is named PH_Giant'],
+    [
+      neutralWith({ opening: ['PH_Warrior', 'PH_Skiff'] }),
+      `the age ${AGE}'s neutral opens with PH_Skiff, which stands on the water alone`,
+    ],
     [neutralWith({ opening: ['PH_Worker'] }), 'the neutral enters PH_Worker and names no workers'],
     [
       slow(['PH_Slinger', 'PH_Warrior']),

@@ -7,6 +7,7 @@ import {
   neutralOf,
   neutralScriptOf,
   type ScriptAct,
+  standsOnWaterAlone,
   type UnitEntryRow,
   type UnitEntryTable,
   unitEntryTableHeld,
@@ -269,9 +270,31 @@ export function enemyEntering(
 /** An enemy entered or not yet: its kind's stats, and its moves ashore and embarked. */
 type Entrant = { readonly stats: UnitStats; readonly moves: Moves };
 
-function entrantOf(catalogue: Catalogue, chronicle: Chronicle, kind: string): Entrant {
+/**
+ * A unit of the faction's of the kind entering through a door; a kind that stands on the water alone
+ * enters through none and is refused.
+ */
+function entrantOf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  kind: string,
+  faction: ScriptedFaction,
+): Entrant {
+  if (standsOnWaterAlone(catalogue, kind)) {
+    refuse(catalogue, `${enteredBy(faction)} enters ${kind}, which stands on the water alone`);
+  }
   const stats = unitKind(catalogue, kind);
   return { stats, moves: walkMoves(catalogue, chronicle, { stats, embarked: false }) };
+}
+
+/** Who enters a unit of the faction's through a door, in a refusal's words. */
+function enteredBy(faction: ScriptedFaction): string {
+  switch (faction) {
+    case 'enemy':
+      return 'an enemy';
+    case 'neutral':
+      return 'the neutral';
+  }
 }
 
 /** One row drawn among these by their weights from the chronicle's generator; one alone draws nothing. */
@@ -414,7 +437,7 @@ function enteredAs(
   const doorOf = (kind: string): ReturnType<typeof aroundDoor> => {
     const known = doors.get(kind);
     if (known !== undefined) return known;
-    const entrant = entrantOf(catalogue, chronicle, kind);
+    const entrant = entrantOf(catalogue, chronicle, kind, door.faction);
     const walked = aroundDoor(catalogue, chronicle, entrant, around, door.faction);
     doors.set(kind, walked);
     return walked;
@@ -492,7 +515,8 @@ export function neutralRoomAround(
   around: TileCoords,
   kind: string,
 ): boolean {
-  return roomyDoors(catalogue, chronicle, entrantOf(catalogue, chronicle, kind), 'neutral')(around);
+  const entrant = entrantOf(catalogue, chronicle, kind, 'neutral');
+  return roomyDoors(catalogue, chronicle, entrant, 'neutral')(around);
 }
 
 /**
@@ -535,7 +559,7 @@ function raidEntry(
 ): { readonly entry: TileCoords; readonly chronicle: Chronicle } | undefined {
   const city = chronicle.city ?? refuse(catalogue, 'a raid landed while the city stands nowhere');
   const { camp } = ageOf(catalogue, chronicle.age);
-  const entrant = entrantOf(catalogue, chronicle, kind);
+  const entrant = entrantOf(catalogue, chronicle, kind, 'enemy');
   const roomy = roomyDoors(catalogue, chronicle, entrant, 'enemy');
   const camps = chronicle.tiles.filter((tile) => tile.building === camp.building && roomy(tile));
   // The chronicle holds no radius: the disc's edge is read off its tiles, which the generator deals

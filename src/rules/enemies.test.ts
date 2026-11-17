@@ -1946,10 +1946,13 @@ test('the neutral whose guards standing ashore are as many as its wave gathers s
   ]);
 });
 
-test('an entry handed a table holding no row, or a row at a weight not above nought, is refused where it lands', () => {
+test('an entry handed a table holding no row, or a row at a weight not above nought, is refused where it lands, and so is a unit of a kind that stands on the water alone entering through a door', () => {
   const camp = { q: 4, r: 0 };
   const city = cityOf(['urban'], { tiles: camped(field(4), [camp]) });
 
+  expect(() => raided(CATALOGUE, city, [RAIDER_ROW, { kind: 'PH_Skiff', script: SCRIPT }])).toThrow(
+    'fixture: an enemy enters PH_Skiff, which stands on the water alone',
+  );
   for (const table of [[], [RAIDER_ROW, { ...RAIDER_ROW, weight: 0 }]]) {
     for (const landing of [
       () => enteredOnCamp(CATALOGUE, city, camp, table),

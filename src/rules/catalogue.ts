@@ -933,8 +933,18 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
     refuse(content, `the age ${id} sets a base price of ${basePrice}`);
   }
 
-  unitEntryTableHeld(content, camp.opening, `the age ${id}'s camp's opening`);
-  unitEntryTableHeld(content, camp.roll, `the age ${id}'s camp's roll`);
+  for (const [table, rows] of [
+    ['opening', camp.opening],
+    ['roll', camp.roll],
+  ] as const) {
+    const owner = `the age ${id}'s camp's ${table}`;
+    unitEntryTableHeld(content, rows, owner);
+    for (const { kind } of rows) {
+      if (standsOnWaterAlone(content, kind)) {
+        refuse(content, `${owner} enters ${kind}, which stands on the water alone`);
+      }
+    }
+  }
   for (const script of Object.values(camp.scripts)) unitScript(content, script);
   rewardsHeld(content, camp.rewards, `the age ${id}'s camp`);
   const { odds, wait, raidCampOdds, embarkedMove } = camp;
@@ -1018,7 +1028,15 @@ function ageHeld(content: Catalogue, id: string, age: Age): void {
       if (campKind.terrains.includes(terrain)) continue;
       refuse(content, `the age ${id}'s camp ${camp.building} does not stand on ${terrain}`);
     }
-    for (const kind of opening) neutralScriptOf(content, neutral, kind);
+    for (const kind of opening) {
+      if (standsOnWaterAlone(content, kind)) {
+        refuse(
+          content,
+          `the age ${id}'s neutral opens with ${kind}, which stands on the water alone`,
+        );
+      }
+      neutralScriptOf(content, neutral, kind);
+    }
     const [first] = opening;
     if (first !== undefined) {
       for (const terrain of neutralKind.terrains) {
