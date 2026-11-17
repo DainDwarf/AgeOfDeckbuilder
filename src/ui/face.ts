@@ -6,9 +6,7 @@ import {
   cardOf,
   costOf,
   influenceOf,
-  type PlacedThing,
   type Placing,
-  placedBy,
   placingOf,
   unitKind,
 } from '../rules/catalogue';
@@ -57,26 +55,22 @@ export function labelledKind(card: Card): FaceKind {
   }
 }
 
-/** The family a card's frame wears the colour of. */
-export type CardFamily = PlacedThing | 'thing-done' | 'hazard' | 'challenge' | 'trophy';
+/** The two windows a plain front is drawn with. */
+export type FrontWindow = 'arched' | 'oval';
 
-/** A card's family: what its play places, and its kind where it places nothing. */
-export function familyOf(card: Card): CardFamily {
-  const placed = placedBy(card);
-  if (placed !== undefined) return placed;
-  switch (card.kind) {
-    case 'hazard':
-    case 'challenge':
-    case 'trophy':
-      return card.kind;
-    case 'settle':
-    case 'unit':
-    case 'building':
-    case 'improvement':
-    case 'action':
-    case 'instant':
-      return 'thing-done';
-  }
+/** The front a card wears: a plain one in its kind's colour through one of its windows, or the decorated one. */
+export type CardFront =
+  | { readonly front: 'plain'; readonly kind: CardKind; readonly window: FrontWindow }
+  | { readonly front: 'decorated' };
+
+/**
+ * A card's front: the decorated one on the card whose play places the city, else the plain one in its
+ * kind's colour, the oval window on a card whose play places a thing and the arched on the rest.
+ */
+export function cardFront(card: Card): CardFront {
+  const placing = placingOf(card);
+  if (placing?.thing === 'city') return { front: 'decorated' };
+  return { front: 'plain', kind: card.kind, window: placing === undefined ? 'arched' : 'oval' };
 }
 
 /** The numbers an answer's text or the capstone's reads of the chronicle, by name. */
@@ -135,7 +129,7 @@ export type Face = {
   readonly id: string;
   readonly name: string;
   readonly kind: FaceKind;
-  readonly family: CardFamily;
+  readonly front: CardFront;
   readonly rules: string;
   readonly costs: readonly Cost[];
   readonly influence: number;
@@ -254,7 +248,7 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     id: card.id,
     name: cardName(card.id),
     kind: labelledKind(content),
-    family: familyOf(content),
+    front: cardFront(content),
     rules: leads === undefined || sentence === '' ? (leads ?? sentence) : `${leads}\n${sentence}`,
     costs: costOf(catalogue, card.id),
     influence: influenceOf(content) ?? 0,

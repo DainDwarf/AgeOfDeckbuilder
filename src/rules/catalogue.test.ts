@@ -1090,9 +1090,10 @@ test('a catalogue whose unit card enters a kind that stands on the water alone o
   }
 });
 
-test('a catalogue whose action no unit’s action goes to, whose improvement places none or no worker’s action goes to, or whose instant a worker’s action goes to, is refused', () => {
+test('a catalogue whose action no unit’s action goes to or places an improvement, whose improvement places none or no worker’s action goes to, or whose instant a worker’s action goes to, is refused', () => {
   const misfits: Readonly<Record<string, Card>> = {
     PH_Idle: { kind: 'action', cost: {}, aim: 'none', effect: (_c, paid) => unchanged(paid) },
+    PH_Quarried: { kind: 'action', cost: {}, ...placesImprovement('PH_Mine') },
     PH_Raised: { kind: 'improvement', cost: {}, ...builds('PH_Farm') },
     PH_Unworked: {
       kind: 'improvement',

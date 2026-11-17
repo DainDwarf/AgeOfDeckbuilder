@@ -37,7 +37,7 @@ import {
   type BadgeStat,
   BOX_STATS,
   type BoxStat,
-  type CardFamily,
+  type CardFront,
   type CardStat,
   type Face,
   kindLabel,
@@ -355,28 +355,28 @@ export type CardFace = {
 };
 
 /**
- * The image of the front a card of the family wears, at a card that wide, its body's top-left corner
- * where the image stands.
+ * The image of a card's front, at a card that wide, its body's top-left corner where the image
+ * stands.
  */
 function wearFront(
   image: Phaser.GameObjects.Image,
-  family: CardFamily,
+  front: CardFront,
   width: number,
 ): Phaser.GameObjects.Image {
-  const { frame, body } = frontOf(family);
+  const { frame, body } = frontOf(front);
   return image
     .setTexture(CARDS_SHEET_KEY, frame)
     .setScale(unitOf(width), downOf(width))
     .setDisplayOrigin(body.x, body.y);
 }
 
-/** The image of the shadow of the front a card of the family wears, laid as `wearFront` lays it. */
+/** The image of the shadow of a card's front, laid as `wearFront` lays it. */
 function wearShadow(
   image: Phaser.GameObjects.Image,
-  family: CardFamily,
+  front: CardFront,
   width: number,
 ): Phaser.GameObjects.Image {
-  const { shadow, body } = frontOf(family);
+  const { shadow, body } = frontOf(front);
   const { pixels, room } = SHADOW;
   return image
     .setTexture(CARDS_SHEET_KEY, shadow)
@@ -385,15 +385,15 @@ function wearShadow(
 }
 
 /**
- * The front of a card of the family drawn alone, as a copy under a stack's face shows it, at a card
- * of the hand's size, its body's top-left corner at its place, every colour through the tone.
+ * A card's front drawn alone, as a copy under a stack's face shows it, at a card of the hand's size,
+ * its body's top-left corner at its place, every colour through the tone.
  */
 export function addFront(
   scene: Phaser.Scene,
-  family: CardFamily,
+  front: CardFront,
   tone: Tone,
 ): Phaser.GameObjects.Image {
-  return wearFront(scene.add.image(0, 0, CARDS_SHEET_KEY), family, CARD_WIDTH).setTint(
+  return wearFront(scene.add.image(0, 0, CARDS_SHEET_KEY), front, CARD_WIDTH).setTint(
     tone(0xffffff),
   );
 }
@@ -599,7 +599,7 @@ export function createCardFace(
   const root = scene.add.container(0, 0);
   const shadow = scene.add.image(0, 0, CARDS_SHEET_KEY).setVisible(false);
   const window = scene.add.rectangle(0, 0, 1, 1, 0).setOrigin(0, 0);
-  const front = scene.add.image(0, 0, CARDS_SHEET_KEY);
+  const frontImage = scene.add.image(0, 0, CARDS_SHEET_KEY);
   const plate = scene.add.image(0, -height + PLATE.middle * down, CARDS_SHEET_KEY, PLATE.file);
   plate.setScale((PLATE.width * unit) / plate.width);
   /** The room between the plate's rivets, in units of a card wherever it stands but large. */
@@ -688,7 +688,7 @@ export function createCardFace(
   root.add([
     shadow,
     window,
-    front,
+    frontImage,
     plate,
     name,
     rules,
@@ -766,17 +766,17 @@ export function createCardFace(
 
   const read = (next: Face, refused: Refusal, toned: Tone = unworn): void => {
     reads = next;
-    const shape = frontOf(next.family);
+    const shape = frontOf(next.front);
     const tint = toned(0xffffff);
     const textInk = toned(LOOK.cardTextInk);
 
-    wearShadow(shadow, next.family, width).setPosition(-width / 2, -height);
+    wearShadow(shadow, next.front, width).setPosition(-width / 2, -height);
     const glass = placed(shape.window);
     window
       .setPosition(glass.x, glass.y)
       .setSize(shape.window.width * unit, shape.window.height * down)
-      .setFillStyle(multiplied(paleOf(next.family), tint));
-    wearFront(front, next.family, width)
+      .setFillStyle(multiplied(paleOf(next.front), tint));
+    wearFront(frontImage, next.front, width)
       .setPosition(-width / 2, -height)
       .setTint(tint);
     plate.setTint(tint);

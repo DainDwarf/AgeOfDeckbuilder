@@ -579,11 +579,19 @@ export const STONE: Slice = {
         cost: { production: 6 },
         ...builds('farm'),
       },
-      trapping: { kind: 'action', cost: { production: 3 }, ...placesImprovement('trapping') },
-      irrigation: { kind: 'action', cost: { production: 3 }, ...placesImprovement('irrigation') },
-      pasture: { kind: 'action', cost: { production: 3 }, ...placesImprovement('pasture') },
+      trapping: { kind: 'improvement', cost: { production: 3 }, ...placesImprovement('trapping') },
+      irrigation: {
+        kind: 'improvement',
+        cost: { production: 3 },
+        ...placesImprovement('irrigation'),
+      },
+      pasture: { kind: 'improvement', cost: { production: 3 }, ...placesImprovement('pasture') },
       archer: { kind: 'unit', cost: { military: 2 }, ...enters('archer') },
-      'clay-pit': { kind: 'action', cost: { production: 3 }, ...placesImprovement('clay-pit') },
+      'clay-pit': {
+        kind: 'improvement',
+        cost: { production: 3 },
+        ...placesImprovement('clay-pit'),
+      },
       calendar: { kind: 'instant', cost: { science: 2 }, ...showsNextLanding() },
       bread: {
         kind: 'instant',

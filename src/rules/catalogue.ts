@@ -302,7 +302,7 @@ export function influenceOf(card: Card): number | undefined {
 }
 
 /** What a card's play can place: a unit, a building or an improvement. */
-export type PlacedThing = 'unit' | 'building' | 'improvement';
+type PlacedThing = 'unit' | 'building' | 'improvement';
 
 /** A unit a card's play places, of that kind. */
 export type UnitPlacing = { readonly thing: 'unit'; readonly unit: string };
@@ -367,12 +367,6 @@ function placedThingOf(placing: Placing): PlacedThing {
   }
 }
 
-/** What a card's play places, and nothing for a card whose play places none. */
-export function placedBy(card: Card): PlacedThing | undefined {
-  const placing = placingOf(card);
-  return placing === undefined ? undefined : placedThingOf(placing);
-}
-
 /** Whether what a play places lies on the tile's ground: a building or an improvement. */
 export function placedOnGround(placing: Placing | undefined): boolean {
   if (placing === undefined) return false;
@@ -423,7 +417,7 @@ export function workerAim(card: Card): Extract<Aim, { readonly aim: 'tile' }> | 
 /**
  * What keeps a card out of the kind it declares, and nothing where it stands under it: an improvement
  * is a card that places an improvement and a worker's action goes to, an action one a unit's action
- * goes to, and an instant one no unit's action goes to.
+ * goes to that places no improvement, and an instant one no unit's action goes to.
  */
 function kindMisfit(card: Card): string | undefined {
   switch (card.kind) {
@@ -431,7 +425,10 @@ function kindMisfit(card: Card): string | undefined {
       if (placingOf(card)?.thing !== 'improvement') return 'is an improvement that places none';
       return unitActs(card) ? undefined : "is an improvement no worker's action goes to";
     case 'action':
-      return unitActs(card) ? undefined : "is an action no unit's action goes to";
+      if (!unitActs(card)) return "is an action no unit's action goes to";
+      return placingOf(card)?.thing === 'improvement'
+        ? 'is an action that places an improvement'
+        : undefined;
     case 'instant':
       return unitActs(card) ? "is an instant a unit's action goes to" : undefined;
     case 'settle':

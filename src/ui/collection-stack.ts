@@ -141,7 +141,7 @@ export function stackedCardsOf(
   const under = Math.min(copies - 1, UNDER_MOST);
   const unders = Array.from({ length: under }, (_, at) => {
     const step = (under - at) * UNDER_STEP;
-    return addFront(scene, shown.family, tone).setPosition(left + step, top + step);
+    return addFront(scene, shown.front, tone).setPosition(left + step, top + step);
   });
   const card = createCardFace(scene, shown, refusal, { tone });
   card.root.setPosition(left + CARD_WIDTH / 2, top + CARD_HEIGHT).setName(name);

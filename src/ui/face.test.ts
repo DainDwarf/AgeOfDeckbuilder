@@ -13,8 +13,8 @@ import {
 } from '../rules/fixtures';
 import { answerOf } from '../rules/schedule';
 import {
+  cardFront,
   cardStats,
-  familyOf,
   labelledKind,
   namedCardMade,
   numbersRun,
@@ -32,20 +32,18 @@ describe('a card’s face', () => {
     expect(labelled('PH_Harvest')).toBe('instant');
   });
 
-  it('is of the family of what its play places, whatever its kind, and of its kind’s family where it places nothing', () => {
-    const family = (id: string) => familyOf(cardOf(CATALOGUE, id));
+  it('wears the plain front of its kind, the oval window where its play places a thing and the arched where it places nothing, and the decorated front where its play places the city', () => {
+    const front = (id: string) => cardFront(cardOf(CATALOGUE, id));
 
-    expect(family('PH_Worker')).toBe('unit');
-    expect(family('PH_Band')).toBe('unit');
-    expect(family('PH_Farm')).toBe('building');
-    expect(family('PH_Settle')).toBe('building');
-    expect(family(SILO)).toBe('building');
-    expect(family('PH_Mine')).toBe('improvement');
-    expect(family('PH_Hunger')).toBe('hazard');
-    expect(family('PH_Ordeal')).toBe('challenge');
-    expect(family('PH_Spoils')).toBe('trophy');
-    expect(family('PH_Hunt')).toBe('thing-done');
-    expect(family('PH_Stores')).toBe('thing-done');
+    expect(front('PH_Worker')).toEqual({ front: 'plain', kind: 'unit', window: 'oval' });
+    expect(front('PH_Band')).toEqual({ front: 'plain', kind: 'settle', window: 'oval' });
+    expect(front('PH_Stores')).toEqual({ front: 'plain', kind: 'settle', window: 'arched' });
+    expect(front(SILO)).toEqual({ front: 'plain', kind: 'action', window: 'oval' });
+    expect(front('PH_Mine')).toEqual({ front: 'plain', kind: 'improvement', window: 'oval' });
+    expect(front('PH_Hunt')).toEqual({ front: 'plain', kind: 'action', window: 'arched' });
+    expect(front('PH_Harvest')).toEqual({ front: 'plain', kind: 'instant', window: 'arched' });
+    expect(front('PH_Hunger')).toEqual({ front: 'plain', kind: 'hazard', window: 'arched' });
+    expect(front('PH_Settle')).toEqual({ front: 'decorated' });
   });
 });
 

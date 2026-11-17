@@ -1,11 +1,12 @@
+import type { CardKind } from '../rules/cards';
 import type { Resource } from '../rules/resources';
-import type { BadgeStat, CardFamily } from './face';
+import type { BadgeStat } from './face';
 
 /**
- * A family's colour as a card's frame wears it: the hue its paper is turned to, in degrees, the
+ * A kind's colour as a card's frame wears it: the hue its paper is turned to, in degrees, the
  * saturation that paper's own is scaled by, and how much its lightness is scaled by.
  */
-export type FamilyColour = {
+export type KindColour = {
   readonly hue: number;
   readonly saturation: number;
   readonly darkness: number;
@@ -145,8 +146,8 @@ export type Look = {
   readonly cardEdge: number;
   /** The ground of the badge reading a browse's stack's copies. */
   readonly copiesBadge: number;
-  /** Each family's colour, on the frame of every card of that family. */
-  readonly cardFamily: Readonly<Record<CardFamily, FamilyColour>>;
+  /** Each kind's colour, on the frame of every card of that kind. */
+  readonly cardKind: Readonly<Record<CardKind, KindColour>>;
   /** The ink a card's name reads in on its plate. */
   readonly cardNameInk: number;
   /** The ink a card's text reads in on its paper, and its kind label. */
@@ -283,11 +284,13 @@ export const LOOK: Look = {
   modeButtonEdge: 0x5c6068,
   cardEdge: 0x6f757d,
   copiesBadge: 0x232833,
-  cardFamily: {
+  cardKind: {
+    settle: { hue: 210, saturation: 0.06, darkness: 0.72 },
     unit: { hue: 46, saturation: 0.85, darkness: 0.84 },
     building: { hue: 176, saturation: 0.5, darkness: 0.52 },
     improvement: { hue: 70, saturation: 0.45, darkness: 0.58 },
-    'thing-done': { hue: 42, saturation: 0.14, darkness: 1.12 },
+    action: { hue: 42, saturation: 0.14, darkness: 1.12 },
+    instant: { hue: 42, saturation: 0.14, darkness: 1.12 },
     hazard: { hue: 356, saturation: 0.78, darkness: 0.6 },
     challenge: { hue: 344, saturation: 0.6, darkness: 0.38 },
     trophy: { hue: 38, saturation: 0.7, darkness: 0.78 },

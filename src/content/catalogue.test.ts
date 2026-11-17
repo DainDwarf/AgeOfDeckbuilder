@@ -34,6 +34,7 @@ import {
 import type { Landed } from '../rules/stages';
 import { type Chronicle, keysDealt, type Rewards } from '../rules/state';
 import { yieldParts } from '../rules/yields';
+import { CARDS_SHEET, frontOf } from '../ui/card-frames';
 import {
   answerLinesOfCase,
   answerName,
@@ -177,6 +178,16 @@ test('every card of the catalogue has a name, and a text on its face read at the
   for (const id of Object.keys(CATALOGUE.cards)) {
     expect(() => cardName(id)).not.toThrow();
     expect(() => rulesAsDrawn(id)).not.toThrow();
+  }
+});
+
+test('every card of the catalogue wears a front and a shadow the cards sheet makes', () => {
+  const made = new Set((CARDS_SHEET.made ?? []).map(({ frame }) => frame));
+  for (const id of Object.keys(CATALOGUE.cards)) {
+    const { frame, shadow } = frontOf(cardFaceAtStart(CATALOGUE, id, undefined).front);
+
+    expect(made).toContain(frame);
+    expect(made).toContain(shadow);
   }
 });
 

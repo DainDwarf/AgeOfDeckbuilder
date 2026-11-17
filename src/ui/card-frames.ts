@@ -1,5 +1,6 @@
-import type { BadgeStat, CardFamily } from './face';
-import { type FamilyColour, LOOK } from './look';
+import { CARD_KINDS, type CardKind } from '../rules/cards';
+import type { BadgeStat, CardFront, FrontWindow } from './face';
+import { type KindColour, LOOK } from './look';
 import { blankCanvas, type InSheet, type Made, type Sheet } from './sheet';
 
 /** The folder chicogames' pack stands in, under the assets folder. */
@@ -23,8 +24,8 @@ type PackBox = {
 export type PackPoint = { readonly x: number; readonly y: number };
 
 /**
- * One of the pack's plain fronts: its file and its size; where its body's corner lies in it; how far
- * its frame rises above the body; its window, its paper and the middle of its first cost's disc.
+ * One of the pack's fronts: its file and its size; where its body's corner lies in it; how far its
+ * frame rises above the body; its window, its paper and the middle of its first cost's disc.
  */
 type Front = {
   readonly file: string;
@@ -36,9 +37,6 @@ type Front = {
   readonly paper: PackBox;
   readonly cost: PackPoint;
 };
-
-/** The two windows a front is drawn with. */
-type FrontWindow = 'arched' | 'oval';
 
 const FRONTS: Readonly<Record<FrontWindow, Front>> = {
   arched: {
@@ -62,6 +60,9 @@ const FRONTS: Readonly<Record<FrontWindow, Front>> = {
     cost: { x: 60, y: 34 },
   },
 };
+
+/** The decorated front, laid out as the plain oval one is, its outline the plain oval one's. */
+const DECORATED: Front = { ...FRONTS.oval, file: `${PACK}/0 - Front/Card 2 - Blue.png` };
 
 /** The back, and where its body's corner lies in its file. */
 export const BACK = { file: `${PACK}/0 - Back/Back - 2.png`, body: { x: 17, y: 15 } };
@@ -141,30 +142,44 @@ export const HIGHEST_RISE = Math.max(
 /** How far a front's body corners are rounded. */
 export const BODY_RADIUS = 33;
 
-/** The window a card of the family wears: the oval on one that places a thing, the arched on the rest. */
-function windowOf(family: CardFamily): FrontWindow {
-  switch (family) {
+/**
+ * The windows a plain front of the kind is drawn with: a unit card's play always places its unit, and
+ * a hazard's and a challenge's never place a thing.
+ */
+function windowsOf(kind: CardKind): readonly FrontWindow[] {
+  switch (kind) {
     case 'unit':
-    case 'building':
-    case 'improvement':
-      return 'oval';
-    case 'thing-done':
+      return ['oval'];
     case 'hazard':
     case 'challenge':
+      return ['arched'];
+    case 'settle':
+    case 'building':
+    case 'improvement':
+    case 'action':
+    case 'instant':
     case 'trophy':
-      return 'arched';
+      return ['arched', 'oval'];
   }
 }
 
 /**
- * The front a card of the family wears, the frame of the cards sheet it is drawn from, and the frame
- * its shadow is.
+ * The pack's front a card's front is drawn off, the frame of the cards sheet it is drawn from, and
+ * the frame its shadow is.
  */
 export function frontOf(
-  family: CardFamily,
+  front: CardFront,
 ): Front & { readonly frame: string; readonly shadow: string } {
-  const window = windowOf(family);
-  return { ...FRONTS[window], frame: `front-${family}`, shadow: shadowFrameOf(window) };
+  switch (front.front) {
+    case 'plain':
+      return {
+        ...FRONTS[front.window],
+        frame: `front-${front.kind}-${front.window}`,
+        shadow: shadowFrameOf(front.window),
+      };
+    case 'decorated':
+      return { ...DECORATED, frame: 'front-decorated', shadow: shadowFrameOf('oval') };
+  }
 }
 
 /** The frame of the cards sheet the shadow of a front of that window is. */
@@ -263,9 +278,24 @@ function toHsl(red: number, green: number, blue: number): [number, number, numbe
   return [sector * 60, saturation, lightness];
 }
 
-/** The colour a window holding no painting shows: its family's hue, pale. */
-export function paleOf(family: CardFamily): number {
-  const { hue, saturation } = LOOK.cardFamily[family];
+/** The hue, saturation and lightness of the pixel at that index, as `toHsl` reads them. */
+function hslAt(pixels: Uint8ClampedArray, at: number): [number, number, number] {
+  return toHsl(pixels[4 * at] / 0xff, pixels[4 * at + 1] / 0xff, pixels[4 * at + 2] / 0xff);
+}
+
+/** The colour a front is turned to: its kind's, and the settle cards' on the decorated front. */
+function colourOf(front: CardFront): KindColour {
+  switch (front.front) {
+    case 'plain':
+      return LOOK.cardKind[front.kind];
+    case 'decorated':
+      return LOOK.cardKind.settle;
+  }
+}
+
+/** The colour a window holding no painting shows: its front's hue, pale. */
+export function paleOf(front: CardFront): number {
+  const { hue, saturation } = colourOf(front);
   const [red, green, blue] = fromHsl(hue, Math.min(0.45, saturation * 0.55), 0.82);
   const channel = (value: number): number => Math.round(value * 0xff);
   return (channel(red) << 16) | (channel(green) << 8) | channel(blue);
@@ -277,11 +307,7 @@ export function paleOf(family: CardFamily): number {
  */
 function rimAt(pixels: Uint8ClampedArray, at: number): boolean {
   if (pixels[4 * at + 3] < 0xff) return true;
-  const [hue, saturation, lightness] = toHsl(
-    pixels[4 * at] / 0xff,
-    pixels[4 * at + 1] / 0xff,
-    pixels[4 * at + 2] / 0xff,
-  );
+  const [hue, saturation, lightness] = hslAt(pixels, at);
   return (
     lightness < 0.1 ||
     (hue >= 165 && hue <= 265 && saturation > 0.06) ||
@@ -327,15 +353,49 @@ function paperOf(
   return paper;
 }
 
-/** Every pixel of the paper turned to the family's colour, its grain kept. */
-function turned(pixels: Uint8ClampedArray, paper: Uint8Array, colour: FamilyColour): void {
-  paper.forEach((onPaper, at) => {
-    if (onPaper === 0) return;
-    const [, saturation, lightness] = toHsl(
-      pixels[4 * at] / 0xff,
-      pixels[4 * at + 1] / 0xff,
-      pixels[4 * at + 2] / 0xff,
-    );
+/**
+ * The decorated front's body, its flames and its outer rim with it: its blue, where its gold and its
+ * paper lie far off in hue.
+ */
+function bodyOf(pixels: Uint8ClampedArray): Uint8Array {
+  return Uint8Array.from({ length: pixels.length / 4 }, (_, at) => {
+    const [hue, saturation] = hslAt(pixels, at);
+    return saturation >= 0.15 && hue >= 170 && hue <= 260 ? 1 : 0;
+  });
+}
+
+/** The mean saturation and lightness of the pixels the mask holds. */
+function meanOf(
+  pixels: Uint8ClampedArray,
+  mask: Uint8Array,
+): { readonly saturation: number; readonly lightness: number } {
+  let count = 0;
+  let saturations = 0;
+  let lightnesses = 0;
+  mask.forEach((held, at) => {
+    if (held === 0) return;
+    const [, saturation, lightness] = hslAt(pixels, at);
+    count += 1;
+    saturations += saturation;
+    lightnesses += lightness;
+  });
+  return { saturation: saturations / count, lightness: lightnesses / count };
+}
+
+/**
+ * Every pixel the mask holds turned to the colour, its grain kept, its own saturation and lightness
+ * read as `seen` reads them.
+ */
+function turned(
+  pixels: Uint8ClampedArray,
+  mask: Uint8Array,
+  colour: KindColour,
+  seen: (saturation: number, lightness: number) => readonly [number, number] = (...own) => own,
+): void {
+  mask.forEach((held, at) => {
+    if (held === 0) return;
+    const [, ownSaturation, ownLightness] = hslAt(pixels, at);
+    const [saturation, lightness] = seen(ownSaturation, ownLightness);
     const rgb = fromHsl(
       colour.hue,
       Math.min(1, colour.saturation * (0.75 + saturation)),
@@ -349,39 +409,81 @@ function turned(pixels: Uint8ClampedArray, paper: Uint8Array, colour: FamilyColo
 /** The key of the sheet every front, the back, the plate, the disc and the badges are drawn into. */
 export const CARDS_SHEET_KEY = 'cards';
 
+/** A painting of a sheet drawn alone on a canvas of its size. */
+function drawnAlone(from: InSheet): CanvasRenderingContext2D {
+  const on = blankCanvas(from.width, from.height);
+  on.drawImage(from.canvas, from.x, from.y, from.width, from.height, 0, 0, from.width, from.height);
+  return on;
+}
+
 /** A painting of a sheet drawn from the context's top-left corner, its pixels changed by `change` first. */
 function paintChanged(
   context: CanvasRenderingContext2D,
   from: InSheet,
   change: (pixels: Uint8ClampedArray) => void,
 ): void {
-  const on = blankCanvas(from.width, from.height);
-  on.drawImage(from.canvas, from.x, from.y, from.width, from.height, 0, 0, from.width, from.height);
+  const on = drawnAlone(from);
   const image = on.getImageData(0, 0, from.width, from.height);
   change(image.data);
   on.putImageData(image, 0, 0);
   context.drawImage(on.canvas, 0, 0);
 }
 
-/** The plain front of each family, its paper turned to the family's colour off the pack's file. */
+/**
+ * Every plain front a card can wear, its paper turned to its kind's colour off the pack's file; and
+ * the decorated front, its body turned to the settle cards' colour as the plain oval paper is, its
+ * lightness brought to where that paper's stands.
+ */
 function frontsMade(): Made[] {
   const papers = new Map<string, Uint8Array>();
-  return (Object.keys(LOOK.cardFamily) as CardFamily[]).map((family) => {
-    const { file, width, height, body, frame } = frontOf(family);
-    return {
-      frame,
-      width,
-      height,
+  const paperIn = (pixels: Uint8ClampedArray, { file, width, height, body }: Front): Uint8Array => {
+    const paper = papers.get(file) ?? paperOf(pixels, width, height, body);
+    papers.set(file, paper);
+    return paper;
+  };
+  const plain = CARD_KINDS.flatMap((kind) =>
+    windowsOf(kind).map((window): Made => {
+      const front: CardFront = { front: 'plain', kind, window };
+      const shape = frontOf(front);
+      return {
+        frame: shape.frame,
+        width: shape.width,
+        height: shape.height,
+        paint: (context, paintingIn) =>
+          paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) =>
+            turned(pixels, paperIn(pixels, shape), colourOf(front)),
+          ),
+      };
+    }),
+  );
+  const decorated: CardFront = { front: 'decorated' };
+  const shape = frontOf(decorated);
+  const oval = FRONTS.oval;
+  return [
+    ...plain,
+    {
+      frame: shape.frame,
+      width: shape.width,
+      height: shape.height,
       paint: (context, paintingIn) => {
-        const from = paintingIn(CARDS_SHEET_KEY, file);
-        paintChanged(context, from, (pixels) => {
-          const paper = papers.get(file) ?? paperOf(pixels, from.width, from.height, body);
-          papers.set(file, paper);
-          turned(pixels, paper, LOOK.cardFamily[family]);
+        const { data } = drawnAlone(paintingIn(CARDS_SHEET_KEY, oval.file)).getImageData(
+          0,
+          0,
+          oval.width,
+          oval.height,
+        );
+        const paper = meanOf(data, paperIn(data, oval));
+        paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) => {
+          const body = bodyOf(pixels);
+          const { lightness } = meanOf(pixels, body);
+          turned(pixels, body, colourOf(decorated), (_saturation, own) => [
+            paper.saturation,
+            (own * paper.lightness) / lightness,
+          ]);
         });
       },
-    };
-  });
+    },
+  ];
 }
 
 /**
@@ -434,12 +536,13 @@ function badgesMade(): Made[] {
   });
 }
 
-/** The sheet the pack's files, every family's front and the badges are drawn into. */
+/** The sheet the pack's files, every front a card wears and the badges are drawn into. */
 export const CARDS_SHEET: Sheet = {
   key: CARDS_SHEET_KEY,
   files: [
     FRONTS.arched.file,
     FRONTS.oval.file,
+    DECORATED.file,
     BACK.file,
     PLATE.file,
     DISC.file,
