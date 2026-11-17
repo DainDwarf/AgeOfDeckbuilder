@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A building's card reads its building** — a card that places a building or an improvement, the settle card among them, reads on its face a row of marks of what it goes on at the window's foot and what its thing gives and takes as glyphs, in place of a sentence naming it; every face's text has three lines of room; the monument's three cards are building cards, each adding the next to the discard pile, and the monument takes no upkeep; `e2e/card-reads.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`, `docs/MAP-SCREEN.md`, `docs/CHRONICLE.md`, `docs/ages/STONE.md`, `docs/GLOSSARY.md`. [board/a-buildings-card-reads-its-building.md](board/a-buildings-card-reads-its-building.md)
 - **A unit's card reads its unit** — a unit card reads on its face its unit's stats, health, move, range and the rest, with a place for the terrains the unit crosses, in place of a sentence naming it.
 - **The other cards' texts** — the text of every card that places nothing gone through one by one with the user, population, influence and a unit's stat marked as glyphs where they read better.
 - **The texts overflowing the card face** — the card texts that still pass the three lines a face's text has, Floodplain the longest, and a name wider than its plate ("Misunderstandings") are inspected one by one, and the text is rewritten, the box changed or given a scroll, through mockups.

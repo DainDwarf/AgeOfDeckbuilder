@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { buildingKind } from '../src/rules/map-kinds';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { answerShown } from '../src/ui/event-text';
@@ -12,6 +13,7 @@ import {
   civilizationOpened,
   cursorOverCanvas,
   firstDealtAlone,
+  kindLabelOnScreen,
   launchedAs,
   liftedName,
   namedIn,
@@ -183,13 +185,13 @@ test('a card named on a card shown large stands over it at a right click on the 
   expect(problems).toEqual([]);
 });
 
-test('a building named on the settle card raises its card small at a rest and shows it large at a right click, alone or on top of the settle card shown large', async ({
+test('a terrain marked on the settle card raises its card small at a rest and shows it large at a right click, alone or on top of the settle card shown large', async ({
   page,
 }) => {
   const problems = watch(page);
   const { city: section } = civilizationOpened();
   const settle = section.card;
-  const city = { kind: 'building', id: section.building };
+  const marked = { kind: 'terrain', id: buildingKind(CATALOGUE, section.building).terrains[0] };
 
   await openSaved(page, launchedAs(1));
   const opened = await chronicleOf(page);
@@ -200,13 +202,13 @@ test('a building named on the settle card raises its card small at a rest and sh
   await page.mouse.move(card.x, card.y);
   const name = await liftedName(page, lying);
   await page.mouse.move(name.x, name.y, { steps: 5 });
-  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(city);
+  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(marked);
   expect(await cardOnFace(page, 'small-card-0')).toBeUndefined();
 
   const small = await onScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await waitGameClock(page, PAST_HANDOVER);
-  expect(await referenceOnFace(page, 'small-card-0')).toEqual(city);
+  expect(await referenceOnFace(page, 'small-card-0')).toEqual(marked);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const menu = await onScreen(page, 'menu-button');
@@ -216,12 +218,15 @@ test('a building named on the settle card raises its card small at a rest and sh
   await page.mouse.move(card.x, card.y, { steps: 5 });
   const again = await liftedName(page, lying);
   await page.mouse.click(again.x, again.y, { button: 'right' });
-  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(city);
+  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(marked);
   expect(await standing(page, 'inspection-0')).toBe(false);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
 
-  await page.mouse.click(card.x, card.y, { button: 'right' });
+  // A mark may stand on the card's middle: the card is right-clicked on its kind label, a name nowhere.
+  const lifted = await kindLabelOnScreen(page, 'hand-0');
+  await page.mouse.move(lifted.x, lifted.y, { steps: 5 });
+  await page.mouse.click(lifted.x, lifted.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(settle);
   await rested(page);
   const named = await nameOnScreen(page, 'inspection');
@@ -229,7 +234,7 @@ test('a building named on the settle card raises its card small at a rest and sh
   await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
 
   await page.mouse.click(named.x, named.y, { button: 'right' });
-  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(city);
+  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(marked);
   expect(await cardOnFace(page, 'inspection-0')).toBe(settle);
 
   await page.keyboard.press('Escape');

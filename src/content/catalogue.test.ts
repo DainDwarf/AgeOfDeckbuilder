@@ -42,6 +42,7 @@ import {
   capstoneName,
   eventName,
 } from '../ui/event-text';
+import { cardFaceAtStart } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -59,7 +60,6 @@ import {
   ageName,
   buildingName,
   cardName,
-  cardRules,
   civilizationName,
   defeatLine,
   featureName,
@@ -161,15 +161,19 @@ const CITIES = [
 const CITY_CARDS = new Set(Object.values(CATALOGUE.civilizations).map(({ city }) => city.card));
 
 /**
- * A card's rules entry read at the counters it starts with, under each city's building, and under no
- * city section for a card no city section holds.
+ * The text a card's face reads at the counters it starts with, under each city's building, and under
+ * no city section for a card no city section holds, each thing it marks at its window's foot named.
  */
 function rulesAsDrawn(id: string): string[] {
   const cities = CITY_CARDS.has(id) ? CITIES : [...CITIES, undefined];
-  return cities.map((city) => cardRules(cardMade(CATALOGUE, id), city));
+  return cities.map((city) => {
+    const face = cardFaceAtStart(CATALOGUE, id, city);
+    for (const mark of face.goesOn) if (mark.kind !== 'river') referenceName(mark);
+    return face.rules;
+  });
 }
 
-test('every card of the catalogue has a name, and a rules entry read at the counters it starts with under each city’s building, and under no city section for a card no city section holds, on the screen', () => {
+test('every card of the catalogue has a name, and a text on its face read at the counters it starts with under each city’s building, and under no city section for a card no city section holds, and a name for each thing it marks, on the screen', () => {
   for (const id of Object.keys(CATALOGUE.cards)) {
     expect(() => cardName(id)).not.toThrow();
     expect(() => rulesAsDrawn(id)).not.toThrow();

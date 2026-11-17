@@ -386,13 +386,11 @@ test('on the discard pile’s top card a rest on a name raises the named thing s
   const opened = firstSeed('ends its first turn on a card naming a thing', (seed) => {
     const ended = endedTurn(settledOn(seed));
     const top = ended.discardPile.at(-1);
-    return top !== undefined && namedIn(cardRules(top, ended.citySection.building)).length > 0
-      ? ended
-      : undefined;
+    return top !== undefined && namedIn(cardRules(top)).length > 0 ? ended : undefined;
   });
   const top = opened.discardPile[opened.discardPile.length - 1];
   const city = opened.citySection.building;
-  const [named] = namedIn(cardRules(top, city));
+  const [named] = namedIn(cardRules(top));
   await openSaved(page, opened);
 
   const face = 'discard-pile-top';

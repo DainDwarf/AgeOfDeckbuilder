@@ -1,8 +1,8 @@
 import type { MadeCard } from '../rules/state';
 import type { Reference } from './text-run';
 
-// A `rules.` or `goal.` entry, `plate.cards` and `plate.building`, and an answer's or a capstone's
-// text (`event-text.ts`) may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind
+// A `rules.`, `face.` or `goal.` entry, `plate.cards` and `plate.building`, and an answer's or a
+// capstone's text (`event-text.ts`) may mark a glyph `[<resource>]` and a name `[<kind>:<id>]`, a kind
 // `REFERENCE_KINDS` lists, which only a card face, a plate and an answer draw: elsewhere the mark shows.
 /**
  * Every player-facing sentence but the lore (`lore.ts`) and the events' (`event-text.ts`), one entry
@@ -50,7 +50,7 @@ const TEXT = {
   'terrain.desert': 'Desert',
   'panel.river': 'River',
   'panel.crossing': 'Crossing ends the move',
-  'panel.beside': 'And {terrain} beside it',
+  'panel.beside': 'And {terrain} in range',
   'panel.upkeep': 'Upkeep',
   'panel.movement': 'Mv {cost}',
   'panel.no-movement': 'Mv —',
@@ -120,7 +120,7 @@ const TEXT = {
   'unit-state.hostile': 'Hostile',
   'unit-state.joined': '{one} · {other}',
   'card.settle': 'Settlement', // glossary exception: settlement
-  'rules.settle': 'Place the [building:{building}]',
+  'rules.settle': 'Settle your city',
   'card.first-worker': 'Worker',
   'rules.first-worker': 'Place a [player:worker]',
   'card.first-scout': 'Scout',
@@ -152,24 +152,23 @@ const TEXT = {
   'card.bone-carvings': 'Bone carvings',
   'rules.bone-carvings': '2[culture]',
   'card.farm': 'Farm',
-  'rules.farm': 'Build [building:farm] on [terrain:plain]',
+  'rules.farm': '',
   'card.trapping': 'Trapping',
-  'rules.trapping': 'Place [improvement:trapping] on [feature:deer]',
+  'rules.trapping': '',
   'card.irrigation': 'Irrigation',
-  'rules.irrigation':
-    'Place [improvement:irrigation] on [terrain:plain] or [terrain:desert] along a river',
+  'rules.irrigation': '',
   'card.pasture': 'Pasture',
-  'rules.pasture': 'Place [improvement:pasture] on [feature:cattle]',
+  'rules.pasture': '',
   'card.archer': 'Archer',
   'rules.archer': 'Place a [player:archer]',
   'card.clay-pit': 'Clay pit',
-  'rules.clay-pit': 'Place [improvement:clay-pit] on [terrain:hills]',
+  'rules.clay-pit': '',
   'card.calendar': 'Calendar', // glossary exception: calendar
   'rules.calendar': 'Show the turn of the next event', // glossary exception: calendar
   'card.bread': 'Bread',
   'rules.bread': 'Gain 2[culture]',
   'card.tannery': 'Tannery',
-  'rules.tannery': 'Build [building:tannery] on [feature:deer] or [feature:cattle]',
+  'rules.tannery': '',
   'card.fire': 'Fire',
   'rules.fire': 'Discard another card. Gain 1[science]',
   'card.heal': 'Heal',
@@ -183,7 +182,7 @@ const TEXT = {
   'card.goods-trade': 'Goods trade',
   'rules.goods-trade': 'Gain 3[production]',
   'card.fishery': 'Fishery',
-  'rules.fishery': 'Build [building:fishery] on [terrain:coast]',
+  'rules.fishery': '',
   'card.stone-cave-paintings': 'Cave paintings',
   'rules.stone-cave-paintings': '4[culture]',
   'card.old-stories': 'Old stories',
@@ -205,8 +204,7 @@ const TEXT = {
   'card.their-stores': 'Their stores',
   'rules.their-stores': '2[food] 2[production] 2[military] 2[money] 2[science]',
   'card.megalith': 'Megalith',
-  'rules.megalith':
-    'Build [building:megalith] on [terrain:plain], [terrain:hills] or [terrain:desert]',
+  'rules.megalith': '',
   'card.floodplain': 'Floodplain',
   'rules.floodplain':
     'Removes one improvement near your city, a building inside your border once none stands, your city last',
@@ -226,13 +224,11 @@ const TEXT = {
   'card.cold-night': 'Cold night',
   'rules.cold-night': 'Kills one population',
   'card.foundations': 'Foundations',
-  'rules.foundations':
-    'Build [building:foundations] on [terrain:plain], [terrain:hills] or [terrain:desert].\nAdd [card:great-stones] to the discard pile',
+  'rules.foundations': 'Add [card:great-stones] to the discard pile',
   'card.great-stones': 'Great stones',
-  'rules.great-stones':
-    'Build [building:great-stones] on [building:foundations].\nAdd [card:ornaments] to the discard pile',
+  'rules.great-stones': 'Add [card:ornaments] to the discard pile',
   'card.ornaments': 'Ornaments',
-  'rules.ornaments': 'Build [building:monument] on [building:great-stones]. Win the Stone Age',
+  'rules.ornaments': 'Win the Stone Age',
   'card.unrest': 'Unrest',
   'rules.unrest': 'Takes 2[culture]',
   'card.thieves': 'Thieves',
@@ -244,6 +240,10 @@ const TEXT = {
   'aim.unit': 'Play {card} at a unit',
   'aim.hand': 'Play {card} at a card of the hand',
   'aim.yield': '+',
+  'face.gives': '+',
+  'face.takes': '−',
+  'face.in-range': '{gives} on [terrain:{terrain}] in range',
+  'face.in-range-taking': '{gives} on [terrain:{terrain}] in range, {takes}',
   'refusal.food': 'Costs {cost} food',
   'refusal.production': 'Costs {cost} production',
   'refusal.military': 'Costs {cost} military',
@@ -529,13 +529,11 @@ export function referenceName(reference: Reference): string {
 }
 
 /**
- * What a card's rules entry reads on the screen, filled with the counters the card carries and the
- * building of the city section it is drawn under, where it is drawn under one; a card no entry names
- * is refused, and so is an entry reading a city's building where none is handed.
+ * What a card's rules entry reads on the screen, filled with the counters the card carries; a card no
+ * entry names is refused.
  */
-export function cardRules(card: MadeCard, city: string | undefined): string {
-  const values = city === undefined ? card.counters : { ...card.counters, building: city };
-  return named('rules', card.id, 'the card', values);
+export function cardRules(card: MadeCard): string {
+  return named('rules', card.id, 'the card', card.counters);
 }
 
 /** The line the victory screen reads for passing a capstone; a capstone no entry names is refused. */

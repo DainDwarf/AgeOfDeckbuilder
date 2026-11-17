@@ -142,10 +142,10 @@ export type Aim =
        */
       readonly worker?: true;
       /**
-       * What the play places on the tile: set by `builds`, `placesImprovement`, `entersOn` and
-       * `settlesCity` alone.
+       * What the play places on the tile, and which: it must name what the effect places, so the
+       * helper that writes the effect writes it.
        */
-      readonly places?: PlacedThing;
+      readonly places?: Placing;
       readonly refuses: (
         catalogue: Catalogue,
         chronicle: Chronicle,
@@ -296,11 +296,22 @@ export function influenceOf(card: Card): number | undefined {
 /** What a card's play can place: a unit, a building or an improvement. */
 export type PlacedThing = 'unit' | 'building' | 'improvement';
 
-/** What a card's play places, and nothing for a card whose play places none. */
-export function placedBy(card: Card): PlacedThing | undefined {
+/**
+ * What a card's play places, and which: a unit; a building of that kind, built over the one `over`
+ * names where it names one; the city section's building, which the chronicle names; or an improvement
+ * of that kind.
+ */
+export type Placing =
+  | { readonly thing: 'unit' }
+  | { readonly thing: 'building'; readonly building: string; readonly over?: string }
+  | { readonly thing: 'city' }
+  | { readonly thing: 'improvement'; readonly improvement: string };
+
+/** What a card's play places, and which, and nothing for a card whose play places none. */
+export function placingOf(card: Card): Placing | undefined {
   switch (card.kind) {
     case 'unit':
-      return 'unit';
+      return { thing: 'unit' };
     case 'settle':
     case 'building':
     case 'action':
@@ -313,14 +324,32 @@ export function placedBy(card: Card): PlacedThing | undefined {
   }
 }
 
+/** What a placing places: the city section's building being a building. */
+function placedThingOf(placing: Placing): PlacedThing {
+  switch (placing.thing) {
+    case 'unit':
+    case 'building':
+    case 'improvement':
+      return placing.thing;
+    case 'city':
+      return 'building';
+  }
+}
+
+/** What a card's play places, and nothing for a card whose play places none. */
+export function placedBy(card: Card): PlacedThing | undefined {
+  const placing = placingOf(card);
+  return placing === undefined ? undefined : placedThingOf(placing);
+}
+
 /** Whether what a play places lies on the tile's ground: a building or an improvement. */
-export function placedOnGround(placed: PlacedThing | undefined): boolean {
-  switch (placed) {
+export function placedOnGround(placing: Placing | undefined): boolean {
+  if (placing === undefined) return false;
+  switch (placedThingOf(placing)) {
     case 'building':
     case 'improvement':
       return true;
     case 'unit':
-    case undefined:
       return false;
   }
 }

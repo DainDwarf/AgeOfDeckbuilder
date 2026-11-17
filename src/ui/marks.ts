@@ -129,6 +129,7 @@ export const FACE_SHEET: Sheet = {
     ...Object.values(CLEARINGS).flat(),
   ],
   side: 4096,
+  rowGap: 16,
 };
 
 /**
@@ -359,14 +360,15 @@ export const UNIT_SHEET: Sheet = {
 };
 
 /**
- * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, an
- * attack that would kill, what a prepare lands as, a faction, a site, or a card nothing plays.
+ * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
+ * an attack that would kill, what a prepare lands as, a faction, a site, or a card nothing plays.
  */
 export type CastSymbol =
   | Resource
   | 'population'
   | 'influence'
   | 'health'
+  | 'range'
   | 'killed'
   | PreparedAs
   | Faction
@@ -384,6 +386,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   population: 'material-design-icons/account.svg',
   influence: 'material-design-icons/star.svg',
   health: 'material-design-icons/heart.svg',
+  range: 'material-design-icons/target.svg',
   killed: 'game-icons/death-skull.svg',
   pillage: 'game-icons/fire.svg',
   capture: 'material-design-icons/flag-variant.svg',

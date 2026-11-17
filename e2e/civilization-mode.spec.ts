@@ -201,7 +201,8 @@ test('in the civilization mode a right click on a stack or on the city sectionâ€
     ['civilization-city', OWNED.city.card.id],
     [`civilization-card-${id}`, id],
   ]) {
-    const at = await onScreen(page, face);
+    // A mark may stand on a card's middle: the card is right-clicked on its kind label, a name nowhere.
+    const at = await kindLabelOnScreen(page, face);
     await page.mouse.click(at.x, at.y, { button: 'right' });
     await expect.poll(() => cardOnFace(page, 'inspection')).toBe(card);
     await rested(page);
@@ -228,7 +229,12 @@ test('in the civilization mode the pointer is the hand over Collection Â» and ov
 
   expect(await cursorAt(page, await onScreen(page, 'collection-to-deck-editing'))).toBe(HAND);
   expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe(HAND);
-  expect(await cursorAt(page, await onScreen(page, 'civilization-city'))).toBe('');
+  // The marks of what the city section's card goes on stand at its window's foot and react, so its
+  // art is read above them.
+  const city = (await readings(page, ['civilization-city']))('civilization-city').boundsOnScreen;
+  expect(await cursorAt(page, { x: city.x + city.width / 2, y: city.y + city.height / 4 })).toBe(
+    '',
+  );
   const at = await onScreen(page, face);
   expect(await cursorAt(page, at)).toBe('');
 

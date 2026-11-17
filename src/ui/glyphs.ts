@@ -36,6 +36,7 @@ function colourOf(symbol: CastSymbol): number {
       return LOOK.enemySignInk;
     case 'site':
       return LOOK.siteSignInk;
+    case 'range':
     case 'played-by-nothing':
       return LOOK.cardDiscInk;
   }
@@ -64,6 +65,7 @@ function outlineOf(scene: Phaser.Scene, symbol: CastSymbol, square: number): str
   };
   paintMade(
     scene.textures,
+    GLYPH_SHEET,
     sheet,
     aroundPicture(picture, frame, OUTLINE, (on, alpha, pixels) => {
       const { width, height } = on.canvas;

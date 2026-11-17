@@ -719,7 +719,7 @@ export function entersOn(type: string): Aim & { readonly aim: 'tile' } {
       ),
     effect: (catalogue, paid, at) =>
       entered(catalogue, paid, { type, faction: 'player', tile: { q: at.q, r: at.r } }),
-    places: 'unit',
+    places: { thing: 'unit' },
   };
 }
 
@@ -738,7 +738,7 @@ export function builds(building: string, over?: string): Aim & { readonly aim: '
         ),
       (catalogue, paid, at) => built(catalogue, paid, at, building),
     ),
-    places: 'building',
+    places: { thing: 'building', building, over },
   };
 }
 
@@ -757,7 +757,7 @@ export function placesImprovement(improvement: string): Aim & { readonly aim: 't
         ),
       (catalogue, paid, at) => improvementPlaced(catalogue, paid, at, improvement),
     ),
-    places: 'improvement',
+    places: { thing: 'improvement', improvement },
   };
 }
 
@@ -828,7 +828,7 @@ export function settlesCity(
       readied === undefined
         ? settled(catalogue, paid, at)
         : followed(readied(catalogue, paid, at), (left) => settled(catalogue, left, at)),
-    places: 'building',
+    places: { thing: 'city' },
   };
 }
 

@@ -19,6 +19,7 @@ import {
   addText,
   cutTexts,
   DESIGN_HEIGHT,
+  inked,
   MARGIN,
   onClick,
   onHover,
@@ -28,10 +29,25 @@ import {
   type SizedStyle,
   UI_FONT,
 } from './design-space';
-import { type AnswerReading, type CardFamily, type Face, kindLabel, kindTooltip } from './face';
+import {
+  type AnswerReading,
+  type CardFamily,
+  type Face,
+  kindLabel,
+  kindTooltip,
+  numbersRun,
+} from './face';
 import { asGlyph, glyphMark } from './glyphs';
 import { css, LOOK, multiplied, type Tone, unworn } from './look';
 import type { CastSymbol } from './marks';
+import {
+  GOES_ON_GAP,
+  GOES_ON_SIZE,
+  goesOnMarkOf,
+  numbersRowOf,
+  showGoesOn,
+  showNumbers,
+} from './placed-marks';
 import { poolOf, rootedPoolOf, zonePoolOf } from './pool';
 import { referenceName, text } from './text';
 import { layOutRun, type Reference, type Run } from './text-run';
@@ -105,9 +121,12 @@ function capitalsOf(label: Phaser.GameObjects.Text): number {
   return rise;
 }
 
+/** How far over the plate's upper edge the middle of a mark of what a card goes on stands, in units of a card wherever it stands but large. */
+const GOES_ON_OVER_PLATE = 10.5;
+
 /**
- * A name a rules entry draws, which a face carries in its data as `names`: what it names, the
- * reading of the text it stands in, and its box.
+ * A name a rules entry draws, or a mark at the foot of a face's window, which a face carries in its
+ * data as `names`: what it names, the reading of the text it stands in, and its box.
  */
 export type Name = {
   readonly reference: Reference;
@@ -116,7 +135,7 @@ export type Name = {
   readonly x: number;
   readonly y: number;
   readonly width: number;
-  /** The run's line height. */
+  /** The run's line height, or the mark's. */
   readonly height: number;
 };
 
@@ -151,10 +170,14 @@ export function spotOn(container: Phaser.GameObjects.Container, name: Name): Spo
 /** A glyph a run marks, a side of its square, as a share of the run's type. */
 export const GLYPH_SHARE = 2 / 3;
 
-/** A label drawn as a run, and the run its entry was last laid out as. */
+/**
+ * A label drawn as a run, the run its entry was last laid out as, and how tall another entry would
+ * stand laid out as the label lays out its own.
+ */
 export type RunLabel = {
   readonly label: Phaser.GameObjects.Text;
   readonly run: Run;
+  heightOf(entry: string): number;
 };
 
 /**
@@ -168,19 +191,22 @@ export function addRun(
   width: number,
 ): RunLabel {
   const size = Number.parseFloat(style.fontSize);
+  const laidOut = (content: string, context: CanvasRenderingContext2D): Run => {
+    const measure = (drawn: string): number => context.measureText(drawn).width;
+    return layOutRun(
+      content,
+      measure,
+      { width, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
+      referenceName,
+    );
+  };
   // Phaser runs the callback from inside updateText, on a context whose font it has just synced.
   let run!: Run;
   const label = addText(scene, 0, 0, entry, {
     ...style,
     wordWrap: {
       callback: (content, textObject) => {
-        const measure = (drawn: string): number => textObject.context.measureText(drawn).width;
-        run = layOutRun(
-          content,
-          measure,
-          { width, glyph: GLYPH_SHARE * size, bearing: size / 4, space: measure(' ') },
-          referenceName,
-        );
+        run = laidOut(content, textObject.context);
         return run.content.split('\n');
       },
     },
@@ -189,6 +215,11 @@ export function addRun(
     label,
     get run() {
       return run;
+    },
+    heightOf(other: string): number {
+      const { ascent, descent } = label.getTextMetrics();
+      const lines = laidOut(other, label.context).widths.length;
+      return lines * (ascent + descent) + (lines - 1) * label.lineSpacing;
     },
   };
 }
@@ -223,6 +254,15 @@ export function centredMarks(
       height: pitch,
     })),
   };
+}
+
+/** A face's text with the numbers of what its thing gives and takes run in it, ahead of it. */
+function inlineOf({ gives, takes, rules }: Face): string {
+  const runs = [
+    ...(gives.length === 0 ? [] : [numbersRun('gives', gives)]),
+    ...(takes.length === 0 ? [] : [numbersRun('takes', takes)]),
+  ];
+  return [...runs, rules].join(' ');
 }
 
 /** What stands at a face's foot and raises a tooltip: the kind label, and the influence it gains. */
@@ -265,12 +305,6 @@ export type CardFace = {
    */
   explainFoot(tooltip: Tooltip, label: FootLabel): void;
 };
-
-/** A Text's ink, written where it moved: `setColor` redraws the Text whatever it is handed. */
-function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjects.Text {
-  const ink = css(colour);
-  return label.style.color === ink ? label : label.setColor(ink);
-}
 
 /**
  * The image of the front a card of the family wears, at a card that wide, its body's top-left corner
@@ -486,16 +520,38 @@ export function createCardFace(
   const rules = ruled.label.setOrigin(0.5).setName('rules');
   const plateEdge = (row: number): number => plate.y + (row - plate.height / 2) * plate.scaleY;
   const textTop = plateEdge(PLATE.edges.bottom) + size(TEXT_UNDER_PLATE);
+  const numbers = numbersRowOf(scene, width);
 
   const influence = discMarkOf(scene, width, discNumber);
   influence.number.setName('influence-label');
+  const range = discMarkOf(scene, width, discNumber);
 
   const signDisc = discOf(scene, width);
   const signGlyph = glyphMark(scene);
   const sign = scene.add.container(0, 0, [signDisc, signGlyph]);
 
-  root.add([shadow, window, front, plate, name, rules, kind, influence.root, sign]);
+  root.add([
+    shadow,
+    window,
+    front,
+    plate,
+    name,
+    rules,
+    numbers.root,
+    kind,
+    influence.root,
+    range.root,
+    sign,
+  ]);
 
+  const underPlate = {
+    scene,
+    add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(plate)),
+  };
+  const goesOn = rootedPoolOf(underPlate, () => goesOnMarkOf(scene, width));
+  const markAcross = size(GOES_ON_SIZE);
+  const markPitch = markAcross + size(GOES_ON_GAP);
+  const markY = plateEdge(PLATE.edges.top) - size(GOES_ON_OVER_PLATE);
   const underSign = {
     scene,
     add: (object: Phaser.GameObjects.GameObject) => root.addAt(object, root.getIndex(sign)),
@@ -555,9 +611,20 @@ export function createCardFace(
     const spacing = Math.min(0, (room - TEXT_LINES * (ascent + descent)) / (TEXT_LINES - 1));
     if (rules.lineSpacing !== spacing) rules.setLineSpacing(spacing);
 
+    const numbered = next.gives.length + next.takes.length > 0;
+    const inline =
+      numbered && next.rules !== '' && numbers.height + ruled.heightOf(next.rules) > room;
+    const reading = inline ? inlineOf(next) : next.rules;
+    const rowShown = numbered && !inline;
     inked(rules, textInk)
-      .setText(next.rules)
-      .setPosition(0, (textTop + textBottom) / 2);
+      .setText(reading)
+      .setVisible(reading !== '');
+    const rowTall = rowShown ? numbers.height : 0;
+    const textTall = reading === '' ? 0 : ownBoxOf(rules).height;
+    const blockTop = (textTop + textBottom - rowTall - textTall) / 2;
+    numbers.root.setVisible(rowShown).setPosition(0, blockTop + rowTall / 2);
+    if (rowShown) showNumbers(numbers, next.gives, next.takes, toned);
+    rules.setPosition(0, blockTop + rowTall + textTall / 2);
     const marks = centredMarks(ruled, {});
     glyphs.hide();
     for (const glyph of marks.glyphs) {
@@ -566,7 +633,26 @@ export function createCardFace(
         glyph.y,
       );
     }
-    names = marks.names;
+
+    goesOn.hide();
+    const marked: Name[] = [];
+    for (const [at, thing] of next.goesOn.entries()) {
+      const x = (at - (next.goesOn.length - 1) / 2) * markPitch;
+      const mark = goesOn.take();
+      showGoesOn(mark, thing, toned);
+      mark.root.setPosition(x, markY);
+      if (thing.kind !== 'river') {
+        marked.push({
+          reference: thing,
+          reading: {},
+          x,
+          y: markY,
+          width: markAcross,
+          height: markAcross,
+        });
+      }
+    }
+    names = [...marks.names, ...marked];
     root.setData({ card: next.id, names });
     layNameZones?.(names);
 
@@ -596,6 +682,19 @@ export function createCardFace(
       showDisc(influence, {
         symbol: 'influence',
         amount: next.influence,
+        ink: LOOK.cardDiscInk,
+        tint,
+        tone: toned,
+        at: influenceAt,
+      });
+    }
+
+    const ranged = next.range !== 0;
+    range.root.setVisible(ranged);
+    if (ranged) {
+      showDisc(range, {
+        symbol: 'range',
+        amount: next.range,
         ink: LOOK.cardDiscInk,
         tint,
         tone: toned,

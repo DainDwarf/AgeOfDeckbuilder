@@ -144,6 +144,7 @@ type PageReading = {
   scale: Answer<number>;
   ringed: Answer<boolean>;
   rules: Answer<string>;
+  numbers: Answer<string[]>;
   answerText: Answer<string>;
   names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
@@ -817,6 +818,21 @@ export async function readNames(page: Page): Promise<void> {
         rules: answer(
           () => (part('rules', `${name} is no card face`) as Phaser.GameObjects.Text).text,
         ),
+        // A face's row of numbers is its signs, Texts, and its glyphs, `glyphMark`s.
+        numbers: answer(() => {
+          const row = part('numbers', `${name} is no card face`) as Phaser.GameObjects.Container;
+          if (!isShown(row as Parented)) return [];
+          const glyphIn = window.glyphIn;
+          if (glyphIn === undefined) throw new Error('the page reads no glyph');
+          return (row.list as (Phaser.GameObjects.Text | Phaser.GameObjects.Container)[])
+            .filter((child) => child.visible)
+            .sort((one, other) => one.x - other.x)
+            .map((child) =>
+              child.type === 'Text'
+                ? (child as Phaser.GameObjects.Text).text
+                : glyphIn(child).frame.name,
+            );
+        }),
         answerText: answer(
           () => (part('text', `${name} is no answer`) as Phaser.GameObjects.Text).text,
         ),
@@ -1270,19 +1286,21 @@ export async function nameOnScreen(page: Page, face: string, at = 0): Promise<Sp
 }
 
 /**
- * The first name of the first card of the hand, read once the card has come to rest lifted under the
- * pointer: the lift carries the name up off where it lay.
+ * A name of a card of the hand, the first of the first card unless told, read once the card has come
+ * to rest lifted under the pointer: the lift carries the name up off where it lay.
  */
 export async function liftedName(
   page: Page,
   lying: { x: number; y: number },
+  face = 'hand-0',
+  at = 0,
 ): Promise<{ x: number; y: number }> {
   let name = lying;
   await expect
     .poll(async () => {
-      const was = await nameOnScreen(page, 'hand-0');
+      const was = await nameOnScreen(page, face, at);
       await rested(page);
-      name = await nameOnScreen(page, 'hand-0');
+      name = await nameOnScreen(page, face, at);
       return name.y < lying.y && name.y === was.y;
     })
     .toBe(true);
@@ -1541,13 +1559,21 @@ export type Reading = {
   /** How much larger than its own frame the object is drawn across. */
   readonly scale: number;
   readonly ringed: boolean;
-  /** The face's rules entry, its marks as written. */
+  /**
+   * The text the face draws, its marks as written: its rules entry, led by a building's in-range text
+   * or by the numbers run in it where it reads them so.
+   */
   readonly rules: string;
+  /**
+   * What the face's row of what its thing gives and takes reads, left to right: a sign as its text, a
+   * glyph as the frame it draws; nothing for a face that shows no row.
+   */
+  readonly numbers: readonly string[];
   /** The answer's text, its marks as written, a list's lines one to a line. */
   readonly answerText: string;
-  /** Whether the face's rules entry draws a name. */
+  /** Whether the face draws a name, in its rules entry or at the foot of its window. */
   readonly drawsName: boolean;
-  /** What each name the face's rules entry draws names, in the order it draws them. */
+  /** What each name the face draws names: its rules entry's in the order it draws them, then its window's. */
   readonly references: readonly Reference[];
   readonly onScreen: OnScreen;
   /** The frame of its texture the object draws, by name. */
@@ -1615,6 +1641,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get rules() {
       return owed(name, answered?.rules);
+    },
+    get numbers() {
+      return owed(name, answered?.numbers);
     },
     get answerText() {
       return owed(name, answered?.answerText);

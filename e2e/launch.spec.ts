@@ -14,7 +14,6 @@ import {
   launchedAs,
   launchedFromScreen,
   namedOn,
-  onScreen,
   openLaunch,
   optionsSelected,
   plantCampaign,
@@ -78,8 +77,8 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
     kindTooltip(cardFaceAtStart(CATALOGUE, OWNED.city.card.id, OWNED.city.building).kind),
   );
 
-  const card = await onScreen(page, CITY_CARD);
-  await page.mouse.click(card.x, card.y, { button: 'right' });
+  // A mark may stand on a card's middle: the card is right-clicked on its kind label, a name nowhere.
+  await page.mouse.click(label.x, label.y, { button: 'right' });
   await expect.poll(() => standing(page, BROWSE)).toBe(true);
   await rested(page);
   const seen = await readings(page, [
@@ -101,7 +100,7 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   const indices = STACKS.map((_, index) => index);
   expect(readOrder(indices, (index) => seen(`${BROWSE}-card-${index}`).place)).toEqual(indices);
 
-  const first = seen(`${BROWSE}-card-0`).onScreen;
+  const first = seen(`${BROWSE}-card-0`).kindLabelOnScreen;
   await page.mouse.click(first.x, first.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(OWNED.city.card.id);
   await rested(page);

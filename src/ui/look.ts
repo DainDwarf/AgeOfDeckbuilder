@@ -153,8 +153,10 @@ export type Look = {
   readonly cardTextInk: number;
   /** The strength a card's kind label stands at in its text's ink. */
   readonly cardKindLabel: number;
-  /** What reads on a card's disc: its cost's or its influence's number, and the sign of a card nothing plays. */
+  /** What reads on a card's disc: its cost's, its influence's or its range's number and glyph, and the sign of a card nothing plays. */
   readonly cardDiscInk: number;
+  /** The strength the line round a terrain marked at the foot of a card's window stands at, in the map's outline. */
+  readonly cardTerrainOutline: number;
   /** The tint a cost's disc is multiplied by where the player's city cannot pay it, and the disc of a card nothing plays. */
   readonly unaffordableDisc: number;
   /** How much larger than its own size a card lifted out of the hand's lane is drawn. */
@@ -292,6 +294,7 @@ export const LOOK: Look = {
   cardTextInk: 0x2a2010,
   cardKindLabel: 0.72,
   cardDiscInk: 0xf2f6ff,
+  cardTerrainOutline: 0.85,
   unaffordableDisc: 0xff6b66,
   liftedCard: 1.1,
   liftedShadow: { colour: 0x000000, strength: 0.5, blur: 9, fall: 5 },

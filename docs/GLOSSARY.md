@@ -122,7 +122,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **attack** | The act: a unit removes its damage from a target's health. | hit |
 | **damage** | A unit's stat: the health its attack removes. | strength, power, harm |
 | **bonus** | What a unit adds to the damage of the units of its faction standing beside it. | buff, boost, aura, rally, lead |
-| **range** | The distance, in tiles, a unit attacks over; one for melee. | reach |
+| **range** | The distance, in tiles, a unit attacks over, one for melee; for a building, the distance it gives yield over, one for the tiles beside it. | reach |
 | **move** | A unit's stat: the move points it refreshes to. | speed, mobility, movement points |
 | **move points** | What a unit spends to cross tiles, a tile's movement cost to enter it; refreshed to its move. | movement points, steps, stamina |
 | **embark** | To step a unit from the tile it stands on onto a tile beside it that embarked units enter. | board (for a unit), set sail, launch (for a unit) |

@@ -541,25 +541,51 @@ export function buildingStandsAs(key: string): string {
 }
 
 /**
- * A building off the map: its pieces in their arrangement, a village as the first of his four, the
- * patch among them, their paint centred on the container's point.
+ * The box a piece's paint fills about its container's own point, whatever the container stands in:
+ * by the pixels he painted and not by its file.
  */
+function pieceBox(image: Phaser.GameObjects.Image): Phaser.Geom.Rectangle {
+  const paint = paintIn(image.frame.name) ?? {
+    x: 0,
+    y: 0,
+    width: image.frame.width,
+    height: image.frame.height,
+  };
+  return new Phaser.Geom.Rectangle(
+    image.x + (paint.x - image.displayOriginX) * image.scaleX,
+    image.y + (paint.y - image.displayOriginY) * image.scaleY,
+    paint.width * image.scaleX,
+    paint.height * image.scaleY,
+  );
+}
+
+/**
+ * A container read as a building off the map: its pieces in their arrangement, a village as the first
+ * of his four, the patch among them, their paint centred on the container's own point; and the box
+ * that paint fills about it.
+ */
+export function asBuildingAlone(
+  on: Phaser.GameObjects.Container,
+  building: BuildingTypeId,
+): Phaser.Geom.Rectangle {
+  const paintings = buildingPaintingsOf(building);
+  asPieces(on, paintings, paintings.patch, ([first]) => first, 'clear');
+  const shown = (on.list as Phaser.GameObjects.Image[]).filter((image) => image.visible);
+  const box = shown
+    .map(pieceBox)
+    .reduce((union, one) => Phaser.Geom.Rectangle.Union(union, one, union));
+  const { centerX, centerY } = box;
+  for (const image of shown) image.setPosition(image.x - centerX, image.y - centerY);
+  return box.setTo(box.x - centerX, box.y - centerY, box.width, box.height);
+}
+
+/** A building off the map, as `asBuildingAlone` reads it. */
 export function buildingMark(
   scene: Phaser.Scene,
   building: BuildingTypeId,
 ): Phaser.GameObjects.Container {
-  const paintings = buildingPaintingsOf(building);
-  const pieces = asPieces(
-    scene.add.container(0, 0),
-    paintings,
-    paintings.patch,
-    ([first]) => first,
-    'clear',
-  );
-  const { centerX, centerY } = paintedBounds(pieces);
-  for (const image of pieces.list as Phaser.GameObjects.Image[]) {
-    image.setPosition(image.x - centerX, image.y - centerY);
-  }
+  const pieces = scene.add.container(0, 0);
+  asBuildingAlone(pieces, building);
   return pieces;
 }
 

@@ -581,6 +581,12 @@ export function addText(
   });
 }
 
+/** A Text's ink, written where it moved: `setColor` redraws the Text whatever it is handed. */
+export function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjects.Text {
+  const ink = css(colour);
+  return label.style.color === ink ? label : label.setColor(ink);
+}
+
 /** The ink a window's title reads in. */
 export const TITLE_INK = css(LOOK.paleInk);
 

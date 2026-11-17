@@ -9,10 +9,20 @@ import {
   costOf,
   influenceOf,
   type PlacedThing,
+  type Placing,
   placedBy,
+  placingOf,
 } from '../rules/catalogue';
+import {
+  type BuildingKind,
+  buildingKind,
+  improvementKind,
+  type LayerKind,
+} from '../rules/map-kinds';
+import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CardId, Cost, MadeCard } from '../rules/state';
 import { cardName, cardRules, text } from './text';
+import type { Reference } from './text-run';
 
 /** What the label at a face's foot reads, and what its tooltip says. */
 export type FaceKind = CardKind | 'worker-action';
@@ -78,10 +88,14 @@ export function familyOf(card: Card): CardFamily {
 /** The numbers an answer's text or the capstone's reads of the chronicle, by name. */
 export type AnswerReading = Readonly<Record<string, number>>;
 
+/** A mark of what a card's thing goes on: a terrain, a feature or a building, or the river. */
+export type GoesOn =
+  | Extract<Reference, { readonly kind: 'terrain' | 'feature' | 'building' }>
+  | { readonly kind: 'river' };
+
 /**
- * What a face reads: what it stands, for whoever reads that back off the object it is drawn on; its
- * name, kind label, family and rules entry; its costs in the resource bar's order; the influence it
- * gains, none on a face that gains none; and whether nothing plays its card.
+ * What a face reads; `id` is what it stands, for whoever reads that back off the object it is drawn
+ * on, and an influence or a range of nought is none.
  */
 export type Face = {
   readonly id: string;
@@ -92,23 +106,116 @@ export type Face = {
   readonly costs: readonly Cost[];
   readonly influence: number;
   readonly playedByNothing: boolean;
+  /** What the thing the card places goes on. */
+  readonly goesOn: readonly GoesOn[];
+  /** One resource to each point that thing gives at income, and to each it takes as its upkeep. */
+  readonly gives: readonly Resource[];
+  readonly takes: readonly Resource[];
+  readonly range: number;
 };
 
+/** The range a building that gives to the tiles beside it gives over. */
+const BESIDE_RANGE = 1;
+
+/** One resource to each point of the amounts, in the order the resource bar reads. */
+function onePerPoint(amounts: Partial<Resources>): Resource[] {
+  return RESOURCES.flatMap((resource) => Array<Resource>(amounts[resource] ?? 0).fill(resource));
+}
+
 /**
- * The face a card is drawn as, its rules entry reading the counters it carries and `city`, the
- * building of the city section it is drawn under: a chronicle's, or a civilization's.
+ * The thing a play places on the ground, as the content holds it, and the building it is built over
+ * where it is; nothing for a unit, and nothing for the city section's building under no city section.
+ */
+function placedOf(
+  catalogue: Catalogue,
+  placing: Placing,
+  city: string | undefined,
+): { readonly kind: BuildingKind; readonly over?: string } | undefined {
+  switch (placing.thing) {
+    case 'unit':
+      return undefined;
+    case 'building':
+      return { kind: buildingKind(catalogue, placing.building), over: placing.over };
+    case 'city':
+      return city === undefined ? undefined : { kind: buildingKind(catalogue, city) };
+    case 'improvement':
+      return { kind: improvementKind(catalogue, placing.improvement) };
+  }
+}
+
+/**
+ * What a thing goes on: the building it is built over, else the features it names, else its
+ * terrains, and the river last where it asks for one.
+ */
+function goesOnOf({ terrains, features, river }: LayerKind, over: string | undefined): GoesOn[] {
+  if (over !== undefined) return [{ kind: 'building', id: over }];
+  const ground: GoesOn[] =
+    features !== undefined && features.length > 0
+      ? features.map((id) => ({ kind: 'feature', id }))
+      : terrains.map((id) => ({ kind: 'terrain', id }));
+  return river === true ? [...ground, { kind: 'river' }] : ground;
+}
+
+/** What a face reads of the thing its card places on the ground, and the text that leads its own. */
+type PlacedReading = Pick<Face, 'goesOn' | 'gives' | 'takes' | 'range'> & {
+  readonly leads?: string;
+};
+
+const NOTHING_PLACED: PlacedReading = { goesOn: [], gives: [], takes: [], range: 0 };
+
+/**
+ * What a card's face reads of the thing it places on the ground: what it goes on, and what it gives
+ * and takes, or for a building giving to the tiles beside it the one text saying so and its range.
+ */
+export function placedReading(
+  catalogue: Catalogue,
+  card: Card,
+  city: string | undefined,
+): PlacedReading {
+  const placing = placingOf(card);
+  const placed = placing === undefined ? undefined : placedOf(catalogue, placing, city);
+  if (placed === undefined) return NOTHING_PLACED;
+  const { kind, over } = placed;
+  const goesOn = goesOnOf(kind, over);
+  const takes = onePerPoint(kind.upkeep ?? {});
+  if (kind.givesBeside === undefined) {
+    return { goesOn, gives: onePerPoint(kind.yields), takes, range: 0 };
+  }
+  const values = {
+    gives: numbersRun('gives', onePerPoint(kind.givesBeside.yields)),
+    terrain: kind.givesBeside.terrain,
+  };
+  const leads =
+    takes.length === 0
+      ? text('face.in-range', values)
+      : text('face.in-range-taking', { ...values, takes: numbersRun('takes', takes) });
+  return { goesOn, gives: [], takes: [], range: BESIDE_RANGE, leads };
+}
+
+/** Numbers as a text runs them: the sign, then one glyph to each point. */
+export function numbersRun(sign: 'gives' | 'takes', points: readonly Resource[]): string {
+  return `${text(`face.${sign}`)}${points.map((resource) => `[${resource}]`).join('')}`;
+}
+
+/**
+ * The face a card is drawn as under `city`, the building of the city section it is drawn under, a
+ * chronicle's or a civilization's: its text the one a building giving in its range reads, over its
+ * rules entry read at the counters the card carries.
  */
 export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | undefined): Face {
   const content = cardOf(catalogue, card.id);
+  const { leads, ...placed } = placedReading(catalogue, content, city);
+  const sentence = cardRules(card);
   return {
     id: card.id,
     name: cardName(card.id),
     kind: labelledKind(content),
     family: familyOf(content),
-    rules: cardRules(card, city),
+    rules: leads === undefined || sentence === '' ? (leads ?? sentence) : `${leads}\n${sentence}`,
     costs: costOf(catalogue, card.id),
     influence: influenceOf(content) ?? 0,
     playedByNothing: playedByNothing(content),
+    ...placed,
   };
 }
 
