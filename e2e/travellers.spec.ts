@@ -5,7 +5,6 @@ import { RESOURCES } from '../src/rules/resources';
 import { answerOf } from '../src/rules/schedule';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   eventDealRead,
   firstDealtAlone,
@@ -28,7 +27,6 @@ const TRAVELLERS = 'travellers';
  */
 async function takenAndGained(page: Page, answer: string): Promise<void> {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = firstDealtAlone(TRAVELLERS, campaign);
   const gift = answerOf(CATALOGUE, TRAVELLERS, answer).reads(CATALOGUE, dealt);

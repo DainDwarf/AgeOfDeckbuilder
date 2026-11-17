@@ -14,7 +14,6 @@ import { LOOK, multiplied } from '../src/ui/look';
 import { glyphFileOf } from '../src/ui/marks';
 import { text } from '../src/ui/text';
 import {
-  budget,
   campKind,
   chronicleOf,
   type DiscShown,
@@ -96,7 +95,6 @@ test('a pillager standing on a farm prepares the pillage: it wears the badge in 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const campaign = wonCampaign();
   const { chronicle, farm } = farmBeset(campaign);
   const key = tileKey(farm);
@@ -139,7 +137,6 @@ test('an enemy on the city’s tile prepares the capture: it wears the badge in 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const settled = settledOn(1);
   const city = playerCityTile(settled);
   const { raider } = ageOf(CATALOGUE, settled.age).camp.scripts;

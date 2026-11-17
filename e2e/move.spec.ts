@@ -7,7 +7,6 @@ import type { Chronicle } from '../src/rules/state';
 import { type Unit, unitAt, unitOf } from '../src/rules/units';
 import { darkeningOf, LOOK, multiplied } from '../src/ui/look';
 import {
-  budget,
   chronicleOf,
   click,
   dragUnit,
@@ -120,7 +119,6 @@ test('a warrior that spends its last move points with no unit in its attack’s 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const { chronicle, warrior, worker, warriorTo, workerTo, both } = spentOut();
 
   await openSaved(page, chronicle);
@@ -142,7 +140,6 @@ test('a warrior that spends its last move points with no unit in its attack’s 
 
 test('a unit crosses two tiles in two steps', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const { chronicle, first, second } = stepped();
   const [worker] = playersOf(chronicle);
   const city = playerCityTile(chronicle);

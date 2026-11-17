@@ -12,7 +12,6 @@ import { capstoneLore } from '../src/ui/lore';
 import { terrainName } from '../src/ui/text';
 import {
   beforeTheLanding,
-  budget,
   chronicleOf,
   cleared,
   click,
@@ -64,7 +63,6 @@ test('the long winter’s landing raises its window, adds its Cold nights to the
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { before, landed } = beforeTheWinter(campaign);
   const city = playerCityTile(landed);

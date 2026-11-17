@@ -25,7 +25,6 @@ import { reachable, relationsOf, type UnitStats, unitAt } from '../src/rules/uni
 import { LOOK, multiplied } from '../src/ui/look';
 import { text, unitName } from '../src/ui/text';
 import {
-  budget,
   campKind,
   chronicleOf,
   consoleKey,
@@ -460,7 +459,6 @@ test('an attack that kills the unit whose sight alone held its tiles plays befor
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle: stood, alone } = attackedUnseen();
   const mark = `unit-${tileKey(alone)}`;
   const face = `tile-${tileKey(alone)}`;

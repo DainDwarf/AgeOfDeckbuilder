@@ -14,7 +14,6 @@ import { text } from '../src/ui/text';
 import {
   bareTile,
   besideTiles,
-  budget,
   chronicleOf,
   claimMarked,
   click,
@@ -180,7 +179,6 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(0));
 
   await openSaved(page, launchedAs(1));
 

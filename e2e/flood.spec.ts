@@ -10,7 +10,6 @@ import { followed } from '../src/rules/stages';
 import { type Chronicle, holderOf } from '../src/rules/state';
 import { answerLinesOfCase, answerShown } from '../src/ui/event-text';
 import {
-  budget,
   chronicleOf,
   dealtAloneOn,
   eventDealRead,
@@ -73,7 +72,6 @@ test('the flood deals its answers, Lose the fields reading its one line whose nu
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, city } = flooding(campaign);
   const at = offeredOn(dealt).indexOf(LOSE_THE_FIELDS);

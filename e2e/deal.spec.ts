@@ -8,7 +8,6 @@ import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
 import {
   besideTheDeal,
-  budget,
   chronicleOf,
   click,
   cursorAt,
@@ -65,7 +64,6 @@ test('the events phase deals a choice, and the turn plays on from the one a left
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const dealt = firstDealtAlone(LEAN_SEASON);
   const answers = offeredOn(dealt);
   const ration = answers.indexOf(RATION);
@@ -133,7 +131,6 @@ test('a left click on an answer the city cannot pay for says why over it, takes 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(0));
   const { dealt, answer } = unpaid();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);

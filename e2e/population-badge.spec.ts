@@ -10,7 +10,6 @@ import { CITY_BAR_STOCKS, type CityBarStock } from '../src/ui/city-bar';
 import { LOOK } from '../src/ui/look';
 import {
   type BarParts,
-  budget,
   chronicleOf,
   claimedAt,
   consoleKey,
@@ -65,7 +64,6 @@ test('the player’s city wears a bar of each stock, filled in the stock’s col
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = neutralCampaign();
   const filling = (chronicle: Chronicle, stock: CityBarStock): boolean => {
     if (reckoned(CATALOGUE, chronicle) === undefined) return false;
@@ -151,7 +149,6 @@ test('the player’s city wears a badge in the civilization’s colour reading i
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const struck = hungry();
   const ended = endedTurn(struck);
   const badge = badgeOn(tileKey(playerCityTile(struck)));

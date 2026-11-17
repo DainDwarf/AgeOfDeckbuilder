@@ -6,7 +6,6 @@ import type { Chronicle } from '../src/rules/state';
 import { pathTo, type Unit } from '../src/rules/units';
 import {
   besideTiles,
-  budget,
   chronicleOf,
   click,
   firstSeed,
@@ -116,7 +115,6 @@ test('a scout being aimed wears its path to the lit tile the pointer is on, keep
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const { chronicle, scout, far, way } = afield();
   const own = scout.tile;
   const beside = alongRow(own, way, 1);

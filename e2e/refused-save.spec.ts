@@ -4,7 +4,6 @@ import { apply, outcome } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
-  budget,
   campaignShown,
   capstoneClosed,
   click,
@@ -138,7 +137,6 @@ test('a right click on its scrim takes the refused-save window down, and the men
 test('a write refused mid-chronicle raises the refused-save window once over the chronicle screen, and a second refused write raises nothing', async ({
   page,
 }) => {
-  test.setTimeout(budget(2));
   const problems = watch(page);
   const said = refusals(page);
   await plantSaved(page, twoBareTurns());

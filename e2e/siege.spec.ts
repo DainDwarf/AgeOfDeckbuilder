@@ -15,7 +15,6 @@ import { capstoneLore } from '../src/ui/lore';
 import { text, victoryLine } from '../src/ui/text';
 import {
   beforeTheLanding,
-  budget,
   chronicleOf,
   cleared,
   click,
@@ -123,7 +122,6 @@ test('the siege’s landing raises its window and enters a leader and its band o
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { before, landed } = siegeLanding(
     'stands on an open turn the turn before the siege lands',
@@ -160,7 +158,6 @@ test('an enemy warrior beside the leader reads its damage and the bonus it carri
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { chronicle, warrior, leader, led } = siegeLanding(
     'stands a leader and a warrior of its band beside its city after the siege lands',

@@ -14,7 +14,6 @@ import {
   admits,
   aimed,
   beforeTheLanding,
-  budget,
   chronicleOf,
   claimedAt,
   cleared,
@@ -135,7 +134,6 @@ test('the monument’s landing raises its window and puts Foundations on top of 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const campaign = wonCampaign();
   const { before, landed } = beforeTheLanding(
     'stands on an open turn the turn before the monument lands',
@@ -175,7 +173,6 @@ test('Ornaments played over Great stones through the worker wins on the play, an
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { chronicle, index, tile, won } = beforeTheLanding(
     'builds the monument to Ornaments in hand after its landing',

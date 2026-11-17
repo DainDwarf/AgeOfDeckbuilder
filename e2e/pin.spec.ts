@@ -10,7 +10,6 @@ import { withAge } from '../src/ui/launch-layout';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import {
   aimed,
-  budget,
   campaignShown,
   chronicleOf,
   click,
@@ -98,7 +97,6 @@ test('a chronicle of the second age beside a campaign pinning a technology it re
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const paid = paidOnDeer(HUNT, [], campaign);
   const hunted = playedOn(paid.chronicle, paid.index, paid.tile);

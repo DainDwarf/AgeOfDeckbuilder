@@ -13,7 +13,6 @@ import {
   aimDrawn,
   type BarShown,
   besideTiles,
-  budget,
   campKind,
   chronicleOf,
   click,
@@ -140,7 +139,6 @@ test('a warrior dragged onto an enemy attacks it, the enemy wearing its health b
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, warrior, enemy } = warriorBesideAnEnemy();
   const attacked = outcome(
     apply(CATALOGUE, chronicle, { type: 'attack', unit: warrior.id, tile: enemy.tile }),
@@ -184,7 +182,6 @@ test('a warrior selected beside an enemy marks it with the attack’s ring; the 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, warrior, enemy } = warriorBesideAnEnemy();
   const { landings } = byHand(CATALOGUE, chronicle, warrior);
   const [landing] = landings;
@@ -254,7 +251,6 @@ test('a warrior beside an enemy its attack would kill reads on the enemy’s hea
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const beside = warriorBesideAnEnemy();
   const { warrior, enemy } = beside;
   const damage = damageOf(CATALOGUE, beside.chronicle.units, warrior);
@@ -287,7 +283,6 @@ test('a warrior selected two tiles from an enemy a step brings in its range mark
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, warrior, enemy, landing } = warriorAStepFromAnEnemy();
   const [own, foe, from] = [warrior.tile, enemy.tile, landing.tile].map(tileKey);
   const attack = { type: 'attack', unit: warrior.id, tile: enemy.tile } as const;

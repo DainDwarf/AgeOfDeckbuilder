@@ -5,7 +5,6 @@ import { answerOf } from '../src/rules/schedule';
 import { idle } from '../src/rules/state';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   eventDealRead,
   firstDealtAlone,
@@ -32,7 +31,6 @@ test('the strangers deal their answers, and taking them in brings idle populatio
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = firstDealtAlone(STRANGERS, campaign);
   const brought = answerOf(CATALOGUE, STRANGERS, TAKE_THEM_IN).reads(CATALOGUE, dealt).population;

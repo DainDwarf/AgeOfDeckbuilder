@@ -6,7 +6,6 @@ import type { Chronicle } from '../src/rules/state';
 import { text } from '../src/ui/text';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   counted,
   endedTurn,
@@ -84,7 +83,6 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const opened = settled();
   const committed = outcome(apply(CATALOGUE, opened, { type: 'end-turn' }));
 

@@ -8,7 +8,6 @@ import type { Chronicle } from '../src/rules/state';
 import { answerText } from '../src/ui/event-text';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   eventDealRead,
   firstDealtAlone,
@@ -49,7 +48,6 @@ test('the wildfire deals its answers, Let the fields burn reading the food the r
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = smoked(campaign);
   const at = offeredOn(dealt).indexOf(LET_THE_FIELDS_BURN);
@@ -77,7 +75,6 @@ test('the wildfire deals its answers, Let the fields burn reading the food the r
 
 test('burning the forest adds Embers to the discard pile', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = firstDealtAlone(WILDFIRE, campaign);
   const at = offeredOn(dealt).indexOf(BURN_THE_FOREST);

@@ -14,7 +14,6 @@ import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { text } from '../src/ui/text';
 import {
   besideTiles,
-  budget,
   campaignShown,
   chronicleOf,
   click,
@@ -174,8 +173,6 @@ async function heldBy(page: Page, key: string): Promise<number> {
 
 test('the key above Tab opens the console, which then holds the keyboard', async ({ page }) => {
   const problems = watch(page);
-  // No turn is played out; the budget covers the boot and the gestures held over a dozen frames.
-  test.setTimeout(budget(1));
 
   await openSaved(page, settledOn(1));
   expect(await shows(page, 'console')).toBe(false);
@@ -405,7 +402,6 @@ test('unit run while an end of turn plays out stands the screen on the chronicle
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const stood = settledOn(1);
   const turned = outcome(apply(CATALOGUE, stood, { type: 'end-turn' }));
   const free = warriorGround(turned);

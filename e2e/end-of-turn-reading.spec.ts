@@ -9,7 +9,6 @@ import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type BarReading, css, LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
-  budget,
   chronicleOf,
   endedTurn,
   endTurn,
@@ -88,7 +87,6 @@ test('the bar reads what ending the turn would do, a stock the strikes take past
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const struck = hungry();
   onDesignedSpeed(page);
 

@@ -7,7 +7,6 @@ import { answerCost, answerOf } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   eventDealRead,
   firstDealtAlone,
@@ -46,7 +45,6 @@ test('the drought deals its answers, and rationing pays the food the rules price
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = parched(campaign);
   const at = offeredOn(dealt).indexOf(RATIONING);
@@ -74,7 +72,6 @@ test('the drought deals its answers, and rationing pays the food the rules price
 
 test('the rain dance adds Rain dance to the discard pile', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = parched(campaign);
   const at = offeredOn(dealt).indexOf(RAIN_DANCE);

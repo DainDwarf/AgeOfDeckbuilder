@@ -5,7 +5,6 @@ import { tileAt, tileKey } from '../src/rules/map';
 import { captureLore } from '../src/ui/lore';
 import { buildingName } from '../src/ui/text';
 import {
-  budget,
   chronicleOf,
   loreOf,
   openSaved,
@@ -24,7 +23,6 @@ test('a warrior standing on a site through the enemy phase captures it, and the 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const bare = settledOn(1);
   const [site] = sitesOf(bare);
   if (site === undefined) throw new Error('seed 1 deals no site');

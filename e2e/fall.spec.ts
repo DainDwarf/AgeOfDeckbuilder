@@ -3,7 +3,6 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import {
   beforeTheFall,
-  budget,
   chronicleOf,
   defeatShown,
   openSaved,
@@ -15,7 +14,6 @@ test('the enemy that reaches the city captures it, and the chronicle ends on the
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const standing = beforeTheFall();
   const fallen = outcome(apply(CATALOGUE, standing, { type: 'end-turn' }));
 

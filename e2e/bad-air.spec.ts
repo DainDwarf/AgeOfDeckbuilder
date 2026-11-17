@@ -7,7 +7,6 @@ import { answerOf } from '../src/rules/schedule';
 import { type Chronicle, idle } from '../src/rules/state';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   dealtAloneOn,
   eventDealRead,
@@ -51,7 +50,6 @@ test('the sickness deals its answers, and burying the dead kills the idle popula
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, killed } = sickened(campaign);
   const at = offeredOn(dealt).indexOf(BURY_THE_DEAD);

@@ -6,7 +6,6 @@ import { capstoneLore } from '../src/ui/lore';
 import { text } from '../src/ui/text';
 import {
   beforeTheLanding,
-  budget,
   cardOnFace,
   chronicleOf,
   click,
@@ -27,7 +26,6 @@ test('the capstone’s landing holds the end of turn on its window over the hand
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { before, landed } = beforeTheLanding(
     'stands on an open turn the turn before the capstone lands',
     (before, landed) => ({ before, landed }),

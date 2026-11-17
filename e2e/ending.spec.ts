@@ -14,7 +14,6 @@ import { cardName, technologyName, text } from '../src/ui/text';
 import {
   aimed,
   beforeTheFall,
-  budget,
   campaignShown,
   chronicleButton,
   click,
@@ -69,7 +68,6 @@ test('the play that ends the chronicle pays it into the campaign: the ending scr
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const landing = landed();
   const { index, tile } = landing;
   const gaining = influenceCardGaining('trophy', (influence) => influence > 0);
@@ -137,7 +135,6 @@ test('a defeat keeps on the ledger the challenge it kept, greyed, reading what i
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const challenge = influenceCardGaining('challenge', (influence) => influence > 0);
   const trophy = influenceCardGaining('trophy', (influence) => influence > 0);
   const standing = withOnTop(beforeTheFall(), [challenge, challenge, trophy]);
@@ -194,7 +191,6 @@ test('End chronicle reacts to no press and reads an arrow while the ending scree
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, index, tile } = landed();
   onDesignedSpeed(page);
 

@@ -2,7 +2,6 @@ import { expect, test } from '@playwright/test';
 import { tileAt, tileKey } from '../src/rules/map';
 import {
   aimed,
-  budget,
   chronicleOf,
   click,
   dragOut,
@@ -18,7 +17,6 @@ test('the play whose building passes the capstone wins on the play, and the vict
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, index, tile, won } = landed();
 
   await openSaved(page, chronicle);

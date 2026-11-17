@@ -6,7 +6,6 @@ import { eventName } from '../src/ui/event-text';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import {
   aimed,
-  budget,
   campaignShown,
   chronicleOf,
   click,
@@ -35,7 +34,6 @@ async function resume(page: Page): Promise<void> {
 test('a chronicle continued through the address stands where it stood, under its capstone’s window', async ({
   page,
 }) => {
-  test.setTimeout(budget(0));
   const problems = watch(page);
 
   await openSaved(page, launchedAs(1));

@@ -6,7 +6,6 @@ import { tileAt, tileKey } from '../src/rules/map';
 import { captureLore } from '../src/ui/lore';
 import { buildingName } from '../src/ui/text';
 import {
-  budget,
   campBeside,
   campsOf,
   chronicleOf,
@@ -56,7 +55,6 @@ test('a warrior standing on a camp through the enemy phase captures it, and the 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, camp } = campBeside((tile) => ({ type: WARRIOR, faction: 'player', tile }));
   const captured = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
 

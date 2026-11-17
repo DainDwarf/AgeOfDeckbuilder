@@ -31,7 +31,6 @@ import {
   borderColours,
   borderStretches,
   borderStrokes,
-  budget,
   campaignWith,
   campBeside,
   campsOf,
@@ -519,7 +518,6 @@ test('a unit of the neutral’s standing on a camp through the enemy phase captu
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const kind = kindEntered(settledOn(1, [], CAMPAIGN));
   const { wave } = neutralOf(CATALOGUE, AGE).scripts;
   const { chronicle, camp } = campBeside(
@@ -594,7 +592,6 @@ test('a worker of the neutral’s standing on a tile its city holds builds there
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, tile } = workerBeside();
   const built = endedTurn(chronicle);
   const mark = `building-${tileKey(tile)}`;
@@ -618,7 +615,6 @@ test('a warrior of the player’s standing on the neutral’s city through the e
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle: opened, city } = seedOneFreed();
   const chronicle = warDeclared(
     unitEntered(opened, { type: WARRIOR, faction: 'player', tile: city }),

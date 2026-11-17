@@ -25,7 +25,6 @@ import {
   admits,
   aimed,
   besideTiles,
-  budget,
   campaignWith,
   dragOut,
   drawnFaces,
@@ -208,7 +207,6 @@ test('the settle card on the settle phase plates on each tile it lights what the
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(0));
   // The first age's city building gives nothing, so its settle plates nothing; the neutral's age's gives.
   const campaign = neutralCampaign();
   const opened = launchedAs(1, campaign);

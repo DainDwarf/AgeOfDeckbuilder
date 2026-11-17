@@ -4,7 +4,6 @@ import { apply, outcome } from '../src/rules/chronicle';
 import { walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import {
-  budget,
   chronicleOf,
   endedTurn,
   endTurn,
@@ -38,7 +37,6 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(2));
   const opened = thinned();
   const stages = apply(CATALOGUE, opened, { type: 'end-turn' });
   const names = [...walked(stages)].map((stage) => stage.name);

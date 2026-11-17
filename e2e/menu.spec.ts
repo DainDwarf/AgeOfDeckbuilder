@@ -9,7 +9,6 @@ import {
   bareAimable,
   beforeTheFall,
   browse,
-  budget,
   campaignThenChronicle,
   chronicleOf,
   civilizationOpened,
@@ -224,7 +223,6 @@ test('the menu opens over the defeat screen, and Campaign, Chronicle then Launch
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
 
   await openSaved(page, beforeTheFall());
   await stoppedTurn(page);

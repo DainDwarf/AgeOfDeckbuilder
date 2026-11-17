@@ -18,7 +18,6 @@ import {
   bareWith,
   besideTheCards,
   browse,
-  budget,
   cardOnFace,
   chronicleOf,
   click,
@@ -248,7 +247,6 @@ test('a click held on the end-turn button stands through the right button let go
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const opened = settledOn(1);
 
   await page.setViewportSize(WINDOW);
@@ -718,7 +716,6 @@ test('the end-turn button clicked while a card is aimed at a tile lets the card 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle: opened, index } = bareAimable();
 
   await openSaved(page, opened);
@@ -739,7 +736,6 @@ test('a click on the top of a card of the hand while the end of turn plays out s
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const opened = settledOn(1);
 
   await openSaved(page, opened);

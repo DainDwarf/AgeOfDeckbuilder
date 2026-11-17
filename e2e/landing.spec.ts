@@ -9,7 +9,6 @@ import { inSight } from '../src/rules/sight';
 import { followed, unchanged, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import {
-  budget,
   firstSeed,
   inside,
   mapFrame,
@@ -118,7 +117,6 @@ test("an answer's charted tile, out of the frame under the deal window, is broug
 }) => {
   const problems = watch(page);
   // The end of turn stops on the deal, and the take plays the rest of it out.
-  test.setTimeout(budget(2));
   const run = herdDealt();
   const key = tileKey(run.tile);
 

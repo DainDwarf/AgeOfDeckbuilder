@@ -1,7 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { text } from '../src/ui/text';
 import {
-  budget,
   capstoneClosed,
   chronicleOf,
   click,
@@ -112,7 +111,6 @@ test('a press on the row moves the speed on, kept across a reload, and ×4 goes 
 
 test('an end of turn played out at ×4 finishes', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   onDesignedSpeed(page);
 
   await openSaved(page, OPENED);
@@ -131,7 +129,6 @@ test('a press over a play-out in the air takes at once, and the play-out finishe
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   onDesignedSpeed(page);
 
   await openSaved(page, OPENED);

@@ -9,7 +9,6 @@ import type { Chronicle } from '../src/rules/state';
 import { type Unit, unitAt } from '../src/rules/units';
 import { LOOK } from '../src/ui/look';
 import {
-  budget,
   campKind,
   chronicleOf,
   click,
@@ -78,7 +77,6 @@ test('an archer dragged onto an enemy two tiles off in sight attacks it, and an 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, archer, seen, hidden } = overTheHills();
   const attacked = outcome(
     apply(CATALOGUE, chronicle, { type: 'attack', unit: archer.id, tile: seen.tile }),

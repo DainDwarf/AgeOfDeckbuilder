@@ -12,7 +12,6 @@ import { type Chronicle, holderOf, holds } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   dealtAloneOn,
   eventDealRead,
@@ -132,7 +131,6 @@ test('abandoning a herd with none inside the border takes the one standing outsi
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = strayed(campaign);
   const at = placeOf(dealt, ABANDON_A_HERD);
@@ -162,7 +160,6 @@ test('abandoning a herd with none inside the border takes the one standing outsi
 
 test('defending the herds pays the military the rules price', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = defensible(campaign);
   const defend = placeOf(dealt, DEFEND_THE_HERDS);
@@ -190,7 +187,6 @@ test('defending the herds pays the military the rules price', async ({ page }) =
 
 test('abandoning a herd removes the deer standing on the city’s tile', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const { dealt, city } = herdedAtHome(campaign);
   const at = placeOf(dealt, ABANDON_A_HERD);

@@ -341,23 +341,6 @@ function playedAs(chronicle: Chronicle, index: number, aimed: Aimed): Chronicle 
 /** How far up a card comes before the release plays it or aims it, in design units, and then some. */
 const DRAG = 140;
 
-/** What the dev server's first transform costs the spec that opens on it, and then some. */
-const COLD_START_MS = 10_000;
-
-/**
- * What one end of turn takes with every stage of it played out, and then some: measured 2026-10-30
- * locally at 1.85 s at ×1 and 0.66 s at ×4, so five times the designed turn and fifteen the suite's.
- */
-const TURN_MS = 10_000;
-
-/**
- * How long a spec may take, in milliseconds: `turns` counts every end of turn it plays out on screen,
- * a gesture whose release plays out stages of its own counting as one, and one more is granted.
- */
-export function budget(turns: number): number {
-  return COLD_START_MS + TURN_MS * (turns + 1);
-}
-
 /** Where a named object's centre sits on the page, and what one design unit measures there. */
 export type OnScreen = { x: number; y: number; unit: number };
 

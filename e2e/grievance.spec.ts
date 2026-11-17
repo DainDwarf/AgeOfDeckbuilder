@@ -11,7 +11,6 @@ import { relationsOf } from '../src/rules/units';
 import { answerShown, answerText } from '../src/ui/event-text';
 import {
   barReadingOn,
-  budget,
   chronicleOf,
   eventDealRead,
   firstDealtAlone,
@@ -59,7 +58,6 @@ test('the grievance deals its answers, Escalate reading Declare war while the ne
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = firstDealtAlone(GRIEVANCE, campaign);
   const at = offeredOn(dealt).indexOf(ESCALATE);
@@ -83,7 +81,6 @@ test('the grievance dealt with the neutral hostile reads Escalate as a camp plac
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const hostile = warDeclared(firstDealtAlone(GRIEVANCE, campaign)).chronicle;
   const at = offeredOn(hostile).indexOf(ESCALATE);
@@ -115,7 +112,6 @@ test('the grievance dealt with the neutral hostile reads Escalate as a camp plac
 
 test('paying tribute adds Tribute to the discard pile', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = firstDealtAlone(GRIEVANCE, campaign);
   const at = offeredOn(dealt).indexOf(PAY_TRIBUTE);
@@ -143,7 +139,6 @@ function gifted(campaign: Campaign): Chronicle {
 
 test('sending gifts pays the culture the rules price', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const campaign = wonCampaign();
   const dealt = gifted(campaign);
   const at = offeredOn(dealt).indexOf(SEND_GIFTS);

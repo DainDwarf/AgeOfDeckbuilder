@@ -9,7 +9,6 @@ import {
   bareTile,
   besideTheDeal,
   besideTiles,
-  budget,
   campBeside,
   cardOnFace,
   chronicleOf,
@@ -117,7 +116,6 @@ test('the end-turn button reads End turn under the pointer the last turn ended a
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
 
   await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
@@ -382,7 +380,6 @@ test("a card of the hand that gains influence reads it on its disc, and the disc
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const trophy = influenceCardGaining('trophy', (influence) => influence > 0);
   const added = addedToDrawPileTop(CATALOGUE, settledOn(1), trophy).chronicle;
   const [drawn] = added.drawPile;

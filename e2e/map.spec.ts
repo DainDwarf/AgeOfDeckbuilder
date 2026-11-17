@@ -61,7 +61,6 @@ import {
   aimed,
   type BorderStroke,
   borderStrokes,
-  budget,
   campKind,
   campsOf,
   chronicleOf,
@@ -1387,7 +1386,6 @@ test('however far the map is dragged, it cannot leave the frame', async ({ page 
 
 test('a stage on tiles the frame already holds pans nothing', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const run = raiderThreeOff();
   const crossed = outcome(apply(CATALOGUE, run.chronicle, { type: 'end-turn' }));
 
@@ -1416,7 +1414,6 @@ test('a stage on tiles the frame already holds pans nothing', async ({ page }) =
 
 test('a stage on tiles the frame does not show is brought into it', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const run = raiderThreeOff();
   const crossed = outcome(apply(CATALOGUE, run.chronicle, { type: 'end-turn' }));
 

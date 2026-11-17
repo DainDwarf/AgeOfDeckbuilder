@@ -11,7 +11,6 @@ import {
   aimed,
   borderColours,
   borderStretches,
-  budget,
   campsWorn,
   chronicleOf,
   civilizationOpened,
@@ -39,7 +38,6 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(0));
   const before = launchedAs(1);
 
   await openSaved(page, before);
@@ -121,7 +119,6 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(0));
 
   await openSaved(page, launchedAs(1));
 

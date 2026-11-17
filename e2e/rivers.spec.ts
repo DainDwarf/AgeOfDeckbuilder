@@ -11,7 +11,6 @@ import {
 } from '../src/rules/map';
 import type { Chronicle } from '../src/rules/state';
 import {
-  budget,
   chronicleOf,
   consoleKey,
   counted,
@@ -53,7 +52,6 @@ test('the map draws a piece of river on every corner of the runs along the chart
   page,
 }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const opened = riverCharted();
 
   await openSaved(page, opened);

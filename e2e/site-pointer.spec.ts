@@ -6,7 +6,6 @@ import type { Chronicle } from '../src/rules/state';
 import { LOOK, multiplied } from '../src/ui/look';
 import { glyphFileOf } from '../src/ui/marks';
 import {
-  budget,
   campsOf,
   click,
   openSaved,
@@ -76,7 +75,6 @@ test('every site the map draws wears its pointer with the site’s sign, darkene
 
 test('a site captured loses its pointer, and the site in fog keeps its own', async ({ page }) => {
   const problems = watch(page);
-  test.setTimeout(budget(1));
   const { chronicle, seen, fog } = sitesAndCamp();
 
   await openSaved(page, chronicle);
