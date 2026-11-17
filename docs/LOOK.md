@@ -15,9 +15,11 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 ## The cast ✅
 
-Each symbol wears one glyph, and a meaning wears that one sign wherever it is read: health's heart at the foot of a health bar and on a unit's card, the flame and the flag on a prepared unit's badge and on its card's state line, move's arrows for a terrain's movement cost, population's sign for the idle count and for a worked tile.
+Each symbol wears one glyph, and a meaning wears that one sign wherever it is read: health's heart at the foot of a health bar and on a unit's card, the flame and the flag on a prepared unit's badge and on its card's state line, move's arrows for a terrain's movement cost, population's sign for the idle count, for a worked tile and for a number of population in a text.
 
 A glyph stands in a square and is as large as that square's side. It is drawn in its colour over a dark outline grown out of its shape, half a unit wide at every size it is drawn at and on every ground, so a pale glyph holds on pale paper and any glyph on any terrain. A glyph standing on a disc that has a rim of its own wears no outline, and neither does a stat's glyph in the text box of a unit's card.
+
+**In a text**, a number of a resource or of population reads as the number and the symbol's glyph right after it, with no word: on a card, on an answer and on a plate. A tooltip, a refusal's note and the ending's sentences draw no glyph and read the word.
 
 | Symbol | Its sign | From |
 | --- | --- | --- |
@@ -111,7 +113,7 @@ A card is 124 units wide and 182 tall wherever it stands, and a card shown large
 
 **The art box** is the frame's window, of one size on each front, its glass and the shadow at its rim lying over what it holds: one painting of Baumgart's, a building card its building, a unit card its unit's picture, an action card the object of the action, a hazard its cause. A window holding no painting shows its family's colour, pale.
 
-**The name** stands on the pack's riveted plate across the card, at one height on both fronts, the plate's middle 58% of the way down the card, over the foot of the window and the head of the text box. **The text** stands under the plate, centred across on the card's middle on both fronts and wrapped 88.4 units wide. Its room runs from 1 unit under the plate's lower edge down to 1.5 units over the kind label, which is three lines of the text's type, its lines drawn closer on a face where the room falls short of three, and the text stands centred in it. **The kind label** stands at the paper's foot, its capitals 1.5 units above the foot, its letters set close.
+**The name** stands on the pack's riveted plate across the card, at one height on both fronts, the plate's middle 58% of the way down the card, over the foot of the window and the head of the text box. **The text** stands under the plate, centred across on the card's middle on both fronts and wrapped 88.4 units wide. Its room runs from 1 unit under the plate's lower edge down to 1.5 units over the kind label, which is three lines of the text's type, its lines drawn closer on a face where the room falls short of three, and the text stands centred in it. A card that does several things reads a line to each, with no period between them. **The kind label** stands at the paper's foot, its capitals 1.5 units above the foot, its letters set close.
 
 **The cost** stands on the pack's steel disc at the card's top-left corner, the resource's glyph and the number side by side on it, the disc rising above the card's top edge; a card of two costs wears two discs, the second under the first, in the order the resource bar reads the resources. **The influence** a card gains stands on the same disc at the foot's right corner, influence's glyph and the number.
 

@@ -108,6 +108,7 @@ import {
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Point } from '../src/ui/border-loops';
 import type { Name } from '../src/ui/card-face';
+import { glyphFileOf } from '../src/ui/cast';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { eventName } from '../src/ui/event-text';
@@ -117,7 +118,7 @@ import type { PileKind } from '../src/ui/piles';
 import { refused, type Said } from '../src/ui/refusal-lines';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
-import { layOutRun, type Reference } from '../src/ui/text-run';
+import { layOutRun, type Reference, type Run } from '../src/ui/text-run';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 
 /** What the page answers of a reading: its value, or what a read of it throws. */
@@ -144,8 +145,10 @@ type PageReading = {
   scale: Answer<number>;
   ringed: Answer<boolean>;
   rules: Answer<string>;
+  rulesRead: Answer<string[]>;
   numbers: Answer<string[]>;
   answerText: Answer<string>;
+  answerRead: Answer<string[]>;
   names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
   frame: Answer<string>;
@@ -565,6 +568,44 @@ export async function readNames(page: Page): Promise<void> {
     window.glyphIn = (mark) =>
       (mark as Phaser.GameObjects.Container).list[1] as Phaser.GameObjects.Image;
 
+    const isGlyphMark = (object: Phaser.GameObjects.GameObject): boolean => {
+      const held = (object as Partial<Phaser.GameObjects.Container>).list;
+      return Array.isArray(held) && held.length === 2 && held.every(({ type }) => type === 'Image');
+    };
+
+    // A run's glyphs are `glyphMark`s beside its label in one container, where the label leaves
+    // spaces for them, and Phaser centres each line on its width ceiled (`docs/PHASER.md`).
+    const readRun = (label: Phaser.GameObjects.Text): string[] => {
+      if (label.style.align !== 'center') throw new Error(`${label.name} is no centred text`);
+      const glyphIn = window.glyphIn;
+      if (glyphIn === undefined) throw new Error('the page reads no glyph');
+      const lines = label.getWrappedText();
+      const measure = (content: string): number => label.context.measureText(content).width;
+      const { left = 0, right = 0, top: over = 0, bottom = 0 } = label.padding;
+      const pitch = (label.height - over - bottom + label.lineSpacing) / lines.length;
+      const top = label.y - label.displayOriginY + over;
+      const middle = label.x - label.displayOriginX + left + (label.width - left - right) / 2;
+      const read: { line: number; x: number; drawn: string }[] = [];
+      for (const [line, content] of lines.entries()) {
+        const width = Math.ceil(measure(content));
+        for (const word of content.matchAll(/\S+/g)) {
+          read.push({ line, x: measure(content.slice(0, word.index)) - width / 2, drawn: word[0] });
+        }
+      }
+      for (const mark of label.parentContainer.list) {
+        if (!isGlyphMark(mark) || !isShown(mark as Parented)) continue;
+        const { x, y } = mark as Phaser.GameObjects.Container;
+        read.push({
+          line: Math.floor((y - top) / pitch),
+          x: x - middle,
+          drawn: glyphIn(mark).frame.name,
+        });
+      }
+      return read
+        .sort((one, other) => one.line - other.line || one.x - other.x)
+        .map(({ drawn }) => drawn);
+    };
+
     const tintOf = (image: Phaser.GameObjects.Image): number | undefined =>
       image.isTinted ? image.tint : undefined;
 
@@ -810,6 +851,9 @@ export async function readNames(page: Page): Promise<void> {
         rules: answer(
           () => (part('rules', `${name} is no card face`) as Phaser.GameObjects.Text).text,
         ),
+        rulesRead: answer(() =>
+          readRun(part('rules', `${name} is no card face`) as Phaser.GameObjects.Text),
+        ),
         // A face's row of numbers is its signs, Texts, and its glyphs, `glyphMark`s.
         numbers: answer(() => {
           const row = part('numbers', `${name} is no card face`) as Phaser.GameObjects.Container;
@@ -827,6 +871,9 @@ export async function readNames(page: Page): Promise<void> {
         }),
         answerText: answer(
           () => (part('text', `${name} is no answer`) as Phaser.GameObjects.Text).text,
+        ),
+        answerRead: answer(() =>
+          readRun(part('text', `${name} is no answer`) as Phaser.GameObjects.Text),
         ),
         names: answer(() => {
           const { camera } = found();
@@ -1286,11 +1333,32 @@ export async function stillAt(page: Page, name: string, was: OnScreen): Promise<
   return Math.round(now.x - was.x) === 0 && Math.round(now.y - was.y) === 0;
 }
 
-/** What an entry names, in its order, laid out as a run on a measure of one to the character. */
-export function namedIn(entry: string): Reference[] {
+/** An entry laid out as a run on a measure of one to the character, a line running as long as it holds. */
+function charRun(entry: string): Run {
   const measure = (content: string): number => content.length;
   const metrics = { width: Number.POSITIVE_INFINITY, glyph: 1, bearing: 0, space: 1 };
-  return layOutRun(entry, measure, metrics, referenceName).names.map((name) => name.reference);
+  return layOutRun(entry, measure, metrics, referenceName);
+}
+
+/** What an entry names, in its order, laid out as a run on a measure of one to the character. */
+export function namedIn(entry: string): Reference[] {
+  return charRun(entry).names.map((name) => name.reference);
+}
+
+/** What an entry draws, in reading order, as `rulesRead` and `answerRead` read it off the page. */
+export function readIn(entry: string): string[] {
+  const run = charRun(entry);
+  const words = run.content.split('\n').flatMap((content, line) =>
+    [...content.matchAll(/\S+/g)].map((word) => ({
+      line,
+      x: word.index - run.widths[line] / 2,
+      drawn: word[0],
+    })),
+  );
+  const glyphs = run.glyphs.map(({ symbol, x, line }) => ({ line, x, drawn: glyphFileOf(symbol) }));
+  return [...words, ...glyphs]
+    .sort((one, other) => one.line - other.line || one.x - other.x)
+    .map(({ drawn }) => drawn);
 }
 
 /**
@@ -1590,12 +1658,19 @@ export type Reading = {
    */
   readonly rules: string;
   /**
+   * What the face's text draws, in reading order: each word as it draws it, each glyph as the frame
+   * it draws; a face whose text is not centred throws.
+   */
+  readonly rulesRead: readonly string[];
+  /**
    * What the face's row of what its thing gives and takes reads, left to right: a sign as its text, a
    * glyph as the frame it draws; nothing for a face that shows no row.
    */
   readonly numbers: readonly string[];
   /** The answer's text, its marks as written, a list's lines one to a line. */
   readonly answerText: string;
+  /** What the answer's text draws, in reading order, read as `rulesRead` reads a face's. */
+  readonly answerRead: readonly string[];
   /** Whether the face draws a name, in its rules entry or at the foot of its window. */
   readonly drawsName: boolean;
   /** What each name the face draws names: its rules entry's in the order it draws them, then its window's. */
@@ -1669,11 +1744,17 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     get rules() {
       return owed(name, answered?.rules);
     },
+    get rulesRead() {
+      return owed(name, answered?.rulesRead);
+    },
     get numbers() {
       return owed(name, answered?.numbers);
     },
     get answerText() {
       return owed(name, answered?.answerText);
+    },
+    get answerRead() {
+      return owed(name, answered?.answerRead);
     },
     get drawsName() {
       return owed(name, answered?.names).length > 0;

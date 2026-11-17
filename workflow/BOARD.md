@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The other cards' texts** — a number of population reads in a text as the number and population's glyph, on a card, an answer and a plate; a card doing two things reads a line to each; a trophy reads Gain before its amounts; Floodplain and Tribute read their shorter texts; `e2e/bad-air.spec.ts` passes. Doc-impact: `docs/LOOK.md`. [board/the-other-cards-texts.md](board/the-other-cards-texts.md)
 - **Embarking changed** — the way a unit embarks and disembarks is changed, on feedback the user holds, and the Embark and Disembark cards leave.
 - **The texts overflowing the card face** — the card texts that still pass the three lines a face's text has and a name wider than its plate ("Misunderstandings") are inspected one by one, and the text is rewritten, the box changed or given a scroll, through mockups.
 - **The card types reviewed** — a card's type does not say its family, a settle card placing a building and an action card placing an improvement or nothing, which is a design issue of the card types: review them.
