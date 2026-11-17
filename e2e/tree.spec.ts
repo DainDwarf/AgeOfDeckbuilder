@@ -12,9 +12,9 @@ import { DEFAULTS } from '../src/ui/bindings';
 import { achievementGoal, technologyName, text } from '../src/ui/text';
 import {
   cardOnFace,
+  kindLabelOnScreen,
   namedIn,
   nameOnScreen,
-  onScreen,
   openCampaign,
   plateReads,
   readings,
@@ -114,7 +114,8 @@ test('on a new campaign a right click on the name in the available plate’s goa
 
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named?.id);
   await rested(page);
-  const small = await onScreen(page, 'small-card-0');
+  // A mark may stand on a card's middle: the card is right-clicked on its kind label, a name nowhere.
+  const small = await kindLabelOnScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await rested(page);
   await page.mouse.click(small.x, small.y, { button: 'right' });
