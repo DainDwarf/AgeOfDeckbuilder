@@ -17,7 +17,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The card types reviewed** — a card's type does not say its family, a settle card placing a building and an action card placing an improvement or nothing, which is a design issue of the card types: review them.
+- **The card types reviewed** — a card's frame wears the colour of its kind and the family leaves: Improvement is a kind, the four cards that place an improvement declaring it, reading IMPROVEMENT and standing after the building cards in the collection's order; a settle card's frame is stone grey; the card that settles the player's city wears the pack's decorated front in that grey; the catalogue refuses an improvement card that places no improvement and an action card that places one; `docs/CHRONICLE.md`, `docs/MAP.md`, `docs/GLOSSARY.md`, `docs/META-SCREENS.md` and `docs/LOOK.md` say so; `e2e/trapping.spec.ts` passes. Doc-impact: `docs/CHRONICLE.md`, `docs/MAP.md`, `docs/GLOSSARY.md`, `docs/META-SCREENS.md`, `docs/LOOK.md`. [board/the-card-types-reviewed.md](board/the-card-types-reviewed.md)
 - **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
 - **The Stone cards' paintings** — every card of the Stone Age wears one painting of his in its art box.
 - **A building on the infopanel as its card** — an inspected building, with its tile's improvements, is shown on the infopanel as the face of its card.
