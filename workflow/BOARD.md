@@ -17,8 +17,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The Nomadic cards' paintings** — every card of the Nomadic Age wears one painting of his in its art box.
-- **The Stone cards' paintings** — every card of the Stone Age wears one painting of his in its art box.
+- **The Nomadic cards' paintings** — every card the Nomadic Age brings wears David Baumgart's painting in its art box, filling the box to its rim under a glass at 80% of its painted strength: a card that places a unit or a building holds that thing on a tile of its ground, the city's card the building of its city section, a trophy the place it was won or one of his icons, every other card one of his icons on its ground; the catalogue's test finds each card's painting; `docs/LOOK.md` says so; `e2e/card-reads.spec.ts` passes. Doc-impact: `docs/LOOK.md`. [board/the-nomadic-cards-paintings.md](board/the-nomadic-cards-paintings.md)
+- **The Stone cards' paintings** — every card of the Stone Age wears David Baumgart's painting in its art box.
 - **A building on the infopanel as its card** — an inspected building, with its tile's improvements, is shown on the infopanel as the face of its card.
 - **A unit on the infopanel as its card** — an inspected unit is shown on the infopanel as the face of its card, reading what it holds now.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
