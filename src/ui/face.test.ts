@@ -17,7 +17,7 @@ import {
   TILLAGE,
   WELL,
 } from '../rules/fixtures';
-import { MOVE_POINT, type Tile, tilesBeside } from '../rules/map';
+import { MOVE_POINT, type River, type Tile, tilesBeside } from '../rules/map';
 import { answerOf } from '../rules/schedule';
 import type { CardArt } from './art-box';
 import {
@@ -34,6 +34,8 @@ import {
   namedCardMade,
   numbersRun,
   placedReading,
+  RIVER,
+  riverFace,
   statReading,
   terrainFace,
   terrainOnTile,
@@ -81,7 +83,7 @@ describe('a face of a card that places a thing on the ground', () => {
     expect(reading('PH_Ditch').goesOn).toEqual([
       { kind: 'terrain', id: 'plain' },
       { kind: 'terrain', id: 'forest' },
-      { kind: 'river' },
+      RIVER,
     ]);
     expect(reading('PH_Settle', 'PH_City').goesOn).toEqual([{ kind: 'terrain', id: 'urban' }]);
     expect(reading('PH_Settle').goesOn).toEqual([]);
@@ -308,10 +310,13 @@ describe('a terrain’s face read off a tile', () => {
       desert: { yields: {}, movementCost: MOVE_POINT, water: false, elevation: 0 },
     },
   });
-  /** The face of the first tile's terrain read off it on turn 1, the others standing beside it. */
-  const readOff = (tiles: readonly Tile[], timeline = NO_DEALS) =>
+  /**
+   * The face of the first tile's terrain read off it on turn 1, the others standing beside it and the
+   * rivers running where handed.
+   */
+  const readOff = (tiles: readonly Tile[], timeline = NO_DEALS, rivers: River[] = []) =>
     terrainFace(
-      terrainOnTile(content, { turn: 1, timeline, rivers: [] }, tiles[0], tilesBeside(tiles), true),
+      terrainOnTile(content, { turn: 1, timeline, rivers }, tiles[0], tilesBeside(tiles), true),
     );
   const bare = (q: number, terrain: string): Tile => ({ q, r: 0, terrain, improvements: [] });
 
@@ -361,6 +366,49 @@ describe('a terrain’s face read off a tile', () => {
     expect(readOff([bare(0, 'ocean')])).toMatchObject({
       footDisc: { symbol: 'move', reading: text('face.no-movement-cost') },
       rules: text('face.impassable'),
+    });
+  });
+
+  /** One river along the tile at 0,0's east and south-east edges, one along its north-west edge. */
+  const rivers: River[] = [
+    [
+      { x: 1, y: -1 },
+      { x: 1, y: 1 },
+      { x: 0, y: 2 },
+    ],
+    [
+      { x: -1, y: -1 },
+      { x: 0, y: -2 },
+    ],
+  ];
+
+  it('names the river last, once however many rivers and edges run along the tile, and a tile beside whose corner a river touches names none', () => {
+    const fertile: Tile = { ...bare(0, 'plain'), feature: 'PH_Fertile' };
+
+    expect(readOff([fertile, bare(-1, 'plain')], NO_DEALS, rivers).rules).toBe(
+      '[feature:PH_Fertile], [river:river]',
+    );
+    expect(readOff([bare(-1, 'plain'), fertile], NO_DEALS, rivers).rules).toBe('');
+  });
+
+  it('names the river over Impassable on a tile nothing crosses', () => {
+    expect(readOff([bare(0, 'ocean')], NO_DEALS, rivers).rules).toBe(
+      `[river:river]\n${text('face.impassable')}`,
+    );
+  });
+});
+
+describe('the river’s face', () => {
+  it('is drawn as a terrain’s, labelled Terrain, reading its sentence and no row, no disc and no mark, its window holding a river across a plain ground', () => {
+    expect(riverFace()).toMatchObject({
+      name: text('river.river'),
+      kind: 'terrain',
+      front: { front: 'plain', colour: 'terrain', window: 'oval' },
+      rules: text('face.river'),
+      goesOn: [],
+      gives: [],
+      footDisc: undefined,
+      art: { window: 'oval', ground: 'plain', holds: { kind: 'river' } },
     });
   });
 });

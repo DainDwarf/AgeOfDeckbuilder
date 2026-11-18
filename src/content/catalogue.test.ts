@@ -53,6 +53,8 @@ import {
   freshUnit,
   frontWindowOf,
   improvementFace,
+  RIVER,
+  riverFace,
   terrainFace,
   unitFace,
 } from '../ui/face';
@@ -111,6 +113,8 @@ function tableOf(kind: ReferenceKind): string[] {
       return Object.keys(CATALOGUE.terrains);
     case 'feature':
       return Object.keys(CATALOGUE.features);
+    case 'river':
+      return [RIVER.id];
     case 'improvement':
       return Object.keys(CATALOGUE.improvements);
     case 'building':
@@ -178,7 +182,7 @@ function citiesUnder(id: string): (string | undefined)[] {
 function rulesAsDrawn(id: string): string[] {
   return citiesUnder(id).map((city) => {
     const face = cardFaceAtStart(CATALOGUE, id, city);
-    for (const mark of face.goesOn) if (mark.kind !== 'river') referenceName(mark);
+    for (const mark of face.goesOn) referenceName(mark);
     return face.rules;
   });
 }
@@ -219,6 +223,7 @@ test('every card of the catalogue holds a painting in its art box under each cit
           if (feature !== undefined) expect(() => featureIconOf(feature)).not.toThrow();
           break;
         }
+        case 'river':
         case 'nothing':
           break;
       }
@@ -234,7 +239,7 @@ test('every building of the catalogue wears one face, the face of the one card w
     if (face.art === undefined) throw new Error(`the face of the building ${id} holds no painting`);
 
     expect(made).toContain(artFrameOf(face.art, frontWindowOf(face.front)));
-    for (const mark of face.goesOn) if (mark.kind !== 'river') referenceName(mark);
+    for (const mark of face.goesOn) referenceName(mark);
   }
 });
 
@@ -257,12 +262,13 @@ test('every improvement of the catalogue wears the face of the one card whose pl
   }
 });
 
-test('every terrain and every feature of the catalogue wears a face of its own, on a front and a shadow the cards sheet makes, holding a picture the art sheet paints', () => {
+test('every terrain and every feature of the catalogue, and the river, wears a face of its own, on a front and a shadow the cards sheet makes, holding a picture the art sheet paints', () => {
   const painted = new Set((artSheet(CATALOGUE).made ?? []).map(({ frame }) => frame));
   const made = new Set((CARDS_SHEET.made ?? []).map(({ frame }) => frame));
   const faces = [
     ...Object.keys(CATALOGUE.terrains).map((id) => terrainFace(bareTerrain(CATALOGUE, id))),
     ...Object.keys(CATALOGUE.features).map((id) => featureFace(CATALOGUE, id)),
+    riverFace(),
   ];
   for (const face of faces) {
     if (face.art === undefined) throw new Error(`the face of ${face.id} holds no picture`);

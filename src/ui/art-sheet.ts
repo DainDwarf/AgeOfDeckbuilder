@@ -27,6 +27,7 @@ import {
   featureFace,
   freshUnit,
   type InspectedTile,
+  riverFace,
   terrainFace,
   unitFace,
 } from './face';
@@ -146,6 +147,8 @@ function thingKey(holds: Holds): string {
       return holds.file;
     case 'tile':
       return holds.feature === undefined ? 'tile' : `tile:${holds.feature}`;
+    case 'river':
+      return 'river';
     case 'nothing':
       return 'nothing';
   }
@@ -208,6 +211,7 @@ function carriedOf(holds: Holds): Carried {
       return { building: undefined, improvements: [], feature: holds.feature };
     case 'unit':
     case 'icon':
+    case 'river':
     case 'nothing':
       return { building: undefined, improvements: [], feature: undefined };
   }
@@ -226,6 +230,7 @@ function middleTileOf(holds: Holds): TileCoords {
     case 'improvement':
     case 'icon':
     case 'tile':
+    case 'river':
     case 'nothing':
       return CENTRE;
   }
@@ -286,6 +291,22 @@ function groundRiver(): River {
   }
   return [...above.values()].sort((one, other) => one.x - other.x);
 }
+
+/**
+ * The river the River's face holds, about the ground's middle tile: from its first corner a step down
+ * and right, then one straight down, in turn, twelve edges.
+ */
+function faceRiver(): River {
+  const course: Corner[] = [{ x: -4, y: -8 }];
+  for (let edge = 0; edge < 12; edge++) {
+    const { x, y } = course[edge];
+    course.push(edge % 2 === 0 ? { x: x + 1, y: y + 1 } : { x, y: y + 2 });
+  }
+  return course;
+}
+
+/** The point of the corner lattice the River's face's window stands its middle on. */
+const FACE_RIVER_MIDDLE: Corner = { x: -0.5, y: 0.5 };
 
 /** A painting of the river sheet laid as the map lays it, moved to lie about the middle of the tile at `at`. */
 function laidAbout(laying: RiverLaying, at: TileCoords): RiverLaying {
@@ -509,6 +530,7 @@ function laidOf(paintingIn: PaintingIn, holds: Holds): Laid[] {
         : grownOnTile(laidDecor(paintingIn, holds.feature, CENTRE, LONG_POND), DECOR_GROWN);
     case 'unit':
     case 'icon':
+    case 'river':
     case 'nothing':
       return [];
   }
@@ -525,7 +547,8 @@ function paintedMiddle(laid: readonly Laid[]): Point {
 
 /**
  * Where the middle tile's middle stands in an art box, about the box its glass lies in: under what is
- * painted where that is centred, dropped under an improvement told by ditches, else on its middle.
+ * painted where that is centred, dropped under an improvement told by ditches, off it as the River's
+ * face's river asks, else on its middle.
  */
 function groundMiddleOf(
   picture: ArtPicture,
@@ -548,6 +571,10 @@ function groundMiddleOf(
       return middle;
     case 'building':
       return centred();
+    case 'river': {
+      const off = cornerOnLattice(FACE_RIVER_MIDDLE);
+      return { x: middle.x - off.x * scale, y: middle.y - off.y * scale };
+    }
     case 'improvement':
       switch (liesOf(holds.improvement).kind) {
         case 'painting':
@@ -652,6 +679,10 @@ function paintThing(
       if (discs) paintRow(on, paintingIn, tile);
       return;
     }
+    case 'river':
+      on.setTransform(scale, 0, 0, scale, ground.x, ground.y);
+      paintRivers(on, paintingIn, [faceRiver()], CENTRE);
+      return;
     case 'icon': {
       const from = paintingIn(ART_SHEET_KEY, holds.file);
       const side = ICON_SHARE * Math.min(window.width, window.height);
@@ -679,6 +710,7 @@ function litTile(holds: Holds): boolean {
     case 'building':
     case 'improvement':
     case 'icon':
+    case 'river':
     case 'nothing':
       return false;
   }
@@ -782,6 +814,7 @@ export function artSheet(catalogue: Catalogue): Sheet {
     add(terrainFace(bareTerrain(catalogue, id)).art);
   }
   for (const id of Object.keys(catalogue.features)) add(featureFace(catalogue, id).art);
+  add(riverFace().art);
   for (const id of Object.keys(catalogue.units)) {
     for (const embarked of [false, true]) {
       add(unitFace(catalogue, { ...freshUnit(catalogue, id, 'player'), embarked }).art);
@@ -816,6 +849,7 @@ function inArtSheet(holds: Holds): boolean {
     case 'improvement':
     case 'icon':
     case 'tile':
+    case 'river':
     case 'nothing':
       return true;
   }

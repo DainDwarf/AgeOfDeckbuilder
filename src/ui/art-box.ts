@@ -12,7 +12,7 @@ const CRAFTING_ICONS = 'store/icons-crafting-tools-foraging-herbalism/icons';
 /**
  * What stands on the ground of a card's art box: a unit kind's painting, a building's paintings, an
  * improvement as the map lays it, one of his icons by its file under the assets folder, the middle
- * tile itself lit and carrying a feature where one is named, or nothing.
+ * tile lit and carrying a feature where one is named, a river across the window, or nothing.
  */
 export type ArtThing =
   | { readonly kind: 'unit'; readonly type: string }
@@ -20,6 +20,7 @@ export type ArtThing =
   | { readonly kind: 'improvement'; readonly improvement: ImprovementId }
   | { readonly kind: 'icon'; readonly file: string }
   | { readonly kind: 'tile'; readonly feature: FeatureId | undefined }
+  | { readonly kind: 'river' }
   | { readonly kind: 'nothing' };
 
 /** What a card's art box holds: the terrain of its ground, and the thing its play places or one named. */

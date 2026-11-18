@@ -14,6 +14,7 @@ import {
   click,
   dragOut,
   firstSeed,
+  IRRIGATION,
   idsOf,
   openSaved,
   panelFace,
@@ -30,9 +31,6 @@ import {
   WORKER,
   watch,
 } from './chronicle-screen';
-
-/** The card that places the improvement, and the improvement it places. */
-const IRRIGATION = 'irrigation';
 
 /** A new campaign with the card added to its deck and every other card of the deck removed. */
 const CAMPAIGN = (() => {

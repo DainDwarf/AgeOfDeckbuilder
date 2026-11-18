@@ -7,13 +7,14 @@
 import { type CastSymbol, isCastSymbol } from './cast';
 
 /**
- * What a name names: a card, a terrain, a feature, an improvement, a building, or a unit kind painted
- * for the faction its kind says.
+ * What a name names: a card, a terrain, a feature, the river, an improvement, a building, or a unit
+ * kind painted for the faction its kind says.
  */
 export const REFERENCE_KINDS = [
   'card',
   'terrain',
   'feature',
+  'river',
   'improvement',
   'building',
   'player',

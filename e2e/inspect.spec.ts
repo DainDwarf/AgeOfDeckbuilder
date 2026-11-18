@@ -246,7 +246,7 @@ function faceDrawn(face: Face): FaceRead {
     card: face.id,
     rules: face.rules,
     art: artFrameOf(face.art, frontWindowOf(face.front)),
-    references: face.goesOn.flatMap((mark) => (mark.kind === 'river' ? [] : [mark])),
+    references: face.goesOn,
   };
 }
 

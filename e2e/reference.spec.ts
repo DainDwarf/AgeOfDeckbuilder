@@ -17,6 +17,7 @@ import {
   frontWindowOf,
   improvementFace,
   namedCardFace,
+  riverFace,
   terrainFace,
 } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
@@ -27,6 +28,7 @@ import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   besideTheDeal,
   browse,
+  campaignWith,
   cardOnFace,
   chronicleOf,
   civilizationOpened,
@@ -35,6 +37,7 @@ import {
   firstSeed,
   givesRead,
   HUNT,
+  IRRIGATION,
   idsOf,
   kindLabelOnScreen,
   launchedAs,
@@ -338,6 +341,41 @@ test('a terrain marked on the settle card raises its own face small at a rest an
   expect(await selected(page, 0, card)).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('the river marked on Irrigation’s card raises the River’s face small at a rest and shows it large at a right click', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = campaignWith([IRRIGATION]);
+  const { chronicle, index } = firstSeed(`opens turn 1 with ${IRRIGATION} in hand`, (seed) => {
+    const opened = settledOn(seed, [], campaign);
+    const at = idsOf(opened.hand).indexOf(IRRIGATION);
+    return at === -1 ? undefined : { chronicle: opened, index: at };
+  });
+  const hand = `hand-${index}`;
+  const drawn = cardFaceAtStart(CATALOGUE, IRRIGATION, undefined);
+  const marked =
+    namedIn(drawn.rules).length + drawn.goesOn.findIndex(({ kind }) => kind === 'river');
+  const face = faceRead(riverFace());
+
+  await openSaved(page, chronicle, campaign);
+  const card = await onScreen(page, hand);
+  const lying = await nameOnScreen(page, hand, marked);
+  await page.mouse.move(card.x, card.y);
+  const mark = await liftedName(page, lying, hand, marked);
+  await page.mouse.move(mark.x, mark.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(face.card);
+  expect(faceSeen((await readings(page, ['small-card-0']))('small-card-0'))).toEqual(face);
+
+  await page.mouse.click(mark.x, mark.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(face.card);
+  expect(faceSeen((await readings(page, ['inspection']))('inspection'))).toEqual(face);
+  expect(await standing(page, 'inspection-0')).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
 
   expect(problems).toEqual([]);
 });

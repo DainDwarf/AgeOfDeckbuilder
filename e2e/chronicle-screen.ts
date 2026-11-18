@@ -2773,6 +2773,9 @@ export const SCOUT = 'scout';
 /** The card that places the improvement, and the improvement it places. */
 export const TRAPPING = 'trapping';
 
+/** The card that places the improvement going along a river, and the improvement it places. */
+export const IRRIGATION = 'irrigation';
+
 /** The card that removes a tile's feature. */
 export const HUNT = 'hunt';
 

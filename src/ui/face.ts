@@ -50,6 +50,7 @@ import {
   cardName,
   cardRules,
   featureName,
+  riverName,
   terrainName,
   text,
   unitName,
@@ -263,9 +264,13 @@ export type PaintedUnit = {
 };
 
 /** A mark of what a card's thing goes on: a terrain, a feature or a building, or the river. */
-export type GoesOn =
-  | Extract<Reference, { readonly kind: 'terrain' | 'feature' | 'building' }>
-  | { readonly kind: 'river' };
+export type GoesOn = Extract<
+  Reference,
+  { readonly kind: 'terrain' | 'feature' | 'building' | 'river' }
+>;
+
+/** The river, as a name and a mark name it. */
+export const RIVER: Extract<Reference, { readonly kind: 'river' }> = { kind: 'river', id: 'river' };
 
 /**
  * What the disc at a face's foot's right corner reads where no influence stands there: a symbol's
@@ -343,7 +348,7 @@ function goesOnOf({ terrains, features, river }: LayerKind, over: string | undef
     features !== undefined && features.length > 0
       ? features.map((id) => ({ kind: 'feature', id }))
       : terrains.map((id) => ({ kind: 'terrain', id }));
-  return river === true ? [...ground, { kind: 'river' }] : ground;
+  return river === true ? [...ground, RIVER] : ground;
 }
 
 /** What a face reads of the thing its card places on the ground, and the text that leads its own. */
@@ -610,9 +615,9 @@ function namedPart(part: YieldPart): Reference[] {
 }
 
 /**
- * The tile as its terrain's face reads it: its yield but its building's part, the things giving it
- * that part but its terrain named in the order `yieldParts` reads them, what entering it costs, and
- * its window holding it as the map draws it, the discs of its row standing where `discs` says.
+ * The tile as its terrain's face reads it: its yield but its building's part, what gives that part but
+ * its terrain named in `yieldParts`' order and the river last, what entering it costs, and its window
+ * holding it as the map draws it, the discs of its row standing where `discs` says.
  */
 export function terrainOnTile(
   catalogue: Catalogue,
@@ -633,7 +638,7 @@ export function terrainOnTile(
   return {
     terrain,
     gives: summed(parts.map(({ yields }) => yields)),
-    names: parts.flatMap(namedPart),
+    names: [...parts.flatMap(namedPart), ...(along.length === 0 ? [] : [RIVER])],
     movementCost: movementCostRead((embarked) => movementCost(catalogue, tile, embarked)),
     middle: {
       kind: 'inspected',
@@ -657,24 +662,44 @@ export function terrainFace({
   middle,
 }: TerrainReading): Face {
   const named = names.length === 0 ? undefined : names.map(nameWritten).join(', ');
-  return ownFaceOf(
+  return drawnAsTerrain(
     {
       id: terrain,
       name: terrainName(terrain),
-      kind: 'terrain',
-      front: { front: 'plain', colour: 'terrain', window: 'oval' },
       rules: ledBy(named, cost === undefined ? text('face.impassable') : ''),
       art: { window: 'oval', ground: terrain, holds: middle },
     },
     {
-      goesOn: [],
       gives: onePerPoint(gives),
-      takes: [],
       footDisc: {
         symbol: 'move',
         reading: cost === undefined ? text('face.no-movement-cost') : inMovePoints(cost),
       },
     },
+  );
+}
+
+/** A face drawn as a terrain's is, labelled Terrain on its plain oval front, marking nothing. */
+function drawnAsTerrain(
+  own: Pick<Face, 'id' | 'name' | 'rules' | 'art'>,
+  reads: Pick<Face, 'gives' | 'footDisc'>,
+): Face {
+  return ownFaceOf(
+    { ...own, kind: 'terrain', front: { front: 'plain', colour: 'terrain', window: 'oval' } },
+    { goesOn: [], takes: [], ...reads },
+  );
+}
+
+/** The face the river wears, drawn as a terrain's, its window holding a river falling across it. */
+export function riverFace(): Face {
+  return drawnAsTerrain(
+    {
+      id: RIVER.id,
+      name: riverName(RIVER.id),
+      rules: text('face.river'),
+      art: { window: 'oval', ground: 'plain', holds: { kind: 'river' } },
+    },
+    { gives: [], footDisc: undefined },
   );
 }
 
@@ -888,6 +913,8 @@ export function namedFace(
       return terrainFace(bareTerrain(catalogue, reference.id));
     case 'feature':
       return featureFace(catalogue, reference.id);
+    case 'river':
+      return riverFace();
     case 'improvement':
       return improvementFace(catalogue, reference.id);
   }

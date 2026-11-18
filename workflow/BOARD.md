@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The river named on the terrain card** — a terrain card read off a tile a river runs along names `[River]` last; the river has a face of its own, the River card, raised by that name and by the river's mark at Irrigation's foot; the terrain hover reworded; the face's Vitest and `e2e/reference.spec.ts` pass. Doc-impact: `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`. [board/river-on-terrain-card.md](board/river-on-terrain-card.md)
 - **The infopanel's pile wears the dark back** — on piled infopanels, use the dark back for the pile of cards under the one shown.
 - **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.
 - **The look page names its artist throughout** — `docs/LOOK.md` names David Baumgart once and then says "his" about forty times; reword it so the artist is named wherever a reader could lose whose hand is meant.

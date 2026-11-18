@@ -942,16 +942,14 @@ export function createCardFace(
       const mark = goesOn.take();
       showGoesOn(mark, thing, toned);
       mark.root.setPosition(x, markY);
-      if (thing.kind !== 'river') {
-        marked.push({
-          reference: thing,
-          reading: {},
-          x,
-          y: markY,
-          width: markAcross,
-          height: markAcross,
-        });
-      }
+      marked.push({
+        reference: thing,
+        reading: {},
+        x,
+        y: markY,
+        width: markAcross,
+        height: markAcross,
+      });
     }
     names = [...marks.names, ...marked];
     root.setData({ card: next.id, names });

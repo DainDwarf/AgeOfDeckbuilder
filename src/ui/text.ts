@@ -53,6 +53,7 @@ const TEXT = {
   'feature.cattle': 'Cattle',
   'feature.flint': 'Flint',
   'feature.oasis': 'Oasis',
+  'river.river': 'River',
   'improvement.trapping': 'Trapping',
   'improvement.irrigation': 'Irrigation',
   'improvement.pasture': 'Pasture',
@@ -104,7 +105,7 @@ const TEXT = {
   'kind-tooltip.trophy': 'Played, it is banished. Kept to the ending, it gains its influence',
   'kind-tooltip.challenge':
     'Cannot be played. Strikes each turn it stays in your hand. Gains its influence if you win the age',
-  'kind-tooltip.terrain': 'Every tile has one: what it yields and what entering it costs',
+  'kind-tooltip.terrain': 'What it yields and what crossing it costs',
   'kind-tooltip.feature': "An extra on a tile, its yield added to the terrain's",
   'unit.worker': 'Worker',
   'unit.warrior': 'Warrior',
@@ -240,6 +241,7 @@ const TEXT = {
   'face.bonus': '+{count} damage beside',
   'face.hostile': '[hostile] Hostile',
   'face.impassable': 'Impassable',
+  'face.river': 'Crossing it ends the move',
   'face.no-movement-cost': '—',
   'refusal.food': 'Costs {cost} food',
   'refusal.production': 'Costs {cost} production',
@@ -489,6 +491,11 @@ export function featureName(feature: string): string {
   return named('feature', feature, 'the feature');
 }
 
+/** What the river is named on the screen; a river no entry names is refused. */
+export function riverName(river: string): string {
+  return named('river', river, 'the river');
+}
+
 /** What an improvement is named on the screen; an improvement no entry names is refused. */
 export function improvementName(improvement: string): string {
   return named('improvement', improvement, 'the improvement');
@@ -508,6 +515,8 @@ export function referenceName(reference: Reference): string {
       return terrainName(reference.id);
     case 'feature':
       return featureName(reference.id);
+    case 'river':
+      return riverName(reference.id);
     case 'improvement':
       return improvementName(reference.id);
     case 'building':
