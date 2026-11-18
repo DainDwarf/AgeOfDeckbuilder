@@ -1,6 +1,13 @@
 import type Phaser from 'phaser';
 import { NO_REFUSAL, type Refusal } from '../rules/state';
-import { addFront, CARD_HEIGHT, CARD_RISE, type CardFace, createCardFace } from './card-face';
+import {
+  addFront,
+  CARD_HEIGHT,
+  CARD_RISE,
+  type CardFace,
+  createCardFace,
+  frontAt,
+} from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
@@ -84,7 +91,7 @@ export function linesOf(
   return { parts, held, foot };
 }
 
-/** A stack laid: its container, its face's reactions where the face stands, its reading line, and its foot. */
+/** A stack laid: its container, its face's reactions where its cards stand, its reading line, and its foot. */
 export type LaidStack = {
   /** What a piece laid on the stack joins. */
   readonly root: Phaser.GameObjects.Container;
@@ -103,7 +110,8 @@ export type LaidStack = {
 
 /**
  * A stack's cards laid: the cards under its face, its face drawn and its box, the box they cover
- * together, and where a stack of the most copies would end, whatever this one holds.
+ * together, whether they lie under a point of the surface they are drawn on, and where a stack of the
+ * most copies would end, whatever this one holds.
  */
 export type StackedCards = {
   readonly unders: readonly Phaser.GameObjects.Image[];
@@ -111,6 +119,7 @@ export type StackedCards = {
   readonly shown: Face;
   readonly face: Box;
   readonly box: Box;
+  liesUnder(x: number, y: number): boolean;
   readonly foot: number;
 };
 
@@ -152,6 +161,8 @@ export function stackedCardsOf(
     shown,
     face: { x: left, y: top, width: CARD_WIDTH, height: CARD_HEIGHT },
     box: { x: left, y: top, width: CARD_WIDTH + reach, height: CARD_HEIGHT + reach },
+    liesUnder: (x, y) =>
+      card.cardAt(x, y) || unders.some((drawn) => frontAt(drawn, shown.front, x, y)),
     foot: top + CARD_HEIGHT + UNDER_REACH,
   };
 }
@@ -179,7 +190,7 @@ export function stackOf(
   },
 ): LaidStack {
   const { id } = stack;
-  const { unders, card, shown, face, foot } = stackedCardsOf(scene, {
+  const { unders, card, shown, face, liesUnder, foot } = stackedCardsOf(scene, {
     shown: cardFaceAtStart(catalogue, id, city),
     copies: stack.copies,
     left,
@@ -197,7 +208,7 @@ export function stackOf(
       .container(0, 0, [...unders, card.root, count])
       .setName(`${name}-stack-${id}`)
       .setData('dimmed', reading.dimmed),
-    face: { box: face, reactions: reactionsOf(card, shown, inspecting) },
+    face: { box: face, liesUnder, reactions: reactionsOf(card, shown, inspecting) },
     reading: count,
     line: { top: lineTop, middle, left, right: left + CARD_WIDTH + UNDER_REACH },
     bottom: lineTop + LINE_HEIGHT,

@@ -26,12 +26,13 @@ export type Carry = {
 };
 
 /**
- * A thing a panel holds that reacts to the pointer, its box as it stands unscrolled. A thing that
- * reacts to no left click, or on a surface with no carrier, carries nothing, whatever carry it
- * declares.
+ * A thing a panel holds that reacts to the pointer, its box as it stands unscrolled. One that reacts
+ * to no left click, or on a surface with no carrier, carries nothing, whatever carry it declares.
  */
 export type Held = {
   readonly box: Box;
+  /** Whether it lies under a point of the design space, the panel scrolled as it stands; its box answers where it says nothing. */
+  readonly liesUnder?: (x: number, y: number) => boolean;
   readonly reactions: Reactions;
   readonly press?: () => void;
   readonly carry?: Carry;

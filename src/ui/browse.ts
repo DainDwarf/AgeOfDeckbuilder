@@ -5,6 +5,7 @@ import type { Refusal } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
 import { createFootBubble } from './card-face';
 import { ended, stopMotion } from './card-motion';
+import { inRoundedBox } from './card-shape';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, type StackedCards, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
@@ -27,7 +28,7 @@ import {
   type Inspecting,
   layingOf,
   type Reactions,
-  reactionsAround,
+  reactionsOf,
   type ShownLarge,
   standLarge,
 } from './stack';
@@ -63,14 +64,15 @@ export type BrowseStack = {
 
 /**
  * The badge reading the copies, named `name`, its bottom right corner at the point handed, as wide
- * as its count needs and never narrower than its least: it widens leftwards.
+ * as its count needs and never narrower than its least: it widens leftwards. It says whether it lies
+ * under a point of the surface it is drawn on.
  */
 function badgeOf(
   scene: Phaser.Scene,
   { right, bottom }: { readonly right: number; readonly bottom: number },
   copies: number,
   name: string,
-): { parts: Phaser.GameObjects.GameObject[]; box: Box } {
+): { parts: Phaser.GameObjects.GameObject[]; box: Box; liesUnder(x: number, y: number): boolean } {
   const count = addText(scene, 0, 0, text('collection.row-copies', { copies }), BADGE_STYLE)
     .setOrigin(0.5)
     .setName(name);
@@ -84,17 +86,22 @@ function badgeOf(
     .lineStyle(1, LOOK.cardEdge)
     .strokeRoundedRect(box.x + 0.5, box.y + 0.5, width - 1, BADGE_HEIGHT - 1, radius - 0.5);
   count.setPosition(box.x + width / 2, box.y + BADGE_HEIGHT / 2);
-  return { parts: [ground, count], box };
+  return {
+    parts: [ground, count],
+    box,
+    liesUnder: (x, y) => inRoundedBox(ground.getLocalPoint(x, y), box, radius),
+  };
 }
 
 /**
- * A stack laid with its badge: its cards, everything it draws, the box it and its badge cover, and
- * what it reacts to the pointer with there.
+ * A stack laid with its badge: its cards, everything it draws, the box it and its badge cover,
+ * whether it or its badge lies under a point of the surface, and what it reacts to the pointer with.
  */
 export type BadgedStack = {
   readonly stacked: StackedCards;
   readonly parts: readonly Phaser.GameObjects.GameObject[];
   readonly box: Box;
+  liesUnder(x: number, y: number): boolean;
   readonly reactions: Reactions;
 };
 
@@ -129,9 +136,8 @@ export function badgedStackOf(
       new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height),
       new Phaser.Geom.Rectangle(badge.box.x, badge.box.y, badge.box.width, badge.box.height),
     ),
-    reactions: reactionsAround(stacked.card, stacked.shown, inspecting, () => {
-      inspecting.large.show(stacked.shown);
-    }),
+    liesUnder: (x, y) => stacked.liesUnder(x, y) || badge.liesUnder(x, y),
+    reactions: reactionsOf(stacked.card, stacked.shown, inspecting),
   };
 }
 
@@ -143,7 +149,7 @@ function stackCellOf(
 ): Cell {
   const { scene } = browser;
   return ({ left, top }) => {
-    const { stacked, parts, box, reactions } = badgedStackOf(browser, {
+    const { stacked, parts, box, liesUnder, reactions } = badgedStackOf(browser, {
       shown: stack.shown,
       copies: stack.copies,
       left,
@@ -154,7 +160,7 @@ function stackCellOf(
     const root = scene.add.container(0, 0, [...edge, ...parts]).setName(`${name}-stack-${at}`);
     return {
       parts: [root],
-      held: [{ box, reactions }],
+      held: [{ box, liesUnder, reactions }],
       bottom: stacked.foot,
     };
   };

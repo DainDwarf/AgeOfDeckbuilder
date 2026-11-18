@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
 import {
@@ -7,6 +7,7 @@ import {
   createCardFace,
   type FootBubble,
   type Name,
+  pressedOnFace,
   type Raiser,
   type SmallCards,
 } from './card-face';
@@ -123,13 +124,7 @@ export function createSmallCards(
     const off = { x: x - spot.x, y: y - spot.top };
     const link: Link = { raiser, root, off, onCard: false, under: undefined };
 
-    root
-      .setName(`small-card-${level}`)
-      .setPosition(x, y)
-      .setInteractive({
-        hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
-        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-      });
+    pressedOnFace(face).setName(`small-card-${level}`).setPosition(x, y);
     reactsToPress(root);
     onClick(root, () => inspect(raiser.name), 'right', 'within slack');
     onHover(

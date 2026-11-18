@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A press on a card's frame reaches the map** — every card on screen takes the pointer, press, hover and rest, on everything its face draws and nowhere else, on the infopanel, in the hand, on the piles, as a small card, shown large and on a panel; `docs/INTERFACE.md` says so; `e2e/frame-press.spec.ts` passes. Doc-impact: `docs/INTERFACE.md`. [board/frame-press.md](board/frame-press.md)
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
 - **The river named on the terrain card** — add the [River] reference on terrains next to a river.
 - **The infopanel's pile wears the dark back** — on piled infopanels, use the dark back for the pile of cards under the one shown.

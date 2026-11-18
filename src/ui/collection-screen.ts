@@ -212,7 +212,12 @@ function civilizationsOf(
       browse(id);
     });
     parts.push(scene.add.container(0, 0, [...pile.parts]).setName(name));
-    held.push({ box: pile.box, reactions: pile.reactions, press: () => open(id) });
+    held.push({
+      box: pile.box,
+      liesUnder: pile.liesUnder,
+      reactions: pile.reactions,
+      press: () => open(id),
+    });
     foot = pile.bottom;
     pileTop = pile.bottom + PILES_APART;
   }

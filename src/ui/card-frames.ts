@@ -12,6 +12,9 @@ export const BODY = { width: 560, height: 820 };
 /** How wide a card is wherever it stands but large, in units. */
 export const CARD_WIDTH = 124;
 
+/** How wide a card shown large is, in units. */
+export const LARGE_WIDTH = 380;
+
 /** A box in the pack's pixels, from the top-left corner of a front's body. */
 type PackBox = {
   readonly x: number;
@@ -362,7 +365,7 @@ function glassOf(pixels: Uint8ClampedArray, { width, height, body, window }: Fro
  * The pixels of a file that wide and tall a walk from the starts reaches, from each pixel to the four
  * beside it, through those `passes` lets through, by their index in the file.
  */
-function walkedFrom(
+export function walkedFrom(
   width: number,
   height: number,
   starts: readonly PackPoint[],
@@ -402,8 +405,8 @@ function thinned(pixels: Uint8ClampedArray, mask: Uint8Array): void {
  */
 export function artShapeOf(window: FrontWindow, paintingIn: PaintingIn): CanvasRenderingContext2D {
   const front = FRONTS[window];
-  const { file, width, height, body, glass: box } = front;
-  const { data } = drawnAlone(paintingIn(CARDS_SHEET_KEY, file)).getImageData(0, 0, width, height);
+  const { file, width, body, glass: box } = front;
+  const { data } = pixelsOf(paintingIn, file);
   const on = blankCanvas(box.width, box.height);
   const shape = on.createImageData(box.width, box.height);
   glassOf(data, front).forEach((held, at) => {
@@ -479,6 +482,12 @@ function drawnAlone(from: InSheet): CanvasRenderingContext2D {
   return on;
 }
 
+/** The pixels of a painting of the cards sheet, its file's, as a canvas reads them. */
+export function pixelsOf(paintingIn: PaintingIn, file: string): ImageData {
+  const from = paintingIn(CARDS_SHEET_KEY, file);
+  return drawnAlone(from).getImageData(0, 0, from.width, from.height);
+}
+
 /** A painting of a sheet drawn from the context's top-left corner, its pixels changed by `change` first. */
 function paintChanged(
   context: CanvasRenderingContext2D,
@@ -535,12 +544,7 @@ function frontsMade(): Made[] {
       width: shape.width,
       height: shape.height,
       paint: (context, paintingIn) => {
-        const { data } = drawnAlone(paintingIn(CARDS_SHEET_KEY, oval.file)).getImageData(
-          0,
-          0,
-          oval.width,
-          oval.height,
-        );
+        const { data } = pixelsOf(paintingIn, oval.file);
         const paper = meanOf(data, paperIn(data, oval));
         paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) => {
           const body = bodyOf(pixels);

@@ -11,6 +11,7 @@ import {
 import {
   CARD_BASELINE,
   CARD_HEIGHT,
+  type CardBack,
   type CardFace,
   createCardBack,
   createEmptySlot,
@@ -21,13 +22,16 @@ import {
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { blockLength, SHUFFLE, stopMotion, TURN_OVER, travel, turnOver } from './card-motion';
+import { inRoundedBox } from './card-shape';
 import type { ChronicleFaces } from './chronicle-faces';
 import {
   addText,
+  type Box,
   DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
+  pressedWhere,
   reactsToPress,
   type Stratum,
   UI_FONT,
@@ -101,7 +105,7 @@ export function createPiles(
 ): Piles {
   const reactions = { small, footBubble, presses };
   const back = createCardBack(scene);
-  const drawn = createPile(scene, on.resting, 'draw-pile', back.root, reactions);
+  const drawn = createPile(scene, on.resting, 'draw-pile', back, reactions);
   const discarded = createPile(
     scene,
     on.resting,
@@ -291,15 +295,15 @@ type Pile = {
 };
 
 /**
- * One pile: a right click on it raises its browse, a name on its top card excepted, which reacts to
- * the rest and the right click as a name does anywhere, and the labels of the top card's foot react
- * to the rest. `blank` stands at its place under no face.
+ * One pile, taking the pointer on what it draws: a right click on it raises its browse, a name on
+ * its top card excepted, which reacts to the rest and the right click as a name does anywhere, and
+ * the labels of the top card's foot react to the rest. `blank` stands at its place under no face.
  */
 function createPile(
   scene: Phaser.Scene,
   on: Stratum,
   pile: PileKind,
-  blank: Phaser.GameObjects.Container,
+  blank: Pick<CardBack, 'root' | 'cardAt'>,
   {
     small,
     footBubble,
@@ -320,11 +324,15 @@ function createPile(
   })
     .setOrigin(0.5, 0.5)
     .setName(`${pile}-count`);
-  const press = scene.add
-    .zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT)
-    .setName(pile)
-    .setInteractive();
-  on.layer.add([blank.setPosition(x, y).setName(`${pile}-top`), pill, count, press]);
+  /** Where the pill reading the count stands. */
+  let counted: Box = { x, y, width: 0, height: 0 };
+  const press = pressedWhere(
+    scene.add.zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT).setName(pile),
+    (atX, atY) =>
+      inRoundedBox(pill.getLocalPoint(atX, atY), counted, counted.height / 2) ||
+      (shown ?? blank).cardAt(atX, atY),
+  );
+  on.layer.add([blank.root.setPosition(x, y).setName(`${pile}-top`), pill, count, press]);
 
   let shown: CardFace | undefined;
   /** Whether the small cards standing were raised off a name of this pile's top, and not the hand's. */
@@ -387,7 +395,7 @@ function createPile(
     show(top: CardFace | undefined, remaining: number): void {
       letGo();
       shown = top;
-      blank.setVisible(top === undefined);
+      blank.root.setVisible(top === undefined);
       if (top !== undefined) {
         const root = asPainted(top.root)
           .setPosition(x, y)
@@ -407,9 +415,10 @@ function createPile(
         y: y - CARD_HEIGHT - 10 + height / 2,
       };
       count.setPosition(centre.x, centre.y);
+      counted = { x: centre.x - width / 2, y: centre.y - height / 2, width, height };
       pill.clear();
       pill.fillStyle(LOOK.pileCount);
-      pill.fillRoundedRect(centre.x - width / 2, centre.y - height / 2, width, height, height / 2);
+      pill.fillRoundedRect(counted.x, counted.y, width, height, height / 2);
     },
   };
 }

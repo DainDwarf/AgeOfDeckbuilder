@@ -488,6 +488,25 @@ export function reactsToPress<T extends Phaser.GameObjects.GameObject>(
   return object;
 }
 
+/**
+ * The zone made interactive where `liesUnder` says what it stands over lies under the pointer, asked
+ * at the pointer's point of the world.
+ */
+export function pressedWhere(
+  zone: Phaser.GameObjects.Zone,
+  liesUnder: (x: number, y: number) => boolean,
+): Phaser.GameObjects.Zone {
+  return zone.setInteractive({
+    hitArea: {},
+    hitAreaCallback: (_area: object, x: number, y: number) => {
+      const at = zone
+        .getWorldTransformMatrix()
+        .transformPoint(x - zone.displayOriginX, y - zone.displayOriginY);
+      return liesUnder(at.x, at.y);
+    },
+  });
+}
+
 export type Hover = {
   /** Whether the pointer is on the object. */
   readonly hovered: boolean;

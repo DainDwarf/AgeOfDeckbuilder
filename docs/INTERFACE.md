@@ -44,6 +44,8 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 **A press lands on the thing the pointer is on, and on nothing under it.** Whatever stands over the map stops a press, whether or not it reacts to one, a dead button as a live one, so a tile is reached only where nothing stands over it. A tooltip, a refusal's note, the line naming what a card is aimed at and the frame a mode draws around the map are see-through: the pointer is on what stands under them. A click is a press landed and let go on the same thing; a press let go on another thing is a drag where it took hold of something, and nothing otherwise.
 
+**A card is everything its face draws.** A press, a hover and a rest land on a card wherever it draws, the cards drawn under it included, wherever the card stands. Where what stands under the card shows through, the pointer is on what stands under.
+
 **The screen reacts to a press as it is let go or as its drag starts, never as it lands.** Held still, a press leaves the screen as it stood, and everything it changes there comes at that one moment. A press becomes a drag once the pointer has travelled a short way from where it landed, as far for every thing dragged. One thing reacts to a press as it lands: a panel running on from a drag stops under it. The screen reacts to a key as it goes down.
 
 **The pointer is a hand over a thing that reacts to a left click or a rest**, and an arrow beside the things and over the map and a scrim, whatever those react to. It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still.

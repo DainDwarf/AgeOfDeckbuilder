@@ -275,7 +275,7 @@ function pilesOf(
         browse(id);
       },
     );
-    const zone = inspectedThrough(scene, pile.box, pile.reactions, inspecting.on);
+    const zone = inspectedThrough(scene, pile, inspecting.on);
     return {
       row: 'civilization',
       option: id,

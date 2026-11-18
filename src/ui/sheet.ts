@@ -224,7 +224,7 @@ function roomIn(
 }
 
 /** Where a painting of a sheet drawn already lies, read off the textures; one no sheet holds is refused. */
-function paintingsIn(textures: Phaser.Textures.TextureManager): PaintingIn {
+export function paintingsIn(textures: Phaser.Textures.TextureManager): PaintingIn {
   return (from, painting) => {
     const holds = textures.exists(from) && textures.get(from).has(painting);
     const canvas = holds ? textures.get(from).getSourceImage() : undefined;

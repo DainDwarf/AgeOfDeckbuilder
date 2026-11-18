@@ -363,7 +363,7 @@ function cityCellOf(
     card.root.setPosition(x + CARD_WIDTH / 2, y + box.height).setName('civilization-city');
     return {
       parts: [cityEdgeOf(scene, box), card.root],
-      held: [{ box, reactions: reactionsOf(card, shown, inspecting) }],
+      held: [{ box, liesUnder: card.cardAt, reactions: reactionsOf(card, shown, inspecting) }],
       bottom: y + box.height + CITY_EDGE_OFF + CITY_EDGE,
     };
   };

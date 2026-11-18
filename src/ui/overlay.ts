@@ -86,12 +86,14 @@ function offeredCard(face: Face, at: number, copies: number): Offered {
 }
 
 /**
- * Where one offered entry was laid out: everything it draws, the box it reacts to the pointer over
- * and how, and the box of the face or the answer itself, which a note stands over.
+ * Where one offered entry was laid out: everything it draws, the box it reacts to the pointer over,
+ * where a card says it lies, and how, and the box of the face or the answer itself, which a note
+ * stands over.
  */
 type Placed = Offered & {
   readonly part: Phaser.GameObjects.GameObject;
   readonly box: Box;
+  readonly liesUnder?: (x: number, y: number) => boolean;
   readonly own: Box;
   readonly reactions: Reactions;
 };
@@ -249,7 +251,7 @@ export function createOverlay({
           height: CARD_HEIGHT,
           lay(left, top) {
             if (offered.copies > 1) {
-              const { stacked, parts, box, reactions } = badgedStackOf(
+              const { stacked, parts, box, liesUnder, reactions } = badgedStackOf(
                 { scene, inspecting },
                 {
                   shown: offered.face,
@@ -264,6 +266,7 @@ export function createOverlay({
               return {
                 part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
                 box,
+                liesUnder,
                 own: stacked.face,
                 reactions,
               };
@@ -277,6 +280,7 @@ export function createOverlay({
             return {
               part: drawn.root,
               box,
+              liesUnder: drawn.cardAt,
               own: box,
               reactions: reactionsOf(drawn, offered.face, inspecting),
             };
@@ -327,6 +331,7 @@ export function createOverlay({
       held: placed.map(
         (entry): Held => ({
           box: entry.box,
+          liesUnder: entry.liesUnder,
           reactions: entry.reactions,
           get press() {
             return live()

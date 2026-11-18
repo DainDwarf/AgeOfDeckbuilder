@@ -15,7 +15,8 @@ import {
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { stopMotion } from './card-motion';
-import type { Stratum } from './design-space';
+import { inRoundedBox } from './card-shape';
+import { type Box, pressedWhere, type Stratum } from './design-space';
 import {
   buildingFace,
   type Face,
@@ -29,13 +30,21 @@ import { LOOK } from './look';
 import type { Drawn, TileFace } from './map';
 import type { Tooltip } from './tooltip';
 
-/** A card waiting behind the one the panel stands: grey paper the size of a card, from its top-left corner. */
-function drawGhost(surface: Phaser.GameObjects.Graphics, x: number, y: number): void {
-  const radius = 0.0585 * CARD_WIDTH;
+/** How far a card waiting behind the one the panel stands has its corners rounded. */
+const GHOST_RADIUS = 0.0585 * CARD_WIDTH;
+
+/** Where the card waiting this many places behind the one the panel stands lies, in the panel's space. */
+function ghostBox(ghost: number): Box {
+  const corner = ghost * GHOST_OFFSET;
+  return { x: corner, y: corner, width: CARD_WIDTH, height: CARD_HEIGHT };
+}
+
+/** A card waiting behind the one the panel stands: grey paper the size of a card, in its box. */
+function drawGhost(surface: Phaser.GameObjects.Graphics, { x, y, width, height }: Box): void {
   surface.fillStyle(LOOK.affordableCard.face);
-  surface.fillRoundedRect(x, y, CARD_WIDTH, CARD_HEIGHT, radius);
+  surface.fillRoundedRect(x, y, width, height, GHOST_RADIUS);
   surface.lineStyle(1, LOOK.cardEdge);
-  surface.strokeRoundedRect(x + 0.5, y + 0.5, CARD_WIDTH - 1, CARD_HEIGHT - 1, radius);
+  surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, GHOST_RADIUS);
 }
 
 /** One card an inspection steps through: the unit's, the building's and the terrain's, each a face. */
@@ -132,8 +141,11 @@ export function createInfoPanel(
   names: PanelNames,
 ): InfoPanel {
   const ghosts = scene.add.graphics();
-  // Interactive, so no press reaches the map's catchers under it, and never marked as reacting to one.
-  const stop = scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0).setInteractive();
+  // Interactive where the card and its ghosts draw, so no press there reaches the map's catchers under
+  // it, and never marked as reacting to one.
+  const stop = pressedWhere(scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0), (x, y) =>
+    liesUnder(x, y),
+  );
   const panel = scene.add.container(0, 0, [ghosts, stop]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
   const footBubble = createFootBubble(tooltip);
@@ -148,6 +160,15 @@ export function createInfoPanel(
   let onName = false;
   /** Whether the small cards standing were raised off a name of the face standing. */
   let chained = false;
+
+  /** Whether the card standing or a ghost behind it lies under a point of the map. */
+  const liesUnder = (x: number, y: number): boolean => {
+    const inPanel = ghosts.getLocalPoint(x, y);
+    for (let ghost = 1; ghost <= behind; ghost++) {
+      if (inRoundedBox(inPanel, ghostBox(ghost), GHOST_RADIUS)) return true;
+    }
+    return standing?.face.cardAt(x, y) === true;
+  };
 
   /** What the standing card's names and foot raised, taken down. */
   const letGo = (): void => {
@@ -223,9 +244,8 @@ export function createInfoPanel(
     const unit = on.unit();
     ghosts.clear();
     for (let ghost = behind; ghost >= 1; ghost--) {
-      drawGhost(ghosts, ghost * GHOST_OFFSET, ghost * GHOST_OFFSET);
+      drawGhost(ghosts, ghostBox(ghost));
     }
-    stop.setSize(CARD_WIDTH + behind * GHOST_OFFSET, CARD_HEIGHT + behind * GHOST_OFFSET);
     panel
       .setScale(unit)
       .setPosition(at.x + at.radius + STANDOFF * unit, at.y - (CARD_HEIGHT / 2) * unit);

@@ -4,7 +4,6 @@ import { ART_SHEET_KEY, artScaleOf, artWorn } from './art-sheet';
 import {
   BACK,
   BADGES,
-  BODY,
   BODY_RADIUS,
   CARD_WIDTH,
   CARDS_SHEET_KEY,
@@ -16,9 +15,25 @@ import {
   paleOf,
   SHADOW,
 } from './card-frames';
+import {
+  BADGE_AT,
+  backDrawsAt,
+  cardDrawsAt,
+  costAt,
+  discScaleOf,
+  downOf,
+  frontDrawsAt,
+  heightOf,
+  inRoundedBox,
+  type Laid,
+  type Silhouettes,
+  silhouettesIn,
+  unitOf,
+} from './card-shape';
 import type { CastSymbol } from './cast';
 import {
   addText,
+  type Box,
   cutTexts,
   DESIGN_HEIGHT,
   inked,
@@ -62,25 +77,11 @@ import {
   showNumbers,
 } from './placed-marks';
 import { poolOf, rootedPoolOf, zonePoolOf } from './pool';
+import { paintingsIn } from './sheet';
 import { referenceName, text } from './text';
 import { blockIn } from './text-room';
 import { layOutRun, type Reference, type Run } from './text-run';
 import type { Tooltip } from './tooltip';
-
-/** How many units one of the pack's pixels is across a card that wide. */
-function unitOf(width: number): number {
-  return width / BODY.width;
-}
-
-/** The card's height at that width: the one aspect a card is drawn at, wherever it is drawn. */
-export function heightOf(width: number): number {
-  return Math.round(BODY.height * unitOf(width));
-}
-
-/** How many units one of the pack's pixels is down a card that wide, its body drawn `heightOf` tall. */
-function downOf(width: number): number {
-  return heightOf(width) / BODY.height;
-}
 
 export const CARD_HEIGHT = heightOf(CARD_WIDTH);
 
@@ -372,7 +373,12 @@ export type CardFace = {
    * none does.
    */
   footAt(x: number, y: number): FootLabel | undefined;
-  /** Whether the card lies under a point of the surface the face is drawn on. */
+  /**
+   * Whether a point of its own space lands on what the face draws as it reads now, its body reaching
+   * that much further down.
+   */
+  drawsAt(x: number, y: number, reach?: number): boolean;
+  /** Whether what the face draws lies under a point of the surface it is drawn on. */
   cardAt(x: number, y: number): boolean;
   /**
    * The label's tooltip raised on the bubble, beside the label as it stands when the bubble is
@@ -382,6 +388,15 @@ export type CardFace = {
   /** Its names and its foot react to nothing from now on: the face is on its way out. */
   deaden(): void;
 };
+
+const silhouettesRead = new WeakMap<Phaser.Textures.TextureManager, Silhouettes>();
+
+/** The silhouettes of the cards sheet the textures hold, read the first time they are asked for. */
+function silhouettesOf(textures: Phaser.Textures.TextureManager): Silhouettes {
+  const read = silhouettesRead.get(textures) ?? silhouettesIn(paintingsIn(textures));
+  silhouettesRead.set(textures, read);
+  return read;
+}
 
 /**
  * The image of a card's front, at a card that wide, its body's top-left corner where the image
@@ -425,6 +440,16 @@ export function addFront(
   return wearFront(scene.add.image(0, 0, CARDS_SHEET_KEY), front, CARD_WIDTH).setTint(
     tone(0xffffff),
   );
+}
+
+/** Whether a front `addFront` drew lies under a point of the surface it is drawn on. */
+export function frontAt(
+  image: Phaser.GameObjects.Image,
+  front: CardFront,
+  x: number,
+  y: number,
+): boolean {
+  return frontDrawsAt(silhouettesOf(image.scene.textures), front, image.getLocalPoint(x, y));
 }
 
 /** An interactive zone of a face that a pool or a re-read gives its place and its size. */
@@ -487,14 +512,14 @@ type DiscMark = {
   readonly number: Phaser.GameObjects.Text;
 };
 
-/** How much the pack's steel disc is scaled by on a card that wide, and a badge with it. */
-function discScaleOf(scene: Phaser.Scene, width: number): number {
-  return (DISC.width * unitOf(width)) / scene.textures.getFrame(CARDS_SHEET_KEY, DISC.file).width;
+/** `discScaleOf` a card that wide, read off the disc's picture the scene's textures hold. */
+function discScaled(scene: Phaser.Scene, width: number): number {
+  return discScaleOf(width, scene.textures.getFrame(CARDS_SHEET_KEY, DISC.file).width);
 }
 
 /** The pack's steel disc for a card that wide, about its middle. */
 function discOf(scene: Phaser.Scene, width: number): Phaser.GameObjects.Image {
-  return scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file).setScale(discScaleOf(scene, width));
+  return scene.add.image(0, 0, CARDS_SHEET_KEY, DISC.file).setScale(discScaled(scene, width));
 }
 
 /** A stat a unit's card reads: its sign, a badge or a glyph, and its number, named after the stat. */
@@ -689,10 +714,10 @@ export function createCardFace(
   const influenceAt = placed(DISC.influence);
   const painted = DISC.painted * unit;
   const badgeAt: Readonly<Record<BadgeStat, { x: number; y: number }>> = {
-    damage: placed({ x: BODY.width - DISC.influence.x, y: DISC.influence.y }),
-    health: influenceAt,
+    damage: placed(BADGE_AT.damage),
+    health: placed(BADGE_AT.health),
   };
-  const badgeScale = discScaleOf(scene, width);
+  const badgeScale = discScaled(scene, width);
   const badges = BADGE_STATS.map((stat) => ({
     stat,
     ...badgeOf(scene, stat, badgeScale, discNumber),
@@ -774,6 +799,8 @@ export function createCardFace(
   let names: Name[] = [];
   /** The middle of its kind label. */
   let kindMiddle = 0;
+  /** What of it reaches past its body, as the last read laid it. */
+  let laid: Laid;
 
   /** Whether the face as it reads now shows the label. */
   const shows = (label: FootLabel): boolean => {
@@ -930,16 +957,19 @@ export function createCardFace(
     root.setData({ card: next.id, names });
     layNameZones?.(names);
 
+    /** The middle of every disc laid, in the pack's pixels. */
+    const discs: PackPoint[] = [];
     costs.hide();
-    const first = placed(shape.cost);
     for (const [at, { resource, amount }] of next.costs.entries()) {
+      const middle = costAt(next.front, at);
+      discs.push(middle);
       showDisc(costs.take(), {
         symbol: resource,
         reading: String(amount),
         ink: LOOK.cardDiscInk,
         tint: refused.unaffordable.includes(resource) ? toned(LOOK.unaffordableDisc) : tint,
         tone: toned,
-        at: { x: first.x, y: first.y + at * DISC.below * down },
+        at: placed(middle),
       });
     }
 
@@ -947,12 +977,16 @@ export function createCardFace(
     if (next.playedByNothing) {
       signDisc.setTint(toned(LOOK.unaffordableDisc));
       asGlyph(signGlyph, 'played-by-nothing', size(SIGN_SIZE), { tone: toned, outlined: false });
+      const middle = costAt(next.front, 0);
+      discs.push(middle);
+      const first = placed(middle);
       sign.setPosition(first.x, first.y);
     }
 
     const gains = next.influence !== 0;
     influence.root.setVisible(gains);
     if (gains) {
+      discs.push(DISC.influence);
       showDisc(influence, {
         symbol: 'influence',
         reading: String(next.influence),
@@ -966,6 +1000,7 @@ export function createCardFace(
     const corner = next.footDisc;
     footDisc.root.setVisible(corner !== undefined);
     if (corner !== undefined) {
+      discs.push(DISC.influence);
       showDisc(footDisc, {
         symbol: corner.symbol,
         reading: corner.reading,
@@ -977,14 +1012,16 @@ export function createCardFace(
       });
     }
 
+    const badged = next.stats !== undefined;
     for (const { stat, root: badge, sign: picture, number } of badges) {
-      badge.setVisible(next.stats !== undefined);
+      badge.setVisible(badged);
       if (next.stats === undefined) continue;
       picture.setTint(tint);
       inked(number, toned(LOOK.cardDiscInk))
         .setStroke(css(toned(LOOK.mapOutline)), size(2 * BADGE_OUTLINE))
         .setText(next.stats[stat]);
     }
+    laid = { front: next.front, discs, badged };
 
     for (const { label, zone } of footZones) {
       const box = boxOf(label);
@@ -1027,6 +1064,9 @@ export function createCardFace(
   };
   read(face, refusal, tone);
 
+  const drawsAt = (x: number, y: number, reach = 0): boolean =>
+    cardDrawsAt(silhouettesOf(scene.textures), laid, width, { x, y }, reach);
+
   return {
     root,
     read,
@@ -1046,9 +1086,10 @@ export function createCardFace(
       const local = root.getLocalPoint(x, y);
       return FOOT_LABELS.find((label) => shows(label) && insideBox(local, boxOf(label)));
     },
+    drawsAt,
     cardAt(x: number, y: number): boolean {
       const local = root.getLocalPoint(x, y);
-      return Math.abs(local.x) <= width / 2 && local.y <= 0 && local.y >= -height;
+      return drawsAt(local.x, local.y);
     },
     explainFoot(tooltip: Tooltip, label: FootLabel): void {
       if (!shows(label)) return;
@@ -1107,6 +1148,21 @@ export function createCardFace(
   };
 }
 
+/**
+ * The face's root made interactive on what the face draws, its body reaching `reach()` further down
+ * at each hit test, and draggable where told.
+ */
+export function pressedOnFace(
+  face: CardFace,
+  { reach = () => 0, draggable = false }: { reach?: () => number; draggable?: boolean } = {},
+): Phaser.GameObjects.Container {
+  return face.root.setInteractive({
+    hitArea: {},
+    hitAreaCallback: (_area: object, x: number, y: number) => face.drawsAt(x, y, reach()),
+    draggable,
+  });
+}
+
 /** Which label of which face's foot has raised the surface's one bubble. */
 export type FootBubble = {
   /** The pointer is on this face, on a label of its foot or off them. */
@@ -1152,6 +1208,8 @@ export type CardBack = {
   readonly root: Phaser.GameObjects.Container;
   /** The back drawn again, every colour of it through the tone. */
   wear(tone: Tone): void;
+  /** Whether what the back draws lies under a point of the surface it is drawn on. */
+  cardAt(x: number, y: number): boolean;
 };
 
 /** How wide the crown on a back stands, as a share of the card's width. */
@@ -1170,22 +1228,55 @@ export function createCardBack(scene: Phaser.Scene): CardBack {
     asGlyph(crown, 'player', CROWN_SHARE * CARD_WIDTH, { tone, colour: LOOK.civilization });
   };
   wear(unworn);
+  const root = scene.add.container(0, 0, [back, crown]);
 
-  return { root: scene.add.container(0, 0, [back, crown]), wear };
+  return {
+    root,
+    wear,
+    cardAt(x: number, y: number): boolean {
+      return backDrawsAt(silhouettesOf(scene.textures), CARD_WIDTH, root.getLocalPoint(x, y));
+    },
+  };
 }
 
-/** Where a pile's top card would be: the card's own rounded outline, dashed. */
-export function createEmptySlot(scene: Phaser.Scene): Phaser.GameObjects.Container {
+/**
+ * A card of the hand's size about its own bottom centre, grown that far on every side: its box, and
+ * how far its corners are rounded.
+ */
+export function cardGrown(off: number): { readonly box: Box; readonly radius: number } {
+  return {
+    box: {
+      x: -CARD_WIDTH / 2 - off,
+      y: -CARD_HEIGHT - off,
+      width: CARD_WIDTH + 2 * off,
+      height: CARD_HEIGHT + 2 * off,
+    },
+    radius: CARD_RADIUS + off,
+  };
+}
+
+/**
+ * Where a pile's top card would be, about its own bottom centre: the card's own rounded outline,
+ * dashed, and whether it lies under a point of the surface it is drawn on, inside the outline.
+ */
+export function createEmptySlot(scene: Phaser.Scene): Pick<CardBack, 'root' | 'cardAt'> {
   const outline = scene.add.graphics();
   outline.lineStyle(2, LOOK.emptyEdge);
   dashAlong(outline, cardOutline());
-  return scene.add.container(0, 0, [outline]);
+  const root = scene.add.container(0, 0, [outline]);
+  const { box, radius } = cardGrown(0);
+  return {
+    root,
+    cardAt: (x, y) => inRoundedBox(root.getLocalPoint(x, y), box, radius),
+  };
 }
 
 /** The card's outline as a closed polyline, corner arcs sampled into short chords. */
 function cardOutline(): { x: number; y: number }[] {
-  const half = CARD_WIDTH / 2;
-  const r = CARD_RADIUS;
+  const {
+    box: { x, y, width, height },
+    radius: r,
+  } = cardGrown(0);
   const points: { x: number; y: number }[] = [];
   const corner = (cx: number, cy: number, from: number): void => {
     for (let i = 0; i <= 6; i++) {
@@ -1193,12 +1284,12 @@ function cardOutline(): { x: number; y: number }[] {
       points.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
     }
   };
-  points.push({ x: -half + r, y: -CARD_HEIGHT });
-  corner(half - r, -CARD_HEIGHT + r, -Math.PI / 2);
-  corner(half - r, -r, 0);
-  corner(-half + r, -r, Math.PI / 2);
-  corner(-half + r, -CARD_HEIGHT + r, Math.PI);
-  points.push({ x: -half + r, y: -CARD_HEIGHT });
+  points.push({ x: x + r, y });
+  corner(x + width - r, y + r, -Math.PI / 2);
+  corner(x + width - r, y + height - r, 0);
+  corner(x + r, y + height - r, Math.PI / 2);
+  corner(x + r, y + r, Math.PI);
+  points.push({ x: x + r, y });
   return points;
 }
 

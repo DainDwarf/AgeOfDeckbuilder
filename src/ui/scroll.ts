@@ -153,17 +153,13 @@ export function pointInBox(box: Box, x: number, y: number): boolean {
 }
 
 /**
- * The thing a panel holds under a point of the design space, each thing's box as it stands
- * unscrolled and carried up by the offset; nothing outside the frame the panel is cut at, whatever
- * stands there.
+ * The thing a panel holds under a point of the design space, where the thing says it lies, else in
+ * its box as it stands unscrolled and carried up by the offset; nothing outside the frame the panel
+ * is cut at, whatever stands there.
  */
-export function heldAt<T extends { readonly box: Box }>(
-  frame: Box,
-  offset: number,
-  held: readonly T[],
-  x: number,
-  y: number,
-): T | undefined {
+export function heldAt<
+  T extends { readonly box: Box; readonly liesUnder?: (x: number, y: number) => boolean },
+>(frame: Box, offset: number, held: readonly T[], x: number, y: number): T | undefined {
   if (!pointInBox(frame, x, y)) return undefined;
-  return held.find(({ box }) => pointInBox(box, x, y + offset));
+  return held.find((thing) => thing.liesUnder?.(x, y) ?? pointInBox(thing.box, x, y + offset));
 }

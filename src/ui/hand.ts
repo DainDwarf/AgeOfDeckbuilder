@@ -22,6 +22,7 @@ import {
   type FootBubble,
   type FootLabel,
   type Name,
+  pressedOnFace,
   type Raiser,
   type SmallCards,
 } from './card-face';
@@ -61,8 +62,6 @@ type CardRecord = {
   card: ChronicleCard;
   home: { x: number; y: number; rotation: number };
   refusal: Refusal;
-  /** Where the pointer is on the card: its outline, and down to where it rests while it is hovered. */
-  readonly hitArea: Phaser.Geom.Rectangle;
   /** Whether the pointer is on the card, the hand live or dead. */
   readonly hover: Hover;
   /** Whether the card stands lifted by the pointer on it. */
@@ -201,10 +200,6 @@ export function createHand(
     (lifted ? on.lifted : on.resting).layer.add(record.face.root);
     record.face.lift(lifted);
     record.face.root.setRotation(lifted ? 0 : record.home.rotation);
-    // Short of its resting place, a card lifted by a hover rises off a pointer holding still near its
-    // bottom edge, is left and falls back onto it, frame after frame. The hit area is the card's own,
-    // so it grows with the lift.
-    record.hitArea.height = CARD_HEIGHT + (record.hovered ? CARD_LIFT / LOOK.liftedCard : 0);
     if (duration === 0) {
       record.face.root.setPosition(record.home.x, restingY(record));
       return Promise.resolve();
@@ -396,7 +391,6 @@ export function createHand(
       card,
       home: { x: 0, y: 0, rotation: 0 },
       refusal: NO_REFUSAL,
-      hitArea: new Phaser.Geom.Rectangle(-CARD_WIDTH / 2, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
       hover: onHover(
         root,
         () => {
@@ -416,12 +410,13 @@ export function createHand(
       held: false,
     };
 
-    root
-      .setInteractive({
-        hitArea: record.hitArea,
-        hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-        draggable: true,
-      })
+    // Short of its resting place, a card lifted by a hover rises off a pointer holding still near its
+    // bottom edge, is left and falls back onto it, frame after frame. The reach is in the card's own
+    // space, so it grows with the lift.
+    pressedOnFace(face, {
+      reach: () => (record.hovered ? CARD_LIFT / LOOK.liftedCard : 0),
+      draggable: true,
+    })
       .on('dragstart', (pointer: Phaser.Input.Pointer) => {
         if (!taking) return;
         footBubble.over(face, undefined);

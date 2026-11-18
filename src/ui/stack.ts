@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { NO_REFUSAL } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
@@ -7,10 +7,12 @@ import {
   createCardFace,
   createFootBubble,
   type FootBubble,
-  heightOf,
   type Name,
+  pressedOnFace,
   type SmallCards,
 } from './card-face';
+import { LARGE_WIDTH } from './card-frames';
+import { heightOf } from './card-shape';
 import {
   type Box,
   createScrim,
@@ -18,14 +20,13 @@ import {
   DESIGN_WIDTH,
   onClick,
   onHover,
+  pressedWhere,
   type Stratum,
 } from './design-space';
 import { type Face, namedFace } from './face';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf } from './small-card';
 import { createTooltip } from './tooltip';
-
-const WIDTH = 380;
 
 /** How far each card shown large peeks out, up and to the left, from under the card over it. */
 const BAND = 14;
@@ -59,13 +60,13 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
     small.down();
     for (const object of drawn) object.destroy();
     cards = next;
-    const height = heightOf(WIDTH);
+    const height = heightOf(LARGE_WIDTH);
     const newest = cards.length - 1;
-    const left = (DESIGN_WIDTH - WIDTH - newest * BAND) / 2;
+    const left = (DESIGN_WIDTH - LARGE_WIDTH - newest * BAND) / 2;
     const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
     drawn = cards.map((shown, index) => {
       const face: CardFace = createCardFace(scene, shown, NO_REFUSAL, {
-        width: WIDTH,
+        width: LARGE_WIDTH,
         names:
           index === newest
             ? {
@@ -81,15 +82,11 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
               }
             : undefined,
       });
-      const root = face.root
+      // The card is interactive so that both presses on it reach nothing beneath, the scrim
+      // included; only its names react to one.
+      const root = pressedOnFace(face)
         .setName(index === newest ? 'inspection' : `inspection-${index}`)
-        .setPosition(left + index * BAND + WIDTH / 2, top + index * BAND + height)
-        // The card is interactive so that both presses on it reach nothing beneath, the scrim
-        // included; only its names react to one.
-        .setInteractive({
-          hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -height, WIDTH, height),
-          hitAreaCallback: Phaser.Geom.Rectangle.Contains,
-        });
+        .setPosition(left + index * BAND + LARGE_WIDTH / 2, top + index * BAND + height);
       scene.strata.large.layer.add(root);
       return root;
     });
@@ -307,12 +304,16 @@ export function reactionsOfNames(
 }
 
 /**
- * The names react as `reactionsOfNames` has them, the rest on a label of the foot raises that
- * label's bubble, and the right click on the rest of the card shows the face itself.
+ * The face's reactions, the names reacting as `reactionsOfNames` has them and the rest on a label of
+ * the foot raising that label's bubble, a right click off its names doing what `elsewhere` does.
  */
-export function reactionsOf(card: CardFace, shown: Face, inspecting: Inspecting): Reactions {
+export function reactionsAround(
+  card: CardFace,
+  inspecting: Inspecting,
+  elsewhere: () => void,
+): Reactions {
   const names = reactionsOfNames(card, inspecting);
-  const { footBubble, large } = inspecting;
+  const { footBubble } = inspecting;
   return {
     point(at) {
       names.point(at);
@@ -323,43 +324,39 @@ export function reactionsOf(card: CardFace, shown: Face, inspecting: Inspecting)
     },
     inspect(at) {
       if (names.rests(at)) names.inspect(at);
-      else if (card.cardAt(at.x, at.y)) large.show(shown);
+      else elsewhere();
     },
   };
+}
+
+/** The face's reactions, a right click off its names showing the face itself large. */
+export function reactionsOf(card: CardFace, shown: Face, inspecting: Inspecting): Reactions {
+  return reactionsAround(card, inspecting, () => {
+    inspecting.large.show(shown);
+  });
 }
 
 /**
- * The face's reactions, a right click off its names doing what `elsewhere` does wherever it lands,
- * on the face and around it.
+ * A zone laid over the box, taking the pointer where what it lies over says it lies, reacting to the
+ * rest and the right click through it.
  */
-export function reactionsAround(
-  card: CardFace,
-  shown: Face,
-  inspecting: Inspecting,
-  elsewhere: () => void,
-): Reactions {
-  const { point, rests } = reactionsOf(card, shown, inspecting);
-  return {
-    point,
-    rests,
-    inspect(at) {
-      const named = card.nameAt(at.x, at.y);
-      if (named === undefined) elsewhere();
-      else inspecting.large.named(named);
-    },
-  };
-}
-
-/** A zone laid over the box, reacting to the rest and the right click through it. */
 export function inspectedThrough(
   scene: Phaser.Scene,
-  box: Box,
-  reactions: Reactions,
+  {
+    box,
+    liesUnder,
+    reactions,
+  }: {
+    readonly box: Box;
+    readonly liesUnder: (x: number, y: number) => boolean;
+    readonly reactions: Reactions;
+  },
   on: Stratum,
 ): Phaser.GameObjects.Zone {
-  const zone = scene.add
-    .zone(box.x + box.width / 2, box.y + box.height / 2, box.width, box.height)
-    .setInteractive();
+  const zone = pressedWhere(
+    scene.add.zone(box.x + box.width / 2, box.y + box.height / 2, box.width, box.height),
+    liesUnder,
+  );
   zone.on('pointermove', (pointer: Phaser.Input.Pointer) => {
     reactions.point(on.at(pointer.x, pointer.y));
   });
