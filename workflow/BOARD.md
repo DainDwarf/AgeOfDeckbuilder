@@ -14,6 +14,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, a transition into a chronicle and out of it, and the unit legibility readings.
 - **The Nomadic tutorial** — a tutorial teaching the Nomadic Age, city mode among what it explains, its first chronicle's goal being to capture a site.
 - **Sound and music** — last, so a version closed early still looks whole.
+- **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
 
 ## Lines
 
