@@ -1,10 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { earningOf, technologyOf } from '../src/rules/catalogue';
 import { buildingKind } from '../src/rules/map-kinds';
 import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
+import type { Faction } from '../src/rules/units';
 import { artFrameOf } from '../src/ui/art-sheet';
 import { answerShown } from '../src/ui/event-text';
 import {
@@ -12,12 +13,16 @@ import {
   cardFaceAtStart,
   type Face,
   featureFace,
+  freshUnitFace,
   frontWindowOf,
   improvementFace,
   namedCardFace,
   terrainFace,
 } from '../src/ui/face';
+import { LOOK } from '../src/ui/look';
+import { unitPaintingOf } from '../src/ui/marks';
 import { achievementGoal, cardRules } from '../src/ui/text';
+import type { ReferenceKind } from '../src/ui/text-run';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   besideTheDeal,
@@ -59,6 +64,9 @@ const LEAN_SEASON = 'lean-season';
 /** The technology whose goal names an improvement. */
 const TANNING = 'tanning';
 
+/** The technology whose goal names a unit kind of the player's. */
+const BOW_AND_ARROW = 'bow-and-arrow';
+
 /** What a face shows that tells it from another: what it stands, its text, its row, and its picture. */
 type FaceRead = { card: string | undefined; rules: string; numbers: string[]; art: string };
 
@@ -81,6 +89,23 @@ function faceRead(face: Face): FaceRead {
   };
 }
 
+/**
+ * Waits for the small card a name raised to stand the face of a unit fresh of the kind, of the
+ * faction, and holds it to that face, its window holding the kind's painting in the halo.
+ */
+async function raisedFreshUnit(
+  page: Page,
+  kind: string,
+  faction: Faction,
+  halo: number,
+): Promise<void> {
+  const face = freshUnitFace(CATALOGUE, kind, faction);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(face.id);
+  const raised = (await readings(page, ['small-card-0']))('small-card-0');
+  expect(faceSeen(raised)).toEqual(faceRead(face));
+  expect(raised.windowUnit).toMatchObject({ halo, paintedAs: unitPaintingOf(kind).painting });
+}
+
 /** The cursor over something that reacts to a press. */
 const HAND = 'pointer';
 
@@ -88,10 +113,13 @@ const HAND = 'pointer';
 const PAST_HANDOVER = 400;
 
 /**
- * The first answer the deal standing offers whose text names a card: the answer, where the deal
- * window lays it out, the card it names, and where that name stands among the text's names.
+ * The first answer the deal standing offers whose text names a thing of the kind: the answer, where
+ * the deal window lays it out, the thing it names, and where that name stands among the text's names.
  */
-function namingAnswer(dealt: Chronicle): {
+function namingAnswer(
+  dealt: Chronicle,
+  kind: ReferenceKind,
+): {
   answer: string;
   at: number;
   named: string;
@@ -101,10 +129,10 @@ function namingAnswer(dealt: Chronicle): {
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   for (const [at, answer] of offered(CATALOGUE, deal).entries()) {
     const names = namedIn(answerShown(CATALOGUE, dealt, deal.event, answer).text);
-    const name = names.findIndex((reference) => reference.kind === 'card');
+    const name = names.findIndex((reference) => reference.kind === kind);
     if (name !== -1) return { answer, at, named: names[name].id, name };
   }
-  throw new Error(`the ${deal.event} offers no answer naming a card`);
+  throw new Error(`the ${deal.event} offers no answer naming a ${kind}`);
 }
 
 /**
@@ -129,7 +157,7 @@ test('a card named in an answer’s text raises it small at a rest and shows it 
 }) => {
   const problems = watch(page);
   const dealt = firstDealtAlone(LEAN_SEASON);
-  const { answer, at, named, name: naming } = namingAnswer(dealt);
+  const { answer, at, named, name: naming } = namingAnswer(dealt, 'card');
   const answering = `deal-card-${at}`;
   const { reading } = answerShown(CATALOGUE, dealt, LEAN_SEASON, answer);
 
@@ -181,6 +209,25 @@ test('a card named in an answer’s text raises it small at a rest and shows it 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('an enemy’s unit kind named in an answer’s text raises the face of a unit fresh of that kind in the enemy’s halo small at a rest', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const dealt = firstDealtAlone(LEAN_SEASON);
+  const { answer, at, named, name: naming } = namingAnswer(dealt, 'enemy');
+  const answering = `deal-card-${at}`;
+
+  await openSaved(page, dealt);
+  await restedOnDeal(page);
+  expect(await cardOnFace(page, answering)).toBe(answer);
+
+  const name = await nameOnScreen(page, answering, naming);
+  await page.mouse.move(name.x, name.y);
+  await raisedFreshUnit(page, named, 'enemy', LOOK.enemy);
 
   expect(problems).toEqual([]);
 });
@@ -341,6 +388,25 @@ test('an improvement named in a technology’s goal raises the face of the card 
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(card);
   expect((await readings(page, ['small-card-0']))('small-card-0').art).toBe(art);
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit kind of the player’s named in a technology’s goal raises the face of a unit fresh of that kind in the civilization’s halo small at a rest', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { needs } = technologyOf(CATALOGUE, BOW_AND_ARROW);
+  const campaign = learnedWithNeeds(CATALOGUE, freshCampaign(CATALOGUE), needs);
+  const { id, achievement } = earningOf(CATALOGUE, BOW_AND_ARROW);
+  const names = namedIn(achievementGoal(id, achievement.need));
+  const naming = names.findIndex((reference) => reference.kind === 'player');
+  if (naming === -1) throw new Error(`${BOW_AND_ARROW}'s goal names no unit kind of the player's`);
+
+  await openCampaign(page, campaign);
+  const name = await nameOnScreen(page, `plate-${BOW_AND_ARROW}`, naming);
+  await page.mouse.move(name.x, name.y);
+  await raisedFreshUnit(page, names[naming].id, 'player', LOOK.civilization);
 
   expect(problems).toEqual([]);
 });
