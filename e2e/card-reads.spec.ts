@@ -3,9 +3,17 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { cardOf, placingOf, unitKind } from '../src/rules/catalogue';
 import { buildingKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resources } from '../src/rules/resources';
+import { artFrameOf } from '../src/ui/art-sheet';
 import { BADGES } from '../src/ui/card-frames';
 import { glyphFileOf } from '../src/ui/cast';
-import { BADGE_STATS, BOX_STATS, type CardStat, cardFace, statReading } from '../src/ui/face';
+import {
+  BADGE_STATS,
+  BOX_STATS,
+  type CardStat,
+  cardFace,
+  frontWindowOf,
+  statReading,
+} from '../src/ui/face';
 import { text } from '../src/ui/text';
 import {
   campaignWith,
@@ -84,6 +92,31 @@ test('a card that builds a building reads at the foot of its window the terrains
   const mark = await liftedName(page, lying, face, last);
   await page.mouse.move(mark.x, mark.y, { steps: 5 });
   await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(marks[last]);
+
+  expect(problems).toEqual([]);
+});
+
+test('each card of a Nomadic hand wears in its art box the picture its card holds, the oval window’s and the arched one’s alike', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle } = firstSeed('opens turn 1 with cards of both windows in hand', (seed) => {
+    const opened = settledOn(seed);
+    const city = opened.citySection.building;
+    const windows = opened.hand.map((card) => frontWindowOf(cardFace(CATALOGUE, card, city).front));
+    return new Set(windows).size === 2 ? { chronicle: opened } : undefined;
+  });
+  const city = chronicle.citySection.building;
+  const faces = chronicle.hand.map((_, at) => `hand-${at}`);
+  const held = chronicle.hand.map((card) => {
+    const { art, front } = cardFace(CATALOGUE, card, city);
+    if (art === undefined) throw new Error(`the card ${card.id} holds no painting`);
+    return { card: card.id, art: artFrameOf(art, frontWindowOf(front)) };
+  });
+
+  await openSaved(page, chronicle);
+  const read = await readings(page, faces);
+  expect(faces.map((face) => ({ card: read(face).card, art: read(face).art }))).toEqual(held);
 
   expect(problems).toEqual([]);
 });

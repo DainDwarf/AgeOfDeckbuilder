@@ -11,15 +11,8 @@ import {
 } from './border-loops';
 import { LOOK } from './look';
 import { paintFaded, sceneCanvas, tracedPolygon } from './map-fade';
-import {
-  cornerAt,
-  darkened,
-  FACTION_COLOURS,
-  fogDark,
-  hexagonOn,
-  positionOf,
-  TILE_SIZE,
-} from './map-marks';
+import { cornerAt, darkened, FACTION_COLOURS, fogDark, hexagonOn, positionOf } from './map-marks';
+import { TILE_SIZE } from './marks';
 
 /** How wide a border's line is, and how deep its band fades inside it. */
 const LINE = 1.5;

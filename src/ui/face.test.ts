@@ -12,7 +12,9 @@ import {
   TILLAGE,
 } from '../rules/fixtures';
 import { answerOf } from '../rules/schedule';
+import type { CardArt } from './art-box';
 import {
+  artPictureOf,
   cardFront,
   cardStats,
   labelledKind,
@@ -114,6 +116,19 @@ describe('a face of a card that places a unit', () => {
     expect(stats('PH_Warrior')).toEqual(statsOf('PH_Warrior'));
     expect(stats('PH_Band')).toEqual(statsOf('PH_Worker'));
     expect(stats('PH_Farm')).toBeUndefined();
+  });
+});
+
+describe('a card’s art box', () => {
+  it('on the card whose play places the city holds the building of the city section it is drawn under, on its ground in the oval window, and nothing under no city section', () => {
+    const art: CardArt = { ground: 'plain', holds: 'placed' };
+
+    expect(artPictureOf(CATALOGUE, 'PH_Settle', art, 'PH_City')).toEqual({
+      window: 'oval',
+      ground: 'plain',
+      holds: { kind: 'building', building: 'PH_City' },
+    });
+    expect(artPictureOf(CATALOGUE, 'PH_Settle', art, undefined)).toBeUndefined();
   });
 });
 

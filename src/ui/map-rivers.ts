@@ -12,13 +12,15 @@ import {
   water,
 } from '../rules/map';
 import type { MapContent } from '../rules/map-kinds';
-import { asDarkened, cornerAt, fogDark, SQUASH, TILE_SIZE } from './map-marks';
+import { asDarkened, cornerAt, fogDark } from './map-marks';
 import {
   mouthPaintingsOf,
   PAINTING,
   paintingAtCorner,
   riverPaintingsOf,
+  SQUASH,
   STRAIGHT_RIVER,
+  TILE_SIZE,
 } from './marks';
 
 /** How much smaller than his file a piece is drawn: his leg, the apothem, half an edge. */

@@ -1,7 +1,7 @@
 import { CARD_KINDS, type CardKind } from '../rules/cards';
 import type { BadgeStat, CardFront, FrontWindow } from './face';
 import { type KindColour, LOOK } from './look';
-import { blankCanvas, type InSheet, type Made, type Sheet } from './sheet';
+import { blankCanvas, type InSheet, type Made, type PaintingIn, type Sheet } from './sheet';
 
 /** The folder chicogames' pack stands in, under the assets folder. */
 const PACK = 'store/nice-card-game-template-2';
@@ -25,7 +25,8 @@ export type PackPoint = { readonly x: number; readonly y: number };
 
 /**
  * One of the pack's fronts: its file and its size; where its body's corner lies in it; how far its
- * frame rises above the body; its window, its paper and the middle of its first cost's disc.
+ * frame rises above the body; its window, the box its glass lies in, its paper and the middle of its
+ * first cost's disc.
  */
 type Front = {
   readonly file: string;
@@ -34,11 +35,13 @@ type Front = {
   readonly body: PackPoint;
   readonly rises: number;
   readonly window: PackBox;
+  readonly glass: PackBox;
   readonly paper: PackBox;
   readonly cost: PackPoint;
 };
 
-const FRONTS: Readonly<Record<FrontWindow, Front>> = {
+/** The plain front of each window: an art box's shape and every placement in it are read off it. */
+export const FRONTS: Readonly<Record<FrontWindow, Front>> = {
   arched: {
     file: `${PACK}/0 - Front/Card - Classic.png`,
     width: 596,
@@ -46,6 +49,7 @@ const FRONTS: Readonly<Record<FrontWindow, Front>> = {
     body: { x: 18, y: 10 },
     rises: 0,
     window: { x: 68, y: 87, width: 419, height: 310 },
+    glass: { x: 66, y: 76, width: 423, height: 324 },
     paper: { x: 94, y: 487, width: 354, height: 256 },
     cost: { x: 60, y: 28 },
   },
@@ -56,6 +60,7 @@ const FRONTS: Readonly<Record<FrontWindow, Front>> = {
     body: { x: 18, y: 50 },
     rises: 40,
     window: { x: 113, y: 9, width: 325, height: 428 },
+    glass: { x: 106, y: -7, width: 340, height: 447 },
     paper: { x: 94, y: 530, width: 372, height: 208 },
     cost: { x: 60, y: 34 },
   },
@@ -325,23 +330,48 @@ function paperOf(
   height: number,
   body: PackPoint,
 ): Uint8Array {
-  const paper = new Uint8Array(width * height);
+  const edges: PackPoint[] = [];
+  for (let x = body.x; x < body.x + BODY.width; x++) {
+    edges.push({ x, y: body.y }, { x, y: body.y + BODY.height - 1 });
+  }
+  for (let y = body.y; y < body.y + BODY.height; y++) {
+    edges.push({ x: body.x, y }, { x: body.x + BODY.width - 1, y });
+  }
+  return walkedFrom(width, height, edges, (at) => !rimAt(pixels, at));
+}
+
+/**
+ * The pixels of a front's glass and the shadow at its rim: those a walk from its window's middle
+ * reaches through pixels short of fully solid.
+ */
+function glassOf(pixels: Uint8ClampedArray, { width, height, body, window }: Front): Uint8Array {
+  const middle = {
+    x: body.x + window.x + Math.floor(window.width / 2),
+    y: body.y + window.y + Math.floor(window.height / 2),
+  };
+  return walkedFrom(width, height, [middle], (at) => pixels[4 * at + 3] < 0xff);
+}
+
+/**
+ * The pixels of a file that wide and tall a walk from the starts reaches, from each pixel to the four
+ * beside it, through those `passes` lets through, by their index in the file.
+ */
+function walkedFrom(
+  width: number,
+  height: number,
+  starts: readonly PackPoint[],
+  passes: (at: number) => boolean,
+): Uint8Array {
+  const reached = new Uint8Array(width * height);
   const walk: number[] = [];
   const reach = (x: number, y: number): void => {
     if (x < 0 || y < 0 || x >= width || y >= height) return;
     const at = y * width + x;
-    if (paper[at] === 1 || rimAt(pixels, at)) return;
-    paper[at] = 1;
+    if (reached[at] === 1 || !passes(at)) return;
+    reached[at] = 1;
     walk.push(at);
   };
-  for (let x = body.x; x < body.x + BODY.width; x++) {
-    reach(x, body.y);
-    reach(x, body.y + BODY.height - 1);
-  }
-  for (let y = body.y; y < body.y + BODY.height; y++) {
-    reach(body.x, y);
-    reach(body.x + BODY.width - 1, y);
-  }
+  for (const { x, y } of starts) reach(x, y);
   for (let at = walk.pop(); at !== undefined; at = walk.pop()) {
     const x = at % width;
     const y = (at - x) / width;
@@ -350,7 +380,34 @@ function paperOf(
     reach(x, y - 1);
     reach(x, y + 1);
   }
-  return paper;
+  return reached;
+}
+
+/** Every pixel the mask holds drawn at the strength a card's glass stands at. */
+function thinned(pixels: Uint8ClampedArray, mask: Uint8Array): void {
+  for (let at = 0; at < mask.length; at++) {
+    if (mask[at] === 1) pixels[4 * at + 3] = Math.round(pixels[4 * at + 3] * LOOK.cardGlass);
+  }
+}
+
+/**
+ * The art box of a plain front of that window, the decorated front's being the oval one's: its glass,
+ * opaque white, on a canvas the size of the box its glass lies in.
+ */
+export function artShapeOf(window: FrontWindow, paintingIn: PaintingIn): CanvasRenderingContext2D {
+  const front = FRONTS[window];
+  const { file, width, height, body, glass: box } = front;
+  const { data } = drawnAlone(paintingIn(CARDS_SHEET_KEY, file)).getImageData(0, 0, width, height);
+  const on = blankCanvas(box.width, box.height);
+  const shape = on.createImageData(box.width, box.height);
+  glassOf(data, front).forEach((held, at) => {
+    if (held === 0) return;
+    const x = (at % width) - body.x - box.x;
+    const y = Math.floor(at / width) - body.y - box.y;
+    shape.data.fill(0xff, 4 * (y * box.width + x), 4 * (y * box.width + x) + 4);
+  });
+  on.putImageData(shape, 0, 0);
+  return on;
 }
 
 /**
@@ -432,7 +489,7 @@ function paintChanged(
 /**
  * Every plain front a card can wear, its paper turned to its kind's colour off the pack's file; and
  * the decorated front, its body turned to the settle cards' colour as the plain oval paper is, its
- * lightness brought to where that paper's stands.
+ * lightness brought to where that paper's stands; each with its glass thinned.
  */
 function frontsMade(): Made[] {
   const papers = new Map<string, Uint8Array>();
@@ -440,6 +497,12 @@ function frontsMade(): Made[] {
     const paper = papers.get(file) ?? paperOf(pixels, width, height, body);
     papers.set(file, paper);
     return paper;
+  };
+  const glasses = new Map<string, Uint8Array>();
+  const glassIn = (pixels: Uint8ClampedArray, front: Front): Uint8Array => {
+    const glass = glasses.get(front.file) ?? glassOf(pixels, front);
+    glasses.set(front.file, glass);
+    return glass;
   };
   const plain = CARD_KINDS.flatMap((kind) =>
     windowsOf(kind).map((window): Made => {
@@ -450,9 +513,10 @@ function frontsMade(): Made[] {
         width: shape.width,
         height: shape.height,
         paint: (context, paintingIn) =>
-          paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) =>
-            turned(pixels, paperIn(pixels, shape), colourOf(front)),
-          ),
+          paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) => {
+            turned(pixels, paperIn(pixels, shape), colourOf(front));
+            thinned(pixels, glassIn(pixels, shape));
+          }),
       };
     }),
   );
@@ -480,6 +544,7 @@ function frontsMade(): Made[] {
             paper.saturation,
             (own * paper.lightness) / lightness,
           ]);
+          thinned(pixels, glassIn(pixels, shape));
         });
       },
     },

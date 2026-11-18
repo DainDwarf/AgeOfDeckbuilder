@@ -18,7 +18,6 @@ import {
   asTerrain,
   buildingStandsAs,
   ditchesOf,
-  facePaintingOn,
   featureMarksOn,
   featureToldOn,
   improvementLyingOf,
@@ -36,7 +35,7 @@ import {
   unitHealthBarOf,
   wearing,
 } from './map-marks';
-import { FACE_SHEET, onBuildingPatch } from './marks';
+import { FACE_SHEET, facePaintingOn, onBuildingPatch } from './marks';
 
 /** The paintings a change brings beside its tile, painted, and the ones it takes away. */
 type Swap = { readonly coming: readonly Mark[]; readonly going: readonly Mark[] };

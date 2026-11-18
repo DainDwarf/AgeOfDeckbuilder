@@ -42,7 +42,7 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 
 - **What:** chicogames' card fronts, plain and decorated, card backs, name plates, discs and badges, in `store/nice-card-game-template-2/`, the pack's `License.txt` beside them.
 - **From:** chicogames, <https://chicogames.itch.io/nice-card-game-template-2>, bought on 2026-11-16, version 2.0, the files as released.
-- **Licence:** Creative Commons Attribution-ShareAlike 3.0 Unported, <https://creativecommons.org/licenses/by-sa/3.0/>, as the pack's `License.txt` has it, which adds that credit "would be nice but is not mandatory". The game credits chicogames. The game turns the plain fronts, and the decorated front the city's card wears, to its kinds' colours, and the heart and the crossed swords to the colours a unit's card wears them in, as it loads them: those are changed files and stay under the same licence. The files sit in the store.
+- **Licence:** Creative Commons Attribution-ShareAlike 3.0 Unported, <https://creativecommons.org/licenses/by-sa/3.0/>, as the pack's `License.txt` has it, which adds that credit "would be nice but is not mandatory". The game credits chicogames. The game turns the plain fronts, and the decorated front the city's card wears, to its kinds' colours, thins the glass of every front's window, and turns the heart and the crossed swords to the colours a unit's card wears them in, as it loads them: those are changed files and stay under the same licence. The files sit in the store.
 
 ## Source Sans 3
 

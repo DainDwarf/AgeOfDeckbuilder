@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import type { Refusal } from '../rules/state';
+import { ART_SHEET_KEY, artFrameOf } from './art-sheet';
 import {
   BACK,
   BADGES,
@@ -40,6 +41,7 @@ import {
   type CardFront,
   type CardStat,
   type Face,
+  frontWindowOf,
   kindLabel,
   kindTooltip,
   numbersRun,
@@ -598,7 +600,11 @@ export function createCardFace(
 
   const root = scene.add.container(0, 0);
   const shadow = scene.add.image(0, 0, CARDS_SHEET_KEY).setVisible(false);
-  const window = scene.add.rectangle(0, 0, 1, 1, 0).setOrigin(0, 0);
+  const art = scene.add
+    .image(0, 0, ART_SHEET_KEY)
+    .setOrigin(0, 0)
+    .setScale(unit, down)
+    .setName('art-box');
   const frontImage = scene.add.image(0, 0, CARDS_SHEET_KEY);
   const plate = scene.add.image(0, -height + PLATE.middle * down, CARDS_SHEET_KEY, PLATE.file);
   plate.setScale((PLATE.width * unit) / plate.width);
@@ -687,7 +693,7 @@ export function createCardFace(
 
   root.add([
     shadow,
-    window,
+    art,
     frontImage,
     plate,
     name,
@@ -771,11 +777,11 @@ export function createCardFace(
     const textInk = toned(LOOK.cardTextInk);
 
     wearShadow(shadow, next.front, width).setPosition(-width / 2, -height);
-    const glass = placed(shape.window);
-    window
+    const glass = placed(shape.glass);
+    art
+      .setTexture(ART_SHEET_KEY, artFrameOf(next.art, frontWindowOf(next.front)))
       .setPosition(glass.x, glass.y)
-      .setSize(shape.window.width * unit, shape.window.height * down)
-      .setFillStyle(multiplied(paleOf(next.front), tint));
+      .setTint(next.art === undefined ? multiplied(paleOf(next.front), tint) : tint);
     wearFront(frontImage, next.front, width)
       .setPosition(-width / 2, -height)
       .setTint(tint);

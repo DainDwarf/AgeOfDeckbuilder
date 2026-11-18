@@ -4,6 +4,7 @@ import './failed-boot';
 import Phaser from 'phaser';
 import { CATALOGUE } from './content/catalogue';
 import { booted } from './failed-boot';
+import { artSheet } from './ui/art-sheet';
 import { CampaignScreen } from './ui/campaign-screen';
 import { CARDS_SHEET } from './ui/card-frames';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
@@ -89,8 +90,8 @@ class LoadScene extends Phaser.Scene {
   private sheets: readonly Sheet[] = [];
 
   preload(): void {
-    // The features sheet last: its tinted paintings, the river's cut and the deer in his net are
-    // drawn off the others'.
+    // The art and features sheets last: the cards' pictures, the features' tinted paintings, the
+    // river's cut and the deer in his net are drawn off the others'.
     this.sheets = [
       CARDS_SHEET,
       FACE_SHEET,
@@ -98,6 +99,7 @@ class LoadScene extends Phaser.Scene {
       BUILDING_SHEET,
       UNIT_SHEET,
       GLYPH_SHEET,
+      artSheet(CATALOGUE),
       featureSheet(CATALOGUE),
     ];
     for (const sheet of this.sheets) queueSheet(this.load, sheet);

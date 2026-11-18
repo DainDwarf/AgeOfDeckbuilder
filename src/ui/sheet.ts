@@ -21,7 +21,7 @@ export type InSheet = {
 };
 
 /** Where a painting of a sheet drawn already lies; a painting no sheet holds is refused. */
-type PaintingIn = (sheet: string, painting: string) => InSheet;
+export type PaintingIn = (sheet: string, painting: string) => InSheet;
 
 /**
  * A frame of a sheet drawn by code: its name, its size, and the way to paint it from its top-left
@@ -78,6 +78,29 @@ export function washed(
     image.data[4 * at + 3] = Math.round(0xff * strength);
   });
   on.putImageData(image, 0, 0);
+}
+
+/**
+ * A painting of a sheet re-painted under a wash on a canvas made its size, the wash kept to the
+ * painting's own pixels.
+ */
+export function paintUnder(
+  on: CanvasRenderingContext2D,
+  { canvas, x, y, width, height }: InSheet,
+  wash: Wash,
+  composite: GlobalCompositeOperation,
+): void {
+  const paint = (): void => on.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+  on.canvas.width = width;
+  on.canvas.height = height;
+  paint();
+  on.globalCompositeOperation = composite;
+  on.globalAlpha = wash.strength;
+  on.fillStyle = css(wash.colour);
+  on.fillRect(0, 0, width, height);
+  on.globalCompositeOperation = 'destination-in';
+  on.globalAlpha = 1;
+  paint();
 }
 
 /**
@@ -243,23 +266,11 @@ export function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet
 
   const paintingIn = paintingsIn(textures);
   const context = blankCanvas(0, 0);
-  const scratch = context.canvas;
   for (const { sheet: from, painting, frame, wash, composite } of tinted) {
-    const { canvas, x: cutX, y: cutY, width, height } = paintingIn(from, painting);
-    const paint = (): void =>
-      context.drawImage(canvas, cutX, cutY, width, height, 0, 0, width, height);
-    scratch.width = width;
-    scratch.height = height;
-    paint();
-    context.globalCompositeOperation = composite;
-    context.globalAlpha = wash.strength;
-    context.fillStyle = css(wash.colour);
-    context.fillRect(0, 0, width, height);
-    context.globalCompositeOperation = 'destination-in';
-    context.globalAlpha = 1;
-    paint();
-    const at = roomIn(sheet, frame, width, height, rowGap);
-    sheet.context.drawImage(scratch, at.x, at.y);
+    const under = paintingIn(from, painting);
+    paintUnder(context, under, wash, composite);
+    const at = roomIn(sheet, frame, under.width, under.height, rowGap);
+    sheet.context.drawImage(context.canvas, at.x, at.y);
   }
 
   for (const one of made) paintMade(textures, drawn, sheet, one);

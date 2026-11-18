@@ -106,7 +106,6 @@ import {
   ROW_RISE,
   rowDisc,
   rowOf,
-  SQUASH,
   shoreOn,
   showCityBadge,
   showCityBar,
@@ -115,7 +114,6 @@ import {
   showTileSign,
   showTileYield,
   sitePointerMarker,
-  TILE_SIZE,
   type TileDark,
   type TileObjects,
   thresholdMark,
@@ -149,6 +147,8 @@ import {
   onBuildingPatch,
   paintingOn,
   RIVER_SHEET,
+  SQUASH,
+  TILE_SIZE,
 } from './marks';
 import { asPainted, poolOf, rootedPoolOf } from './pool';
 import { VEILS_ON, type Veils } from './veils';

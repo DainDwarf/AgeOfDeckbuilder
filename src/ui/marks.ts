@@ -1,5 +1,6 @@
-import type { Corner, TileCoords } from '../rules/map';
+import type { Corner, Tile, TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
+import { ARMS_ICONS, GOODS_ICONS } from './art-box';
 import { EVERY_GLYPH_FILE } from './cast';
 import { grownOf, haloOf } from './fade';
 import { css, LOOK, type Wash } from './look';
@@ -46,6 +47,25 @@ export const DISC_PITCH = 2 * DISC_RADIUS + 1;
 
 /** How wide his file is, how tall, and how far down it the middle of his hexagon lies, in his pixels. */
 export const PAINTING = { width: 256, height: 384, middle: 256 };
+
+export const TILE_SIZE = 24;
+
+/** How much the map's lattice is squashed down: rows three quarters of a tile's width apart (docs/LOOK.md). */
+export const SQUASH = 0.75 / (Math.sqrt(3) / 2);
+
+/** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
+const FACE_OVERLAP = 1.04;
+
+/** How much smaller than his file anything painted beside his tile is drawn: a tile's width to his. */
+export const PAINTED_SCALE = (Math.sqrt(3) * TILE_SIZE) / PAINTING.width;
+
+/** How much smaller than his file a face is drawn, and anything painted at his tile's scale. */
+export const FACE_SCALE = PAINTED_SCALE * FACE_OVERLAP;
+
+/** Where a tile's middle stands on the map's lattice about the middle of the tile at its centre. */
+export function latticeAt({ q, r }: TileCoords): { x: number; y: number } {
+  return { x: Math.sqrt(3) * TILE_SIZE * (q + r / 2), y: 1.5 * TILE_SIZE * SQUASH * r };
+}
 
 /** What a feature looks like; a feature with no icon is refused. */
 function featureLookOf(feature: string): { readonly icon: string; readonly dress: FeatureDress } {
@@ -115,6 +135,32 @@ export function clearingsOf(terrain: string): readonly string[] {
   return Object.hasOwn(CLEARINGS, terrain) ? CLEARINGS[terrain] : [];
 }
 
+/** The painting a tile's face wears, and the sheet that holds it. */
+export type FacePainting = { readonly sheet: string; readonly painting: string };
+
+/**
+ * The painting a tile's face wears, picked by its place on the disc: his clearing of its terrain
+ * under a building or an improvement that clears it, where he painted any, else his painting of it;
+ * tinted where the feature on it tints it.
+ */
+export function facePaintingOn(
+  {
+    terrain,
+    feature,
+    building,
+    improvements,
+  }: Pick<Tile, 'terrain' | 'feature' | 'building' | 'improvements'>,
+  coord: TileCoords,
+): FacePainting {
+  const cleared =
+    building !== undefined || improvements.some(clearsItsTile) ? clearingsOf(terrain) : [];
+  const painting = paintingOn(cleared.length > 0 ? cleared : paintingsOf(terrain), coord);
+  if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
+    return { sheet: FEATURE_SHEET_KEY, painting: tintedName(painting, feature) };
+  }
+  return { sheet: FACE_SHEET.key, painting };
+}
+
 /** The sheet every terrain's paintings, every shore's, his voids and his clearings are drawn into. */
 export const FACE_SHEET: Sheet = {
   key: 'faces',
@@ -142,6 +188,20 @@ export type BuildingPiece = {
 };
 
 /**
+ * How a building's piece is laid about its place: his whole tile at a face's scale, his hexagon's
+ * middle on that place, and any other at its size about its own middle; how far down his file that
+ * place lies is a share of the file's height.
+ */
+export function pieceLaying(size: BuildingPiece['size']): {
+  readonly scale: number;
+  readonly down: number;
+} {
+  return size === 'tile'
+    ? { scale: FACE_SCALE, down: PAINTING.middle / PAINTING.height }
+    : { scale: size * PAINTED_SCALE, down: 0.5 };
+}
+
+/**
  * A building drawn as his paintings: whether they lie on the patch, the pieces, back first, and
  * whether they leave an improvement's painting room beside them.
  */
@@ -158,11 +218,9 @@ function piece(file: string, size: number | 'tile', x: number, y: number): Build
   return { files: [file], size, x, y };
 }
 
-const ICONS = 'store/icons-strategic-resources-and-goods/Icons';
-
 const YURT = `${LOCATIONS}/houseYurt00.png`;
-const FURS = `${ICONS}/furs.png`;
-const IVORY = `${ICONS}/ivory.png`;
+const FURS = `${GOODS_ICONS}/furs.png`;
+const IVORY = `${GOODS_ICONS}/ivory.png`;
 const CAVE_MOUTH = `${LOCATIONS}/undergroundPassage00.png`;
 const TALL_BARROW = `${LOCATIONS}/barrow00.png`;
 const LOW_BARROW = `${LOCATIONS}/barrow01.png`;
@@ -255,8 +313,6 @@ const BUILDING_PAINTINGS: Readonly<Record<string, BuildingPaintings>> = {
   'stone-beast-bones': BEAST_BONES,
 };
 
-const ARMS = 'store/icons-medieval-arms-and-armor/icons';
-
 /** His canoe, which an embarked unit stands in, under the assets folder. */
 export const CANOE = 'store/hex-rivers-coasts-and-seas/Decor/canoe00.png';
 
@@ -286,7 +342,7 @@ type UnitPicture = {
 /** His arms icon in that file, drawn at a size against `UNIT_WIDTH`, his paint lying in it as `ink` says. */
 function armsIcon(file: string, size: number, ink: Box): UnitPicture {
   const width = ARMS_PIXELS;
-  return { file: `${ARMS}/${file}`, width, height: width, unitsWide: UNIT_WIDTH * size, ink };
+  return { file: `${ARMS_ICONS}/${file}`, width, height: width, unitsWide: UNIT_WIDTH * size, ink };
 }
 
 const UNIT_PICTURES: Readonly<Record<string, UnitPicture>> = {
@@ -675,7 +731,7 @@ export const RIVER_SHEET: Sheet = {
 
 /** The file of his resource icon a feature wears, under the assets folder; a feature with none is refused. */
 export function featureIconOf(feature: string): string {
-  return `${ICONS}/${featureLookOf(feature).icon}.png`;
+  return `${GOODS_ICONS}/${featureLookOf(feature).icon}.png`;
 }
 
 /** What a feature's tile wears beside its icon; a feature with no icon is refused. */
@@ -813,7 +869,7 @@ const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
   },
   'clay-pit': {
     kind: 'icon',
-    icon: `${ICONS}/clay.png`,
+    icon: `${GOODS_ICONS}/clay.png`,
     width: 14,
     lies: {
       kind: 'painting',

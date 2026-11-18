@@ -10,7 +10,7 @@ import {
   placingOf,
   unitKind,
 } from '../rules/catalogue';
-import { MOVE_POINT } from '../rules/map';
+import { MOVE_POINT, type Terrain } from '../rules/map';
 import {
   type BuildingKind,
   buildingKind,
@@ -19,6 +19,7 @@ import {
 } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CardId, Cost, MadeCard } from '../rules/state';
+import { type ArtThing, type CardArt, cardArtOf } from './art-box';
 import { cardName, cardRules, text } from './text';
 import type { Reference } from './text-run';
 
@@ -71,6 +72,74 @@ export function cardFront(card: Card): CardFront {
   const placing = placingOf(card);
   if (placing?.thing === 'city') return { front: 'decorated' };
   return { front: 'plain', kind: card.kind, window: placing === undefined ? 'arched' : 'oval' };
+}
+
+/** The window a front is drawn with: the decorated front's is the plain oval one's. */
+export function frontWindowOf(front: CardFront): FrontWindow {
+  switch (front.front) {
+    case 'plain':
+      return front.window;
+    case 'decorated':
+      return 'oval';
+  }
+}
+
+/** The picture a card's art box holds: the window it fills, the terrain of its ground, and what stands on it. */
+export type ArtPicture = {
+  readonly window: FrontWindow;
+  readonly ground: Terrain;
+  readonly holds: ArtThing;
+};
+
+/**
+ * What stands in a card's art box where it holds what its play places: its unit, its building, or the
+ * building of the city section it is drawn under, and nothing under none; a card placing anything
+ * else is refused.
+ */
+function placedThingOf(
+  catalogue: Catalogue,
+  id: CardId,
+  city: string | undefined,
+): ArtThing | undefined {
+  const placing = placingOf(cardOf(catalogue, id));
+  if (placing === undefined) throw new Error(`the card ${id} places nothing its art box can hold`);
+  switch (placing.thing) {
+    case 'unit':
+      return { kind: 'unit', type: unitKind(catalogue, placing.unit).type };
+    case 'building':
+      return { kind: 'building', building: placing.building };
+    case 'city':
+      return city === undefined ? undefined : { kind: 'building', building: city };
+    case 'improvement':
+      throw new Error(`no painting holds the improvement the card ${id} places`);
+  }
+}
+
+/**
+ * The picture a card's art box holds under `city`, the building of the city section it is drawn
+ * under, as `art` names it; nothing where it names none, and nothing for the city's card under no
+ * city section.
+ */
+export function artPictureOf(
+  catalogue: Catalogue,
+  id: CardId,
+  art: CardArt | undefined,
+  city: string | undefined,
+): ArtPicture | undefined {
+  if (art === undefined) return undefined;
+  const holds = art.holds === 'placed' ? placedThingOf(catalogue, id, city) : art.holds;
+  if (holds === undefined) return undefined;
+  return { window: frontWindowOf(cardFront(cardOf(catalogue, id))), ground: art.ground, holds };
+}
+
+/** Every building a city section holds: each civilization's, and each a technology unlocks. */
+export function citySectionBuildings(catalogue: Catalogue): string[] {
+  return [
+    ...Object.values(catalogue.civilizations).map(({ city }) => city.building),
+    ...Object.values(catalogue.technologies).flatMap(({ unlocks }) =>
+      unlocks.city === undefined ? [] : [unlocks.city.building],
+    ),
+  ];
 }
 
 /** The numbers an answer's text or the capstone's reads of the chronicle, by name. */
@@ -142,6 +211,8 @@ export type Face = {
   readonly range: number;
   /** The stats of the unit the card places, its kind's, and nothing on a card that places none. */
   readonly stats: Readonly<Record<CardStat, number>> | undefined;
+  /** The picture its art box holds, and nothing where it shows its kind's colour, pale. */
+  readonly art: ArtPicture | undefined;
 };
 
 /** The range a building that gives to the tiles beside it gives over. */
@@ -255,6 +326,7 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     playedByNothing: playedByNothing(content),
     ...placed,
     stats: cardStats(catalogue, content),
+    art: artPictureOf(catalogue, card.id, cardArtOf(card.id), city),
   };
 }
 

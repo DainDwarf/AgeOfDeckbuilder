@@ -35,6 +35,7 @@ import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, unchanged, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import { citySectionBuildings } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
 import {
   buildingPaintingsOf,
@@ -262,13 +263,8 @@ function facePaintingsOf({ terrain, feature, building, improvements }: Tile): st
 /** The monument's stages, each built over the one before it. */
 const STAGES = ['foundations', 'great-stones', 'monument'];
 
-/** Every city's own building: each civilization's, and each a technology unlocks. */
-const CITY_BUILDINGS = new Set([
-  ...Object.values(CATALOGUE.civilizations).map(({ city }) => city.building),
-  ...Object.values(CATALOGUE.technologies).flatMap(({ unlocks }) =>
-    unlocks.city === undefined ? [] : [unlocks.city.building],
-  ),
-]);
+/** Every city's own building. */
+const CITY_BUILDINGS = new Set(citySectionBuildings(CATALOGUE));
 
 /** Every building an age deals onto its map: its camp's and its sites'. */
 const DEALT = new Set(

@@ -3,7 +3,8 @@ import { CENTRE } from '../rules/map';
 import type { Point } from './border-loops';
 import { fadedAt } from './fade';
 import { css, LOOK } from './look';
-import { hexagonOn, positionOf, SQUASH, TILE_SIZE } from './map-marks';
+import { hexagonOn, positionOf } from './map-marks';
+import { SQUASH, TILE_SIZE } from './marks';
 
 /** How deep the selection's rim fades in from the tile's edge, how many pixels of its texture make a unit, and how wide the texture is. */
 const RIM_DEPTH = 5;

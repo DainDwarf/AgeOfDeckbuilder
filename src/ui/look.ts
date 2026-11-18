@@ -160,6 +160,10 @@ export type Look = {
   readonly cardStatBadge: Readonly<Record<BadgeStat, number>>;
   /** The strength the line round a terrain marked at the foot of a card's window stands at, in the map's outline. */
   readonly cardTerrainOutline: number;
+  /** The strength the glass of a card's window and the shadow at its rim stand at, against the pack's. */
+  readonly cardGlass: number;
+  /** The tint the ground in a card's art box is multiplied by. */
+  readonly cardArtGround: number;
   /** The tint a cost's disc is multiplied by where the player's city cannot pay it, and the disc of a card nothing plays. */
   readonly unaffordableDisc: number;
   /** How much larger than its own size a card lifted out of the hand's lane is drawn. */
@@ -301,6 +305,8 @@ export const LOOK: Look = {
   cardDiscInk: 0xf2f6ff,
   cardStatBadge: { health: 15, damage: 260 },
   cardTerrainOutline: 0.85,
+  cardGlass: 0.8,
+  cardArtGround: 0x666666,
   unaffordableDisc: 0xff6b66,
   liftedCard: 1.1,
   liftedShadow: { colour: 0x000000, strength: 0.5, blur: 9, fall: 5 },

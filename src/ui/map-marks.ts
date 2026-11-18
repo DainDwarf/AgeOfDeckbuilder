@@ -37,37 +37,41 @@ import {
   buildingPaintingsOf,
   CANOE,
   CANOE_WIDTH,
-  clearingsOf,
-  clearsItsTile,
   DISC_PITCH,
   DISC_RADIUS,
   DISC_RIM,
   type DiscLook,
   type DiscPicture,
   discFeatureOf,
+  FACE_SCALE,
   FACE_SHEET,
   FEATURE_DISC,
   FEATURE_SHEET_KEY,
+  facePaintingOn,
   featureDressOf,
   featureIconOf,
   GLYPH_SHEET,
   HERD_COPIES,
   ICON_WIDTH,
   improvementLookOf,
+  latticeAt,
   leavesRoom,
   liesOf,
   MARK_EDGE,
+  PAINTED_SCALE,
   PAINTING,
   PONDS,
   paintIn,
   paintingOn,
   paintingsOf,
   pickOf,
+  pieceLaying,
   RIVER_CUT,
   RIVER_SHEET,
   SITE_POINTER,
+  SQUASH,
   shorePaintingsOf,
-  tintedName,
+  TILE_SIZE,
   UNIT_SHEET,
   unitPaintingOf,
   VOIDS,
@@ -75,11 +79,6 @@ import {
 } from './marks';
 import { type Pool, poolOf } from './pool';
 import { text } from './text';
-
-export const TILE_SIZE = 24;
-
-/** How much the map's lattice is squashed down: rows three quarters of a tile's width apart (docs/LOOK.md). */
-export const SQUASH = 0.75 / (Math.sqrt(3) / 2);
 
 /** A tile's hexagon on the map's own surface, at `size` about the tile's middle: its corners at `TILE_SIZE`. */
 export function hexagonOn(tile: TileCoords, size: number): { x: number; y: number }[] {
@@ -96,15 +95,6 @@ export function hexagonOn(tile: TileCoords, size: number): { x: number; y: numbe
 export function mapHexagon(size: number): number[] {
   return corners(hexagonOn(CENTRE, size).flatMap(({ x, y }) => [x, y]));
 }
-
-/** How much wider than its tile a face is drawn, so no seam of the page shows between neighbours. */
-const FACE_OVERLAP = 1.04;
-
-/** How much smaller than his file anything painted beside his tile is drawn: a tile's width to his. */
-const PAINTED_SCALE = (Math.sqrt(3) * TILE_SIZE) / PAINTING.width;
-
-/** How much smaller than his file a face is drawn, and anything painted at his tile's scale. */
-const FACE_SCALE = PAINTED_SCALE * FACE_OVERLAP;
 
 export const FACTION_COLOURS: Record<Faction, number> = {
   player: LOOK.civilization,
@@ -256,11 +246,9 @@ export type TileObjects = {
   readonly featureDisc: Phaser.GameObjects.Arc;
 };
 
-export function positionOf({ q, r }: TileCoords): { x: number; y: number } {
-  return {
-    x: DESIGN_WIDTH / 2 + Math.sqrt(3) * TILE_SIZE * (q + r / 2),
-    y: DESIGN_HEIGHT / 2 + 1.5 * TILE_SIZE * SQUASH * r,
-  };
+export function positionOf(tile: TileCoords): { x: number; y: number } {
+  const { x, y } = latticeAt(tile);
+  return { x: DESIGN_WIDTH / 2 + x, y: DESIGN_HEIGHT / 2 + y };
 }
 
 /** Where a unit's painting stands on a tile: below its middle. */
@@ -367,32 +355,6 @@ export function wearing(
   return asDarkened(face.setTexture(sheet, painting).setScale(FACE_SCALE), dark);
 }
 
-/** The painting a tile's face wears, and the sheet that holds it. */
-export type FacePainting = { readonly sheet: string; readonly painting: string };
-
-/**
- * The painting a tile's face wears, picked by its place on the disc: his clearing of its terrain
- * under a building or an improvement that clears it, where he painted any, else his painting of it;
- * tinted where the feature on it tints it.
- */
-export function facePaintingOn(
-  {
-    terrain,
-    feature,
-    building,
-    improvements,
-  }: Pick<Tile, 'terrain' | 'feature' | 'building' | 'improvements'>,
-  coord: TileCoords,
-): FacePainting {
-  const cleared =
-    building !== undefined || improvements.some(clearsItsTile) ? clearingsOf(terrain) : [];
-  const painting = paintingOn(cleared.length > 0 ? cleared : paintingsOf(terrain), coord);
-  if (feature !== undefined && featureDressOf(feature).kind === 'tint') {
-    return { sheet: FEATURE_SHEET_KEY, painting: tintedName(painting, feature) };
-  }
-  return { sheet: FACE_SHEET.key, painting };
-}
-
 /** A face made to wear the painting its tile wears, darkened by its tile's dark. */
 export function asTerrain(
   face: Phaser.GameObjects.Image,
@@ -466,12 +428,12 @@ function asPiece(
   pick: (files: readonly string[]) => string,
   dark: TileDark,
 ): Phaser.GameObjects.Image {
-  const whole = size === 'tile';
+  const { scale, down } = pieceLaying(size);
   return asDarkened(
     image
       .setTexture(BUILDING_SHEET.key, pick(files))
-      .setOrigin(0.5, whole ? PAINTING.middle / PAINTING.height : 0.5)
-      .setScale(whole ? FACE_SCALE : size * PAINTED_SCALE)
+      .setOrigin(0.5, down)
+      .setScale(scale)
       .setFlipX(false)
       .setPosition(x, y)
       .setAlpha(1)

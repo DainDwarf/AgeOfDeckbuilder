@@ -12,7 +12,8 @@ import {
   type Stratum,
 } from './design-space';
 import { onHeldKeys, onKeyDown } from './keys';
-import { positionOf, TILE_SIZE } from './map-marks';
+import { positionOf } from './map-marks';
+import { TILE_SIZE } from './marks';
 import { PAN_SPEED } from './scroll';
 
 /** How close the map comes and how far it goes, on top of the factor the design space renders at. */

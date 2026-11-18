@@ -34,6 +34,7 @@ import {
 import type { Landed } from '../rules/stages';
 import { type Chronicle, keysDealt, type Rewards } from '../rules/state';
 import { yieldParts } from '../rules/yields';
+import { artFrameOf, artSheet } from '../ui/art-sheet';
 import { CARDS_SHEET, frontOf } from '../ui/card-frames';
 import {
   answerLinesOfCase,
@@ -43,7 +44,7 @@ import {
   capstoneName,
   eventName,
 } from '../ui/event-text';
-import { cardFaceAtStart } from '../ui/face';
+import { cardFaceAtStart, citySectionBuildings, frontWindowOf } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -74,6 +75,7 @@ import {
 } from '../ui/text';
 import { layOutRun, type Reference, type ReferenceKind } from '../ui/text-run';
 import { CATALOGUE } from './catalogue';
+import { NOMADIC } from './nomadic';
 
 const AGES = Object.keys(CATALOGUE.ages);
 
@@ -150,24 +152,23 @@ test('every improvement of the catalogue has a name and, on the screen, its icon
   }
 });
 
-/** Every city's building a card is drawn under: each civilization's, and each a technology unlocks. */
-const CITIES = [
-  ...Object.values(CATALOGUE.civilizations).map(({ city }) => city.building),
-  ...Object.values(CATALOGUE.technologies).flatMap(({ unlocks }) =>
-    unlocks.city === undefined ? [] : [unlocks.city.building],
-  ),
-];
+/** Every city's building a card is drawn under. */
+const CITIES = citySectionBuildings(CATALOGUE);
 
 /** The cards a civilization's city section holds, which a screen draws under a city section alone. */
 const CITY_CARDS = new Set(Object.values(CATALOGUE.civilizations).map(({ city }) => city.card));
+
+/** The cities a card is drawn under: each city's building, and no city section for a card none holds. */
+function citiesUnder(id: string): (string | undefined)[] {
+  return CITY_CARDS.has(id) ? CITIES : [...CITIES, undefined];
+}
 
 /**
  * The text a card's face reads at the counters it starts with, under each city's building, and under
  * no city section for a card no city section holds, each thing it marks at its window's foot named.
  */
 function rulesAsDrawn(id: string): string[] {
-  const cities = CITY_CARDS.has(id) ? CITIES : [...CITIES, undefined];
-  return cities.map((city) => {
+  return citiesUnder(id).map((city) => {
     const face = cardFaceAtStart(CATALOGUE, id, city);
     for (const mark of face.goesOn) if (mark.kind !== 'river') referenceName(mark);
     return face.rules;
@@ -178,6 +179,33 @@ test('every card of the catalogue has a name, and a text on its face read at the
   for (const id of Object.keys(CATALOGUE.cards)) {
     expect(() => cardName(id)).not.toThrow();
     expect(() => rulesAsDrawn(id)).not.toThrow();
+  }
+});
+
+test('every card the Nomadic Age brings holds a painting in its art box under each city’s building, and under no city section for a card no city section holds; each names a ground, a unit, a building or a file the screen draws, and the art sheet paints it', () => {
+  const sheet = artSheet(CATALOGUE);
+  const made = new Set((sheet.made ?? []).map(({ frame }) => frame));
+  for (const id of Object.keys(NOMADIC.brings.cards ?? {})) {
+    for (const city of citiesUnder(id)) {
+      const face = cardFaceAtStart(CATALOGUE, id, city);
+      const picture = face.art;
+      if (picture === undefined) throw new Error(`the card ${id} holds no painting under ${city}`);
+      const { ground, holds } = picture;
+
+      expect(() => paintingsOf(ground)).not.toThrow();
+      switch (holds.kind) {
+        case 'unit':
+          expect(() => unitPaintingOf(holds.type)).not.toThrow();
+          break;
+        case 'building':
+          expect(() => buildingPaintingsOf(holds.building)).not.toThrow();
+          break;
+        case 'icon':
+          expect(sheet.files).toContain(holds.file);
+          break;
+      }
+      expect(made).toContain(artFrameOf(picture, frontWindowOf(face.front)));
+    }
   }
 });
 

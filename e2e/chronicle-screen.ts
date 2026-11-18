@@ -156,6 +156,7 @@ type PageReading = {
   frame: Answer<string>;
   kindLabelOnScreen: Answer<Spot>;
   windowOnScreen: Answer<OnScreen>;
+  art: Answer<string>;
   influence: Answer<{ text: string; onScreen: Spot }>;
   stats: Answer<StatShown[]>;
   answerNameOnScreen: Answer<Spot>;
@@ -905,19 +906,21 @@ export async function readNames(page: Page): Promise<void> {
           return drawn.name;
         }),
         kindLabelOnScreen: answer(() => partOnScreen('kind-label', `${name} wears no kind label`)),
-        // The window is the face's one Rectangle (`src/ui/card-face.ts`), the marks of what its card
-        // goes on standing at its foot: its upper quarter lies off every name and every hover.
+        // The marks of what a card goes on stand at the foot of its window: the upper quarter of its
+        // art box lies off every name and every hover.
         windowOnScreen: answer(() => {
-          const face = found().object as Partial<Phaser.GameObjects.Container>;
-          const glass = face.list?.find((child) => child.type === 'Rectangle') as
-            | Phaser.GameObjects.Rectangle
-            | undefined;
-          if (glass === undefined) throw new Error(`${name} is no card face`);
-          const at = glass
+          const box = part('art-box', `${name} is no card face`) as Phaser.GameObjects.Image;
+          const at = box
             .getWorldTransformMatrix()
-            .transformPoint(glass.width / 2, glass.height / 4);
+            .transformPoint(
+              box.width / 2 - box.displayOriginX,
+              box.height / 4 - box.displayOriginY,
+            );
           return onPage(found().camera, at.x, at.y);
         }),
+        art: answer(
+          () => (part('art-box', `${name} is no card face`) as Phaser.GameObjects.Image).frame.name,
+        ),
         influence: answer(() => {
           const complaint = `${name} wears no influence's disc`;
           const label = part('influence-label', complaint) as Phaser.GameObjects.Text;
@@ -1703,6 +1706,8 @@ export type Reading = {
   readonly kindLabelOnScreen: Spot;
   /** A point of a face's window, off every name and every hover of the face. */
   readonly windowOnScreen: OnScreen;
+  /** The frame of the art sheet a face's art box draws, by name. */
+  readonly art: string;
   /**
    * The number on a face's influence disc, and where it sits on the page, its middle, and how tall it
    * stands there.
@@ -1799,6 +1804,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get windowOnScreen() {
       return owed(name, answered?.windowOnScreen);
+    },
+    get art() {
+      return owed(name, answered?.art);
     },
     get influence() {
       return owed(name, answered?.influence);
