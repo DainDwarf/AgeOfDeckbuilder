@@ -28,6 +28,7 @@ import {
   type Face,
   frontWindowOf,
   inMovePoints,
+  RIVER,
   unitFacing,
 } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
@@ -566,7 +567,7 @@ test('a tile’s terrain card reads what its terrain, its feature and its improv
   expect(problems).toEqual([]);
 });
 
-test('a tile a river runs along names nothing for the river on its terrain card, which reads what the tile gives', async ({
+test('a tile a river runs along names the river last on its terrain card, which reads what the tile gives', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -581,10 +582,10 @@ test('a tile a river runs along names nothing for the river on its terrain card,
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  // The tile is bare, and nothing beside it gives to it: its card names nothing.
+  // The tile is bare, and nothing beside it gives to it: its card names the river alone.
   const face = await panelFace(page);
   expect(terrainSeen(face)).toEqual(terrainRead(chronicle, tile));
-  expect(face.references).toEqual([]);
+  expect(face.references).toEqual([RIVER]);
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');
