@@ -35,6 +35,11 @@ export function downOf(width: number): number {
   return heightOf(width) / BODY.height;
 }
 
+/** Where a point of the pack's pixels, from a body's top-left corner, stands on a face that wide, about its bottom centre. */
+export function onFace(width: number, { x, y }: PackPoint): { x: number; y: number } {
+  return { x: -width / 2 + x * unitOf(width), y: -heightOf(width) + y * downOf(width) };
+}
+
 /** Where the middle of a face's cost's disc stands, the `at`th down from the first. */
 export function costAt(front: CardFront, at: number): PackPoint {
   const { cost } = frontOf(front);

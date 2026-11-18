@@ -6,13 +6,12 @@ import {
   costAt,
   discScaleOf,
   downOf,
-  heightOf,
   inRoundedBox,
   type Laid,
+  onFace,
   type Silhouettes,
   type Solid,
   solidOf,
-  unitOf,
 } from './card-shape';
 
 /** A picture that wide and tall, solid where `solid` says and see-through everywhere else. */
@@ -76,30 +75,27 @@ const BADGED = laidAs([], true);
 const BARE = laidAs([], false);
 
 const WIDTH = CARD_WIDTH;
-const HEIGHT = heightOf(WIDTH);
-
-/** A point of a face's own space at a point of the pack's pixels, from its body's top-left corner. */
-function at(x: number, y: number): { x: number; y: number } {
-  return { x: -WIDTH / 2 + x * unitOf(WIDTH), y: -HEIGHT + y * downOf(WIDTH) };
-}
 
 describe('a card’s face', () => {
   it('takes the pointer on the rim rising above its top, and not beside it', () => {
-    const rim = at(BODY.width / 2, -OVAL.rises / 2);
-    const beside = at(BODY.width - 30, -OVAL.rises / 4);
+    const rim = onFace(WIDTH, { x: BODY.width / 2, y: -OVAL.rises / 2 });
+    const beside = onFace(WIDTH, { x: BODY.width - 30, y: -OVAL.rises / 4 });
 
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, rim)).toBe(true);
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, beside)).toBe(false);
   });
 
   it('takes the pointer on its body and not in the cut-off of a rounded corner', () => {
-    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, at(BODY.width / 2, BODY.height / 2))).toBe(true);
-    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, at(2, BODY.height - 2))).toBe(false);
+    const middle = onFace(WIDTH, { x: BODY.width / 2, y: BODY.height / 2 });
+    const cutOff = onFace(WIDTH, { x: 2, y: BODY.height - 2 });
+
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, middle)).toBe(true);
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, cutOff)).toBe(false);
   });
 
   it('takes the pointer on a disc it lays rising above its top, and not where it lays none', () => {
     const first = costAt(BARE.front, 0);
-    const over = at(first.x, -OVAL.rises / 4);
+    const over = onFace(WIDTH, { x: first.x, y: -OVAL.rises / 4 });
 
     expect(cardDrawsAt(SILHOUETTES, laidAs([first], false), WIDTH, over)).toBe(true);
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, over)).toBe(false);
@@ -109,7 +105,7 @@ describe('a card’s face', () => {
     const swords = BADGES.damage;
     const middle = swords.painted.y + swords.painted.height / 2 - swords.number.y;
     const scale = discScaleOf(WIDTH, DISC_PICTURE.width) / downOf(WIDTH);
-    const pastEdge = at(-6, BADGE_AT.damage.y + middle * scale);
+    const pastEdge = onFace(WIDTH, { x: -6, y: BADGE_AT.damage.y + middle * scale });
 
     expect(pastEdge.x).toBeLessThan(-WIDTH / 2);
     expect(cardDrawsAt(SILHOUETTES, BADGED, WIDTH, pastEdge)).toBe(true);
@@ -117,20 +113,20 @@ describe('a card’s face', () => {
   });
 
   it('takes the pointer under its foot as far as its body is made to reach, and no further', () => {
-    const under = at(BODY.width / 2, BODY.height + 10);
+    const under = onFace(WIDTH, { x: BODY.width / 2, y: BODY.height + 10 });
+    const further = onFace(WIDTH, { x: BODY.width / 2, y: BODY.height + 30 });
 
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, under)).toBe(false);
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, under, 4)).toBe(true);
-    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, at(BODY.width / 2, BODY.height + 30), 4)).toBe(
-      false,
-    );
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, further, 4)).toBe(false);
   });
 
   it('takes the pointer over its top beside its rim as far as its body is made to reach up, and no further', () => {
-    const over = at(BODY.width / 2 + 200, -10);
+    const over = onFace(WIDTH, { x: BODY.width / 2 + 200, y: -10 });
+    const further = onFace(WIDTH, { x: BODY.width / 2 + 200, y: -30 });
 
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, over)).toBe(false);
     expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, over, -4)).toBe(true);
-    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, at(BODY.width / 2 + 200, -30), -4)).toBe(false);
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, further, -4)).toBe(false);
   });
 });

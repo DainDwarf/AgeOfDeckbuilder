@@ -18,5 +18,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The browse windows' "xN" badges** — every browse stack's copies badge stands under its front card's bottom right corner, the numbers at the card's foot readable beside it, and the browse spec checks the place. Doc-impact: `docs/META-SCREENS.md`, `docs/CHRONICLE-SCREEN.md`. [board/browse-copies-badge.md](board/browse-copies-badge.md)
 - **The look page names its artist throughout** — `docs/LOOK.md` names David Baumgart once and then says "his" about forty times; reword it so the artist is named wherever a reader could lose whose hand is meant.

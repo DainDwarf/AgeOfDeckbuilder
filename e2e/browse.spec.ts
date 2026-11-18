@@ -1,7 +1,10 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import type { Chronicle } from '../src/rules/state';
 import { DEFAULTS } from '../src/ui/bindings';
+import { CARD_WIDTH, DISC } from '../src/ui/card-frames';
+import { onFace } from '../src/ui/card-shape';
 import { cardFace, kindTooltip } from '../src/ui/face';
 import type { PileKind } from '../src/ui/piles';
 import { cardRules, text } from '../src/ui/text';
@@ -14,7 +17,9 @@ import {
   consoleKey,
   cursorAt,
   endedTurn,
+  type Frame,
   firstSeed,
+  graphicsCommands,
   hazardsAdded,
   heldFor,
   inside,
@@ -71,6 +76,49 @@ function nearest<At extends { y: number }>(
  */
 function readingApart(): Chronicle {
   return hazardsAdded(settledOn(1), [0, 0, 1]);
+}
+
+/**
+ * The box in the design space of the badge each named count stands on: the badge's ground is the
+ * Graphics just under its count (`badgeOf` in `src/ui/browse.ts`), and the points its fill's path
+ * runs through reach its four edges.
+ */
+async function badgeBoxes(page: Page, counts: readonly string[]): Promise<Frame[]> {
+  const grounds = await page.evaluate(
+    (names) =>
+      names.map((name) => {
+        const count = window.named?.(name)?.object;
+        if (count === undefined) throw new Error(`nothing named ${name} stands on the screen`);
+        const holder = count.parentContainer;
+        const ground = holder.list[holder.list.indexOf(count) - 1] as Phaser.GameObjects.Graphics;
+        const { a, b, c, d, tx, ty } = ground.getWorldTransformMatrix();
+        return { buffer: ground.commandBuffer as number[], matrix: { a, b, c, d, tx, ty } };
+      }),
+    counts,
+  );
+  return grounds.map(({ buffer, matrix: { a, b, c, d, tx, ty } }) => {
+    const commands = graphicsCommands(buffer);
+    const points = commands
+      .slice(
+        0,
+        commands.findIndex(({ name }) => name === 'FILL_PATH'),
+      )
+      .filter(({ name }) => name === 'MOVE_TO' || name === 'LINE_TO')
+      .map(({ args: [x, y] }) => ({ x, y }));
+    const left = Math.min(...points.map(({ x }) => x));
+    const top = Math.min(...points.map(({ y }) => y));
+    const right = Math.max(...points.map(({ x }) => x));
+    const bottom = Math.max(...points.map(({ y }) => y));
+    // A badge is never turned, so its own box's corners stay its corners in the design space.
+    const corner = { x: a * left + c * top + tx, y: b * left + d * top + ty };
+    const opposite = { x: a * right + c * bottom + tx, y: b * right + d * bottom + ty };
+    return {
+      x: corner.x,
+      y: corner.y,
+      width: opposite.x - corner.x,
+      height: opposite.y - corner.y,
+    };
+  });
 }
 
 test('a pile of more stacks than the frame holds scrolls under the wheel wherever the pointer stands, a notch off the frame moving it as far as the same notch over it, and stops on its first and last line', async ({
@@ -229,7 +277,7 @@ test('a card shown large holds a browse still under the two keys that pan the ma
   expect(problems).toEqual([]);
 });
 
-test('a left click on a pile opens nothing; a right click opens its browse, a stack per card that reads the same with its copies on a badge, in the order of the collection; a stack reacts to no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
+test('a left click on a pile opens nothing; a right click opens its browse, a stack per card that reads the same with its copies on a badge under its front card’s bottom right corner, clear of the influence’s disc, in the order of the collection; a stack reacts to no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -265,6 +313,18 @@ test('a left click on a pile opens nothing; a right click opens its browse, a st
     expect(seen(`browse-card-${at}`).scale).toBe(1);
   }
   expect(seen(`browse-card-${stacks.length}`).standing).toBe(false);
+  const badges = await badgeBoxes(
+    page,
+    stacks.map((_, at) => `browse-card-${at}-copies`),
+  );
+  const influence = onFace(CARD_WIDTH, DISC.influence);
+  for (const [at, badge] of badges.entries()) {
+    const foot = seen(`browse-card-${at}`).place;
+    const disc = { x: foot.x + influence.x, y: foot.y + influence.y };
+    expect(badge.y + badge.height / 2).toBeGreaterThan(foot.y);
+    expect(badge.x + badge.width / 2).toBeGreaterThan(foot.x);
+    expect(inside(disc, badge)).toBe(false);
+  }
   const indices = stacks.map((_, index) => index);
   expect(readOrder(indices, (index) => seen(`browse-card-${index}`).place)).toEqual(indices);
 

@@ -7,13 +7,14 @@ import { freshCampaign } from '../src/rules/save';
 import type { CardId, Chronicle } from '../src/rules/state';
 import {
   BADGES,
+  BODY,
   CARD_WIDTH,
   CARDS_SHEET_KEY,
   DISC,
   FRONTS,
   LARGE_WIDTH,
 } from '../src/ui/card-frames';
-import { BADGE_AT, discScaleOf, downOf, heightOf, unitOf } from '../src/ui/card-shape';
+import { BADGE_AT, discScaleOf, heightOf, onFace } from '../src/ui/card-shape';
 import { stacksOf } from '../src/ui/collection-layout';
 import { cardFront, frontWindowOf } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
@@ -42,7 +43,7 @@ import {
 
 /** Where the middle of the oval rim's rise over a card's top stands, in its own space at that width. */
 function rimOf(width: number): { x: number; y: number } {
-  return { x: 0, y: -heightOf(width) - (FRONTS.oval.rises / 2) * downOf(width) };
+  return onFace(width, { x: BODY.width / 2, y: -FRONTS.oval.rises / 2 });
 }
 
 /**
@@ -65,15 +66,10 @@ const SWORDS_PAST_EDGE = { x: 31, y: 234 };
 function onSwords(discPicture: number): { x: number; y: number } {
   const scale = discScaleOf(CARD_WIDTH, discPicture);
   const { number } = BADGES.damage;
+  const badge = onFace(CARD_WIDTH, BADGE_AT.damage);
   return {
-    x:
-      -CARD_WIDTH / 2 +
-      BADGE_AT.damage.x * unitOf(CARD_WIDTH) +
-      (SWORDS_PAST_EDGE.x - number.x) * scale,
-    y:
-      -heightOf(CARD_WIDTH) +
-      BADGE_AT.damage.y * downOf(CARD_WIDTH) +
-      (SWORDS_PAST_EDGE.y - number.y) * scale,
+    x: badge.x + (SWORDS_PAST_EDGE.x - number.x) * scale,
+    y: badge.y + (SWORDS_PAST_EDGE.y - number.y) * scale,
   };
 }
 

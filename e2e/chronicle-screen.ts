@@ -2141,6 +2141,47 @@ export type BorderStroke = {
   readonly points: readonly Point[];
 };
 
+/** A command a reading here meets in a Graphics' buffer, by its name in Phaser's `Commands.js`. */
+type GraphicsCommandName =
+  | 'ARC'
+  | 'BEGIN_PATH'
+  | 'LINE_TO'
+  | 'MOVE_TO'
+  | 'LINE_STYLE'
+  | 'FILL_STYLE'
+  | 'FILL_PATH'
+  | 'STROKE_PATH';
+
+// A Graphics keeps its commands flat in one buffer, each a number followed by its arguments: the
+// numbers are `phaser/src/gameobjects/graphics/Commands.js`'s, the counts what `Graphics.js` pushes.
+const GRAPHICS_COMMANDS: Readonly<
+  Record<number, { name: GraphicsCommandName; takes: number } | undefined>
+> = {
+  0: { name: 'ARC', takes: 7 },
+  1: { name: 'BEGIN_PATH', takes: 0 },
+  4: { name: 'LINE_TO', takes: 2 },
+  5: { name: 'MOVE_TO', takes: 2 },
+  6: { name: 'LINE_STYLE', takes: 3 },
+  7: { name: 'FILL_STYLE', takes: 2 },
+  8: { name: 'FILL_PATH', takes: 0 },
+  9: { name: 'STROKE_PATH', takes: 0 },
+};
+
+/** A command a Graphics was told: its name and the arguments that follow it. */
+export type GraphicsCommand = { readonly name: GraphicsCommandName; readonly args: number[] };
+
+/** The commands a Graphics' buffer holds, in the order told; a command no reading here meets throws. */
+export function graphicsCommands(buffer: readonly number[]): GraphicsCommand[] {
+  const commands: GraphicsCommand[] = [];
+  for (let at = 0; at < buffer.length; ) {
+    const known = GRAPHICS_COMMANDS[buffer[at]];
+    if (known === undefined) throw new Error(`a Graphics holds the command ${buffer[at]}`);
+    commands.push({ name: known.name, args: buffer.slice(at + 1, at + 1 + known.takes) });
+    at += 1 + known.takes;
+  }
+  return commands;
+}
+
 /**
  * What the lines of the map's borders were told to draw: how many line styles each colour was set
  * by, by the colour's value, and every stroke.
@@ -2155,35 +2196,32 @@ async function borderDrawn(
       .filter((object) => object.type === 'Graphics')
       .map((object) => (object as Phaser.GameObjects.Graphics).commandBuffer as number[]);
   });
-  // A Graphics keeps its commands flat in one buffer, each a number followed by its arguments
-  // (`phaser/src/gameobjects/graphics/Commands.js`); a line is drawn with these alone.
-  const [BEGIN_PATH, LINE_TO, MOVE_TO, LINE_STYLE, STROKE_PATH] = [1, 4, 5, 6, 9];
-  const ARGUMENTS: Record<number, number> = {
-    [BEGIN_PATH]: 0,
-    [LINE_TO]: 2,
-    [MOVE_TO]: 2,
-    [LINE_STYLE]: 3,
-    [STROKE_PATH]: 0,
-  };
   const styles: Record<number, number> = {};
   const strokes: BorderStroke[] = [];
-  for (const commands of buffers) {
+  for (const buffer of buffers) {
     let style: { colour: number; width: number } | undefined;
     let points: Point[] = [];
-    for (let at = 0; at < commands.length; at += 1 + ARGUMENTS[commands[at]]) {
-      const command = commands[at];
-      if (!(command in ARGUMENTS)) throw new Error(`a border's line holds the command ${command}`);
-      if (command === LINE_STYLE) {
-        style = { width: commands[at + 1], colour: commands[at + 2] };
-        styles[style.colour] = (styles[style.colour] ?? 0) + 1;
-      }
-      if (command === BEGIN_PATH) points = [];
-      if (command === MOVE_TO || command === LINE_TO) {
-        points.push({ x: commands[at + 1], y: commands[at + 2] });
-      }
-      if (command === STROKE_PATH) {
-        if (style === undefined) throw new Error("a border's line strokes before any line style");
-        strokes.push({ ...style, points });
+    for (const { name, args } of graphicsCommands(buffer)) {
+      switch (name) {
+        case 'LINE_STYLE':
+          style = { width: args[0], colour: args[1] };
+          styles[style.colour] = (styles[style.colour] ?? 0) + 1;
+          break;
+        case 'BEGIN_PATH':
+          points = [];
+          break;
+        case 'MOVE_TO':
+        case 'LINE_TO':
+          points.push({ x: args[0], y: args[1] });
+          break;
+        case 'STROKE_PATH':
+          if (style === undefined) throw new Error("a border's line strokes before any line style");
+          strokes.push({ ...style, points });
+          break;
+        case 'ARC':
+        case 'FILL_STYLE':
+        case 'FILL_PATH':
+          throw new Error(`a border's line holds the command ${name}`);
       }
     }
   }

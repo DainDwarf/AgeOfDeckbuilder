@@ -42,8 +42,10 @@ const ACROSS = 8;
 const BADGE_HEIGHT = 22;
 const BADGE_LEAST = 30;
 const BADGE_PAD = 6;
-/** How far a badge's bottom right corner stands out past its face's, right and down. */
-const BADGE_OUT = 6;
+/** How far a badge's right edge stands past its face's right edge. */
+const BADGE_PAST = 10;
+/** How far a badge's middle stands under its face's bottom edge. */
+const BADGE_UNDER = 4;
 
 const BADGE_STYLE = {
   fontFamily: UI_FONT,
@@ -63,13 +65,13 @@ export type BrowseStack = {
 };
 
 /**
- * The badge reading the copies, named `name`, its bottom right corner at the point handed, as wide
- * as its count needs and never narrower than its least: it widens leftwards. It says whether it lies
- * under a point of the surface it is drawn on.
+ * The badge reading the copies, named `name`, its right edge and its middle's height at the point
+ * handed, as wide as its count needs and never narrower than its least: it widens leftwards. It says
+ * whether it lies under a point of the surface it is drawn on.
  */
 function badgeOf(
   scene: Phaser.Scene,
-  { right, bottom }: { readonly right: number; readonly bottom: number },
+  { right, middle }: { readonly right: number; readonly middle: number },
   copies: number,
   name: string,
 ): { parts: Phaser.GameObjects.GameObject[]; box: Box; liesUnder(x: number, y: number): boolean } {
@@ -77,7 +79,7 @@ function badgeOf(
     .setOrigin(0.5)
     .setName(name);
   const width = Math.max(BADGE_LEAST, ownBoxOf(count).width + 2 * BADGE_PAD);
-  const box = { x: right - width, y: bottom - BADGE_HEIGHT, width, height: BADGE_HEIGHT };
+  const box = { x: right - width, y: middle - BADGE_HEIGHT / 2, width, height: BADGE_HEIGHT };
   const radius = BADGE_HEIGHT / 2;
   const ground = scene.add
     .graphics()
@@ -125,7 +127,7 @@ export function badgedStackOf(
   const { face, box } = stacked;
   const badge = badgeOf(
     scene,
-    { right: face.x + face.width + BADGE_OUT, bottom: face.y + face.height + BADGE_OUT },
+    { right: face.x + face.width + BADGE_PAST, middle: face.y + face.height + BADGE_UNDER },
     of.copies,
     `${of.name}-copies`,
   );
@@ -161,7 +163,7 @@ function stackCellOf(
     return {
       parts: [root],
       held: [{ box, liesUnder, reactions }],
-      bottom: stacked.foot,
+      bottom: Math.max(stacked.foot, box.y + box.height),
     };
   };
 }

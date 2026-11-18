@@ -26,6 +26,7 @@ import {
   heightOf,
   inRoundedBox,
   type Laid,
+  onFace,
   type Silhouettes,
   silhouettesIn,
   unitOf,
@@ -649,11 +650,6 @@ export function createCardFace(
   const height = heightOf(width);
   const size = (units: number): number => (units * width) / CARD_WIDTH;
   const discNumber = size(DISC_NUMBER_SIZE);
-  /** A point of the pack's pixels, from the body's top-left corner, about the face's bottom centre. */
-  const placed = ({ x, y }: PackPoint): { x: number; y: number } => ({
-    x: -width / 2 + x * unit,
-    y: -height + y * down,
-  });
 
   const root = scene.add.container(0, 0);
   const shadow = scene.add.image(0, 0, CARDS_SHEET_KEY).setVisible(false);
@@ -711,11 +707,11 @@ export function createCardFace(
   const signGlyph = glyphMark(scene);
   const sign = scene.add.container(0, 0, [signDisc, signGlyph]);
 
-  const influenceAt = placed(DISC.influence);
+  const influenceAt = onFace(width, DISC.influence);
   const painted = DISC.painted * unit;
   const badgeAt: Readonly<Record<BadgeStat, { x: number; y: number }>> = {
-    damage: placed(BADGE_AT.damage),
-    health: placed(BADGE_AT.health),
+    damage: onFace(width, BADGE_AT.damage),
+    health: onFace(width, BADGE_AT.health),
   };
   const badgeScale = discScaled(scene, width);
   const badges = BADGE_STATS.map((stat) => ({
@@ -846,7 +842,7 @@ export function createCardFace(
     const textInk = toned(LOOK.cardTextInk);
 
     wearShadow(shadow, next.front, width).setPosition(-width / 2, -height);
-    const glass = placed(shape.glass);
+    const glass = onFace(width, shape.glass);
     const worn = artWorn(scene.textures, next.art, frontWindowOf(next.front), ownArt);
     art
       .setTexture(worn.key, worn.frame)
@@ -860,7 +856,7 @@ export function createCardFace(
         // Under the front, whose body and glass lie over what of the unit reaches past the window.
         root.addAt(windowUnit, root.getIndex(art) + 1);
       }
-      const middle = placed({
+      const middle = onFace(width, {
         x: shape.window.x + shape.window.width / 2,
         y: shape.window.y + shape.window.height / 2,
       });
@@ -888,7 +884,7 @@ export function createCardFace(
     name.setFontSize(size(nameWide > nameRoom ? TYPE_FLOOR : NAME_SIZE));
     inked(name, toned(LOOK.cardNameInk)).setText(next.name);
 
-    const paper = placed(shape.paper);
+    const paper = onFace(width, shape.paper);
     const paperMiddle = paper.x + (shape.paper.width * unit) / 2;
     const foot = paper.y + shape.paper.height * down;
     const capitals = foot - size(LABEL_OVER_FOOT);
@@ -967,7 +963,7 @@ export function createCardFace(
         ink: LOOK.cardDiscInk,
         tint: refused.unaffordable.includes(resource) ? toned(LOOK.unaffordableDisc) : tint,
         tone: toned,
-        at: placed(middle),
+        at: onFace(width, middle),
       });
     }
 
@@ -977,7 +973,7 @@ export function createCardFace(
       asGlyph(signGlyph, 'played-by-nothing', size(SIGN_SIZE), { tone: toned, outlined: false });
       const middle = costAt(next.front, 0);
       discs.push(middle);
-      const first = placed(middle);
+      const first = onFace(width, middle);
       sign.setPosition(first.x, first.y);
     }
 
