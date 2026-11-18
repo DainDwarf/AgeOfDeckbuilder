@@ -3,7 +3,7 @@ import { achievementOf, type Catalogue } from '../rules/catalogue';
 import { countOn } from '../rules/chronicle';
 import type { Chronicle } from '../rules/state';
 import { MAP_FRAME } from './band';
-import type { Name } from './card-face';
+import type { Name, SmallCards } from './card-face';
 import { addText, type Stratum } from './design-space';
 import { LOOK } from './look';
 import {
@@ -18,7 +18,6 @@ import {
   TEXT_STYLE,
 } from './plate';
 import { createWell, placeWell, SUNK } from './resource-bar';
-import type { SmallCards } from './small-card';
 import { CHIP_INSET } from './standing';
 import { achievementGoal, technologyName, text } from './text';
 import { PLATE_WIDTH } from './tree-layout';

@@ -57,7 +57,7 @@ test('the trapping card places trapping on the deer the worker stands on', async
   expect(problems).toEqual([]);
 });
 
-test('the tile trapping was placed on inspects trapping on a card of its own, before its terrain', async ({
+test('the tile trapping was placed on inspects trapping as a row of its terrain card', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -65,24 +65,18 @@ test('the tile trapping was placed on inspects trapping on a card of its own, be
 
   await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile), CAMPAIGN);
 
-  // The worker that placed it still stands there, so trapping's card comes after the unit's.
+  // The worker that placed it still stands there and nothing is built there: the terrain card comes
+  // after the unit's.
   await click(page, `tile-${tileKey(paid.tile)}`);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(paid.tile));
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.keyboard.press('i');
-  await expect.poll(() => shownCard(page)).toBe('building');
-
-  // Nothing is built on it, so trapping heads the card and its one row says what it gives.
-  await expect
-    .poll(() => panelRows(page))
-    .toEqual([
-      { text: improvementName(TRAPPING), yields: {} },
-      { text: improvementName(TRAPPING), yields: improvementKind(CATALOGUE, TRAPPING).yields },
-    ]);
-
-  await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
+  expect(await panelRows(page)).toContainEqual({
+    text: improvementName(TRAPPING),
+    yields: improvementKind(CATALOGUE, TRAPPING).yields,
+  });
 
   expect(problems).toEqual([]);
 });

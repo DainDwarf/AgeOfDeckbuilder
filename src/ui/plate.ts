@@ -1,9 +1,8 @@
 import type Phaser from 'phaser';
-import { addRun, GLYPH_SHARE, type Name, spotOn } from './card-face';
+import { addRun, GLYPH_SHARE, type Name, type Raiser, spotOn } from './card-face';
 import { onClick, onHover, ownBoxOf, reactsToPress, UI_FONT } from './design-space';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
-import type { Raiser } from './small-card';
 
 const INK = css(LOOK.ink);
 const TEXT_SIZE = 14;

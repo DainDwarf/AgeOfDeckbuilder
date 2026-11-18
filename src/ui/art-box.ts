@@ -28,9 +28,30 @@ function iconOn(ground: Terrain, file: string): CardArt {
   return { ground, holds: { kind: 'icon', file } };
 }
 
-/** A building's paintings on a ground. */
-function buildingOn(ground: Terrain, id: BuildingTypeId): CardArt {
-  return { ground, holds: { kind: 'building', building: id } };
+/**
+ * The ground an art box holds a building no card places on: on the face of its own it wears, and on
+ * a trophy holding it.
+ */
+const BUILDING_GROUNDS: Readonly<Record<BuildingTypeId, Terrain>> = {
+  'painted-cave': 'hills',
+  'old-cairn': 'plain',
+  'beast-bones': 'plain',
+  camp: 'plain',
+  'stone-painted-cave': 'hills',
+  'stone-old-cairn': 'plain',
+  'stone-beast-bones': 'plain',
+  'stone-camp': 'plain',
+  'neutral-village': 'plain',
+};
+
+/** The ground an art box holds a building no card places on, and nothing for any other building. */
+export function buildingGroundOf(building: BuildingTypeId): Terrain | undefined {
+  return Object.hasOwn(BUILDING_GROUNDS, building) ? BUILDING_GROUNDS[building] : undefined;
+}
+
+/** A building no card places, its paintings on its ground. */
+function buildingArt(id: BuildingTypeId): CardArt {
+  return { ground: BUILDING_GROUNDS[id], holds: { kind: 'building', building: id } };
 }
 
 const RED_OCHRE = iconOn('hills', `${CRAFTING_ICONS}/red_ocher_pigment.png`);
@@ -49,10 +70,10 @@ const CARD_ART: Readonly<Record<string, CardArt>> = {
   march: iconOn('hills', `${ARMS_ICONS}/sandals.png`),
   hunger: iconOn('plain', `${ARMS_ICONS}/bone_club.png`),
   stores: FOODS,
-  'band-joins': buildingOn('plain', 'camp'),
+  'band-joins': buildingArt('camp'),
   'cave-paintings': RED_OCHRE,
-  'honour-the-dead': buildingOn('plain', 'old-cairn'),
-  'bone-carvings': buildingOn('plain', 'beast-bones'),
+  'honour-the-dead': buildingArt('old-cairn'),
+  'bone-carvings': buildingArt('beast-bones'),
   farm: { ground: 'plain', holds: 'placed' },
   tannery: { ground: 'forest', holds: 'placed' },
   fishery: { ground: 'coast', holds: 'placed' },
@@ -72,15 +93,15 @@ const CARD_ART: Readonly<Record<string, CardArt>> = {
   heal: iconOn('plain', `${CRAFTING_ICONS}/medicines.png`),
   'food-trade': iconOn('plain', `${CRAFTING_ICONS}/kola_nuts.png`),
   'goods-trade': iconOn('plain', `${GOODS_ICONS}/pottery.png`),
-  'old-stories': buildingOn('hills', 'stone-painted-cave'),
+  'old-stories': buildingArt('stone-painted-cave'),
   'bone-tools': iconOn('plain', `${CRAFTING_ICONS}/horn.png`),
   'stone-cave-paintings': RED_OCHRE,
-  'stone-honour-the-dead': buildingOn('plain', 'stone-old-cairn'),
-  'stone-bone-carvings': buildingOn('plain', 'stone-beast-bones'),
+  'stone-honour-the-dead': buildingArt('stone-old-cairn'),
+  'stone-bone-carvings': buildingArt('stone-beast-bones'),
   'stone-stores': FOODS,
-  'stone-band-joins': buildingOn('plain', 'stone-camp'),
+  'stone-band-joins': buildingArt('stone-camp'),
   'dig-the-graves': iconOn('hills', `${CRAFTING_ICONS}/jewelry.png`),
-  'their-land': buildingOn('plain', 'neutral-village'),
+  'their-land': buildingArt('neutral-village'),
   'their-stores': iconOn('plain', `${GOODS_ICONS}/barrel.png`),
   floodplain: iconOn('plain', `${GOODS_ICONS}/water.png`),
   sickness: iconOn('plain', `${CRAFTING_ICONS}/manure.png`),

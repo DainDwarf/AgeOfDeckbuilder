@@ -248,7 +248,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
 
     const parts: Part[] = [];
     const view = createMapView(map, map.strata, CATALOGUE, this.current);
-    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map);
+    const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, {
+      small: faces.small,
+      on: ui.smallCard,
+      inspect: (name) => {
+        overlay.inspectNamed(name);
+      },
+    });
     const note = createRefusalNote(map, map.strata.note);
     // A press reaches the map only where this scene lets it through.
     note.hearPressesOf(this);

@@ -44,7 +44,7 @@ import {
   capstoneName,
   eventName,
 } from '../ui/event-text';
-import { cardFaceAtStart, citySectionBuildings, frontWindowOf } from '../ui/face';
+import { buildingFace, cardFaceAtStart, citySectionBuildings, frontWindowOf } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -211,6 +211,17 @@ test('every card of the catalogue holds a painting in its art box under each cit
       }
       expect(made).toContain(artFrameOf(picture, frontWindowOf(face.front)));
     }
+  }
+});
+
+test('every building of the catalogue wears one face, the face of the one card whose play places it or one of its own, holding a painting the art sheet paints and a name for each thing it marks', () => {
+  const made = new Set((artSheet(CATALOGUE).made ?? []).map(({ frame }) => frame));
+  for (const id of Object.keys(CATALOGUE.buildings)) {
+    const face = buildingFace(CATALOGUE, id);
+    if (face.art === undefined) throw new Error(`the face of the building ${id} holds no painting`);
+
+    expect(made).toContain(artFrameOf(face.art, frontWindowOf(face.front)));
+    for (const mark of face.goesOn) if (mark.kind !== 'river') referenceName(mark);
   }
 });
 

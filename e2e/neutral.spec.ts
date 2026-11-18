@@ -12,6 +12,7 @@ import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
 import type { Point } from '../src/ui/border-loops';
+import { buildingFace } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
 import { buildingName, text, unitName } from '../src/ui/text';
@@ -42,6 +43,7 @@ import {
   onScreen,
   openSaved,
   paintedOn,
+  panelFace,
   playedOut,
   RAFT,
   readings,
@@ -102,7 +104,7 @@ async function broughtIn(page: Page, coord: TileCoords): Promise<void> {
   throw new Error(`the map never carried ${tileKey(coord)} into the middle of its frame`);
 }
 
-test('the map draws the neutral’s city once the uncharted veil is off, among the camps, the sites and the city, and its tile inspected heads its building card with its name', async ({
+test('the map draws the neutral’s city once the uncharted veil is off, among the camps, the sites and the city, and its tile inspected shows its building’s face', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -127,7 +129,8 @@ test('the map draws the neutral’s city once the uncharted veil is off, among t
   const at = await tileOnScreen(page, city);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
-  expect(await textOf(page, 'panel-name')).toBe(buildingName(building));
+  const face = await panelFace(page);
+  expect([face.card, face.rules]).toEqual([building, buildingFace(CATALOGUE, building).rules]);
 
   expect(problems).toEqual([]);
 });

@@ -178,6 +178,25 @@ export type Name = {
 /** Where a name stands on the surface its face is drawn on: its middle, and its line's two edges. */
 export type Spot = { readonly x: number; readonly top: number; readonly bottom: number };
 
+/** A name the pointer is on, as whoever drew it hands it over to the small cards. */
+export type Raiser = {
+  readonly name: Name;
+  /** Where the name stands on the stratum the small cards stand on, as it stands when asked. */
+  where(): Spot;
+  /** Told a chain raised off the name stands, and that it has come down. */
+  hold?(on: boolean): void;
+};
+
+/** The chain of small cards the names of one surface raise (`createSmallCards`). */
+export type SmallCards = {
+  /** The pointer is on this name of the surface under the chain, or on none of its names. */
+  over(raiser: Raiser | undefined): void;
+  /** Every small card moved with its name as the name now stands, on the side of it it rose on. */
+  follow(): void;
+  /** The whole chain taken down at once. */
+  down(): void;
+};
+
 /**
  * Of the names drawn in the container, the one lying under a point of the surface it is drawn on,
  * and nothing where none does.
@@ -354,6 +373,8 @@ export type CardFace = {
    * painted.
    */
   explainFoot(tooltip: Tooltip, label: FootLabel): void;
+  /** Its names and its foot react to nothing from now on: the face is on its way out. */
+  deaden(): void;
 };
 
 /**
@@ -1028,6 +1049,9 @@ export function createCardFace(
       }
       const unlisted: never = label;
       throw new Error(`no label of the foot is ${JSON.stringify(unlisted)}`);
+    },
+    deaden(): void {
+      for (const part of root.list) part.disableInteractive();
     },
   };
 }

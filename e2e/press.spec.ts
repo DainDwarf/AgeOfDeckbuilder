@@ -963,7 +963,7 @@ test('a click on a yield reading, a pile or the infopanel lets a unit being aime
   const presses: [string, () => Promise<void>][] = [
     ['reading-food', () => click(page, 'reading-food')],
     ['draw-pile', () => page.mouse.click(pile.x, pile.y)],
-    ['panel-name', () => click(page, 'panel-name')],
+    ['infopanel', () => click(page, 'infopanel')],
   ];
   for (const [on, press] of presses) {
     await page.mouse.click(face.x, face.y);

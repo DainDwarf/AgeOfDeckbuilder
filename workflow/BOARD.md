@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A building on the infopanel as its card** — an inspected tile's building card is the face of the card that places its building, a site, a camp and the neutral's city wear a building face of their own, a named building shows that face small and large, and the tile's improvements read on the terrain card; `inspect.spec.ts` proves it. Doc-impact: `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/building-on-infopanel-as-card.md](board/building-on-infopanel-as-card.md)
 - **A unit on the infopanel as its card** — an inspected unit is shown on the infopanel as the face of its card, reading what it holds now.
 - **The terrain on the infopanel as a card** — the terrain card, with its feature, its improvements and the river, shown on the infopanel as a card face read off the tile, though no card places a terrain.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.

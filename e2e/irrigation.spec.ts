@@ -23,7 +23,6 @@ import {
   playerCityTile,
   readings,
   ringedTile,
-  riverRows,
   settledOn,
   shownCard,
   unitEntered,
@@ -90,7 +89,7 @@ test('the irrigation card places irrigation on the tile a river runs along that 
   expect(problems).toEqual([]);
 });
 
-test('the tile irrigation was placed on inspects irrigation on a card of its own, before its terrain with the river giving no yield', async ({
+test('the tile irrigation was placed on inspects irrigation as a row of its terrain card, ahead of the river giving no yield', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -98,30 +97,21 @@ test('the tile irrigation was placed on inspects irrigation on a card of its own
 
   await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile), CAMPAIGN);
 
-  // The worker that placed it still stands there, so irrigation's card comes after the unit's.
+  // The worker that placed it still stands there and nothing is built there: the terrain card comes
+  // after the unit's.
   await click(page, `tile-${tileKey(paid.tile)}`);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(paid.tile));
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.keyboard.press('i');
-  await expect.poll(() => shownCard(page)).toBe('building');
-
-  // Nothing is built on it, so irrigation heads the card and its one row says what it gives.
-  await expect
-    .poll(() => panelRows(page))
-    .toEqual([
-      { text: improvementName(IRRIGATION), yields: {} },
-      { text: improvementName(IRRIGATION), yields: improvementKind(CATALOGUE, IRRIGATION).yields },
-    ]);
-
-  await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  await expect
-    .poll(() => riverRows(page))
-    .toEqual([
-      { text: text('panel.river'), yields: {} },
-      { text: text('panel.no-yield'), yields: {} },
-    ]);
+  const rows = await panelRows(page);
+  const river = rows.findIndex(({ text: name }) => name === text('panel.river'));
+  expect(rows.slice(river - 1, river + 2)).toEqual([
+    { text: improvementName(IRRIGATION), yields: improvementKind(CATALOGUE, IRRIGATION).yields },
+    { text: text('panel.river'), yields: {} },
+    { text: text('panel.no-yield'), yields: {} },
+  ]);
 
   expect(problems).toEqual([]);
 });

@@ -1,13 +1,14 @@
 import Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
-import { type CardId, NO_REFUSAL } from '../rules/state';
+import { NO_REFUSAL } from '../rules/state';
 import {
   CARD_HEIGHT,
   type CardFace,
   createCardFace,
   type FootBubble,
   type Name,
-  type Spot,
+  type Raiser,
+  type SmallCards,
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import {
@@ -20,30 +21,12 @@ import {
   reactsToPress,
   type Stratum,
 } from './design-space';
-import { type AnswerReading, namedCardFace } from './face';
+import { buildingFace, type Face, namedCardFace } from './face';
 import { createThingCard, PAPER_HEIGHT, PAPER_WIDTH } from './infopanel';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
 /** The clear water between a small card and the line of the name that raised it. */
 const STANDOFF = 8;
-
-/** A name the pointer is on, as whoever drew it hands it over. */
-export type Raiser = {
-  readonly name: Name;
-  /** Where the name stands on the stratum the small cards stand on, as it stands when asked. */
-  where(): Spot;
-  /** Told a chain raised off the name stands, and that it has come down. */
-  hold?(on: boolean): void;
-};
-
-export type SmallCards = {
-  /** The pointer is on this name of the surface under the chain, or on none of its names. */
-  over(raiser: Raiser | undefined): void;
-  /** Every small card moved with its name as the name now stands, on the side of it it rose on. */
-  follow(): void;
-  /** The whole chain taken down at once. */
-  down(): void;
-};
 
 /** One small card of the chain, the name that raised it, and what of it the pointer is on. */
 type Link = {
@@ -109,13 +92,9 @@ export function createSmallCards(
     resting = undefined;
   };
 
-  /** A card named, drawn small as its face, whose own names raise the chain on. */
-  const faceOf = (
-    card: CardId,
-    reading: AnswerReading,
-    over: (under: Raiser | undefined) => void,
-  ): CardFace => {
-    const face = createCardFace(scene, namedCardFace(catalogue, card, reading), NO_REFUSAL, {
+  /** A face drawn small, whose own names raise the chain on. */
+  const faceOf = (shown: Face, over: (under: Raiser | undefined) => void): CardFace => {
+    const face = createCardFace(scene, shown, NO_REFUSAL, {
       names: {
         over: (name) => {
           over(name === undefined ? undefined : raiserOf(face, name));
@@ -127,8 +106,8 @@ export function createSmallCards(
   };
 
   /**
-   * What a name names, drawn small: a card as its face, anything else as its infopanel card, which
-   * wears no kind label.
+   * What a name names, drawn small: a card and a building as their faces, anything else as its
+   * infopanel card, which wears no kind label.
    */
   const drawnOf = (
     { reference, reading }: Name,
@@ -139,15 +118,18 @@ export function createSmallCards(
     width: number;
     height: number;
   } => {
+    const asFace = (shown: Face) => {
+      const face = faceOf(shown, over);
+      return { root: face.root, face, width: CARD_WIDTH, height: CARD_HEIGHT };
+    };
     switch (reference.kind) {
-      case 'card': {
-        const face = faceOf(reference.id, reading, over);
-        return { root: face.root, face, width: CARD_WIDTH, height: CARD_HEIGHT };
-      }
+      case 'card':
+        return asFace(namedCardFace(catalogue, reference.id, reading));
+      case 'building':
+        return asFace(buildingFace(catalogue, reference.id));
       case 'terrain':
       case 'feature':
       case 'improvement':
-      case 'building':
       case 'player':
       case 'enemy':
         return {

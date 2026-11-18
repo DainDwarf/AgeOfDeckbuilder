@@ -1,7 +1,9 @@
 import { type CardKind, playedByNothing } from '../rules/cards';
 import {
+  type Captured,
   type Card,
   type Catalogue,
+  captureOf,
   cardMade,
   cardOf,
   costOf,
@@ -19,8 +21,8 @@ import {
 } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CardId, Cost, MadeCard } from '../rules/state';
-import { type ArtThing, type CardArt, cardArtOf } from './art-box';
-import { cardName, cardRules, text } from './text';
+import { type ArtThing, buildingGroundOf, type CardArt, cardArtOf } from './art-box';
+import { buildingName, cardName, cardRules, text } from './text';
 import type { Reference } from './text-run';
 
 /**
@@ -275,8 +277,17 @@ export function placedReading(
 ): PlacedReading {
   const placing = placingOf(card);
   const placed = placing === undefined ? undefined : placedOf(catalogue, placing, city);
-  if (placed === undefined) return NOTHING_PLACED;
-  const { kind, over } = placed;
+  return placed === undefined ? NOTHING_PLACED : thingReading(placed);
+}
+
+/** What a face reads of a thing on the ground of that kind, built over the building `over` names. */
+function thingReading({
+  kind,
+  over,
+}: {
+  readonly kind: BuildingKind;
+  readonly over?: string;
+}): PlacedReading {
   const goesOn = goesOnOf(kind, over);
   const takes = onePerPoint(kind.upkeep ?? {});
   if (kind.givesBeside === undefined) {
@@ -314,13 +325,12 @@ export function numbersRun(sign: 'gives' | 'takes', points: readonly Resource[])
 export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | undefined): Face {
   const content = cardOf(catalogue, card.id);
   const { leads, ...placed } = placedReading(catalogue, content, city);
-  const sentence = cardRules(card);
   return {
     id: card.id,
     name: cardName(card.id),
     kind: labelledKind(content),
     front: cardFront(content),
-    rules: leads === undefined || sentence === '' ? (leads ?? sentence) : `${leads}\n${sentence}`,
+    rules: ledBy(leads, cardRules(card)),
     costs: costOf(catalogue, card.id),
     influence: influenceOf(content) ?? 0,
     playedByNothing: playedByNothing(content),
@@ -330,9 +340,104 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
   };
 }
 
+/** A face's text: the text its thing leads with, on a line over its sentence, either alone where the other is none. */
+function ledBy(leads: string | undefined, sentence: string): string {
+  return leads === undefined || sentence === '' ? (leads ?? sentence) : `${leads}\n${sentence}`;
+}
+
 /** The face a card is drawn as when its content makes it, at the counters it starts with. */
 export function cardFaceAtStart(catalogue: Catalogue, id: CardId, city: string | undefined): Face {
   return cardFace(catalogue, cardMade(catalogue, id), city);
+}
+
+/**
+ * What a building's face is: the card whose play places it, drawn under the city section it is where
+ * that card places the city; or, where no card places it, what it is in its age's content.
+ */
+export type BuildingFacing =
+  | ({ readonly wears: 'card' } & PlacedBy)
+  | { readonly wears: 'own'; readonly captured: Captured };
+
+/** The card whose play places a building, and the city section it is drawn under. */
+type PlacedBy = { readonly card: CardId; readonly city: string | undefined };
+
+/**
+ * What the building's face is; a building two cards place is refused, and so is one no card places
+ * that no age holds as its camp, a site or its neutral's city.
+ */
+export function buildingFacing(catalogue: Catalogue, building: string): BuildingFacing {
+  const cities = citySectionBuildings(catalogue);
+  const placing = Object.entries(catalogue.cards).flatMap(([card, content]): PlacedBy[] => {
+    const places = placingOf(content);
+    if (places === undefined || !placesBuilding(places, building, cities)) return [];
+    return [{ card, city: places.thing === 'city' ? building : undefined }];
+  });
+  if (placing.length > 1) {
+    const cards = placing.map(({ card }) => card).join(' and ');
+    throw new Error(`the building ${building} is placed by both ${cards}`);
+  }
+  const [placed] = placing;
+  if (placed !== undefined) return { wears: 'card', ...placed };
+  for (const age of Object.keys(catalogue.ages)) {
+    const capture = captureOf(catalogue, age, building);
+    if (capture !== undefined) return { wears: 'own', captured: capture.takes };
+  }
+  throw new Error(
+    `no card places the building ${building}, and no age holds it as its camp, a site or its neutral's city`,
+  );
+}
+
+/**
+ * Whether a play placing that places the building: as a building of its own, or, placing the city,
+ * as the building of one of the city sections `cities` holds.
+ */
+function placesBuilding(places: Placing, building: string, cities: readonly string[]): boolean {
+  switch (places.thing) {
+    case 'building':
+      return places.building === building;
+    case 'city':
+      return cities.includes(building);
+    case 'unit':
+    case 'improvement':
+      return false;
+  }
+}
+
+/**
+ * The face a building wears: the face of the card whose play places it, as its content makes it, the
+ * city's card holding the building; or, where no card places it, a face of its own, the building
+ * card's front and window, reading what it is, what it stands on and what it gives and takes.
+ */
+export function buildingFace(catalogue: Catalogue, building: string): Face {
+  const facing = buildingFacing(catalogue, building);
+  switch (facing.wears) {
+    case 'card':
+      return cardFaceAtStart(catalogue, facing.card, facing.city);
+    case 'own':
+      return ownFace(catalogue, building, facing.captured);
+  }
+}
+
+/** The face of its own a building no card places wears, what it is in its age's content. */
+function ownFace(catalogue: Catalogue, building: string, captured: Captured): Face {
+  const { leads, ...placed } = thingReading({ kind: buildingKind(catalogue, building) });
+  const ground = buildingGroundOf(building);
+  return {
+    id: building,
+    name: buildingName(building),
+    kind: 'building',
+    front: { front: 'plain', kind: 'building', window: 'oval' },
+    rules: ledBy(leads, text(`face.${captured}`)),
+    costs: [],
+    influence: 0,
+    playedByNothing: false,
+    ...placed,
+    stats: undefined,
+    art:
+      ground === undefined
+        ? undefined
+        : { window: 'oval', ground, holds: { kind: 'building', building } },
+  };
 }
 
 /**

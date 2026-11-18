@@ -240,6 +240,8 @@ export type Stratum = {
   readonly camera: Phaser.Cameras.Scene2D.Camera;
   /** Where a canvas point falls on this stratum. */
   at(x: number, y: number): { x: number; y: number };
+  /** Where a point of this stratum falls on the canvas: `at` turned back. */
+  onCanvas(x: number, y: number): { x: number; y: number };
   /**
    * How much of this stratum one design pixel covers: what anything standing on it scales by to
    * keep the size on screen it was laid out at. One on a surface that never zooms.
@@ -262,6 +264,13 @@ export function stratumOf(
       return {
         x: camera.scrollX + half.x + (x - camera.x - half.x) / camera.zoomX,
         y: camera.scrollY + half.y + (y - camera.y - half.y) / camera.zoomY,
+      };
+    },
+    onCanvas(x, y) {
+      const half = { x: camera.width / 2, y: camera.height / 2 };
+      return {
+        x: camera.x + half.x + (x - camera.scrollX - half.x) * camera.zoomX,
+        y: camera.y + half.y + (y - camera.scrollY - half.y) * camera.zoomY,
       };
     },
     unit() {

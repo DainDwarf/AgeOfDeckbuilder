@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { built } from '../src/rules/cards';
+import { ageOf, placingOf } from '../src/rules/catalogue';
 import {
   type FeatureId,
   MOVE_POINT,
@@ -17,23 +18,35 @@ import { buildingKind, featureKind } from '../src/rules/map-kinds';
 import type { Resources } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
-import { builtYield, tileYield } from '../src/rules/yields';
-import { buildingName, featureName, terrainName, text } from '../src/ui/text';
+import { tileYield, yieldParts } from '../src/rules/yields';
+import { type CardArt, cardArtOf } from '../src/ui/art-box';
+import { artFrameOf } from '../src/ui/art-sheet';
+import { buildingFace, cardFaceAtStart, type Face, frontWindowOf } from '../src/ui/face';
+import { featureName, improvementName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
+  campBeside,
+  cardOnFace,
   claimedAt,
   dragSlack,
   drawnFaces,
   firstSeed,
+  nameOnScreen,
+  onDeer,
   onScreen,
   onTheBand,
+  openCampaign,
   openSaved,
+  type PanelRow,
+  panelFace,
   panelMovement,
   panelRows,
   playerCityTile,
+  type Reading,
   reacted,
   reading,
   readings,
+  referenceOnFace,
   rested,
   ringedLitAndInspecting,
   ringedTile,
@@ -41,7 +54,8 @@ import {
   settledOn,
   shownCard,
   standing,
-  upkeepRow,
+  TRAPPING,
+  WARRIOR,
   watch,
   westOf,
 } from './chronicle-screen';
@@ -158,29 +172,85 @@ function bareBeside(): Found<string> {
   );
 }
 
-/** The first building of the catalogue taking upkeep that names no feature and no river and gives nothing beside it. */
-const UPKEPT = (() => {
-  const found = Object.keys(CATALOGUE.buildings).find((id) => {
-    const { upkeep, features, river, givesBeside } = buildingKind(CATALOGUE, id);
-    return upkeep !== undefined && !features && !river && !givesBeside;
-  });
-  if (found === undefined) throw new Error('no building of the catalogue takes upkeep alone');
-  return found;
+/**
+ * The first card of the catalogue that builds a building of its own, taking upkeep, naming no
+ * feature and no river and giving nothing beside it, and that building.
+ */
+const BUILT = (() => {
+  for (const [card, content] of Object.entries(CATALOGUE.cards)) {
+    const placing = placingOf(content);
+    if (placing?.thing !== 'building' || placing.over !== undefined) continue;
+    const { upkeep, features, river, givesBeside } = buildingKind(CATALOGUE, placing.building);
+    if (upkeep !== undefined && !features && !river && !givesBeside) {
+      return { card, building: placing.building };
+    }
+  }
+  throw new Error('no card of the catalogue builds a building taking upkeep alone');
 })();
 
 /**
- * A tile beside the city it goes on, bare of building and improvement and with nobody on it,
- * claimed, and `UPKEPT` built there.
+ * The first card of the catalogue that builds its building over another, that building, and the one
+ * it is built over.
  */
-function upkeptBeside(): Found<Chronicle> {
-  const { terrains } = buildingKind(CATALOGUE, UPKEPT);
-  return besideCity(`claims a tile beside the city ${UPKEPT} goes on`, (tile, chronicle) => {
+const BUILT_OVER = (() => {
+  for (const [card, content] of Object.entries(CATALOGUE.cards)) {
+    const placing = placingOf(content);
+    if (placing?.thing === 'building' && placing.over !== undefined) {
+      return { card, building: placing.building, over: placing.over };
+    }
+  }
+  throw new Error('no card of the catalogue builds a building over another');
+})();
+
+/**
+ * A tile beside the city the first of the buildings goes on, bare of building and improvement and
+ * with nobody on it, claimed, and the buildings built there in turn, each over the one before.
+ */
+function builtBeside(buildings: readonly string[]): Found<Chronicle> {
+  const { terrains } = buildingKind(CATALOGUE, buildings[0]);
+  return besideCity(`claims a tile beside the city ${buildings[0]} goes on`, (tile, chronicle) => {
     if (!terrains.includes(tile.terrain) || tile.building !== undefined) return undefined;
     if (tile.improvements.length > 0 || unitAt(chronicle.units, tile) !== undefined)
       return undefined;
     const claimed = claimedAt(chronicle, tile);
-    return claimed === undefined ? undefined : built(CATALOGUE, claimed, tile, UPKEPT).chronicle;
+    if (claimed === undefined) return undefined;
+    return buildings.reduce(
+      (standing, building) => built(CATALOGUE, standing, tile, building).chronicle,
+      claimed,
+    );
   });
+}
+
+/** What a face reads that the infopanel's is held to: its card, its text, its picture, and what it names. */
+type FaceRead = {
+  readonly card: string | undefined;
+  readonly rules: string;
+  readonly art: string;
+  readonly references: readonly { readonly kind: string; readonly id: string }[];
+};
+
+/** What a face read on the page reads that the infopanel's is held to. */
+function faceRead({ card, rules, art, references }: Reading): FaceRead {
+  return { card, rules, art, references };
+}
+
+/** What a face that names nothing in its text reads: its card, its text, its picture, and its marks. */
+function faceDrawn(face: Face): FaceRead {
+  if (face.art === undefined) throw new Error(`the face of ${face.id} holds no painting`);
+  return {
+    card: face.id,
+    rules: face.rules,
+    art: artFrameOf(face.art, frontWindowOf(face.front)),
+    references: face.goesOn.flatMap((mark) => (mark.kind === 'river' ? [] : [mark])),
+  };
+}
+
+/** A row of grey paper as the infopanel reads it, and its "No yield" where it gives nothing. */
+function rowRead(name: string, yields: Partial<Resources>): PanelRow[] {
+  const read = { text: name, yields };
+  return Object.keys(yields).length === 0
+    ? [read, { text: text('panel.no-yield'), yields: {} }]
+    : [read];
 }
 
 /**
@@ -236,25 +306,174 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   expect(problems).toEqual([]);
 });
 
-test('a building taking upkeep carries one line under its row on its card, the word and a chip reading what it takes of each resource', async ({
+test('a building card is the face of the card whose play places the building, as the hand draws that card, the city’s card holding the city’s building; a rest on a mark at its window’s foot raises that terrain’s small card', async ({
   page,
 }) => {
   const problems = watch(page);
-  const { tile, found: chronicle } = upkeptBeside();
+  const { tile, found: chronicle } = builtBeside([BUILT.building]);
+  const { card, building } = chronicle.citySection;
+  const city = `tile-${tileKey(playerCityTile(chronicle))}`;
+  const beside = `tile-${tileKey(tile)}`;
+
+  await openSaved(page, chronicle);
+  const seen = await readings(page, [city, beside]);
+
+  // Nobody stands on the city this early, nor on the tile built on: each one's building card comes
+  // first. The city's first, the panel standing east of it over whatever lies there.
+  const onCity = seen(city).onScreen;
+  await page.mouse.click(onCity.x, onCity.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('building');
+  expect(faceRead(await panelFace(page))).toEqual(
+    faceDrawn(cardFaceAtStart(CATALOGUE, card, building)),
+  );
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shownCard(page)).toBeUndefined();
+
+  const built = seen(beside).onScreen;
+  await page.mouse.click(built.x, built.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('building');
+  await rested(page);
+  const face = await panelFace(page);
+  expect(faceRead(face)).toEqual(faceDrawn(cardFaceAtStart(CATALOGUE, BUILT.card, undefined)));
+
+  const mark = face.nameOnScreen;
+  await page.mouse.move(mark.x, mark.y, { steps: 5 });
+  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(face.references[0]);
+
+  expect(problems).toEqual([]);
+});
+
+test('a camp’s building card is a face of its own, reading what it is, the terrains it stands on and its painting on the ground of the trophy its capture deals', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, camp } = campBeside((tile) => ({ type: WARRIOR, faction: 'player', tile }));
+  const { building, rewards } = ageOf(CATALOGUE, chronicle.age).camp;
+  const holdsCamp = (art: CardArt | undefined): art is CardArt =>
+    art !== undefined &&
+    art.holds !== 'placed' &&
+    art.holds.kind === 'building' &&
+    art.holds.building === building;
+  const trophy = Object.keys(rewards).map(cardArtOf).find(holdsCamp);
+  if (trophy === undefined) throw new Error(`no trophy of the camp ${building} holds it`);
 
   await openSaved(page, chronicle);
 
-  // Nobody stands on it, so the building card comes first.
+  // The warrior planted on it comes first, the building card after it.
+  const at = await onScreen(page, `tile-${tileKey(camp)}`);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('unit');
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('building');
+  expect(faceRead(await panelFace(page))).toEqual({
+    card: building,
+    rules: text('face.camp'),
+    art: artFrameOf(
+      { window: 'oval', ground: trophy.ground, holds: { kind: 'building', building } },
+      'oval',
+    ),
+    references: buildingKind(CATALOGUE, building).terrains.map((id) => ({ kind: 'terrain', id })),
+  });
+
+  expect(problems).toEqual([]);
+});
+
+test('a building marked at the foot of a building card’s window raises the face of the card that builds it small at a rest, and shows it large at a right click', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { tile, found: chronicle } = builtBeside([BUILT_OVER.over, BUILT_OVER.building]);
+  const named = buildingFace(CATALOGUE, BUILT_OVER.over);
+
+  await openSaved(page, chronicle);
+
+  // Nobody stands on the tile built on, so its building card comes first.
   const at = await onScreen(page, `tile-${tileKey(tile)}`);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
-  await expect
-    .poll(() => panelRows(page))
-    .toEqual([
-      { text: buildingName(UPKEPT), yields: {} },
-      { text: buildingName(UPKEPT), yields: builtYield(CATALOGUE, UPKEPT) },
-      upkeepRow(UPKEPT),
-    ]);
+  await rested(page);
+  const face = await panelFace(page);
+  expect(face.card).toBe(BUILT_OVER.card);
+  const marked = face.references.findIndex(
+    ({ kind, id }) => kind === 'building' && id === BUILT_OVER.over,
+  );
+  expect(marked).not.toBe(-1);
+
+  const mark = face.namesOnScreen[marked];
+  await page.mouse.move(mark.x, mark.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named.id);
+  const small = await reading(page, 'small-card-0');
+  expect(small.art).toBe(faceDrawn(named).art);
+
+  await page.mouse.click(mark.x, mark.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named.id);
+
+  expect(problems).toEqual([]);
+});
+
+test('a city section’s building named on a technology’s plate raises the city’s card small at a rest, and shows it large at a right click', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const technology = Object.keys(CATALOGUE.technologies).find(
+    (id) => CATALOGUE.technologies[id].unlocks.city !== undefined,
+  );
+  if (technology === undefined) throw new Error('no technology of the catalogue unlocks a city');
+  const plate = `plate-${technology}`;
+  const building = CATALOGUE.technologies[technology].unlocks.city?.building;
+  if (building === undefined) throw new Error(`${technology} unlocks no city`);
+  const city = buildingFace(CATALOGUE, building);
+
+  await openCampaign(page);
+  const at = (await reading(page, plate)).references.findIndex(
+    (named) => named.kind === 'building' && named.id === building,
+  );
+  const name = await nameOnScreen(page, plate, at);
+  await page.mouse.move(name.x, name.y);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(city.id);
+  expect((await reading(page, 'small-card-0')).art).toBe(faceDrawn(city).art);
+
+  await page.mouse.click(name.x, name.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(city.id);
+
+  expect(problems).toEqual([]);
+});
+
+test('an improvement reads as a row of its tile’s terrain card, after the feature’s, and a tile it stands on with nothing built holds no building card', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, tile } = onDeer(settledOn(1), [TRAPPING]);
+  const faces = drawnFaces(chronicle);
+  const face = faces.find((drawn) => tileKey(drawn) === tileKey(tile));
+  if (face === undefined) throw new Error(`the map draws no face of ${tileKey(tile)}`);
+  const parts = yieldParts(CATALOGUE, chronicle, face, tilesBeside(faces));
+  const feature = parts.find((part) => part.kind === 'feature');
+  const trapping = parts.find((part) => part.kind === 'improvement');
+  if (feature?.kind !== 'feature' || trapping === undefined) {
+    throw new Error(`${tileKey(tile)} holds no feature or no improvement`);
+  }
+
+  await openSaved(page, chronicle);
+
+  // The worker entered on it comes first, and the terrain card after it.
+  const at = await onScreen(page, `tile-${tileKey(tile)}`);
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('unit');
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+  const named = featureName(feature.feature);
+  const expected = [
+    ...rowRead(named, feature.yields),
+    ...rowRead(improvementName(TRAPPING), trapping.yields),
+  ];
+  const rows = await panelRows(page);
+  const first = rows.findIndex((row) => row.text === named);
+  expect(rows.slice(first, first + expected.length)).toEqual(expected);
+
+  // After the terrain card comes the unit's again.
+  await page.mouse.click(at.x, at.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBe('unit');
 
   expect(problems).toEqual([]);
 });

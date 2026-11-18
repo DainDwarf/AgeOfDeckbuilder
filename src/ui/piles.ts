@@ -17,6 +17,7 @@ import {
   type FootBubble,
   type FootLabel,
   type Name,
+  type SmallCards,
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { blockLength, SHUFFLE, stopMotion, TURN_OVER, travel, turnOver } from './card-motion';
@@ -34,7 +35,7 @@ import {
 import { cardFace } from './face';
 import { css, LOOK, unworn, worn } from './look';
 import { asPainted } from './pool';
-import { raiserOf, type SmallCards } from './small-card';
+import { raiserOf } from './small-card';
 import { text } from './text';
 
 export type PileKind = 'draw-pile' | 'discard-pile' | 'exhaust-pile';

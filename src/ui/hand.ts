@@ -22,6 +22,8 @@ import {
   type FootBubble,
   type FootLabel,
   type Name,
+  type Raiser,
+  type SmallCards,
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card-motion';
@@ -41,7 +43,6 @@ import { PILE_PLACE, pileOf } from './piles';
 import { asPainted, poolOf } from './pool';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
-import type { Raiser, SmallCards } from './small-card';
 
 /** The clear water between a pile and the lane the hand fans out in. */
 const LANE_PAD = 28;

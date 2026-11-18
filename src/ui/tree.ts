@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import type { Campaign } from '../rules/campaign';
 import { ageUnlockedBy, type Catalogue, earningOf, technologyOf } from '../rules/catalogue';
 import { type Control, type Press, pressOf } from './bindings';
-import { createFootBubble, type Name } from './card-face';
+import { createFootBubble, type Name, type Raiser } from './card-face';
 import {
   addText,
   dragged,
@@ -31,7 +31,7 @@ import {
 } from './plate';
 import { createWell, placeWell, SUNK } from './resource-bar';
 import { PAN_SPEED } from './scroll';
-import { createSmallCards, type Raiser } from './small-card';
+import { createSmallCards } from './small-card';
 import { achievementGoal, ageName, regionName, technologyName, text } from './text';
 import { layOutTree, PLATE_WIDTH, type Plate, stopped, WASH } from './tree-layout';
 

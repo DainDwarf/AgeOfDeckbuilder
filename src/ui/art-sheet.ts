@@ -14,7 +14,13 @@ import {
 import { type ArtThing, cardArtOf } from './art-box';
 import type { Point } from './border-loops';
 import { artShapeOf, BODY, CARD_WIDTH, FRONTS } from './card-frames';
-import { type ArtPicture, artPictureOf, citySectionBuildings, type FrontWindow } from './face';
+import {
+  type ArtPicture,
+  artPictureOf,
+  buildingFace,
+  citySectionBuildings,
+  type FrontWindow,
+} from './face';
 import { css, LOOK } from './look';
 import {
   armOf,
@@ -462,7 +468,8 @@ function paleMade(window: FrontWindow, shapeOf: ShapeOf): Made {
 
 /**
  * The sheet every picture a card's art box holds is painted into, under each city section's building
- * and under none, with the icons they draw and each window's shape for a box holding none.
+ * and under none, and every picture a building's face holds, with the icons they draw and each
+ * window's shape for a box holding none.
  */
 export function artSheet(catalogue: Catalogue): Sheet {
   const shapes = new Map<FrontWindow, CanvasRenderingContext2D>();
@@ -472,12 +479,15 @@ export function artSheet(catalogue: Catalogue): Sheet {
     return shape;
   };
   const pictures = new Map<string, ArtPicture>();
+  const add = (picture: ArtPicture | undefined): void => {
+    if (picture !== undefined) pictures.set(artFrameOf(picture, picture.window), picture);
+  };
   for (const id of Object.keys(catalogue.cards)) {
     for (const city of [...citySectionBuildings(catalogue), undefined]) {
-      const picture = artPictureOf(catalogue, id, cardArtOf(id), city);
-      if (picture !== undefined) pictures.set(artFrameOf(picture, picture.window), picture);
+      add(artPictureOf(catalogue, id, cardArtOf(id), city));
     }
   }
+  for (const id of Object.keys(catalogue.buildings)) add(buildingFace(catalogue, id).art);
   const painted = [...pictures.values()];
   return {
     key: ART_SHEET_KEY,

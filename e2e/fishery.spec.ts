@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type TileCoords, tileAt, tileKey, tilesBeside } from '../src/rules/map';
-import { buildingKind } from '../src/rules/map-kinds';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { type YieldPart, yieldParts } from '../src/rules/yields';
-import { buildingName, terrainName, text } from '../src/ui/text';
+import { cardFaceAtStart } from '../src/ui/face';
+import { buildingName } from '../src/ui/text';
 import {
   aimed,
   campaignWith,
@@ -19,27 +19,17 @@ import {
   glyphsOf,
   marksIn,
   openSaved,
+  panelFace,
   panelRows,
   playedOn,
   playedOut,
   RAFT,
   readings,
   shownCard,
-  upkeepRow,
   watch,
 } from './chronicle-screen';
 
 const CAMPAIGN = campaignWith([RAFT]);
-
-/** What the Fishery gives the tiles beside it. */
-const GIVES = (() => {
-  const { givesBeside } = buildingKind(CATALOGUE, FISHERY);
-  if (givesBeside === undefined) throw new Error(`${FISHERY} gives nothing beside it`);
-  return givesBeside;
-})();
-
-/** The line under the Fishery's row, naming the terrain it gives to. */
-const LINE = text('panel.beside', { terrain: terrainName(GIVES.terrain) });
 
 /** What a tile's yield is made of on the faces the map draws of the chronicle: its part of the kind asked. */
 function partOf(
@@ -76,16 +66,15 @@ test('the Fishery played at the coast tile inside the border its embarked worker
   expect(problems).toEqual([]);
 });
 
-test('a Fishery built gives the coast beside it what the overlay glyphs and its terrain card reads, and reads its row and its line on its own tile’s building card', async ({
+test('a Fishery built gives the coast beside it what the overlay glyphs and its terrain card reads, and its own tile’s building card is the face of the card that built it', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, tile, index, beside } = fisheryAdmitted(CAMPAIGN);
   const built = playedOn(chronicle, index, tile);
   const given = partOf(built, beside, 'beside');
-  const own = partOf(built, tile, 'building');
   if (given === undefined) throw new Error(`the ${FISHERY} gives nothing to ${tileKey(beside)}`);
-  if (own === undefined) throw new Error(`no building stands on ${tileKey(tile)}`);
+  const card = chronicle.hand[index].id;
 
   await openSaved(page, built, CAMPAIGN);
   await page.keyboard.press('Tab');
@@ -98,9 +87,10 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
   // Nothing stands on the coast beside and nothing is built there: its terrain card comes first.
   await page.mouse.click(coast.x, coast.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  const rows = await panelRows(page);
-  expect(rows).toContainEqual({ text: buildingName(FISHERY), yields: given.yields });
-  expect(rows).not.toContainEqual({ text: LINE, yields: {} });
+  expect(await panelRows(page)).toContainEqual({
+    text: buildingName(FISHERY),
+    yields: given.yields,
+  });
 
   await page.keyboard.press('Escape');
   await expect.poll(() => shownCard(page)).toBeUndefined();
@@ -110,14 +100,11 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.mouse.click(shore.x, shore.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('building');
-  await expect
-    .poll(() => panelRows(page))
-    .toEqual([
-      { text: buildingName(FISHERY), yields: {} },
-      { text: buildingName(FISHERY), yields: own.yields },
-      { text: LINE, yields: {} },
-      upkeepRow(FISHERY),
-    ]);
+  const face = await panelFace(page);
+  expect([face.card, face.rules]).toEqual([
+    card,
+    cardFaceAtStart(CATALOGUE, card, undefined).rules,
+  ]);
 
   expect(problems).toEqual([]);
 });

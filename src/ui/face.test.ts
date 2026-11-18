@@ -2,19 +2,23 @@ import { describe, expect, it } from 'vitest';
 import { builds } from '../rules/cards';
 import { type Card, cardOf, catalogued, unitKind } from '../rules/catalogue';
 import {
+  CAMP,
   CATALOGUE,
   changed,
   cityOf,
   FREEZE,
   FROST,
+  NEUTRAL,
   SHRINE,
   SILO,
+  SITE,
   TILLAGE,
 } from '../rules/fixtures';
 import { answerOf } from '../rules/schedule';
 import type { CardArt } from './art-box';
 import {
   artPictureOf,
+  buildingFacing,
   cardFront,
   cardStats,
   labelledKind,
@@ -139,6 +143,39 @@ describe('a card’s art box', () => {
       ground: 'hills',
       holds: { kind: 'improvement', improvement: 'PH_Mine' },
     });
+  });
+});
+
+describe('a building’s face', () => {
+  it('is the face of the card whose play places it, the city’s card drawn under it where it is a city section’s building', () => {
+    expect(buildingFacing(CATALOGUE, 'PH_Farm')).toEqual({
+      wears: 'card',
+      card: 'PH_Farm',
+      city: undefined,
+    });
+    expect(buildingFacing(CATALOGUE, 'PH_City')).toEqual({
+      wears: 'card',
+      card: 'PH_Settle',
+      city: 'PH_City',
+    });
+  });
+
+  it('of a building no card places is its own, reading what it is in its age: a camp, a site or a neutral’s city', () => {
+    expect(buildingFacing(CATALOGUE, CAMP.building)).toEqual({ wears: 'own', captured: 'camp' });
+    expect(buildingFacing(CATALOGUE, SITE)).toEqual({ wears: 'own', captured: 'site' });
+    expect(buildingFacing(CATALOGUE, NEUTRAL)).toEqual({ wears: 'own', captured: 'neutral-city' });
+  });
+
+  it('is refused for a building two cards place, and for one no card places that no age holds', () => {
+    const twice = changed({
+      cards: { ...CATALOGUE.cards, PH_Barn: { kind: 'building', cost: {}, ...builds('PH_Farm') } },
+    });
+    const unplaced = changed({
+      buildings: { ...CATALOGUE.buildings, PH_Hut: { terrains: ['plain'], yields: {} } },
+    });
+
+    expect(() => buildingFacing(twice, 'PH_Farm')).toThrow();
+    expect(() => buildingFacing(unplaced, 'PH_Hut')).toThrow();
   });
 });
 
