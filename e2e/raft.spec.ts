@@ -9,7 +9,6 @@ import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { CANOE } from '../src/ui/marks';
 import { refusedAim } from '../src/ui/refusal-lines';
-import { unitName } from '../src/ui/text';
 import {
   admits,
   aimed,
@@ -24,11 +23,11 @@ import {
   openSaved,
   paidFor,
   paintedOn,
+  panelFace,
   playedOn,
   playedOut,
   playerCityTile,
   RAFT,
-  readings,
   refusalLines,
   rested,
   settledOn,
@@ -85,7 +84,7 @@ function onTheWater(): {
   });
 }
 
-test('the Raft dragged out is aimed: a click on a water tile outside the border says the border’s refusal, and a click on a free one inside it turns one idle population into a raft there, embarked, drawn in no canoe and read on the infopanel with no state line', async ({
+test('the Raft dragged out is aimed: a click on a water tile outside the border says the border’s refusal, and a click on a free one inside it turns one idle population into a raft there, embarked, drawn in no canoe, on the map and in the window of the Raft card’s face on the infopanel', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -114,9 +113,9 @@ test('the Raft dragged out is aimed: a click on a water tile outside the border 
   expect(mark?.canoe).toBeUndefined();
 
   await inspected(page, coast);
-  const panel = await readings(page, ['panel-name', 'panel-state']);
-  expect(panel('panel-name').text).toBe(unitName(RAFT));
-  expect(panel('panel-state').text).toBeUndefined();
+  const face = await panelFace(page);
+  expect(face.card).toBe(RAFT);
+  expect(face.windowUnit).toMatchObject({ paintedAs: paintedOn(played, coast), canoe: undefined });
 
   expect(problems).toEqual([]);
 });

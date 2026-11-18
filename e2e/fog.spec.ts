@@ -4,7 +4,7 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { built, featurePlaced, improvementPlaced, made, slotFree } from '../src/rules/cards';
 import { ageOf, fullHealth, unitKind } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { enemyEntering, preparedAs } from '../src/rules/enemies';
+import { enemyEntering } from '../src/rules/enemies';
 import {
   cornerKey,
   neighbours,
@@ -22,8 +22,9 @@ import { chartedAt, inSight } from '../src/rules/sight';
 import { followed, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { reachable, relationsOf, type UnitStats, unitAt } from '../src/rules/units';
+import { freshUnitFace } from '../src/ui/face';
 import { LOOK, multiplied } from '../src/ui/look';
-import { text, unitName } from '../src/ui/text';
+import { text } from '../src/ui/text';
 import {
   campKind,
   chronicleOf,
@@ -43,7 +44,7 @@ import {
   onDesignedSpeed,
   openSaved,
   paintedOn,
-  panelRows,
+  panelFace,
   playerCityTile,
   playersOf,
   readings,
@@ -401,9 +402,6 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   expect(kept.faction).toBe('neutral');
   expect(kept.stats.health).not.toBe(unitAt(stood.units, fog)?.stats.health);
   expect(relationsOf(stood)).toBe('hostile');
-  // Hostile stands alone on the card's state line: the unit kept is neither embarked nor prepared.
-  expect(kept.embarked).toBe(false);
-  expect(preparedAs(stood, { ...kept, tile: fog })).toBeUndefined();
 
   await openSaved(page, stood, campaign);
 
@@ -418,10 +416,13 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await expect.poll(() => ringedTile(page)).toBe(tileKey(fog));
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('unit');
-  const rows = (await panelRows(page)).map((row) => row.text);
-  expect(rows.slice(0, 2)).toEqual([unitName(kept.stats.type), text('unit-state.hostile')]);
-  expect(rows[rows.indexOf(text('label.health')) + 1]).toBe(
-    `${kept.stats.health} / ${fullHealth(CATALOGUE, kept.stats)}`,
+  const face = await panelFace(page);
+  expect([face.card, face.rules]).toEqual([
+    freshUnitFace(CATALOGUE, kept.stats.type, kept.faction).id,
+    text('face.hostile'),
+  ]);
+  expect(face.stats.find(({ stat }) => stat === 'health')?.number).toBe(
+    text('reading.over', { count: kept.stats.health, over: fullHealth(CATALOGUE, kept.stats) }),
   );
 
   // A press on an uncharted tile lands off the map, on his void: it rings nothing and inspects nothing.

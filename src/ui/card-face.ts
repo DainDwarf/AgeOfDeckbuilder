@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Refusal } from '../rules/state';
-import { ART_SHEET_KEY, artFrameOf } from './art-sheet';
+import { ART_SHEET_KEY, artFrameOf, artScaleOf } from './art-sheet';
 import {
   BACK,
   BADGES,
@@ -45,11 +45,12 @@ import {
   kindLabel,
   kindTooltip,
   numbersRun,
-  statReading,
   statTooltip,
 } from './face';
+import { factionSigns } from './faction-signs';
 import { asGlyph, glyphMark } from './glyphs';
 import { css, LOOK, multiplied, type Tone, unworn } from './look';
+import { asUnit, unitMarker, unitPaintDrop } from './map-marks';
 import {
   GOES_ON_GAP,
   GOES_ON_SIZE,
@@ -626,6 +627,8 @@ export function createCardFace(
     .setOrigin(0, 0)
     .setScale(unit, down)
     .setName('art-box');
+  /** The unit its window holds, made the first time the face reads one. */
+  let windowUnit: Phaser.GameObjects.Container | undefined;
   const frontImage = scene.add.image(0, 0, CARDS_SHEET_KEY);
   const plate = scene.add.image(0, -height + PLATE.middle * down, CARDS_SHEET_KEY, PLATE.file);
   plate.setScale((PLATE.width * unit) / plate.width);
@@ -803,6 +806,33 @@ export function createCardFace(
       .setTexture(ART_SHEET_KEY, artFrameOf(next.art, frontWindowOf(next.front)))
       .setPosition(glass.x, glass.y)
       .setTint(next.art === undefined ? multiplied(paleOf(next.front), tint) : tint);
+    const held = next.unit;
+    windowUnit?.setVisible(held !== undefined);
+    if (held !== undefined) {
+      if (windowUnit === undefined) {
+        windowUnit = unitMarker(scene);
+        // Under the front, whose body and glass lie over what of the unit reaches past the window.
+        root.addAt(windowUnit, root.getIndex(art) + 1);
+      }
+      const middle = placed({
+        x: shape.window.x + shape.window.width / 2,
+        y: shape.window.y + shape.window.height / 2,
+      });
+      const scale = artScaleOf(frontWindowOf(next.front));
+      const { canoed } = held;
+      asUnit(
+        windowUnit,
+        held.type,
+        held.faction,
+        canoed,
+        'clear',
+        held.prepares,
+        undefined,
+        factionSigns(),
+      )
+        .setScale(scale * unit, scale * down)
+        .setPosition(middle.x, middle.y - unitPaintDrop(canoed) * scale * down);
+    }
     wearFront(frontImage, next.front, width)
       .setPosition(-width / 2, -height)
       .setTint(tint);
@@ -933,7 +963,7 @@ export function createCardFace(
       picture.setTint(tint);
       inked(number, toned(LOOK.cardDiscInk))
         .setStroke(css(toned(LOOK.mapOutline)), size(2 * BADGE_OUTLINE))
-        .setText(statReading(stat, next.stats[stat]));
+        .setText(next.stats[stat]);
     }
 
     for (const { label, zone } of footZones) {
@@ -956,7 +986,7 @@ export function createCardFace(
     const cellOf = ({ number }: { number: Phaser.GameObjects.Text }): number =>
       statGlyph + size(STAT_GAP) + ownBoxOf(number).width;
     for (const { stat, number } of boxed) {
-      inked(number, toned(LOOK.cardTextInk)).setText(statReading(stat, stats[stat]));
+      inked(number, toned(LOOK.cardTextInk)).setText(stats[stat]);
     }
     const columns = size(STAT_COLUMNS);
     const across = Math.max(...boxed.map((cell) => cell.column * columns + cellOf(cell)));

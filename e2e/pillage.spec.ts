@@ -12,7 +12,6 @@ import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { glyphFileOf } from '../src/ui/cast';
 import { LOOK, multiplied } from '../src/ui/look';
-import { text } from '../src/ui/text';
 import {
   campKind,
   chronicleOf,
@@ -22,11 +21,11 @@ import {
   freeGround,
   inspected,
   openSaved,
+  panelFace,
   playerCityTile,
   readingsAndUnitMarks,
   settledOn,
   shownCard,
-  textOf,
   unitEntered,
   unitMarksOn,
   watch,
@@ -91,7 +90,7 @@ function enemyBadge(prepares: PreparedAs | undefined, shade = 0xffffff): DiscSho
   };
 }
 
-test('a pillager standing on a farm prepares the pillage: it wears the badge in the enemy colour with the flame and its card reads Pillaging, and at the next end of turn the farm is gone and the pillager wears only what it prepares next', async ({
+test('a pillager standing on a farm prepares the pillage: it wears the badge in the enemy colour with the flame, in its card’s window too, and at the next end of turn the farm is gone and the pillager wears only what it prepares next', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -112,7 +111,7 @@ test('a pillager standing on a farm prepares the pillage: it wears the badge in 
   expect(badged.unitMarkOn(farm)?.badge).toEqual(enemyBadge(preparesOn(prepared, farm)));
   expect(badged.read(`building-${key}`).standing).toBe(true);
   await inspected(page, farm);
-  expect(await textOf(page, 'panel-state')).toBe(text('unit-state.pillaging'));
+  expect((await panelFace(page)).windowUnit?.badge).toEqual(enemyBadge(preparesOn(prepared, farm)));
 
   await page.keyboard.press('Escape');
   await expect.poll(() => shownCard(page)).toBeUndefined();
@@ -133,7 +132,7 @@ test('a pillager standing on a farm prepares the pillage: it wears the badge in 
   expect(problems).toEqual([]);
 });
 
-test('an enemy on the city’s tile prepares the capture: it wears the badge in the enemy colour with the flag and its card reads Capturing', async ({
+test('an enemy on the city’s tile prepares the capture: it wears the badge in the enemy colour with the flag, in its card’s window too', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -150,7 +149,7 @@ test('an enemy on the city’s tile prepares the capture: it wears the badge in 
   const [mark] = await unitMarksOn(page, [city]);
   expect(mark?.badge).toEqual(enemyBadge(preparesOn(prepared, city)));
   await inspected(page, city);
-  expect(await textOf(page, 'panel-state')).toBe(text('unit-state.capturing'));
+  expect((await panelFace(page)).windowUnit?.badge).toEqual(enemyBadge(preparesOn(prepared, city)));
 
   expect(problems).toEqual([]);
 });

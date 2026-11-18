@@ -20,6 +20,8 @@ import {
   buildingFace,
   citySectionBuildings,
   type FrontWindow,
+  freshUnit,
+  unitFace,
 } from './face';
 import { css, LOOK } from './look';
 import {
@@ -83,6 +85,12 @@ const GROUND_RINGS = 2;
 
 /** How many of a front's pixels make a unit of a card wherever it stands but large. */
 const PIXELS = BODY.width / CARD_WIDTH;
+
+/** How many of a front's pixels one of the map's units spans in that window's art box. */
+export function artScaleOf(window: FrontWindow): number {
+  const { width, height } = FRONTS[window].window;
+  return (TILE_SHARE * Math.max(width, height)) / (Math.sqrt(3) * TILE_SIZE);
+}
 
 /** What names what stands on a picture's ground in its frame's name. */
 function thingKey(holds: ArtThing): string {
@@ -434,8 +442,7 @@ function pictureMade(picture: ArtPicture, shapeOf: ShapeOf): Made {
         x: window.x + window.width / 2 - glass.x,
         y: window.y + window.height / 2 - glass.y,
       };
-      const scale =
-        (TILE_SHARE * Math.max(window.width, window.height)) / (Math.sqrt(3) * TILE_SIZE);
+      const scale = artScaleOf(picture.window);
       const { holds } = picture;
       const laid = laidOf(paintingIn, holds);
       const ground = groundMiddleOf(picture, middle, scale, laid);
@@ -468,8 +475,8 @@ function paleMade(window: FrontWindow, shapeOf: ShapeOf): Made {
 
 /**
  * The sheet every picture a card's art box holds is painted into, under each city section's building
- * and under none, and every picture a building's face holds, with the icons they draw and each
- * window's shape for a box holding none.
+ * and under none, every picture a building's face holds, and every picture a unit's face holds ashore
+ * and embarked, with the icons they draw and each window's shape for a box holding none.
  */
 export function artSheet(catalogue: Catalogue): Sheet {
   const shapes = new Map<FrontWindow, CanvasRenderingContext2D>();
@@ -488,6 +495,11 @@ export function artSheet(catalogue: Catalogue): Sheet {
     }
   }
   for (const id of Object.keys(catalogue.buildings)) add(buildingFace(catalogue, id).art);
+  for (const id of Object.keys(catalogue.units)) {
+    for (const embarked of [false, true]) {
+      add(unitFace(catalogue, { ...freshUnit(catalogue, id, 'player'), embarked }).art);
+    }
+  }
   const painted = [...pictures.values()];
   return {
     key: ART_SHEET_KEY,

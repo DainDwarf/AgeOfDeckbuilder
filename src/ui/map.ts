@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import type { GivenTo } from '../rules/cards';
-import { ageOf, type Catalogue, captureOf, damageOf, fullHealth } from '../rules/catalogue';
+import {
+  ageOf,
+  type Catalogue,
+  captureOf,
+  damageOf,
+  fullHealth,
+  inCanoe,
+} from '../rules/catalogue';
 import {
   anythingByHand,
   apply,
@@ -95,7 +102,6 @@ import {
   IMPROVEMENT_DISC,
   improvementLyingOf,
   improvementMarksOn,
-  inCanoe,
   type Lying,
   lyingOf,
   type Mark,

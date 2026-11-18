@@ -20,7 +20,7 @@ import {
   onHover,
   type Stratum,
 } from './design-space';
-import { buildingFace, type Face, namedCardFace } from './face';
+import { buildingFace, type Face, freshUnitFace, namedCardFace } from './face';
 import { createThingCard, paperMetricsOf, type Thing } from './infopanel';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf } from './small-card';
@@ -39,18 +39,19 @@ type Inspected =
   | { readonly shows: 'face'; readonly face: Face }
   | { readonly shows: 'thing'; readonly thing: Thing };
 
-/** What a name names, as it stands large: a card and a building as their faces. */
+/** What a name names, as it stands large: a card, a building and a unit kind as their faces. */
 function inspectedOf(catalogue: Catalogue, { reference, reading }: Name): Inspected {
   switch (reference.kind) {
     case 'card':
       return { shows: 'face', face: namedCardFace(catalogue, reference.id, reading) };
     case 'building':
       return { shows: 'face', face: buildingFace(catalogue, reference.id) };
+    case 'player':
+    case 'enemy':
+      return { shows: 'face', face: freshUnitFace(catalogue, reference.id, reference.kind) };
     case 'terrain':
     case 'feature':
     case 'improvement':
-    case 'player':
-    case 'enemy':
       return { shows: 'thing', thing: reference };
   }
 }

@@ -43,7 +43,38 @@ function colourOf(symbol: CastSymbol): number {
     case 'move':
     case 'action':
     case 'sight':
+    case 'hostile':
       return LOOK.cardTextInk;
+  }
+}
+
+/** Whether a symbol's glyph wears its outline where it is not told: the hostile glyph, read in a text's ink, wears none. */
+function outlinedOf(symbol: CastSymbol): boolean {
+  switch (symbol) {
+    case 'hostile':
+      return false;
+    case 'food':
+    case 'production':
+    case 'military':
+    case 'money':
+    case 'science':
+    case 'culture':
+    case 'population':
+    case 'influence':
+    case 'health':
+    case 'killed':
+    case 'pillage':
+    case 'capture':
+    case 'player':
+    case 'neutral':
+    case 'enemy':
+    case 'site':
+    case 'range':
+    case 'played-by-nothing':
+    case 'move':
+    case 'action':
+    case 'sight':
+      return true;
   }
 }
 
@@ -110,13 +141,14 @@ export function glyphMark(scene: Phaser.Scene): Phaser.GameObjects.Container {
 
 /**
  * A `glyphMark` made to draw a symbol's glyph `square` units a side, in its colour over its outline
- * in the outline's, both through the tone; a glyph asked to wear no outline stands bare.
+ * in the outline's, both through the tone; a glyph asked to wear no outline stands bare, and so does
+ * one not asked whose symbol wears none.
  */
 export function asGlyph(
   mark: Phaser.GameObjects.Container,
   symbol: CastSymbol,
   square: number,
-  { tone = unworn, colour = colourOf(symbol), outlined = true }: GlyphPaint = {},
+  { tone = unworn, colour = colourOf(symbol), outlined = outlinedOf(symbol) }: GlyphPaint = {},
 ): Phaser.GameObjects.Container {
   const [outline, glyph] = mark.list as Phaser.GameObjects.Image[];
   const scale = square / GLYPH_PIXELS;

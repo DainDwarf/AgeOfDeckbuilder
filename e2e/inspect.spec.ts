@@ -1,7 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import type { Campaign } from '../src/rules/campaign';
 import { built } from '../src/rules/cards';
-import { ageOf, placingOf } from '../src/rules/catalogue';
+import { ageOf, bonusOf, fullHealth, placingOf, unitKind } from '../src/rules/catalogue';
+import { enemyEntering } from '../src/rules/enemies';
 import {
   type FeatureId,
   MOVE_POINT,
@@ -16,12 +18,20 @@ import {
 } from '../src/rules/map';
 import { buildingKind, featureKind } from '../src/rules/map-kinds';
 import type { Resources } from '../src/rules/resources';
+import { unitDamaged } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { tileYield, yieldParts } from '../src/rules/yields';
-import { type CardArt, cardArtOf } from '../src/ui/art-box';
+import { type CardArt, cardArtOf, unitGroundOf } from '../src/ui/art-box';
 import { artFrameOf } from '../src/ui/art-sheet';
-import { buildingFace, cardFaceAtStart, type Face, frontWindowOf } from '../src/ui/face';
+import {
+  buildingFace,
+  cardFaceAtStart,
+  type Face,
+  frontWindowOf,
+  unitFacing,
+} from '../src/ui/face';
+import { LOOK } from '../src/ui/look';
 import { featureName, improvementName, terrainName, text } from '../src/ui/text';
 import {
   besideTiles,
@@ -31,6 +41,8 @@ import {
   dragSlack,
   drawnFaces,
   firstSeed,
+  freeGround,
+  inspected,
   nameOnScreen,
   onDeer,
   onScreen,
@@ -38,6 +50,7 @@ import {
   openCampaign,
   openSaved,
   type PanelRow,
+  paintedOn,
   panelFace,
   panelMovement,
   panelRows,
@@ -55,9 +68,11 @@ import {
   shownCard,
   standing,
   TRAPPING,
+  unitEntered,
   WARRIOR,
   watch,
   westOf,
+  wonCampaign,
 } from './chronicle-screen';
 
 declare global {
@@ -374,6 +389,94 @@ test('a camp’s building card is a face of its own, reading what it is, the ter
     ),
     references: buildingKind(CATALOGUE, building).terrains.map((id) => ({ kind: 'terrain', id })),
   });
+
+  expect(problems).toEqual([]);
+});
+
+/** The unit kind no card places. */
+const LEADER = 'leader';
+
+/**
+ * Seed 1's turn 1 on the campaign a win has paid into, a warrior of the player's on a camp beside the
+ * city and an enemy leader on the first ground beside the city, each wounded by one; the two tiles.
+ */
+function woundedBesideCity(): {
+  readonly chronicle: Chronicle;
+  readonly campaign: Campaign;
+  readonly warrior: TileCoords;
+  readonly leader: TileCoords;
+} {
+  const campaign = wonCampaign();
+  const { chronicle: camped, camp } = campBeside(
+    (tile) => ({ type: WARRIOR, faction: 'player', tile }),
+    campaign,
+  );
+  const [leader] = freeGround(camped, LEADER, 1);
+  if (leader === undefined) throw new Error('seed 1 leaves no ground beside its city for a leader');
+  const { raider } = ageOf(CATALOGUE, camped.age).camp.scripts;
+  const led = unitEntered(camped, enemyEntering(LEADER, raider, leader));
+  const wounded = [camp, leader].reduce(
+    (standing, tile) => unitDamaged(standing, tile, 1).chronicle,
+    led,
+  );
+  return { chronicle: wounded, campaign, warrior: camp, leader };
+}
+
+/** What a face's health reads. */
+function healthOn({ stats }: Reading): string | undefined {
+  return stats.find(({ stat }) => stat === 'health')?.number;
+}
+
+test('a unit’s card is the face of the unit card that places its kind, reading the health it holds over its kind’s own, its window holding the unit in its faction’s halo; the leader, which no card places, wears a face of its own', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, campaign, warrior, leader } = woundedBesideCity();
+  const facing = unitFacing(CATALOGUE, WARRIOR);
+  if (facing.wears !== 'card') throw new Error(`no unit card places ${WARRIOR}`);
+  const art = cardArtOf(facing.card);
+  if (art === undefined) throw new Error(`the card ${facing.card} holds no painting`);
+  const ground = unitGroundOf(LEADER);
+  if (ground === undefined) throw new Error(`the face of ${LEADER} holds no ground`);
+  /** What the unit standing on the tile holds of its health, over its kind's own. */
+  const heldOn = (tile: TileCoords): string => {
+    const unit = unitAt(chronicle.units, tile);
+    if (unit === undefined) throw new Error(`no unit stands on ${tileKey(tile)}`);
+    const full = fullHealth(CATALOGUE, unit.stats);
+    expect(unit.stats.health).toBeLessThan(full);
+    return text('reading.over', { count: unit.stats.health, over: full });
+  };
+
+  await openSaved(page, chronicle, campaign);
+
+  await inspected(page, warrior);
+  const warriorFace = await panelFace(page);
+  expect(faceRead(warriorFace)).toEqual({
+    ...faceDrawn(cardFaceAtStart(CATALOGUE, facing.card, undefined)),
+    art: artFrameOf({ window: 'oval', ground: art.ground, holds: { kind: 'nothing' } }, 'oval'),
+  });
+  expect(warriorFace.windowUnit).toMatchObject({
+    halo: LOOK.civilization,
+    paintedAs: paintedOn(chronicle, warrior),
+    canoe: undefined,
+  });
+  expect(healthOn(warriorFace)).toBe(heldOn(warrior));
+  await page.keyboard.press('Escape');
+  await expect.poll(() => shownCard(page)).toBeUndefined();
+
+  await inspected(page, leader);
+  const leaderFace = await panelFace(page);
+  expect(faceRead(leaderFace)).toEqual({
+    card: LEADER,
+    rules: text('face.bonus', { count: bonusOf(CATALOGUE, unitKind(CATALOGUE, LEADER)) }),
+    art: artFrameOf({ window: 'oval', ground, holds: { kind: 'nothing' } }, 'oval'),
+    references: [],
+  });
+  expect(leaderFace.windowUnit).toMatchObject({
+    halo: LOOK.enemy,
+    paintedAs: paintedOn(chronicle, leader),
+  });
+  expect(healthOn(leaderFace)).toBe(heldOn(leader));
 
   expect(problems).toEqual([]);
 });

@@ -156,6 +156,7 @@ type PageReading = {
   kindLabelOnScreen: Answer<Spot>;
   windowOnScreen: Answer<OnScreen>;
   art: Answer<string>;
+  windowUnit: Answer<UnitMarkShown | undefined>;
   influence: Answer<{ text: string; onScreen: Spot }>;
   stats: Answer<StatShown[]>;
   answerNameOnScreen: Answer<Spot>;
@@ -192,8 +193,6 @@ declare global {
     faceCounts?: (fog: number) => { shown: number; inFog: number };
     /** What the unit mark standing on the tile of that key shows, and nothing where none stands. */
     unitMarkOn?: (key: string) => UnitMarkShown | undefined;
-    /** The faction sign a unit's mark shows, and nothing where it shows none. */
-    unitSignIn?: (mark: Phaser.GameObjects.Container) => DiscShown | undefined;
     /** The faction sign the tile of that key shows, a city's or a camp's, and nothing where it shows none. */
     tileSignOn?: (key: string) => DiscShown | undefined;
     /** The site's pointer the tile of that key shows, and nothing where it shows none. */
@@ -636,8 +635,6 @@ export async function readNames(page: Page): Promise<void> {
       return { sign, badge };
     };
 
-    window.unitSignIn = (mark) => discShown(unitDiscsOf(mark).sign);
-
     window.tileSignOn = (key) => {
       const sign = window.named?.(`faction-sign-${key}`)?.object as
         | Phaser.GameObjects.Container
@@ -662,18 +659,13 @@ export async function readNames(page: Page): Promise<void> {
       };
     };
 
-    // A tile in fog carries a nameless mark, found by standing where the tile's face does. Its frames
-    // end as `linedName`'s and `haloName`'s in `src/ui/marks.ts`.
-    window.unitMarkOn = (key) => {
-      const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
-      if (face === undefined) return undefined;
-      const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
-      const mark = marks.find((one) => one.x === face.x && one.y === face.y);
-      if (mark === undefined) return undefined;
+    // A unit's mark is `unitMarker`'s in `src/ui/map-marks.ts`. Its frames end as `linedName`'s and
+    // `haloName`'s in `src/ui/marks.ts`.
+    const unitMarkShown = (mark: Phaser.GameObjects.Container, where: string): UnitMarkShown => {
       const images = mark.list.filter((one) => one.type === 'Image') as Phaser.GameObjects.Image[];
       const framed = (frame: string): Phaser.GameObjects.Image => {
         const image = images.find((one) => one.frame.name.endsWith(frame));
-        if (image === undefined) throw new Error(`the unit mark on ${key} draws no ${frame}`);
+        if (image === undefined) throw new Error(`the unit mark ${where} draws no ${frame}`);
         return image;
       };
       const { sign, badge } = unitDiscsOf(mark);
@@ -682,7 +674,7 @@ export async function readNames(page: Page): Promise<void> {
       // The health bar is the mark's last container: the health held under the health removed, then
       // the `glyphMark` at its foot.
       const bar = mark.list.at(-1) as Phaser.GameObjects.Container | undefined;
-      if (bar?.type !== 'Container') throw new Error(`the unit mark on ${key} holds no health bar`);
+      if (bar?.type !== 'Container') throw new Error(`the unit mark ${where} holds no health bar`);
       const { filled, past } = barPartsOf(bar);
       const foot = glyphIn(bar.list[4]);
       // His canoe is the mark's first image (`unitMarker` in `src/ui/map-marks.ts`).
@@ -703,6 +695,15 @@ export async function readNames(page: Page): Promise<void> {
             }
           : undefined,
       };
+    };
+
+    // A tile in fog carries a nameless mark, found by standing where the tile's face does.
+    window.unitMarkOn = (key) => {
+      const face = window.named?.(`tile-${key}`)?.object as Phaser.GameObjects.Image | undefined;
+      if (face === undefined) return undefined;
+      const marks = (window.shownIn?.('units') ?? []) as Phaser.GameObjects.Container[];
+      const mark = marks.find((one) => one.x === face.x && one.y === face.y);
+      return mark === undefined ? undefined : unitMarkShown(mark, `on ${key}`);
     };
 
     /** Where a point of the camera's world sits on the page, and what one unit of it measures there. */
@@ -925,6 +926,15 @@ export async function readNames(page: Page): Promise<void> {
         art: answer(
           () => (part('art-box', `${name} is no card face`) as Phaser.GameObjects.Image).frame.name,
         ),
+        // A face's window holds its unit's mark, a container, just over its art box, and its front,
+        // an image, there where it never held one (`createCardFace` in `src/ui/card-face.ts`).
+        windowUnit: answer(() => {
+          const box = part('art-box', `${name} is no card face`);
+          const holder = box.parentContainer;
+          const mark = holder.list[holder.list.indexOf(box) + 1];
+          if (mark.type !== 'Container' || !isShown(mark as Parented)) return undefined;
+          return unitMarkShown(mark as Phaser.GameObjects.Container, `in the window of ${name}`);
+        }),
         influence: answer(() => {
           const complaint = `${name} wears no influence's disc`;
           const label = part('influence-label', complaint) as Phaser.GameObjects.Text;
@@ -1736,6 +1746,8 @@ export type Reading = {
   readonly windowOnScreen: OnScreen;
   /** The frame of the art sheet a face's art box draws, by name. */
   readonly art: string;
+  /** What the unit a face's window holds over its art box shows, and nothing where it holds none. */
+  readonly windowUnit: UnitMarkShown | undefined;
   /**
    * The number on a face's influence disc, and where it sits on the page, its middle, and how tall it
    * stands there.
@@ -1838,6 +1850,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get art() {
       return owed(name, answered?.art);
+    },
+    get windowUnit() {
+      return owed(name, answered?.windowUnit);
     },
     get influence() {
       return owed(name, answered?.influence);
@@ -1957,19 +1972,6 @@ export function sitePointersOn(
     (keys) => keys.map((key) => window.sitePointerShownOn?.(key)),
     tiles.map(tileKey),
   );
-}
-
-/** The faction sign the head of the infopanel's unit card shows, and nothing where it shows none. */
-export function panelHeadSign(page: Page): Promise<DiscShown | undefined> {
-  return page.evaluate(() => {
-    const name = window.named?.('panel-name')?.object;
-    if (name === undefined) throw new Error('the infopanel reads no card');
-    // The head's mark is drawn just before the name (`buildPaper` in `src/ui/infopanel.ts`).
-    const face = name.parentContainer;
-    return window.unitSignIn?.(
-      face.list[face.list.indexOf(name) - 1] as Phaser.GameObjects.Container,
-    );
-  });
 }
 
 /** The frame the painting of the unit standing on the tile is drawn from; a tile no unit stands on throws. */

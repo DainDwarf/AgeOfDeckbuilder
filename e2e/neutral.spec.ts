@@ -12,10 +12,10 @@ import { type Chronicle, type CityFaction, holderOf } from '../src/rules/state';
 import { relationsOf, unitAt } from '../src/rules/units';
 import { tileYield } from '../src/rules/yields';
 import type { Point } from '../src/ui/border-loops';
-import { buildingFace } from '../src/ui/face';
+import { buildingFace, freshUnitFace } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
 import { captureLore } from '../src/ui/lore';
-import { buildingName, text, unitName } from '../src/ui/text';
+import { buildingName, text } from '../src/ui/text';
 import {
   type BorderStroke,
   borderColours,
@@ -57,7 +57,6 @@ import {
   standing,
   stoppedTurn,
   take,
-  textOf,
   tileOnScreen,
   unitEntered,
   unitMarksOn,
@@ -161,7 +160,7 @@ function kindEntered(chronicle: Chronicle): string {
   return kind;
 }
 
-test('a unit of the neutral’s entered on its city stands on the map in the neutral’s colour, and its tile inspected heads its unit card with its kind’s name', async ({
+test('a unit of the neutral’s entered on its city stands on the map in the neutral’s colour, and its tile inspected shows the face of the card that places its kind, the unit in the neutral’s colour in its window', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -188,7 +187,11 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   const at = await tileOnScreen(page, city);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('unit');
-  expect(await textOf(page, 'panel-name')).toBe(unitName(kind));
+  const face = await panelFace(page);
+  expect([face.card, face.windowUnit?.halo]).toEqual([
+    freshUnitFace(CATALOGUE, kind, 'neutral').id,
+    LOOK.neutral,
+  ]);
 
   expect(problems).toEqual([]);
 });

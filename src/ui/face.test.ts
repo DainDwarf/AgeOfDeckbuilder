@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { builds } from '../rules/cards';
+import { builds, enters } from '../rules/cards';
 import { type Card, cardOf, catalogued, unitKind } from '../rules/catalogue';
 import {
   CAMP,
@@ -21,10 +21,15 @@ import {
   buildingFacing,
   cardFront,
   cardStats,
+  freshUnit,
   labelledKind,
   namedCardMade,
   numbersRun,
   placedReading,
+  statReading,
+  type UnitReading,
+  unitFacing,
+  unitStats,
 } from './face';
 import { text } from './text';
 
@@ -113,13 +118,70 @@ describe('a face of a card that places a unit', () => {
   it('reads the stats of the kind its card places, a unit card’s and a settle card’s alike, and a card placing no unit reads none', () => {
     const statsOf = (kind: string) => {
       const { damage, health, move, action, range, sight } = unitKind(CATALOGUE, kind);
-      return { damage, health, move, action, range, sight };
+      return {
+        damage: statReading('damage', damage),
+        health: statReading('health', health),
+        move: statReading('move', move),
+        action: statReading('action', action),
+        range: statReading('range', range),
+        sight: statReading('sight', sight),
+      };
     };
     const stats = (id: string) => cardStats(CATALOGUE, cardOf(CATALOGUE, id));
 
     expect(stats('PH_Warrior')).toEqual(statsOf('PH_Warrior'));
     expect(stats('PH_Band')).toEqual(statsOf('PH_Worker'));
     expect(stats('PH_Farm')).toBeUndefined();
+  });
+});
+
+describe('a unit’s face', () => {
+  /** A unit fresh of the kind, of the player's, changed as handed. */
+  const unitOf = (kind: string, change: Partial<UnitReading> = {}): UnitReading => ({
+    ...freshUnit(CATALOGUE, kind, 'player'),
+    ...change,
+  });
+
+  it('is the face of the one unit card whose play places its kind, a settle card placing it counting for nothing, and its own for a kind no card places', () => {
+    expect(unitFacing(CATALOGUE, 'PH_Warrior')).toEqual({ wears: 'card', card: 'PH_Warrior' });
+    expect(unitFacing(CATALOGUE, 'PH_Worker')).toEqual({ wears: 'card', card: 'PH_Worker' });
+    expect(unitFacing(CATALOGUE, 'PH_Chief')).toEqual({ wears: 'own' });
+  });
+
+  it('is refused for a kind two unit cards place', () => {
+    const twice = changed({
+      cards: { ...CATALOGUE.cards, PH_Levy: { kind: 'unit', cost: {}, ...enters('PH_Warrior') } },
+    });
+
+    expect(() => unitFacing(twice, 'PH_Warrior')).toThrow();
+  });
+
+  it('reads the health, the move and the action the unit holds over its kind’s own, at full too, and its damage with the bonus it carries after a plus sign', () => {
+    const kind = unitKind(CATALOGUE, 'PH_Warrior');
+    const over = (count: string, own: string) => text('reading.over', { count, over: own });
+    const wounded = unitOf('PH_Warrior', {
+      stats: { ...kind, health: kind.health - 1 },
+      movePoints: 0,
+      damage: kind.damage + 1,
+    });
+
+    expect(unitStats(CATALOGUE, wounded)).toEqual({
+      health: over(statReading('health', kind.health - 1), statReading('health', kind.health)),
+      move: over(statReading('move', 0), statReading('move', kind.move)),
+      action: over(statReading('action', kind.action), statReading('action', kind.action)),
+      damage: `${statReading('damage', kind.damage)}${text('reading.plus', { count: 1 })}`,
+      range: statReading('range', kind.range),
+      sight: statReading('sight', kind.sight),
+    });
+    expect(unitStats(CATALOGUE, unitOf('PH_Warrior')).damage).toBe(
+      statReading('damage', kind.damage),
+    );
+  });
+
+  it('embarked, reads a damage and a range of nought', () => {
+    expect(unitStats(CATALOGUE, unitOf('PH_Warrior', { embarked: true, damage: 3 }))).toMatchObject(
+      { damage: statReading('damage', 0), range: statReading('range', 0) },
+    );
   });
 });
 

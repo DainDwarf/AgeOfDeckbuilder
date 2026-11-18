@@ -21,7 +21,7 @@ import {
   reactsToPress,
   type Stratum,
 } from './design-space';
-import { buildingFace, type Face, namedCardFace } from './face';
+import { buildingFace, type Face, freshUnitFace, namedCardFace } from './face';
 import { createThingCard, PAPER_HEIGHT, PAPER_WIDTH } from './infopanel';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
@@ -106,8 +106,8 @@ export function createSmallCards(
   };
 
   /**
-   * What a name names, drawn small: a card and a building as their faces, anything else as its
-   * infopanel card, which wears no kind label.
+   * What a name names, drawn small: a card, a building and a unit kind as their faces, anything else
+   * as its infopanel card, which wears no kind label.
    */
   const drawnOf = (
     { reference, reading }: Name,
@@ -127,11 +127,12 @@ export function createSmallCards(
         return asFace(namedCardFace(catalogue, reference.id, reading));
       case 'building':
         return asFace(buildingFace(catalogue, reference.id));
+      case 'player':
+      case 'enemy':
+        return asFace(freshUnitFace(catalogue, reference.id, reference.kind));
       case 'terrain':
       case 'feature':
       case 'improvement':
-      case 'player':
-      case 'enemy':
         return {
           root: createThingCard(scene, catalogue, reference, PAPER_WIDTH),
           face: undefined,

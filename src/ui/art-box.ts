@@ -49,6 +49,16 @@ export function buildingGroundOf(building: BuildingTypeId): Terrain | undefined 
   return Object.hasOwn(BUILDING_GROUNDS, building) ? BUILDING_GROUNDS[building] : undefined;
 }
 
+/** The ground an art box holds a unit kind no card places on, on the face of its own it wears. */
+const UNIT_GROUNDS: Readonly<Record<string, Terrain>> = {
+  leader: 'plain',
+};
+
+/** The ground an art box holds a unit kind no card places on, and nothing for any other kind. */
+export function unitGroundOf(kind: string): Terrain | undefined {
+  return Object.hasOwn(UNIT_GROUNDS, kind) ? UNIT_GROUNDS[kind] : undefined;
+}
+
 /** A building no card places, its paintings on its ground. */
 function buildingArt(id: BuildingTypeId): CardArt {
   return { ground: BUILDING_GROUNDS[id], holds: { kind: 'building', building: id } };

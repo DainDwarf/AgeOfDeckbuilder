@@ -1330,6 +1330,14 @@ export function standsOnWaterAlone(catalogue: Catalogue, id: string): boolean {
   return entryOf(catalogue, catalogue.units, id, 'unit kind').onWaterAlone === true;
 }
 
+/** Whether a unit stands in a canoe: embarked, and of a kind that does not stand on the water alone. */
+export function inCanoe(
+  catalogue: Catalogue,
+  { stats, embarked }: Pick<Unit, 'stats' | 'embarked'>,
+): boolean {
+  return embarked && !standsOnWaterAlone(catalogue, stats.type);
+}
+
 /**
  * Whether a unit of that kind entering stands on the tile: embarked on its kind's move where the kind
  * stands on the water alone, and ashore otherwise.

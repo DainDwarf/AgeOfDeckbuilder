@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A unit on the infopanel as its card** — an inspected unit's card is the face of the unit card that places its kind, the leader's a face of its own, reading what the unit holds now, its window holding the unit as the map paints it, a hostile neutral's reading Hostile, and a named unit kind shows that same face; `inspect.spec.ts` proves it. Doc-impact: `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/unit-on-infopanel-as-card.md](board/unit-on-infopanel-as-card.md)
 - **The terrain on the infopanel as a card** — the terrain card, with its feature, its improvements and the river, shown on the infopanel as a card face read off the tile, though no card places a terrain.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
 - **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.

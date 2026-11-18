@@ -1,5 +1,6 @@
 import { type CardKind, playedByNothing } from '../rules/cards';
 import {
+  bonusOf,
   type Captured,
   type Card,
   type Catalogue,
@@ -7,11 +8,15 @@ import {
   cardMade,
   cardOf,
   costOf,
+  fullHealth,
+  inCanoe,
   influenceOf,
   type Placing,
   placingOf,
+  standsOnWaterAlone,
   unitKind,
 } from '../rules/catalogue';
+import type { PreparedAs } from '../rules/enemies';
 import { MOVE_POINT, type Terrain } from '../rules/map';
 import {
   type BuildingKind,
@@ -21,8 +26,9 @@ import {
 } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CardId, Cost, MadeCard } from '../rules/state';
-import { type ArtThing, buildingGroundOf, type CardArt, cardArtOf } from './art-box';
-import { buildingName, cardName, cardRules, text } from './text';
+import type { Faction, Unit } from '../rules/units';
+import { type ArtThing, buildingGroundOf, type CardArt, cardArtOf, unitGroundOf } from './art-box';
+import { buildingName, cardName, cardRules, text, unitName } from './text';
 import type { Reference } from './text-run';
 
 /**
@@ -187,6 +193,17 @@ export function statTooltip(stat: CardStat): { readonly name: string; readonly s
   return { name: text(`label.${stat}`), sentence: text(`tooltip.${stat}`) };
 }
 
+/**
+ * A unit a face's window holds as the map paints it: its kind, whose it is, whether it stands in his
+ * canoe, and what its prepare lands as where it has prepared.
+ */
+export type PaintedUnit = {
+  readonly type: string;
+  readonly faction: Faction;
+  readonly canoed: boolean;
+  readonly prepares: PreparedAs | undefined;
+};
+
 /** A mark of what a card's thing goes on: a terrain, a feature or a building, or the river. */
 export type GoesOn =
   | Extract<Reference, { readonly kind: 'terrain' | 'feature' | 'building' }>
@@ -211,10 +228,15 @@ export type Face = {
   readonly gives: readonly Resource[];
   readonly takes: readonly Resource[];
   readonly range: number;
-  /** The stats of the unit the card places, its kind's, and nothing on a card that places none. */
-  readonly stats: Readonly<Record<CardStat, number>> | undefined;
+  /**
+   * What each stat reads of the unit the card places, its kind's, or of the unit the face reads; and
+   * nothing on a face reading no unit.
+   */
+  readonly stats: Readonly<Record<CardStat, string>> | undefined;
   /** The picture its art box holds, and nothing where it shows its kind's colour, pale. */
   readonly art: ArtPicture | undefined;
+  /** The unit its window holds over its picture, and nothing on a face holding none. */
+  readonly unit: PaintedUnit | undefined;
 };
 
 /** The range a building that gives to the tiles beside it gives over. */
@@ -309,7 +331,14 @@ export function cardStats(catalogue: Catalogue, card: Card): Face['stats'] {
   const placing = placingOf(card);
   if (placing?.thing !== 'unit') return undefined;
   const { damage, health, move, action, range, sight } = unitKind(catalogue, placing.unit);
-  return { damage, health, move, action, range, sight };
+  return {
+    damage: statReading('damage', damage),
+    health: statReading('health', health),
+    move: statReading('move', move),
+    action: statReading('action', action),
+    range: statReading('range', range),
+    sight: statReading('sight', sight),
+  };
 }
 
 /** Numbers as a text runs them: the sign, then one glyph to each point. */
@@ -337,6 +366,7 @@ export function cardFace(catalogue: Catalogue, card: MadeCard, city: string | un
     ...placed,
     stats: cardStats(catalogue, content),
     art: artPictureOf(catalogue, card.id, cardArtOf(card.id), city),
+    unit: undefined,
   };
 }
 
@@ -437,6 +467,150 @@ function ownFace(catalogue: Catalogue, building: string, captured: Captured): Fa
       ground === undefined
         ? undefined
         : { window: 'oval', ground, holds: { kind: 'building', building } },
+    unit: undefined,
+  };
+}
+
+/** What a unit kind's face is: the face of the one unit card whose play places it, or its own. */
+export type UnitFacing =
+  | { readonly wears: 'card'; readonly card: CardId }
+  | { readonly wears: 'own' };
+
+/**
+ * What the unit kind's face is: its own where no unit card places it, a settle card placing it
+ * counting for nothing; a kind two unit cards place is refused.
+ */
+export function unitFacing(catalogue: Catalogue, kind: string): UnitFacing {
+  const placing = Object.entries(catalogue.cards).flatMap(([card, content]) => {
+    if (content.kind !== 'unit') return [];
+    const places = placingOf(content);
+    return places?.thing === 'unit' && places.unit === kind ? [card] : [];
+  });
+  if (placing.length > 1) {
+    throw new Error(`the unit kind ${kind} is placed by both ${placing.join(' and ')}`);
+  }
+  const [card] = placing;
+  return card === undefined ? { wears: 'own' } : { wears: 'card', card };
+}
+
+/**
+ * A unit as its face reads it: a unit on the map, one a snapshot kept as it stood, or one fresh of its
+ * kind; the damage its attack removes, what its prepare lands as where it has prepared, and whether it
+ * is the neutral's while it is hostile.
+ */
+export type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
+  readonly damage: number;
+  readonly prepares: PreparedAs | undefined;
+  readonly hostile: boolean;
+};
+
+/**
+ * A unit fresh of its kind, of the faction named: its stats its kind's, its move points and its
+ * action full, ashore, or embarked where its kind stands on the water alone.
+ */
+export function freshUnit(catalogue: Catalogue, kind: string, faction: Faction): UnitReading {
+  const stats = unitKind(catalogue, kind);
+  return {
+    stats,
+    faction,
+    movePoints: stats.move,
+    action: stats.action,
+    embarked: standsOnWaterAlone(catalogue, kind),
+    damage: stats.damage,
+    prepares: undefined,
+    hostile: false,
+  };
+}
+
+/**
+ * The face a unit wears, its kind's, reading the unit as it stands: its window holding it on that
+ * face's ground, or the coast where it is embarked, its text Hostile where it is the neutral's while
+ * hostile.
+ */
+export function unitFace(catalogue: Catalogue, unit: UnitReading): Face {
+  const worn = unitKindFace(catalogue, unit.stats.type);
+  return {
+    ...worn,
+    rules: unit.hostile ? text('face.hostile') : worn.rules,
+    stats: unitStats(catalogue, unit),
+    art:
+      worn.art === undefined
+        ? undefined
+        : {
+            window: worn.art.window,
+            ground: unit.embarked ? 'coast' : worn.art.ground,
+            holds: { kind: 'nothing' },
+          },
+    unit: {
+      type: unit.stats.type,
+      faction: unit.faction,
+      canoed: inCanoe(catalogue, unit),
+      prepares: unit.prepares,
+    },
+  };
+}
+
+/** The face a unit fresh of the kind wears, of the faction named. */
+export function freshUnitFace(catalogue: Catalogue, kind: string, faction: Faction): Face {
+  return unitFace(catalogue, freshUnit(catalogue, kind, faction));
+}
+
+/** The face a unit kind wears before it reads a unit: its unit card's, or its own. */
+function unitKindFace(catalogue: Catalogue, kind: string): Face {
+  const facing = unitFacing(catalogue, kind);
+  switch (facing.wears) {
+    case 'card':
+      return cardFaceAtStart(catalogue, facing.card, undefined);
+    case 'own':
+      return ownUnitFace(catalogue, kind);
+  }
+}
+
+/**
+ * The face of its own a unit kind no card places wears: the unit card's front and window, its kind's
+ * name, its ground, and a text saying the bonus it carries where it carries one.
+ */
+function ownUnitFace(catalogue: Catalogue, kind: string): Face {
+  const bonus = bonusOf(catalogue, unitKind(catalogue, kind));
+  const ground = unitGroundOf(kind);
+  return {
+    id: kind,
+    name: unitName(kind),
+    kind: 'unit',
+    front: { front: 'plain', kind: 'unit', window: 'oval' },
+    rules: bonus > 0 ? text('face.bonus', { count: bonus }) : '',
+    costs: [],
+    influence: 0,
+    playedByNothing: false,
+    ...NOTHING_PLACED,
+    stats: undefined,
+    art: ground === undefined ? undefined : { window: 'oval', ground, holds: { kind: 'nothing' } },
+    unit: undefined,
+  };
+}
+
+/**
+ * What a unit's face reads of it as it stands: the health, the move and the action it holds over its
+ * kind's own, the damage its attack removes with the bonus it carries after a plus sign, its range and
+ * its sight; embarked, a damage and a range of nought.
+ */
+export function unitStats(catalogue: Catalogue, unit: UnitReading): NonNullable<Face['stats']> {
+  const { stats, embarked } = unit;
+  const over = (held: string, own: string): string =>
+    text('reading.over', { count: held, over: own });
+  const carried = unit.damage - stats.damage;
+  const damage = statReading('damage', embarked ? 0 : stats.damage);
+  return {
+    damage:
+      embarked || carried === 0 ? damage : `${damage}${text('reading.plus', { count: carried })}`,
+    health: over(
+      statReading('health', stats.health),
+      statReading('health', fullHealth(catalogue, stats)),
+    ),
+    move: over(statReading('move', unit.movePoints), statReading('move', stats.move)),
+    action: over(statReading('action', unit.action), statReading('action', stats.action)),
+    range: statReading('range', embarked ? 0 : stats.range),
+    sight: statReading('sight', stats.sight),
   };
 }
 

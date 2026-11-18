@@ -23,7 +23,7 @@ import {
   freeFor,
   onScreen,
   openSaved,
-  panelRows,
+  panelFace,
   playedOut,
   playerCityTile,
   readings,
@@ -154,7 +154,7 @@ test('the siege’s landing raises its window and enters a leader and its band o
   expect(problems).toEqual([]);
 });
 
-test('an enemy warrior beside the leader reads its damage and the bonus it carries, and the warrior’s attack that kills the leader wins on the blow with the siege’s line', async ({
+test('an enemy warrior beside the leader reads its damage and the bonus it carries after a plus sign on its card’s face, and the warrior’s attack that kills the leader wins on the blow with the siege’s line', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -178,8 +178,10 @@ test('an enemy warrior beside the leader reads its damage and the bonus it carri
   const at = await onScreen(page, `tile-${tileKey(led.tile)}`);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('unit');
-  const rows = (await panelRows(page)).map((row) => row.text);
-  expect(rows[rows.indexOf(text('label.damage')) + 1]).toBe(`${led.stats.damage} + ${carried}`);
+  const { stats } = await panelFace(page);
+  expect(stats.find(({ stat }) => stat === 'damage')?.number).toBe(
+    `${led.stats.damage}${text('reading.plus', { count: carried })}`,
+  );
   await page.keyboard.press('Escape');
   await expect.poll(() => shownCard(page)).toBeUndefined();
 

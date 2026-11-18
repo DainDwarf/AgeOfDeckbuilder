@@ -1,19 +1,12 @@
 import Phaser from 'phaser';
-import {
-  bonusOf,
-  type Catalogue,
-  damageOf,
-  fullHealth,
-  standsOnWaterAlone,
-  unitKind,
-} from '../rules/catalogue';
-import { type PreparedAs, preparedAs } from '../rules/enemies';
+import { type Catalogue, damageOf } from '../rules/catalogue';
+import { preparedAs } from '../rules/enemies';
 import { groundCost, movementCost, runsAlong, type TilesBeside } from '../rules/map';
 import { featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { unitShown } from '../rules/sight';
 import { type Chronicle, NO_REFUSAL } from '../rules/state';
-import { relationsOf, type Unit } from '../rules/units';
+import { relationsOf } from '../rules/units';
 import { type YieldPart, type YieldSource, yieldParts } from '../rules/yields';
 import {
   CARD_HEIGHT,
@@ -26,8 +19,7 @@ import {
 import { CARD_WIDTH } from './card-frames';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
-import { buildingFace, inMovePoints } from './face';
-import { factionSigns } from './faction-signs';
+import { buildingFace, type Face, inMovePoints, type UnitReading, unitFace } from './face';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Drawn, TileFace } from './map';
@@ -35,15 +27,12 @@ import {
   buildingMark,
   featureMark,
   improvementMark,
-  inCanoe,
   type Mark,
   paintedBoundsOf,
   riverMark,
   terrainMark,
-  unitFittedBy,
-  unitMark,
 } from './map-marks';
-import { buildingName, featureName, improvementName, terrainName, text, unitName } from './text';
+import { buildingName, featureName, improvementName, terrainName, text } from './text';
 import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
@@ -91,18 +80,7 @@ type Row = (Exclude<YieldSource, { readonly kind: 'building' }> | { readonly kin
 };
 
 /**
- * What a unit card reads: a unit on the map, one a snapshot kept as it stood, or a unit kind read as
- * a unit fresh of it, the damage its attack removes, what its prepare lands as, if it has prepared,
- * and whether it is the neutral's while it is hostile.
- */
-type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
-  readonly damage: number;
-  readonly prepares?: PreparedAs;
-  readonly hostile?: boolean;
-};
-
-/**
- * One card an inspection steps through: the unit's, the building's, which is its face, or the
+ * One card an inspection steps through: the unit's and the building's, which are their faces, or the
  * terrain's, headed by the first of the rows it holds.
  */
 export type Card =
@@ -115,17 +93,17 @@ export type Card =
     };
 
 /**
- * What a card of grey paper is drawn from: the unit's or the terrain's an inspection steps through,
- * or a feature or an improvement named alone.
+ * What a card of grey paper is drawn from: the terrain's an inspection steps through, or a feature or
+ * an improvement named alone.
  */
 type Drawing =
-  | Exclude<Card, { readonly kind: 'building' }>
+  | Extract<Card, { readonly kind: 'terrain' }>
   | { readonly kind: 'feature' | 'improvement'; readonly rows: readonly Row[] };
 
-/** A thing a name names that is neither a card nor a building, each of which a face shows. */
-export type Thing = Exclude<Reference, { readonly kind: 'card' | 'building' }>;
+/** A thing a name names that is neither a card, a building nor a unit kind, each of which a face shows. */
+export type Thing = Exclude<Reference, { readonly kind: 'card' | 'building' | 'player' | 'enemy' }>;
 
-/** The card the infopanel reads a thing named by: its one row, or the unit kind read fresh. */
+/** The card the infopanel reads a thing named by: its one row. */
 function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
   switch (thing.kind) {
     case 'terrain':
@@ -154,19 +132,6 @@ function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
           },
         ],
       };
-    case 'player':
-    case 'enemy': {
-      const stats = unitKind(catalogue, thing.id);
-      const unit = {
-        stats,
-        faction: thing.kind,
-        movePoints: stats.move,
-        action: stats.action,
-        embarked: standsOnWaterAlone(catalogue, thing.id),
-        damage: stats.damage,
-      };
-      return { kind: 'unit', unit };
-    }
   }
 }
 
@@ -188,7 +153,7 @@ export function createThingCard(
   thing: Thing,
   width: number,
 ): Phaser.GameObjects.Container {
-  const paper = buildPaper(scene, catalogue, drawingOf(catalogue, thing), width, undefined, false);
+  const paper = buildPaper(scene, catalogue, drawingOf(catalogue, thing), width, undefined);
   paper.root.setPosition(-width / 2, -paperMetricsOf(width).height);
   return scene.add.container(0, 0, [paper.root]).setData('reference', thing);
 }
@@ -212,7 +177,7 @@ function rowOf(part: YieldPart): { place: 'ground' | 'beside'; row: Row } | unde
 
 /**
  * What the map draws of a tile, as the cards an inspection steps, each row read off the face's
- * yield: the unit, the building card, and the terrain card, which always stands.
+ * yield: the unit card, the building card, and the terrain card, which always stands.
  */
 export function cardsOf(
   catalogue: Catalogue,
@@ -269,8 +234,8 @@ export type InfoPanel = {
 };
 
 /**
- * What the names on the building card raise on the screen standing over the map: its small cards,
- * on the stratum they stand on, and the named thing shown large.
+ * What the names on a card that is a face raise on the screen standing over the map: its small
+ * cards, on the stratum they stand on, and the named thing shown large.
  */
 export type PanelNames = {
   readonly small: Pick<SmallCards, 'over' | 'down'>;
@@ -290,8 +255,6 @@ const CYCLE_MS = 150;
 /** The type a card's face is set in, sized by the `em` of the width it is drawn at. */
 function stylesOf(em: number) {
   const fontSize = `${SMALLEST_TYPE * em}px`;
-  const label = { fontFamily: UI_FONT, fontSize, color: css(LOOK.faintInk) };
-  const value = { fontFamily: UI_FONT, fontSize, color: css(LOOK.ink) };
   return {
     title: {
       fontFamily: UI_FONT,
@@ -299,65 +262,9 @@ function stylesOf(em: number) {
       fontStyle: 'bold',
       color: css(LOOK.ink),
     },
-    label,
-    value,
-    chip: { ...value, fontStyle: 'bold' },
+    label: { fontFamily: UI_FONT, fontSize, color: css(LOOK.faintInk) },
+    chip: { fontFamily: UI_FONT, fontSize, color: css(LOOK.ink), fontStyle: 'bold' },
   };
-}
-
-const STATS = ['health', 'damage', 'bonus', 'range', 'move', 'action', 'sight'] as const;
-
-type Stat = (typeof STATS)[number];
-
-/** The stats a unit card reads, in the order `STATS` lists them. */
-function statsOf(catalogue: Catalogue, unit: UnitReading): readonly Stat[] {
-  return STATS.filter((stat) => readsRow(catalogue, unit, stat));
-}
-
-/**
- * Whether a unit card reads the stat's row: an embarked unit's reads no damage and no range, and the
- * card of a unit whose kind carries no bonus reads none.
- */
-function readsRow(catalogue: Catalogue, unit: UnitReading, stat: Stat): boolean {
-  switch (stat) {
-    case 'damage':
-    case 'range':
-      return !unit.embarked;
-    case 'bonus':
-      return bonusOf(catalogue, unit.stats) > 0;
-    case 'health':
-    case 'move':
-    case 'action':
-    case 'sight':
-      return true;
-  }
-}
-
-/** What a row of a card is named by: one `label.` and one `tooltip.` entry each. */
-type Term = Stat | Resource;
-
-/**
- * What a stat's row reads: what the unit has left over its own number, where it has two, and its own
- * damage and the bonus it carries, where it carries one.
- */
-function readingOf(catalogue: Catalogue, unit: UnitReading, stat: Stat): string {
-  switch (stat) {
-    case 'health':
-      return `${unit.stats.health} / ${fullHealth(catalogue, unit.stats)}`;
-    case 'move':
-      return `${inMovePoints(unit.movePoints)} / ${inMovePoints(unit.stats.move)}`;
-    case 'action':
-      return `${unit.action} / ${unit.stats.action}`;
-    case 'damage': {
-      const carried = unit.damage - unit.stats.damage;
-      return carried > 0 ? `${unit.stats.damage} + ${carried}` : String(unit.stats.damage);
-    }
-    case 'bonus':
-      return text('reading.plus', { count: bonusOf(catalogue, unit.stats) });
-    case 'range':
-    case 'sight':
-      return String(unit.stats[stat]);
-  }
 }
 
 /** One card of grey paper drawn: its paper, its contents, and the zones its rows raise tooltips from. */
@@ -367,8 +274,8 @@ type Paper = {
 };
 
 /**
- * The card the panel stands: one of grey paper, or the building card's face, which the panel's root
- * holds laid out from its top-left corner as the paper is; and its size.
+ * The card the panel stands: one of grey paper, or a face, which the panel's root holds laid out
+ * from its top-left corner as the paper is; and its size.
  */
 type Shown = Paper & {
   readonly face: CardFace | undefined;
@@ -446,12 +353,11 @@ export function createInfoPanel(
   };
 
   /**
-   * The building's face, drawn as its card is in the hand, its top-left corner where the panel's
-   * cards stand theirs; its names raise the screen's small cards while it stands, and its foot the
-   * map's bubble.
+   * A face drawn as a card is in the hand, its top-left corner where the panel's cards stand theirs;
+   * its names raise the screen's small cards while it stands, and its foot the map's bubble.
    */
-  const faceOf = (building: string): Shown => {
-    const face: CardFace = createCardFace(scene, buildingFace(catalogue, building), NO_REFUSAL, {
+  const faceOf = (shown: Face): Shown => {
+    const face: CardFace = createCardFace(scene, shown, NO_REFUSAL, {
       names: {
         over: (name) => {
           onName = name !== undefined;
@@ -485,14 +391,15 @@ export function createInfoPanel(
     return { root, hovers: [], face, width: CARD_WIDTH, height: CARD_HEIGHT };
   };
 
-  /** The card drawn as the panel stands it: the building's as its face, any other on grey paper. */
+  /** The card drawn as the panel stands it: the unit's and the building's as their faces, the terrain's on grey paper. */
   const shownOf = (card: Card): Shown => {
     switch (card.kind) {
-      case 'building':
-        return faceOf(card.building);
       case 'unit':
+        return faceOf(unitFace(catalogue, card.unit));
+      case 'building':
+        return faceOf(buildingFace(catalogue, card.building));
       case 'terrain': {
-        const paper = buildPaper(scene, catalogue, card, PAPER_WIDTH, reactions, factionSigns());
+        const paper = buildPaper(scene, catalogue, card, PAPER_WIDTH, reactions);
         return { ...paper, face: undefined, width: PAPER_WIDTH, height: PAPER_HEIGHT };
       }
     }
@@ -586,8 +493,7 @@ export function createInfoPanel(
 
 /**
  * A card of grey paper: its head over its rows, laid out in the card's own type and spacing at
- * `width`, from its top-left corner; a row raises a bubble only where its reactions are handed, and
- * a unit's head wears its faction's sign where `signed`.
+ * `width`, from its top-left corner; a row raises a bubble only where its reactions are handed.
  */
 function buildPaper(
   scene: Phaser.Scene,
@@ -595,7 +501,6 @@ function buildPaper(
   card: Drawing,
   width: number,
   reactions: RowReactions | undefined,
-  signed: boolean,
 ): Paper {
   const { em, pad } = paperMetricsOf(width);
   const style = stylesOf(em);
@@ -608,23 +513,17 @@ function buildPaper(
   const paper = scene.add.graphics();
   drawPaper(paper, 0, 0, width);
 
-  const head = headOf(scene, catalogue, card, signed);
-  const mark = fitMark(head.mark, markBox, head.fittedBy).setPosition(left + markBox / 2, middle);
-  const name = addText(scene, left + markBox + 0.5 * em, middle, head.name, style.title)
+  const [head] = card.rows;
+  const mark = fitMark(markOf(scene, catalogue, head), markBox).setPosition(
+    left + markBox / 2,
+    middle,
+  );
+  const name = addText(scene, left + markBox + 0.5 * em, middle, nameOf(head), style.title)
     .setOrigin(0, 0.5)
     .setName('panel-name');
   const contents: Phaser.GameObjects.GameObject[] = [paper, mark, name];
 
-  let ruleY = Math.round(middle + 1.15 * em);
-  const state = card.kind === 'unit' ? stateOf(catalogue, card.unit) : undefined;
-  if (state !== undefined) {
-    const line = addText(scene, name.x, 0, state, style.label)
-      .setOrigin(0, 0.5)
-      .setName('panel-state');
-    line.setY(middle + name.height / 2 + line.height / 2);
-    contents.push(line);
-    ruleY = Math.round(line.y + line.height / 2 + 0.35 * em);
-  }
+  const ruleY = Math.round(middle + 1.15 * em);
   const rule = scene.add.rectangle(left, ruleY, right - left, 1, LOOK.cardEdge).setOrigin(0, 0);
   contents.push(rule);
   const hovers: Phaser.GameObjects.Zone[] = [];
@@ -638,8 +537,14 @@ function buildPaper(
     );
   }
 
-  /** The box a term raises its bubble from, named so a spec finds the rows in the order drawn. */
-  const listen = (x: number, rowTop: number, across: number, down: number, term: Term): void => {
+  /** The box a resource raises its bubble from, named so a spec finds the rows in the order drawn. */
+  const listen = (
+    x: number,
+    rowTop: number,
+    across: number,
+    down: number,
+    resource: Resource,
+  ): void => {
     if (reactions === undefined) return;
     const hover = scene.add
       .zone(x, rowTop, across, down)
@@ -648,7 +553,7 @@ function buildPaper(
       .setInteractive();
     onHover(
       hover,
-      () => reactions.raise(rowTop + down / 2, text(`tooltip.${term}`)),
+      () => reactions.raise(rowTop + down / 2, text(`tooltip.${resource}`)),
       () => reactions.drop(),
     );
     contents.push(hover);
@@ -656,20 +561,6 @@ function buildPaper(
   };
 
   let rowTop = ruleY + 1 + 0.55 * em;
-
-  if (card.kind === 'unit') {
-    for (const stat of statsOf(catalogue, card.unit)) {
-      const label = addText(scene, left, 0, text(`label.${stat}`), style.label).setOrigin(0, 0.5);
-      const reading = readingOf(catalogue, card.unit, stat);
-      const value = addText(scene, right, 0, reading, style.value).setOrigin(1, 0.5);
-      label.setY(rowTop + label.height / 2);
-      value.setY(rowTop + label.height / 2);
-      contents.push(label, value);
-      listen(left, rowTop, label.width, label.height, stat);
-      rowTop += label.height + 0.18 * em;
-    }
-    return { root: scene.add.container(0, 0, contents), hovers };
-  }
 
   /**
    * The chips of a line on its right, three at most to a line, moved under it where they do not fit
@@ -755,46 +646,12 @@ function buildPaper(
   return { root: scene.add.container(0, 0, contents), hovers };
 }
 
-/** What the card is headed by, the unit it stands for or the first row it holds, and what fits it to its box. */
-function headOf(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
-  card: Drawing,
-  signed: boolean,
-): { mark: Mark; fittedBy?: readonly Mark[]; name: string } {
-  if (card.kind === 'unit') {
-    const { stats, faction } = card.unit;
-    const mark = unitMark(scene, stats.type, faction, inCanoe(catalogue, card.unit), signed);
-    return { mark, fittedBy: unitFittedBy(mark), name: unitName(stats.type) };
-  }
-  return { mark: markOf(scene, catalogue, card.rows[0]), name: nameOf(card.rows[0]) };
-}
-
-/** What the line under a unit card's name reads: the unit's states joined, and nothing for none. */
-function stateOf(catalogue: Catalogue, unit: UnitReading): string | undefined {
-  const states = inCanoe(catalogue, unit) ? [text('unit-state.raft')] : [];
-  switch (unit.prepares) {
-    case 'capture':
-      states.push(text('unit-state.capturing'));
-      break;
-    case 'pillage':
-      states.push(text('unit-state.pillaging'));
-      break;
-    case undefined:
-      break;
-  }
-  if (unit.hostile === true) states.push(text('unit-state.hostile'));
-  if (states.length === 0) return undefined;
-  return states.reduce((one, other) => text('unit-state.joined', { one, other }));
-}
-
 /**
  * What the card reads in the corner of its head: what entering the tile costs on the terrain card, a
  * dash where nothing crosses it, and nothing at all on any other card.
  */
 function movementOf(card: Drawing): string | undefined {
   switch (card.kind) {
-    case 'unit':
     case 'feature':
     case 'improvement':
       return undefined;
@@ -858,13 +715,10 @@ function amountsOf(amounts: Partial<Resources>): { resource: Resource; amount: n
   return named;
 }
 
-/**
- * A mark drawn at the size it has on the map, brought into a box by the paint of what it is fitted
- * by; an outline keeps its weight.
- */
-function fitMark(mark: Mark, box: number, fittedBy: readonly Mark[] = [mark]): Mark {
+/** A mark drawn at the size it has on the map, brought into a box by its paint; an outline keeps its weight. */
+function fitMark(mark: Mark, box: number): Mark {
   const shapes = mark instanceof Phaser.GameObjects.Container ? mark.list : [mark];
-  const { width, height } = paintedBoundsOf(fittedBy);
+  const { width, height } = paintedBoundsOf([mark]);
   const scale = box / Math.max(width, height);
   for (const shape of shapes) {
     if (shape instanceof Phaser.GameObjects.Shape) {

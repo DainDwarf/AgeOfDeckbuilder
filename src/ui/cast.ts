@@ -4,8 +4,8 @@ import type { Faction } from '../rules/units';
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
- * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a faction, a
- * site, or a card nothing plays.
+ * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a unit of the
+ * neutral's while it is hostile, a faction, a site, or a card nothing plays.
  */
 export type CastSymbol =
   | Resource
@@ -18,6 +18,7 @@ export type CastSymbol =
   | 'sight'
   | 'killed'
   | PreparedAs
+  | 'hostile'
   | Faction
   | 'site'
   | 'played-by-nothing';
@@ -40,6 +41,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   killed: 'game-icons/death-skull.svg',
   pillage: 'game-icons/fire.svg',
   capture: 'material-design-icons/flag-variant.svg',
+  hostile: 'game-icons/crossed-axes.svg',
   player: 'material-design-icons/crown.svg',
   neutral: 'material-design-icons/scale-balance.svg',
   enemy: 'material-design-icons/axe-battle.svg',

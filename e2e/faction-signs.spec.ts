@@ -23,7 +23,7 @@ import {
   neutralAge,
   neutralCampaign,
   openSaved,
-  panelHeadSign,
+  panelFace,
   plantEntry,
   playerCityTile,
   reloadedOnCapstone,
@@ -115,6 +115,11 @@ function signedOnes(): {
   };
 }
 
+/** The faction sign the unit in the window of the infopanel's card wears, and nothing where it wears none. */
+async function panelSign(page: Page): Promise<DiscShown | undefined> {
+  return (await panelFace(page)).windowUnit?.sign;
+}
+
 /** What the tiles wear with the signs off: nothing. */
 function bare({ tiles }: Signed): SignsShown[] {
   return tiles.map(() => ({ tile: undefined, unit: undefined }));
@@ -137,7 +142,7 @@ test('with Faction signs on, every unit, both cities and the camp wear their fac
   expect(await signsOn(page, signed.tiles)).toEqual(signed.worn);
 
   await inspected(page, warrior);
-  expect(await panelHeadSign(page)).toEqual(signOf('player'));
+  expect(await panelSign(page)).toEqual(signOf('player'));
 
   expect(problems).toEqual([]);
 });
@@ -151,13 +156,13 @@ test('opened with nothing kept, nothing wears a sign; a press on the row over th
   await openSaved(page, chronicle, CAMPAIGN);
   expect(await signsOn(page, signed.tiles)).toEqual(bare(signed));
   await inspected(page, warrior);
-  expect(await panelHeadSign(page)).toBeUndefined();
+  expect(await panelSign(page)).toBeUndefined();
 
   await intoGraphics(page);
   expect(await textOf(page, `${ROW}-label`)).toBe(text('graphics.off'));
   await pressedTo(page, 'graphics.on');
   expect(await signsOn(page, signed.tiles)).toEqual(signed.worn);
-  expect(await panelHeadSign(page)).toEqual(signOf('player'));
+  expect(await panelSign(page)).toEqual(signOf('player'));
 
   await reloadedOnCapstone(page);
   await capstoneClosed(page);

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { type Catalogue, standsOnWaterAlone } from '../rules/catalogue';
 import type { PreparedAs } from '../rules/enemies';
 import {
   type BuildingTypeId,
@@ -21,7 +20,7 @@ import {
 import type { MapContent } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CityFaction, Cost } from '../rules/state';
-import type { Faction, Unit } from '../rules/units';
+import type { Faction } from '../rules/units';
 import type { CastSymbol } from './cast';
 import type { CityBar, CityBarStock } from './city-bar';
 import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from './design-space';
@@ -1005,12 +1004,12 @@ function asUnitDisc(
   }
 }
 
-/** Whether a unit stands in his canoe: embarked, and of a kind that does not stand on the water alone. */
-export function inCanoe(
-  catalogue: Catalogue,
-  { stats, embarked }: Pick<Unit, 'stats' | 'embarked'>,
-): boolean {
-  return embarked && !standsOnWaterAlone(catalogue, stats.type);
+/**
+ * How far below a `unitMarker`'s point the middle of its paint stands: its painting's, and in his
+ * canoe the middle between the painting's and the canoe's.
+ */
+export function unitPaintDrop(canoed: boolean): number {
+  return UNIT_DROP + (canoed ? CANOE_DROP / 2 : 0);
 }
 
 /**
@@ -1049,38 +1048,6 @@ export function asUnit(
   asUnitDisc(unitSignOf(mark), -UNIT_SIGN_OFF, faction, signed ? faction : undefined, tint);
   asUnitDisc(unitBadgeOf(mark), UNIT_BADGE_OFF, faction, prepares, tint);
   asUnitHealthBar(mark, bar, shade);
-  return mark;
-}
-
-/** What a unit's mark is fitted to a box by: its painting, and his canoe while it stands in it. */
-export function unitFittedBy(mark: Phaser.GameObjects.Container): Phaser.GameObjects.Image[] {
-  const [canoe, , painting] = mark.list as Phaser.GameObjects.Image[];
-  return canoe.visible ? [canoe, painting] : [painting];
-}
-
-/**
- * A unit off the map, undarkened and wearing neither badge nor health bar, its faction's sign where
- * `signed`, its painting and his canoe where `canoed` centred on the container's point.
- */
-export function unitMark(
-  scene: Phaser.Scene,
-  type: string,
-  faction: Faction,
-  canoed: boolean,
-  signed: boolean,
-): Phaser.GameObjects.Container {
-  const mark = asUnit(
-    unitMarker(scene),
-    type,
-    faction,
-    canoed,
-    'clear',
-    undefined,
-    undefined,
-    signed,
-  );
-  const { centerX, centerY } = paintedBoundsOf(unitFittedBy(mark));
-  for (const part of mark.list as Mark[]) part.setPosition(part.x - centerX, part.y - centerY);
   return mark;
 }
 

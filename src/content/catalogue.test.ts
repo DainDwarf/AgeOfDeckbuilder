@@ -44,7 +44,14 @@ import {
   capstoneName,
   eventName,
 } from '../ui/event-text';
-import { buildingFace, cardFaceAtStart, citySectionBuildings, frontWindowOf } from '../ui/face';
+import {
+  buildingFace,
+  cardFaceAtStart,
+  citySectionBuildings,
+  freshUnit,
+  frontWindowOf,
+  unitFace,
+} from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
@@ -222,6 +229,19 @@ test('every building of the catalogue wears one face, the face of the one card w
 
     expect(made).toContain(artFrameOf(face.art, frontWindowOf(face.front)));
     for (const mark of face.goesOn) if (mark.kind !== 'river') referenceName(mark);
+  }
+});
+
+test('every unit kind of the catalogue wears one face, the face of the one unit card whose play places it or one of its own, holding a picture the art sheet paints, ashore and embarked', () => {
+  const made = new Set((artSheet(CATALOGUE).made ?? []).map(({ frame }) => frame));
+  for (const id of Object.keys(CATALOGUE.units)) {
+    for (const embarked of [false, true]) {
+      const face = unitFace(CATALOGUE, { ...freshUnit(CATALOGUE, id, 'player'), embarked });
+      if (face.art === undefined)
+        throw new Error(`the face of the unit kind ${id} holds no picture`);
+
+      expect(made).toContain(artFrameOf(face.art, frontWindowOf(face.front)));
+    }
   }
 });
 
