@@ -18,6 +18,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The infopanel's pile wears the dark back** — the cards waiting under the infopanel's card are drawn as the game's card back, the grey paper gone from `src/ui/infopanel.ts`, and `docs/MAP-SCREEN.md` → _The infopanel_ states the stack. Doc-impact: `docs/MAP-SCREEN.md`. [board/infopanel-pile-dark-back.md](board/infopanel-pile-dark-back.md)
 - **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.
 - **The look page names its artist throughout** — `docs/LOOK.md` names David Baumgart once and then says "his" about forty times; reword it so the artist is named wherever a reader could lose whose hand is meant.

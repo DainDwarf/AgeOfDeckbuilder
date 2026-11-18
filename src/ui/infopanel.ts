@@ -7,7 +7,9 @@ import { type Chronicle, NO_REFUSAL } from '../rules/state';
 import { relationsOf } from '../rules/units';
 import {
   CARD_HEIGHT,
+  type CardBack,
   type CardFace,
+  createCardBack,
   createCardFace,
   createFootBubble,
   type Name,
@@ -15,8 +17,7 @@ import {
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { stopMotion } from './card-motion';
-import { inRoundedBox } from './card-shape';
-import { type Box, pressedWhere, type Stratum } from './design-space';
+import { pressedWhere, type Stratum } from './design-space';
 import {
   buildingFace,
   type Face,
@@ -26,26 +27,9 @@ import {
   type UnitReading,
   unitFace,
 } from './face';
-import { LOOK } from './look';
 import type { Drawn, TileFace } from './map';
+import { rootedPoolOf } from './pool';
 import type { Tooltip } from './tooltip';
-
-/** How far a card waiting behind the one the panel stands has its corners rounded. */
-const GHOST_RADIUS = 0.0585 * CARD_WIDTH;
-
-/** Where the card waiting this many places behind the one the panel stands lies, in the panel's space. */
-function ghostBox(ghost: number): Box {
-  const corner = ghost * GHOST_OFFSET;
-  return { x: corner, y: corner, width: CARD_WIDTH, height: CARD_HEIGHT };
-}
-
-/** A card waiting behind the one the panel stands: grey paper the size of a card, in its box. */
-function drawGhost(surface: Phaser.GameObjects.Graphics, { x, y, width, height }: Box): void {
-  surface.fillStyle(LOOK.affordableCard.face);
-  surface.fillRoundedRect(x, y, width, height, GHOST_RADIUS);
-  surface.lineStyle(1, LOOK.cardEdge);
-  surface.strokeRoundedRect(x + 0.5, y + 0.5, width - 1, height - 1, GHOST_RADIUS);
-}
 
 /** One card an inspection steps through: the unit's, the building's and the terrain's, each a face. */
 export type Card =
@@ -90,8 +74,8 @@ export function cardsOf(
 
 export type InfoPanel = {
   /**
-   * The card at `index`, beside the tile, over one ghost per card behind it. `cycling` dissolves it
-   * out of the card already shown; anything else is instant.
+   * The card at `index`, beside the tile, over one card back per card under it. `cycling` dissolves
+   * it out of the card already shown; anything else is instant.
    */
   show(cards: Card[], index: number, at: TileFace, cycling: boolean): void;
   /**
@@ -117,8 +101,8 @@ export type PanelNames = {
 /** How far the panel stands clear of the face it reads, in design pixels. */
 const STANDOFF = 12;
 
-/** How far each card waiting behind the panel stands out of it, down and to the right. */
-const GHOST_OFFSET = 4;
+/** How far each back under the card stands out of the one above it, down and to the right. */
+const BACK_OFFSET = 4;
 
 /** How long one card takes to dissolve into the next. */
 const CYCLE_MS = 150;
@@ -130,7 +114,7 @@ type Shown = {
 };
 
 /**
- * A tile inspected, one card at a time over the ghosts of the rest. It stands on the map, so a pan
+ * A tile inspected, one card at a time over the backs of the rest. It stands on the map, so a pan
  * carries it; every show rebuilds the card, so whatever changes the state dismisses the panel.
  */
 export function createInfoPanel(
@@ -140,20 +124,26 @@ export function createInfoPanel(
   tooltip: Tooltip,
   names: PanelNames,
 ): InfoPanel {
-  const ghosts = scene.add.graphics();
-  // Interactive where the card and its ghosts draw, so no press there reaches the map's catchers under
+  // Interactive where the card and its backs draw, so no press there reaches the map's catchers under
   // it, and never marked as reacting to one.
   const stop = pressedWhere(scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setOrigin(0, 0), (x, y) =>
     liesUnder(x, y),
   );
-  const panel = scene.add.container(0, 0, [ghosts, stop]).setName('infopanel').setVisible(false);
+  const panel = scene.add.container(0, 0, [stop]).setName('infopanel').setVisible(false);
   on.layer.add(panel);
+  // Under the stop, where `show` puts the card just above it: a back made later draws over the earlier.
+  const backs = rootedPoolOf(
+    { scene, add: (back) => panel.addAt(back, panel.getIndex(stop)) },
+    () => createCardBack(scene),
+  );
   const footBubble = createFootBubble(tooltip);
 
   let standing: Shown | undefined;
   let leaving: Shown | undefined;
-  /** How many cards wait behind the one standing: the ghosts, and the room they ask for. */
+  /** How many cards wait under the one standing. */
   let behind = 0;
+  /** The backs standing under the card. */
+  let underneath: CardBack[] = [];
   /** The face the panel is standing beside, and nothing while it stands nowhere. */
   let beside: TileFace | undefined;
   /** Whether the small cards were last told the pointer is on a name of the face standing. */
@@ -161,14 +151,9 @@ export function createInfoPanel(
   /** Whether the small cards standing were raised off a name of the face standing. */
   let chained = false;
 
-  /** Whether the card standing or a ghost behind it lies under a point of the map. */
-  const liesUnder = (x: number, y: number): boolean => {
-    const inPanel = ghosts.getLocalPoint(x, y);
-    for (let ghost = 1; ghost <= behind; ghost++) {
-      if (inRoundedBox(inPanel, ghostBox(ghost), GHOST_RADIUS)) return true;
-    }
-    return standing?.face.cardAt(x, y) === true;
-  };
+  /** Whether the card standing or a back under it lies under a point of the map. */
+  const liesUnder = (x: number, y: number): boolean =>
+    underneath.some((back) => back.cardAt(x, y)) || standing?.face.cardAt(x, y) === true;
 
   /** What the standing card's names and foot raised, taken down. */
   const letGo = (): void => {
@@ -237,14 +222,20 @@ export function createInfoPanel(
 
   /**
    * Level with the face it reads, clear of its rim, at the size on screen the card was laid out at,
-   * each ghost behind it the size of the card standing.
+   * each back under it the size of the card standing.
    */
   const stand = (at: TileFace): void => {
     beside = at;
     const unit = on.unit();
-    ghosts.clear();
-    for (let ghost = behind; ghost >= 1; ghost--) {
-      drawGhost(ghosts, ghostBox(ghost));
+    backs.hide();
+    underneath = [];
+    for (let place = behind; place >= 1; place--) {
+      const back = backs.take();
+      back.root.setPosition(
+        CARD_WIDTH / 2 + place * BACK_OFFSET,
+        CARD_HEIGHT + place * BACK_OFFSET,
+      );
+      underneath.push(back);
     }
     panel
       .setScale(unit)
@@ -270,7 +261,8 @@ export function createInfoPanel(
     standing?.root.destroy();
     standing = undefined;
     beside = undefined;
-    ghosts.clear();
+    backs.hide();
+    underneath = [];
     panel.setVisible(false);
   };
 
@@ -294,7 +286,7 @@ export function createInfoPanel(
       if (cycling && outgoing !== undefined) {
         leaving = outgoing;
         outgoing.face.deaden();
-        shown.root.setPosition(GHOST_OFFSET, GHOST_OFFSET).setAlpha(0);
+        shown.root.setPosition(BACK_OFFSET, BACK_OFFSET).setAlpha(0);
         scene.tweens.add({ targets: shown.root, x: 0, y: 0, alpha: 1, duration: CYCLE_MS });
         scene.tweens.add({
           targets: outgoing.root,
