@@ -18,6 +18,9 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **A press on a card's frame reaches the map** — a press on a card face's frame outside the card's body (the oval rim rising above its top, the front image reaching past its left edge) falls through the infopanel to the map, on the terrain, unit and building cards alike.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
+- **The river named on the terrain card** — add the [River] reference on terrains next to a river.
+- **The infopanel's pile wears the dark back** — on piled infopanels, use the dark back for the pile of cards under the one shown.
 - **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.
 - **The look page names its artist throughout** — `docs/LOOK.md` names David Baumgart once and then says "his" about forty times; reword it so the artist is named wherever a reader could lose whose hand is meant.
