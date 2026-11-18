@@ -6,7 +6,7 @@ import { addText, corners, inked, ownBoxOf, UI_FONT } from './design-space';
 import type { GoesOn } from './face';
 import { asGlyph, glyphMark } from './glyphs';
 import { LOOK, type Tone } from './look';
-import { asBuildingAlone, hexagonOn, IMPROVEMENT_DISC, tileFace } from './map-marks';
+import { asBuildingAlone, hexagonOn, tileFace } from './map-marks';
 import {
   DISC_RADIUS,
   DISC_RIM,
@@ -16,6 +16,7 @@ import {
   FEATURE_SHEET_KEY,
   featureIconOf,
   ICON_WIDTH,
+  IMPROVEMENT_DISC,
   PAINTING,
   paintingsOf,
   RIVER_CUT,

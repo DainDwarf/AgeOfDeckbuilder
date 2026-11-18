@@ -76,7 +76,7 @@ import {
   tilesBeside,
 } from '../src/rules/map';
 import { buildingKind, featureKind, improvementKind } from '../src/rules/map-kinds';
-import { RESOURCES, type Resource, type Resources } from '../src/rules/resources';
+import { RESOURCES, type Resource } from '../src/rules/resources';
 import { freshCampaign, readSave, type SaveRead, writeSave } from '../src/rules/save';
 import { addedToDrawPileTop, answerRefusal, offered, unitDamaged } from '../src/rules/schedule';
 import { charted, chartedAt, inSight } from '../src/rules/sight';
@@ -112,7 +112,7 @@ import { glyphFileOf } from '../src/ui/cast';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { eventName } from '../src/ui/event-text';
-import { namedFace } from '../src/ui/face';
+import { type Face, namedFace, terrainFace, terrainOnTile } from '../src/ui/face';
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import { unitPaintingOf } from '../src/ui/marks';
@@ -142,6 +142,7 @@ type PageReading = {
   tints: (number | undefined)[];
   strengths: number[];
   place: Answer<{ x: number; y: number }>;
+  placeOnScreen: Answer<OnScreen>;
   axes: Answer<Axes>;
   scale: Answer<number>;
   ringed: Answer<boolean>;
@@ -158,6 +159,7 @@ type PageReading = {
   art: Answer<string>;
   windowUnit: Answer<UnitMarkShown | undefined>;
   influence: Answer<{ text: string; onScreen: Spot }>;
+  discs: Answer<DiscRead[]>;
   stats: Answer<StatShown[]>;
   answerNameOnScreen: Answer<Spot>;
   boundsOnScreen: Answer<Frame>;
@@ -355,6 +357,9 @@ type DrawnName = { spot: Spot; reference: Reference };
  * and where its number sits on the page.
  */
 export type StatShown = { stat: string; sign: string; number: string; onScreen: Spot };
+
+/** A disc a face shows, a cost's, its influence's or its foot's: the frame its glyph draws, and its number. */
+export type DiscRead = { glyph: string; number: string };
 
 /** An object's left and right ends and its middle across, in design units. */
 type Across = { left: number; right: number; middle: number };
@@ -842,6 +847,10 @@ export async function readNames(page: Page): Promise<void> {
           const at = matrix();
           return { x: at.tx, y: at.ty };
         }),
+        placeOnScreen: answer(() => {
+          const at = matrix();
+          return onPage(found().camera, at.tx, at.ty);
+        }),
         axes: answer(() => {
           const at = matrix();
           return { x: { x: at.a, y: at.b }, y: { x: at.c, y: at.d } };
@@ -938,6 +947,25 @@ export async function readNames(page: Page): Promise<void> {
           const complaint = `${name} wears no influence's disc`;
           const label = part('influence-label', complaint) as Phaser.GameObjects.Text;
           return { text: label.text, onScreen: partOnScreen('influence-label', complaint) };
+        }),
+        // A disc is `discMarkOf`'s in `src/ui/card-face.ts`: the pack's disc, its `glyphMark`, then its
+        // number, standing in the face itself.
+        discs: answer(() => {
+          const face = found().object as Partial<Phaser.GameObjects.Container>;
+          if (!Array.isArray(face.list)) throw new Error(`${name} is no card face`);
+          const glyphIn = window.glyphIn;
+          if (glyphIn === undefined) throw new Error('the page reads no glyph');
+          return (face.list as Phaser.GameObjects.Container[])
+            .filter(
+              (child) =>
+                Array.isArray(child.list) &&
+                child.list.map(({ type }) => type).join() === 'Image,Container,Text' &&
+                isShown(child as Parented),
+            )
+            .map((disc) => ({
+              glyph: glyphIn(disc.list[1]).frame.name,
+              number: (disc.list[2] as Phaser.GameObjects.Text).text,
+            }));
         }),
         // A stat is `badgeOf`'s or `boxStatOf`'s in `src/ui/card-face.ts`: its badge's image or its
         // `glyphMark`, then its number.
@@ -1691,6 +1719,8 @@ export type Reading = {
   readonly strengths: readonly number[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
+  /** Where the point the object is drawn about sits on the page. */
+  readonly placeOnScreen: OnScreen;
   readonly axes: Axes;
   /** How much larger than its own frame the object is drawn across. */
   readonly scale: number;
@@ -1736,6 +1766,8 @@ export type Reading = {
    * stands there.
    */
   readonly influence: { readonly text: string; readonly onScreen: Spot };
+  /** Each disc a face shows, a cost's, its influence's or its foot's, in the order it holds them. */
+  readonly discs: readonly DiscRead[];
   /** Each stat a face shows of its unit, in the order it draws them; nothing on a face showing none. */
   readonly stats: readonly StatShown[];
   /** Where the answer's name sits on the page, its middle, and how tall it stands there. */
@@ -1781,6 +1813,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get place() {
       return owed(name, answered?.place);
+    },
+    get placeOnScreen() {
+      return owed(name, answered?.placeOnScreen);
     },
     get axes() {
       return owed(name, answered?.axes);
@@ -1838,6 +1873,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get influence() {
       return owed(name, answered?.influence);
+    },
+    get discs() {
+      return owed(name, answered?.discs);
     },
     get stats() {
       return owed(name, answered?.stats);
@@ -3090,71 +3128,50 @@ export async function aimed(page: Page): Promise<void> {
   await rested(page);
 }
 
-/**
- * What the card of grey paper the infopanel is standing reads, in the order it was drawn: its texts,
- * and every yield chip by the resource it is named for.
- */
-function panelLines(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const panel = window.named?.('infopanel')?.object as Phaser.GameObjects.Container | undefined;
-    if (panel === undefined) throw new Error('the infopanel is not on the chronicle screen');
-    return panel.list
-      .filter((object) => object.type === 'Container')
-      .flatMap((card) =>
-        (card as Phaser.GameObjects.Container).list
-          .filter((part) => part.type === 'Text' || part.name.startsWith('panel-yield-'))
-          .map((part) =>
-            part.type === 'Text' ? (part as Phaser.GameObjects.Text).text : part.name,
-          ),
-      );
-  });
-}
-
-/** A text the infopanel's card reads, and what the yield chips drawn after it give. */
-export type PanelRow = {
-  readonly text: string;
-  readonly yields: Partial<Resources>;
-};
-
-/** The rows of the card the infopanel is standing, in the order drawn; a row's chips are read in whatever order they were. */
-export async function panelRows(page: Page): Promise<PanelRow[]> {
-  const lines = await panelLines(page);
-  const rows: { text: string; yields: Partial<Resources> }[] = [];
-  for (let at = 0; at < lines.length; at++) {
-    const yielding = RESOURCES.find((named) => lines[at] === `panel-yield-${named}`);
-    if (yielding === undefined) {
-      rows.push({ text: lines[at], yields: {} });
-      continue;
-    }
-    const row = rows.at(-1);
-    if (row === undefined) throw new Error(`the infopanel draws ${lines[at]} before any text`);
-    at++;
-    row.yields[yielding] = Number(lines[at]);
-  }
-  return rows;
-}
-
-/**
- * What the face the infopanel stands reads, as a named face reads; nothing stands while the panel
- * stands a card of grey paper.
- */
+/** What the face the infopanel stands reads, as a named face reads; nothing stands while the panel is down. */
 export async function panelFace(page: Page): Promise<Reading> {
   return readingOf("the infopanel's face", await page.evaluate(() => window.readPanelFace?.()));
 }
 
 /**
- * The River row of the card the infopanel is standing and the row drawn after it, which is what it
- * gives when it gives nothing; nothing where the card holds no River row.
+ * What a face's row of what its thing gives reads, as `numbers` reads it off the page: the sign of
+ * what is given and one glyph to each point, nothing where it gives none.
  */
-export async function riverRows(page: Page): Promise<PanelRow[]> {
-  const rows = await panelRows(page);
-  const at = rows.findIndex((row) => row.text === text('panel.river'));
-  return at === -1 ? [] : rows.slice(at, at + 2);
+export function givesRead(face: Face): string[] {
+  const glyphs = face.gives.map(glyphFileOf);
+  return glyphs.length === 0 ? [] : [text('face.gives'), ...glyphs];
 }
 
-/** What the card the infopanel is standing reads of the tile's movement cost, or nothing on one that reads none. */
-export function panelMovement(page: Page): Promise<string | undefined> {
-  return textOf(page, 'panel-movement');
+/** What a terrain card reads that the infopanel's is held to: what it stands, its text, its row and its disc. */
+export type TerrainRead = {
+  readonly card: string | undefined;
+  readonly rules: string;
+  readonly numbers: readonly string[];
+  readonly discs: readonly DiscRead[];
+};
+
+/** What a terrain card read on the page reads that the infopanel's is held to. */
+export function terrainSeen({ card, rules, numbers, discs }: Reading): TerrainRead {
+  return { card, rules, numbers, discs };
+}
+
+/**
+ * What the infopanel's terrain card of the tile at `at` reads, as `terrainSeen` reads it: read off the
+ * face the map draws of it on the chronicle, every face it draws beside it, the discs of its row shown.
+ */
+export function terrainRead(chronicle: Chronicle, at: TileCoords): TerrainRead {
+  const faces = drawnFaces(chronicle);
+  const drawn = faces.find((one) => tileKey(one) === tileKey(at));
+  if (drawn === undefined) throw new Error(`the map draws no face of ${tileKey(at)}`);
+  const face = terrainFace(terrainOnTile(CATALOGUE, chronicle, drawn, tilesBeside(faces), true));
+  if (face.footDisc === undefined) throw new Error(`the face of ${face.id} reads no disc`);
+  const { symbol, reading } = face.footDisc;
+  return {
+    card: face.id,
+    rules: face.rules,
+    numbers: givesRead(face),
+    discs: [{ glyph: glyphFileOf(symbol), number: reading }],
+  };
 }
 
 /** Which card of the tile the infopanel is showing, or nothing while it stands down. */

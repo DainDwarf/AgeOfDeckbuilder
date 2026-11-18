@@ -5,6 +5,7 @@ import { fadedAt } from './fade';
 import { css, LOOK } from './look';
 import { hexagonOn, positionOf } from './map-marks';
 import { SQUASH, TILE_SIZE } from './marks';
+import { mipmappedSide } from './sheet';
 
 /** How deep the selection's rim fades in from the tile's edge, how many pixels of its texture make a unit, and how wide the texture is. */
 const RIM_DEPTH = 5;
@@ -19,16 +20,13 @@ const RING_REACH = 15;
 const RING_KEY = 'unit-ring';
 
 // A texture is the game's and outlives the scene's restart (docs/PHASER.md).
-/**
- * A canvas texture under `key` until the scene's shutdown, at least `span` wide and tall and a power
- * of two, or Phaser makes no mipmaps of it (docs/PHASER.md).
- */
+/** A canvas texture under `key` until the scene's shutdown, as `mipmappedSide` sizes one for `span`. */
 export function sceneCanvas(
   scene: Phaser.Scene,
   key: string,
   span: number,
 ): Phaser.Textures.CanvasTexture {
-  const side = 2 ** Math.ceil(Math.log2(span));
+  const side = mipmappedSide(span);
   const texture = scene.textures.createCanvas(key, side, side);
   if (texture === null) throw new Error(`a texture stands under ${key} already`);
   scene.events.once(Phaser.Scenes.Events.SHUTDOWN, () => scene.textures.remove(key));

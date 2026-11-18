@@ -14,32 +14,30 @@ import {
   type TileCoords,
   tileAt,
   tileKey,
-  tilesBeside,
 } from '../src/rules/map';
-import { buildingKind, featureKind } from '../src/rules/map-kinds';
-import type { Resources } from '../src/rules/resources';
+import { buildingKind } from '../src/rules/map-kinds';
 import { unitDamaged } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
-import { tileYield, yieldParts } from '../src/rules/yields';
 import { type CardArt, cardArtOf, unitGroundOf } from '../src/ui/art-box';
 import { artFrameOf } from '../src/ui/art-sheet';
+import { glyphFileOf } from '../src/ui/cast';
 import {
   buildingFace,
   cardFaceAtStart,
   type Face,
   frontWindowOf,
+  inMovePoints,
   unitFacing,
 } from '../src/ui/face';
 import { LOOK } from '../src/ui/look';
-import { featureName, improvementName, terrainName, text } from '../src/ui/text';
+import { text } from '../src/ui/text';
 import {
   besideTiles,
   campBeside,
   cardOnFace,
   claimedAt,
   dragSlack,
-  drawnFaces,
   firstSeed,
   freeGround,
   inspected,
@@ -49,11 +47,8 @@ import {
   onTheBand,
   openCampaign,
   openSaved,
-  type PanelRow,
   paintedOn,
   panelFace,
-  panelMovement,
-  panelRows,
   playerCityTile,
   type Reading,
   reacted,
@@ -62,12 +57,13 @@ import {
   rested,
   ringedLitAndInspecting,
   ringedTile,
-  riverRows,
   settledOn,
   shownCard,
   standing,
   standsFor,
   TRAPPING,
+  terrainRead,
+  terrainSeen,
   unitEntered,
   WARRIOR,
   watch,
@@ -160,25 +156,19 @@ function featureBeside(): Found<FeatureId> {
   return besideCity('puts a feature beside the city', (tile) => tile.feature);
 }
 
-/**
- * A tile beside the city bare of feature, building and improvement, a river running along it, and
- * what it yields.
- */
-function riverBeside(): Found<Partial<Resources>> {
+/** A tile beside the city bare of feature, building and improvement, a river running along it, and its key. */
+function riverBeside(): Found<string> {
   return besideCity('runs a river along a bare tile beside the city', (tile, chronicle) =>
     tile.feature === undefined &&
     tile.building === undefined &&
     tile.improvements.length === 0 &&
     runsAlong(chronicle.rivers, tile)
-      ? tileYield(CATALOGUE, chronicle, tile, tilesBeside(drawnFaces(chronicle)))
+      ? tileKey(tile)
       : undefined,
   );
 }
 
-/**
- * A tile beside the city bare of feature, building and improvement, and its key; a river may run
- * along it, being a row of its terrain card, not a card.
- */
+/** A tile beside the city bare of feature, building and improvement, and its key; a river may run along it. */
 function bareBeside(): Found<string> {
   return besideCity('leaves a tile beside the city bare', (tile) =>
     tile.feature === undefined && tile.building === undefined && tile.improvements.length === 0
@@ -260,14 +250,6 @@ function faceDrawn(face: Face): FaceRead {
   };
 }
 
-/** A row of grey paper as the infopanel reads it, and its "No yield" where it gives nothing. */
-function rowRead(name: string, yields: Partial<Resources>): PanelRow[] {
-  const read = { text: name, yields };
-  return Object.keys(yields).length === 0
-    ? [read, { text: text('panel.no-yield'), yields: {} }]
-    : [read];
-}
-
 /**
  * The first seed's bare turn 1 whose opening charts a tile nothing crosses, a unit or an embarked
  * one, and a tile beside the city costing two move points, bare and with nobody on it so its terrain
@@ -297,7 +279,7 @@ function costBeside(): Found<number> & { readonly uncrossed: TileCoords } {
   );
 }
 
-test('a tile the generator gave a feature shows its mark, and the terrain card gives it a row of its own', async ({
+test('a tile the generator gave a feature shows its mark, and its terrain card names the feature under what the tile gives', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -314,9 +296,9 @@ test('a tile the generator gave a feature shows its mark, and the terrain card g
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  await expect
-    .poll(() => panelRows(page))
-    .toContainEqual({ text: featureName(feature), yields: featureKind(CATALOGUE, feature).yields });
+  const face = await panelFace(page);
+  expect(terrainSeen(face)).toEqual(terrainRead(chronicle, tile));
+  expect(face.references[0]).toEqual({ kind: 'feature', id: feature });
 
   expect(problems).toEqual([]);
 });
@@ -542,20 +524,14 @@ test('a city section’s building named on a technology’s plate raises the cit
   expect(problems).toEqual([]);
 });
 
-test('an improvement reads as a row of its tile’s terrain card, after the feature’s, and a tile it stands on with nothing built holds no building card', async ({
+test('a tile’s terrain card reads what its terrain, its feature and its improvement give summed, and names the feature and the improvement, each name raising its face small at a rest and large at a right click; a tile with nothing built holds no building card', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, tile } = onDeer(settledOn(1), [TRAPPING]);
-  const faces = drawnFaces(chronicle);
-  const face = faces.find((drawn) => tileKey(drawn) === tileKey(tile));
-  if (face === undefined) throw new Error(`the map draws no face of ${tileKey(tile)}`);
-  const parts = yieldParts(CATALOGUE, chronicle, face, tilesBeside(faces));
-  const feature = parts.find((part) => part.kind === 'feature');
-  const trapping = parts.find((part) => part.kind === 'improvement');
-  if (feature?.kind !== 'feature' || trapping === undefined) {
-    throw new Error(`${tileKey(tile)} holds no feature or no improvement`);
-  }
+  const feature = tileAt(chronicle.tiles, tile)?.feature;
+  if (feature === undefined) throw new Error(`${tileKey(tile)} holds no feature`);
+  const card = terrainRead(chronicle, tile);
 
   await openSaved(page, chronicle);
 
@@ -565,14 +541,23 @@ test('an improvement reads as a row of its tile’s terrain card, after the feat
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  const named = featureName(feature.feature);
-  const expected = [
-    ...rowRead(named, feature.yields),
-    ...rowRead(improvementName(TRAPPING), trapping.yields),
-  ];
-  const rows = await panelRows(page);
-  const first = rows.findIndex((row) => row.text === named);
-  expect(rows.slice(first, first + expected.length)).toEqual(expected);
+  await rested(page);
+  const face = await panelFace(page);
+  expect(terrainSeen(face)).toEqual(card);
+  expect(face.references).toEqual([
+    { kind: 'feature', id: feature },
+    { kind: 'improvement', id: TRAPPING },
+  ]);
+
+  const [onFeature, onTrapping] = face.namesOnScreen;
+  await page.mouse.move(onFeature.x, onFeature.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(face.references[0]));
+  await page.mouse.move(onTrapping.x, onTrapping.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(face.references[1]));
+  await page.mouse.click(onTrapping.x, onTrapping.y, { button: 'right' });
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(standsFor(face.references[1]));
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
 
   // After the terrain card comes the unit's again.
   await page.mouse.click(at.x, at.y, { button: 'right' });
@@ -581,12 +566,11 @@ test('an improvement reads as a row of its tile’s terrain card, after the feat
   expect(problems).toEqual([]);
 });
 
-test('a tile a river runs along gives the river a row of the terrain card, and the river gives the tile no yield', async ({
+test('a tile a river runs along names nothing for the river on its terrain card, which reads what the tile gives', async ({
   page,
 }) => {
   const problems = watch(page);
-  const { chronicle, tile, found: yields } = riverBeside();
-  const key = tileKey(tile);
+  const { chronicle, tile, found: key } = riverBeside();
 
   await openSaved(page, chronicle);
 
@@ -597,14 +581,10 @@ test('a tile a river runs along gives the river a row of the terrain card, and t
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
 
-  // The tile is bare, so its terrain's row gives the whole of what the rules say it yields.
-  await expect
-    .poll(() => riverRows(page))
-    .toEqual([
-      { text: text('panel.river'), yields: {} },
-      { text: text('panel.no-yield'), yields: {} },
-    ]);
-  expect(await panelRows(page)).toContainEqual({ text: terrainName(tile.terrain), yields });
+  // The tile is bare, and nothing beside it gives to it: its card names nothing.
+  const face = await panelFace(page);
+  expect(terrainSeen(face)).toEqual(terrainRead(chronicle, tile));
+  expect(face.references).toEqual([]);
 
   // The tile holds that one card, so a further press leaves it standing.
   await page.keyboard.press('i');
@@ -615,11 +595,12 @@ test('a tile a river runs along gives the river a row of the terrain card, and t
   expect(problems).toEqual([]);
 });
 
-test('the terrain card reads what entering the tile costs, and a dash on a tile nothing crosses', async ({
+test('the terrain card reads on its disc what entering the tile costs, and a dash and Impassable on a tile nothing crosses', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, tile, found: cost, uncrossed } = costBeside();
+  const move = glyphFileOf('move');
 
   await openSaved(page, chronicle);
 
@@ -627,15 +608,17 @@ test('the terrain card reads what entering the tile costs, and a dash on a tile 
   const land = await onScreen(page, `tile-${tileKey(tile)}`);
   await page.mouse.click(land.x, land.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await panelMovement(page)).toBe(text('panel.movement', { cost: cost / MOVE_POINT }));
+  expect((await panelFace(page)).discs).toEqual([{ glyph: move, number: inMovePoints(cost) }]);
 
   // The infopanel stands east of the tile it reads, over whatever tile the search found there.
   await page.keyboard.press('Escape');
   await expect.poll(() => shownCard(page)).toBeUndefined();
   const across = await onScreen(page, `tile-${tileKey(uncrossed)}`);
   await page.mouse.click(across.x, across.y, { button: 'right' });
-  await expect.poll(() => panelMovement(page)).toBe(text('panel.no-movement'));
-  expect(await shownCard(page)).toBe('terrain');
+  await expect.poll(() => shownCard(page)).toBe('terrain');
+  const face = await panelFace(page);
+  expect(face.discs).toEqual([{ glyph: move, number: text('face.no-movement-cost') }]);
+  expect(face.rules).toBe(text('face.impassable'));
 
   expect(problems).toEqual([]);
 });
@@ -793,8 +776,9 @@ test('a right press let go on the infopanel inspects nothing new, and a right cl
   await rested(page);
   const inspected = await ringedLitAndInspecting(page);
 
+  // The infopanel is drawn about its card's top-left corner; its face's frame reaches past that edge.
   const quarter = (await dragSlack(page)) / 4;
-  const edge = (await reading(page, 'infopanel')).boundsOnScreen.x;
+  const edge = (await reading(page, 'infopanel')).placeOnScreen.x;
   await page.mouse.move(edge - quarter, west.y);
   await page.mouse.down({ button: 'right' });
   await page.mouse.move(edge + quarter, west.y);

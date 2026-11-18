@@ -6,19 +6,23 @@ import {
   CATALOGUE,
   changed,
   cityOf,
+  FALLOW,
   FREEZE,
   FROST,
   NEUTRAL,
+  NO_DEALS,
   SHRINE,
   SILO,
   SITE,
   TILLAGE,
+  WELL,
 } from '../rules/fixtures';
-import { MOVE_POINT } from '../rules/map';
+import { MOVE_POINT, type Tile, tilesBeside } from '../rules/map';
 import { answerOf } from '../rules/schedule';
 import type { CardArt } from './art-box';
 import {
   artPictureOf,
+  bareTerrain,
   buildingFacing,
   cardFront,
   cardStats,
@@ -32,6 +36,7 @@ import {
   placedReading,
   statReading,
   terrainFace,
+  terrainOnTile,
   type UnitReading,
   unitFacing,
   unitStats,
@@ -258,7 +263,7 @@ describe('a terrain’s face', () => {
       desert: { yields: {}, movementCost: MOVE_POINT, water: false, elevation: 0 },
     },
   });
-  const face = (terrain: string) => terrainFace(content, terrain);
+  const face = (terrain: string) => terrainFace(bareTerrain(content, terrain));
 
   it('reads one resource to each point a bare tile of it gives, and on its foot’s disc what entering it costs a unit in move points', () => {
     expect(face('forest')).toMatchObject({
@@ -291,6 +296,71 @@ describe('a terrain’s face', () => {
       window: 'oval',
       ground: 'plain',
       holds: { kind: 'tile', feature: undefined },
+    });
+  });
+});
+
+describe('a terrain’s face read off a tile', () => {
+  const content = changed({
+    terrains: {
+      ...CATALOGUE.terrains,
+      ocean: { yields: { food: 1 }, water: true, elevation: 0 },
+      desert: { yields: {}, movementCost: MOVE_POINT, water: false, elevation: 0 },
+    },
+  });
+  /** The face of the first tile's terrain read off it on turn 1, the others standing beside it. */
+  const readOff = (tiles: readonly Tile[], timeline = NO_DEALS) =>
+    terrainFace(
+      terrainOnTile(content, { turn: 1, timeline, rivers: [] }, tiles[0], tilesBeside(tiles), true),
+    );
+  const bare = (q: number, terrain: string): Tile => ({ q, r: 0, terrain, improvements: [] });
+
+  it('reads in its row what the tile gives with everything on it but its building, under the rule of the capstone landed, and names its feature, its improvements in the order placed and each kind of building beside it giving to it, once', () => {
+    const crowded: Tile = {
+      q: 0,
+      r: 0,
+      terrain: 'plain',
+      feature: 'PH_Fertile',
+      improvements: ['PH_Stake', 'PH_Ditch'],
+      building: 'PH_Farm',
+    };
+    const wells = [-1, 1].map((q) => ({ ...bare(q, 'plain'), building: WELL }));
+    const face = readOff([crowded, ...wells], { ...NO_DEALS, capstone: { id: FALLOW, turn: 1 } });
+
+    // The fallow takes the terrain's food and the fertile's: the ditch's and the wells' gifts stand.
+    expect(face).toMatchObject({
+      kind: 'terrain',
+      gives: ['food', 'production', 'production'],
+      rules:
+        '[feature:PH_Fertile], [improvement:PH_Stake], [improvement:PH_Ditch], [building:PH_Well]',
+      footDisc: { symbol: 'move', reading: inMovePoints(MOVE_POINT) },
+    });
+    expect(face.art).toEqual({
+      window: 'oval',
+      ground: 'plain',
+      holds: {
+        kind: 'inspected',
+        tile: {
+          q: 0,
+          r: 0,
+          terrain: 'plain',
+          feature: 'PH_Fertile',
+          improvements: ['PH_Stake', 'PH_Ditch'],
+        },
+        rivers: [],
+        discs: true,
+      },
+    });
+  });
+
+  it('reads no row and no text on a bare tile giving nothing', () => {
+    expect(readOff([bare(0, 'desert')])).toMatchObject({ gives: [], rules: '' });
+  });
+
+  it('reads a dash on its disc and Impassable as its text on a tile nothing crosses, ashore or embarked', () => {
+    expect(readOff([bare(0, 'ocean')])).toMatchObject({
+      footDisc: { symbol: 'move', reading: text('face.no-movement-cost') },
+      rules: text('face.impassable'),
     });
   });
 });

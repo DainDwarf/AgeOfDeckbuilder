@@ -7,7 +7,6 @@ import { neighbours, runsAlong, type TileCoords, tileAt, tileKey } from '../src/
 import { improvementKind } from '../src/rules/map-kinds';
 import { unchanged } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
-import { improvementName, text } from '../src/ui/text';
 import {
   aimed,
   campaignWith,
@@ -17,7 +16,7 @@ import {
   firstSeed,
   idsOf,
   openSaved,
-  panelRows,
+  panelFace,
   playedOn,
   playedOut,
   playerCityTile,
@@ -25,6 +24,8 @@ import {
   ringedTile,
   settledOn,
   shownCard,
+  terrainRead,
+  terrainSeen,
   unitEntered,
   WORKER,
   watch,
@@ -89,13 +90,14 @@ test('the irrigation card places irrigation on the tile a river runs along that 
   expect(problems).toEqual([]);
 });
 
-test('the tile irrigation was placed on inspects irrigation as a row of its terrain card, ahead of the river giving no yield', async ({
+test('the tile irrigation was placed on names irrigation on its terrain card, which reads what the tile gives with it', async ({
   page,
 }) => {
   const problems = watch(page);
   const paid = paidAlongRiver();
+  const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
-  await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile), CAMPAIGN);
+  await openSaved(page, placed, CAMPAIGN);
 
   // The worker that placed it still stands there and nothing is built there: the terrain card comes
   // after the unit's.
@@ -105,13 +107,9 @@ test('the tile irrigation was placed on inspects irrigation as a row of its terr
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  const rows = await panelRows(page);
-  const river = rows.findIndex(({ text: name }) => name === text('panel.river'));
-  expect(rows.slice(river - 1, river + 2)).toEqual([
-    { text: improvementName(IRRIGATION), yields: improvementKind(CATALOGUE, IRRIGATION).yields },
-    { text: text('panel.river'), yields: {} },
-    { text: text('panel.no-yield'), yields: {} },
-  ]);
+  const face = await panelFace(page);
+  expect(terrainSeen(face)).toEqual(terrainRead(placed, paid.tile));
+  expect(face.references).toContainEqual({ kind: 'improvement', id: IRRIGATION });
 
   expect(problems).toEqual([]);
 });

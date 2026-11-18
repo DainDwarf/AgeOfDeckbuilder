@@ -45,6 +45,7 @@ import {
   eventName,
 } from '../ui/event-text';
 import {
+  bareTerrain,
   buildingFace,
   cardFaceAtStart,
   citySectionBuildings,
@@ -59,7 +60,6 @@ import { clustersOf } from '../ui/launch-layout';
 import { capstoneLore, captureLore, eventLore } from '../ui/lore';
 import {
   buildingPaintingsOf,
-  discFeatureOf,
   featureIconOf,
   groundColourOf,
   improvementLookOf,
@@ -153,12 +153,10 @@ test('every feature of the catalogue has a name and an icon on the screen', () =
   }
 });
 
-test('every improvement of the catalogue has a name and, on the screen, its icon on a disc of its own with its painting or its ditches, or its feature’s disc turned pale with its painting, and one told on its feature’s disc names its one feature', () => {
+test('every improvement of the catalogue has a name and, on the screen, its icon on a disc of its own with its painting or its ditches, or its feature’s disc turned pale with its painting', () => {
   for (const id of Object.keys(CATALOGUE.improvements)) {
     expect(() => improvementName(id)).not.toThrow();
-    if (improvementLookOf(id).kind === 'feature') {
-      expect(() => featureIconOf(discFeatureOf(CATALOGUE, id))).not.toThrow();
-    }
+    expect(() => improvementLookOf(id)).not.toThrow();
   }
 });
 
@@ -263,7 +261,7 @@ test('every terrain and every feature of the catalogue wears a face of its own, 
   const painted = new Set((artSheet(CATALOGUE).made ?? []).map(({ frame }) => frame));
   const made = new Set((CARDS_SHEET.made ?? []).map(({ frame }) => frame));
   const faces = [
-    ...Object.keys(CATALOGUE.terrains).map((id) => terrainFace(CATALOGUE, id)),
+    ...Object.keys(CATALOGUE.terrains).map((id) => terrainFace(bareTerrain(CATALOGUE, id))),
     ...Object.keys(CATALOGUE.features).map((id) => featureFace(CATALOGUE, id)),
   ];
   for (const face of faces) {

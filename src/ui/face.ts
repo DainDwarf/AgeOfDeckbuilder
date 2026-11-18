@@ -22,7 +22,15 @@ import {
   groundCost,
   type ImprovementId,
   MOVE_POINT,
+  movementCost,
+  type River,
+  riversAlong,
+  runsAlong,
   type Terrain,
+  type Tile,
+  type TilesBeside,
+  tileKey,
+  tilesAtCorner,
 } from '../rules/map';
 import {
   type BuildingKind,
@@ -32,9 +40,10 @@ import {
   type LayerKind,
   terrainKind,
 } from '../rules/map-kinds';
-import { RESOURCES, type Resource, type Resources } from '../rules/resources';
-import type { CardId, Cost, MadeCard } from '../rules/state';
+import { RESOURCES, type Resource, type Resources, summed } from '../rules/resources';
+import type { CardId, Chronicle, Cost, MadeCard } from '../rules/state';
 import type { Faction, Unit } from '../rules/units';
+import { type YieldPart, yieldParts } from '../rules/yields';
 import { type ArtThing, buildingGroundOf, type CardArt, cardArtOf, unitGroundOf } from './art-box';
 import {
   buildingName,
@@ -45,7 +54,7 @@ import {
   text,
   unitName,
 } from './text';
-import type { Reference } from './text-run';
+import { nameWritten, type Reference } from './text-run';
 
 /**
  * What the label at a face's foot reads, and what its tooltip says: an action's names the worker, the
@@ -115,11 +124,23 @@ export function frontWindowOf(front: CardFront): FrontWindow {
   }
 }
 
+/**
+ * A tile inspected as its terrain's face holds it in its window: its place and what lies on it but its
+ * building, the rivers running along it as far as the map draws them, and whether the discs of its
+ * row stand.
+ */
+export type InspectedTile = {
+  readonly kind: 'inspected';
+  readonly tile: Pick<Tile, 'q' | 'r' | 'terrain' | 'feature' | 'improvements'>;
+  readonly rivers: readonly River[];
+  readonly discs: boolean;
+};
+
 /** The picture a card's art box holds: the window it fills, the terrain of its ground, and what stands on it. */
 export type ArtPicture = {
   readonly window: FrontWindow;
   readonly ground: Terrain;
-  readonly holds: ArtThing;
+  readonly holds: ArtThing | InspectedTile;
 };
 
 /**
@@ -226,9 +247,7 @@ export function statTooltip(stat: CardStat | 'movement-cost'): {
  * What entering a terrain is read to cost, out of what entering costs a unit embarked or ashore: the
  * cost ashore, or, where none is, the cost embarked; nothing where nothing crosses it.
  */
-export function movementCostRead(
-  cost: (embarked: boolean) => number | undefined,
-): number | undefined {
+function movementCostRead(cost: (embarked: boolean) => number | undefined): number | undefined {
   return cost(false) ?? cost(true);
 }
 
@@ -552,21 +571,104 @@ function ownFace(catalogue: Catalogue, building: string, captured: Captured): Fa
   );
 }
 
-/** The face a terrain wears, reading a bare tile of it: no feature, improvement or river adds to it. */
-export function terrainFace(catalogue: Catalogue, terrain: Terrain): Face {
-  const cost = movementCostRead((embarked) => groundCost(catalogue, terrain, embarked));
+/**
+ * What a terrain's face reads of a tile of it: what the tile gives at income, the things its text
+ * names, what entering it costs, and what its window's middle tile holds.
+ */
+export type TerrainReading = {
+  readonly terrain: Terrain;
+  readonly gives: Partial<Resources>;
+  readonly names: readonly Reference[];
+  readonly movementCost: number | undefined;
+  readonly middle: { readonly kind: 'tile'; readonly feature: undefined } | InspectedTile;
+};
+
+/** A bare tile of the terrain as its face reads it: nothing on it or beside it adds to it. */
+export function bareTerrain(catalogue: Catalogue, terrain: Terrain): TerrainReading {
+  return {
+    terrain,
+    gives: terrainKind(catalogue, terrain).yields,
+    names: [],
+    movementCost: movementCostRead((embarked) => groundCost(catalogue, terrain, embarked)),
+    middle: { kind: 'tile', feature: undefined },
+  };
+}
+
+/** What a face read off a tile names of a part of its yield: nothing of its terrain's or its building's. */
+function namedPart(part: YieldPart): Reference[] {
+  switch (part.kind) {
+    case 'terrain':
+    case 'building':
+      return [];
+    case 'feature':
+      return [{ kind: 'feature', id: part.feature }];
+    case 'improvement':
+      return [{ kind: 'improvement', id: part.improvement }];
+    case 'beside':
+      return [{ kind: 'building', id: part.building }];
+  }
+}
+
+/**
+ * The tile as its terrain's face reads it: its yield but its building's part, the things giving it
+ * that part but its terrain named in the order `yieldParts` reads them, what entering it costs, and
+ * its window holding it as the map draws it, the discs of its row standing where `discs` says.
+ */
+export function terrainOnTile(
+  catalogue: Catalogue,
+  chronicle: Pick<Chronicle, 'turn' | 'timeline' | 'rivers'>,
+  tile: Tile,
+  beside: TilesBeside,
+  discs: boolean,
+): TerrainReading {
+  const parts = yieldParts(catalogue, chronicle, tile, beside).filter(
+    ({ kind }) => kind !== 'building',
+  );
+  const along = chronicle.rivers.filter((river) => runsAlong([river], tile));
+  const drawn = along
+    .flat()
+    .flatMap(tilesAtCorner)
+    .filter((coord) => beside(coord) !== undefined);
+  const { q, r, terrain, feature, improvements } = tile;
+  return {
+    terrain,
+    gives: summed(parts.map(({ yields }) => yields)),
+    names: parts.flatMap(namedPart),
+    movementCost: movementCostRead((embarked) => movementCost(catalogue, tile, embarked)),
+    middle: {
+      kind: 'inspected',
+      tile: { q, r, terrain, feature, improvements },
+      rivers: riversAlong(along, new Set(drawn.map(tileKey))),
+      discs,
+    },
+  };
+}
+
+/**
+ * The face a terrain wears, reading a tile of it: what the tile gives in its row, the things it names
+ * in its text over Impassable where nothing crosses it, what entering it costs on its disc, and its
+ * window's middle tile.
+ */
+export function terrainFace({
+  terrain,
+  gives,
+  names,
+  movementCost: cost,
+  middle,
+}: TerrainReading): Face {
+  const named = names.length === 0 ? undefined : names.map(nameWritten).join(', ');
   return ownFaceOf(
     {
       id: terrain,
       name: terrainName(terrain),
       kind: 'terrain',
       front: { front: 'plain', colour: 'terrain', window: 'oval' },
-      rules: cost === undefined ? text('face.impassable') : '',
-      art: { window: 'oval', ground: terrain, holds: { kind: 'tile', feature: undefined } },
+      rules: ledBy(named, cost === undefined ? text('face.impassable') : ''),
+      art: { window: 'oval', ground: terrain, holds: middle },
     },
     {
       goesOn: [],
-      gives: onePerPoint(terrainKind(catalogue, terrain).yields),
+      gives: onePerPoint(gives),
       takes: [],
       footDisc: {
         symbol: 'move',
@@ -783,7 +885,7 @@ export function namedFace(
     case 'enemy':
       return freshUnitFace(catalogue, reference.id, reference.kind);
     case 'terrain':
-      return terrainFace(catalogue, reference.id);
+      return terrainFace(bareTerrain(catalogue, reference.id));
     case 'feature':
       return featureFace(catalogue, reference.id);
     case 'improvement':

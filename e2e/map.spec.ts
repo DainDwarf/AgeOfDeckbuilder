@@ -43,7 +43,6 @@ import {
   clearsItsTile,
   DISC_PITCH,
   type DiscPicture,
-  discFeatureOf,
   featureDressOf,
   featureIconOf,
   HERD_COPIES,
@@ -699,7 +698,8 @@ function placedOnFeature(
   buildings: readonly string[],
 ): { chronicle: Chronicle; feature: string; placed: OnFeature; alone: TileCoords } {
   const opened = settledOn(1, [], campaign);
-  const feature = discFeatureOf(CATALOGUE, improvement);
+  const [feature] = improvementKind(CATALOGUE, improvement).features ?? [];
+  if (feature === undefined) throw new Error(`${improvement} names no feature`);
   const { terrain } = featureKind(CATALOGUE, feature);
   const [bare, ...rest] = opened.tiles
     .filter(

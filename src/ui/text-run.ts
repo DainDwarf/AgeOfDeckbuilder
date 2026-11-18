@@ -86,6 +86,11 @@ const NOTHING: Marked = { drawn: '', glyphs: [], names: [] };
 
 const MARK = /\[(?:(\w+):([\w-]+)|(\w+))\]/;
 
+/** A name as an entry writes it, for a run to read back. */
+export function nameWritten({ kind, id }: Reference): string {
+  return `[${kind}:${id}]`;
+}
+
 function symbolOf(key: string): CastSymbol {
   if (!isCastSymbol(key)) throw new Error(`${key} is no symbol of the cast a glyph is drawn for`);
   return key;

@@ -4,6 +4,7 @@ import { css, LOOK } from './look';
 import { sceneCanvas } from './map-fade';
 import { movePointsLeftMark, showMovePointsLeft, unitStandsAt } from './map-marks';
 import { poolOf } from './pool';
+import { mipmappedSide } from './sheet';
 
 /**
  * How far a chevron's arms reach back from its point and to either side, how wide it is stroked, and
@@ -117,8 +118,7 @@ function createArrow(scene: Phaser.Scene): {
     paint(length): void {
       if (length === painted) return;
       painted = length;
-      // A power of two along both sides, or Phaser makes no mipmaps of it (docs/PHASER.md).
-      const width = 2 ** Math.ceil(Math.log2((length + 2 * EDGE) * CHEVRON_PIXELS));
+      const width = mipmappedSide((length + 2 * EDGE) * CHEVRON_PIXELS);
       if (width !== texture.width) {
         texture.setSize(width, texture.height);
         // The image takes its size from its frame only when it is handed one again.

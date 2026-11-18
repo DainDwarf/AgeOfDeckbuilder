@@ -1,5 +1,15 @@
-import { ARMS, type Corner, cornersOf, type Tile, type TileCoords } from '../rules/map';
-import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
+import {
+  ARMS,
+  type Corner,
+  cornerKey,
+  cornersOf,
+  type FeatureId,
+  type ImprovementId,
+  type River,
+  type Tile,
+  type TileCoords,
+} from '../rules/map';
+import { featureKind, type MapContent } from '../rules/map-kinds';
 import { ARMS_ICONS, GOODS_ICONS } from './art-box';
 import type { Point } from './border-loops';
 import { EVERY_GLYPH_FILE } from './cast';
@@ -65,6 +75,12 @@ export type DiscLook = { readonly fill: Wash; readonly rim: Wash };
 
 /** The disc a feature's icon stands on: dark, with a pale rim. */
 export const FEATURE_DISC: DiscLook = { fill: LOOK.featureDisc, rim: LOOK.featureDiscRim };
+
+/** The disc an improvement's icon stands on: pale, in the stone everything worked is, with a dark rim. */
+export const IMPROVEMENT_DISC: DiscLook = {
+  fill: { colour: LOOK.built, strength: LOOK.improvementDisc },
+  rim: { colour: LOOK.mapOutline, strength: LOOK.improvementDiscRim },
+};
 
 /** How far apart two discs of a tile's row stand, centre to centre, a unit between them, in the map's units. */
 export const DISC_PITCH = 2 * DISC_RADIUS + 1;
@@ -520,12 +536,11 @@ function paintPointer(context: CanvasRenderingContext2D): void {
   context.arc(0, 0, DISC_RADIUS, lowest + POINTER_LEAVES, lowest - POINTER_LEAVES);
   context.lineTo(0, DISC_RADIUS + POINTER_TIP);
   context.closePath();
-  paintFeatureDisc(context);
+  paintDisc(context, FEATURE_DISC);
 }
 
-/** The path the context holds painted as the feature's disc: its dark, its pale rim, the rim's corners rounded. */
-export function paintFeatureDisc(context: CanvasRenderingContext2D): void {
-  const { fill, rim } = FEATURE_DISC;
+/** The path the context holds painted as a disc in its look: its fill, its rim, the rim's corners rounded. */
+export function paintDisc(context: CanvasRenderingContext2D, { fill, rim }: DiscLook): void {
   context.globalAlpha = fill.strength;
   context.fillStyle = css(fill.colour);
   context.fill();
@@ -828,6 +843,26 @@ export function riverPieceAt(arms: ReadonlySet<number>, corner: Corner): string 
   return paintingAtCorner(riverPaintingsOf(arms), corner);
 }
 
+/** Every corner the runs pass, by its key, and the arms they leave it by. */
+export function armsAlong(
+  runs: readonly River[],
+): Map<string, { readonly corner: Corner; readonly arms: ReadonlySet<number> }> {
+  const armed = new Map<string, { corner: Corner; arms: Set<number> }>();
+  const leaves = (corner: Corner, to: Corner): void => {
+    const key = cornerKey(corner);
+    const at = armed.get(key) ?? { corner, arms: new Set<number>() };
+    at.arms.add(armOf(corner, to));
+    armed.set(key, at);
+  };
+  for (const run of runs) {
+    for (let at = 1; at < run.length; at++) {
+      leaves(run[at - 1], run[at]);
+      leaves(run[at], run[at - 1]);
+    }
+  }
+  return armed;
+}
+
 /**
  * How a painting of the river sheet is laid: where the point it is held at stands about the middle of
  * the tile at the map's centre, that point in its file as shares of its width and height, its scales
@@ -897,6 +932,15 @@ export const PONDS: readonly string[] = numberedFiles(
   'decorPond',
   4,
 );
+
+/**
+ * The one of his ponds the tile at that place lays. The pick is salted apart from the face's: the
+ * desert has as many paintings as there are ponds, and an unsalted pick pairs each painting with one
+ * pond.
+ */
+export function pondOn({ q, r }: TileCoords): string {
+  return PONDS[pickOf(q * 5 + 1, r * 9 + 7, PONDS.length)];
+}
 
 /** Where his painting of an improvement lies: its size against the size he painted it at beside his tile, and its middle about the tile's. */
 export type LyingAt = { readonly size: number; readonly x: number; readonly y: number };
@@ -1108,15 +1152,63 @@ export function improvementLookOf(improvement: string): ImprovementLook {
   return drawn(IMPROVEMENT_LOOKS, improvement, 'no mark is drawn for the improvement');
 }
 
+/** Whether an improvement stands on a disc of its own in its tile's row, or its feature's disc tells it. */
+function ownDisc(improvement: ImprovementId): boolean {
+  switch (improvementLookOf(improvement).kind) {
+    case 'icon':
+      return true;
+    case 'feature':
+      return false;
+  }
+}
+
 /**
- * The feature whose disc an improvement told on it is drawn on where no tile says one: the one its
- * kind names; a kind naming none or several is refused.
+ * Where the discs of a face's row stand across its tile, its feature first and its improvements
+ * after, in the order the face holds them, the row centred on the tile's middle `x`; an improvement
+ * told on its feature's disc stands where the feature does.
  */
-export function discFeatureOf(catalogue: MapContent, improvement: string): string {
-  const features = improvementKind(catalogue, improvement).features ?? [];
-  if (features.length !== 1)
-    throw new Error(`no one feature is named for the improvement ${improvement}`);
-  return features[0];
+export function rowOf(
+  face: Pick<Tile, 'feature' | 'improvements'>,
+  x: number,
+): { feature: number; improvements: number[] } {
+  const first = face.feature === undefined ? 0 : 1;
+  const owned = face.improvements.map(ownDisc);
+  const discs = first + owned.filter((own) => own).length;
+  const at = (slot: number): number => x + (slot - (discs - 1) / 2) * DISC_PITCH;
+  let taken = first;
+  return {
+    feature: at(0),
+    improvements: owned.map((own) => (own ? at(taken++) : at(0))),
+  };
+}
+
+/** None on a face carrying a feature whose disc an improvement placed on it tells. */
+export function featureToldOn(face: Pick<Tile, 'feature' | 'improvements'>): FeatureId | undefined {
+  return face.improvements.every(ownDisc) ? face.feature : undefined;
+}
+
+/**
+ * What an improvement's pale disc wears on a tile carrying `feature`: its own icon, or for one told on
+ * its feature's disc its own picture where it has one, else the feature's icon; one told on a feature
+ * its tile does not carry is refused.
+ */
+export function discWornOn(
+  improvement: ImprovementId,
+  feature: FeatureId | undefined,
+): DiscPicture {
+  const look = improvementLookOf(improvement);
+  switch (look.kind) {
+    case 'icon':
+      return { icon: look.icon, width: look.width };
+    case 'feature':
+      if (look.picture !== undefined) return look.picture;
+      if (feature === undefined) {
+        throw new Error(
+          `the improvement ${improvement} is told on a feature its tile does not carry`,
+        );
+      }
+      return { icon: featureIconOf(feature), width: ICON_WIDTH };
+  }
 }
 
 /** The entry of one table a key names; a key the table does not hold is refused with the complaint. */

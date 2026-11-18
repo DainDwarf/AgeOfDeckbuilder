@@ -16,6 +16,7 @@ import type { MapContent } from '../rules/map-kinds';
 import { asDarkened, cornerAt, fogDark, positionOf } from './map-marks';
 import {
   armOf,
+  armsAlong,
   mouthPaintingsOf,
   PAINTING,
   PIECE_SCALE,
@@ -69,23 +70,12 @@ export function riverPieces(
   live: ReadonlySet<string>,
   faces: TilesBeside,
 ): Map<string, RiverPiece> {
-  const armed = new Map<string, { corner: Corner; arms: Set<number> }>();
-  const leaves = (corner: Corner, to: Corner): void => {
-    const key = cornerKey(corner);
-    const at = armed.get(key) ?? { corner, arms: new Set<number>() };
-    at.arms.add(armOf(corner, to));
-    armed.set(key, at);
-  };
+  const runs: River[] = [];
   const mouths = new Map<string, number>();
   for (const river of rivers) {
-    const runs = riversAlong([river], drawn);
-    for (const run of runs) {
-      for (let at = 1; at < run.length; at++) {
-        leaves(run[at - 1], run[at]);
-        leaves(run[at], run[at - 1]);
-      }
-    }
-    const last = runs.at(-1);
+    const along = riversAlong([river], drawn);
+    runs.push(...along);
+    const last = along.at(-1);
     const end = river[river.length - 1];
     if (last === undefined || cornerKey(last[last.length - 1]) !== cornerKey(end)) continue;
     const before = last[last.length - 2];
@@ -96,7 +86,7 @@ export function riverPieces(
     }
   }
   return new Map(
-    [...armed].map(([key, { corner, arms }]): [string, RiverPiece] => {
+    [...armsAlong(runs)].map(([key, { corner, arms }]): [string, RiverPiece] => {
       const inFog = !tilesAtCorner(corner).some((tile) => live.has(tileKey(tile)));
       const arrived = mouths.get(key);
       if (arrived === undefined) {

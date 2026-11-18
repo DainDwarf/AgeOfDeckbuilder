@@ -1,12 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import { type TileCoords, tileKey } from '../src/rules/map';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import { cardFace, cardFaceAtStart, kindTooltip } from '../src/ui/face';
 import { text } from '../src/ui/text';
 import {
-  bareTile,
   besideTheDeal,
   besideTiles,
   campBeside,
@@ -24,12 +22,9 @@ import {
   openSaved,
   reading,
   restedOnDeal,
-  ringedTile,
   settledOn,
-  shownCard,
   standing,
   stoppedTurn,
-  tileOnScreen,
   tooltipText,
   tooltipUp,
   WARRIOR,
@@ -220,58 +215,6 @@ test('the end-turn button reads End turn the moment the menu falls under a point
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
   expect(await cursorOverCanvas(page)).toBe(HAND);
-
-  expect(problems).toEqual([]);
-});
-
-/** The bare tile inspected, and the pointer resting on the first row of its card. */
-async function onPanelRow(page: Page, at: TileCoords): Promise<void> {
-  const tile = await tileOnScreen(page, at);
-  await page.mouse.click(tile.x, tile.y);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(at));
-  await page.keyboard.press('i');
-  await expect.poll(() => shownCard(page)).toBe('terrain');
-  const row = await onScreen(page, 'infopanel-row-0');
-  await page.mouse.move(row.x, row.y);
-}
-
-// One move each way: the pointer never crosses bare map between the row and the reading.
-test("a panel row's tooltip does not rise once the pointer moves straight onto a reading", async ({
-  page,
-}) => {
-  const problems = watch(page);
-
-  await page.setViewportSize(WINDOW);
-  const opened = settledOn(1);
-  await openSaved(page, opened);
-
-  await onPanelRow(page, bareTile(opened));
-  const food = await onScreen(page, 'reading-food');
-  await page.mouse.move(food.x, food.y);
-  await waitGameClock(page, PAST_REST);
-
-  expect(await tooltipUp(page, 'tooltip-map')).toBe(false);
-
-  expect(problems).toEqual([]);
-});
-
-test("a panel row's tooltip rises when the pointer comes straight back onto it from a reading", async ({
-  page,
-}) => {
-  const problems = watch(page);
-
-  await page.setViewportSize(WINDOW);
-  const opened = settledOn(1);
-  await openSaved(page, opened);
-
-  await onPanelRow(page, bareTile(opened));
-  const row = await onScreen(page, 'infopanel-row-0');
-  const food = await onScreen(page, 'reading-food');
-  await page.mouse.move(food.x, food.y);
-  await waitGameClock(page, PAST_REST);
-  await page.mouse.move(row.x, row.y);
-
-  await expect.poll(() => tooltipUp(page, 'tooltip-map')).toBe(true);
 
   expect(problems).toEqual([]);
 });

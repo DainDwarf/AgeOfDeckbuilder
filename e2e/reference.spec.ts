@@ -6,9 +6,9 @@ import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
 import { artFrameOf } from '../src/ui/art-sheet';
-import { glyphFileOf } from '../src/ui/cast';
 import { answerShown } from '../src/ui/event-text';
 import {
+  bareTerrain,
   cardFaceAtStart,
   type Face,
   featureFace,
@@ -17,7 +17,7 @@ import {
   namedCardFace,
   terrainFace,
 } from '../src/ui/face';
-import { achievementGoal, cardRules, text } from '../src/ui/text';
+import { achievementGoal, cardRules } from '../src/ui/text';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   besideTheDeal,
@@ -28,6 +28,7 @@ import {
   cursorOverCanvas,
   firstDealtAlone,
   firstSeed,
+  givesRead,
   HUNT,
   idsOf,
   kindLabelOnScreen,
@@ -72,11 +73,10 @@ function faceSeen({ card, rules, numbers, art }: Reading): FaceRead {
  */
 function faceRead(face: Face): FaceRead {
   if (face.art === undefined) throw new Error(`the face of ${face.id} holds no picture`);
-  const glyphs = face.gives.map(glyphFileOf);
   return {
     card: face.id,
     rules: face.rules,
-    numbers: glyphs.length === 0 ? [] : [text('face.gives'), ...glyphs],
+    numbers: givesRead(face),
     art: artFrameOf(face.art, frontWindowOf(face.front)),
   };
 }
@@ -237,7 +237,7 @@ test('a terrain marked on the settle card raises its own face small at a rest an
   const { city: section } = civilizationOpened();
   const settle = section.card;
   const marked = buildingKind(CATALOGUE, section.building).terrains[0];
-  const face = faceRead(terrainFace(CATALOGUE, marked));
+  const face = faceRead(terrainFace(bareTerrain(CATALOGUE, marked)));
 
   await openSaved(page, launchedAs(1));
   const opened = await chronicleOf(page);

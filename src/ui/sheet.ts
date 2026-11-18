@@ -53,6 +53,14 @@ export type Sheet = {
   readonly rowGap?: number;
 };
 
+/**
+ * The side of a texture holding that span: the power of two at or past it, or Phaser makes no mipmaps
+ * of it (docs/PHASER.md).
+ */
+export function mipmappedSide(span: number): number {
+  return 2 ** Math.ceil(Math.log2(span));
+}
+
 /** A canvas of the page that wide and tall, holding nothing, and the context it draws in. */
 export function blankCanvas(width: number, height: number): CanvasRenderingContext2D {
   const canvas = document.createElement('canvas');

@@ -1,8 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { CATALOGUE } from '../src/content/catalogue';
 import { type TileCoords, tileKey } from '../src/rules/map';
-import { improvementKind } from '../src/rules/map-kinds';
-import { improvementName } from '../src/ui/text';
 import {
   aimed,
   campaignWith,
@@ -12,13 +9,15 @@ import {
   HUNT,
   openSaved,
   paidOnDeer,
-  panelRows,
+  panelFace,
   playedOn,
   playedOut,
   readings,
   ringedTile,
   shownCard,
   TRAPPING,
+  terrainRead,
+  terrainSeen,
   watch,
 } from './chronicle-screen';
 
@@ -57,13 +56,14 @@ test('the trapping card places trapping on the deer the worker stands on', async
   expect(problems).toEqual([]);
 });
 
-test('the tile trapping was placed on inspects trapping as a row of its terrain card', async ({
+test('the tile trapping was placed on names trapping on its terrain card, which reads what the tile gives with it', async ({
   page,
 }) => {
   const problems = watch(page);
   const paid = paidOnDeer(TRAPPING, [], CAMPAIGN);
+  const placed = playedOn(paid.chronicle, paid.index, paid.tile);
 
-  await openSaved(page, playedOn(paid.chronicle, paid.index, paid.tile), CAMPAIGN);
+  await openSaved(page, placed, CAMPAIGN);
 
   // The worker that placed it still stands there and nothing is built there: the terrain card comes
   // after the unit's.
@@ -73,10 +73,9 @@ test('the tile trapping was placed on inspects trapping as a row of its terrain 
   await expect.poll(() => shownCard(page)).toBe('unit');
   await page.keyboard.press('i');
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await panelRows(page)).toContainEqual({
-    text: improvementName(TRAPPING),
-    yields: improvementKind(CATALOGUE, TRAPPING).yields,
-  });
+  const face = await panelFace(page);
+  expect(terrainSeen(face)).toEqual(terrainRead(placed, paid.tile));
+  expect(face.references).toContainEqual({ kind: 'improvement', id: TRAPPING });
 
   expect(problems).toEqual([]);
 });

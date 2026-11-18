@@ -19,14 +19,12 @@ import {
   buildingStandsAs,
   ditchesOf,
   featureMarksOn,
-  featureToldOn,
   improvementLyingOf,
   improvementMarksOn,
   type Lying,
   lyingOf,
   type Mark,
   positionOf,
-  rowOf,
   sitePointerAs,
   type TileDark,
   type TileObjects,
@@ -34,7 +32,14 @@ import {
   unitHealthBarOf,
   wearing,
 } from './map-marks';
-import { FACE_SHEET, facePaintingOn, onBuildingPatch, ROW_RISE } from './marks';
+import {
+  FACE_SHEET,
+  facePaintingOn,
+  featureToldOn,
+  onBuildingPatch,
+  ROW_RISE,
+  rowOf,
+} from './marks';
 
 /** The paintings a change brings beside its tile, painted, and the ones it takes away. */
 type Swap = { readonly coming: readonly Mark[]; readonly going: readonly Mark[] };

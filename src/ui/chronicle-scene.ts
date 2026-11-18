@@ -51,7 +51,7 @@ import { createIconsButton } from './icons-button';
 import { type Card, cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { css, LOOK } from './look';
-import { type AimShown, createMapView, type PressedTile } from './map';
+import { type AimShown, createMapView, type Drawn, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
@@ -268,8 +268,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     /** Whether city mode is on: a left click on the selection is the city's act on that tile. */
     let cityMode = false;
 
-    /** The tile the infopanel is inspecting, its cards, and which of them it shows. */
-    let inspection: { on: PressedTile; cards: Card[]; card: number } | undefined;
+    /** The tile the infopanel is inspecting, as the map draws it, its cards, and which of them it shows. */
+    let inspection: { on: PressedTile; face: Drawn; cards: Card[]; card: number } | undefined;
+
+    /** Whether the discs of every tile's row stand on the map. */
+    let discsShown = true;
 
     /** The inspection let go of on its own: the infopanel down, whatever is selected still ringed. */
     const uninspect = (): void => {
@@ -416,7 +419,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
         uninspect();
         return;
       }
-      const cards = cardsOf(CATALOGUE, face, this.current, (coord) => view.drawnAs(coord)?.tile);
+      const cards = cardsOn(face);
       const already =
         inspection !== undefined && tileKey(inspection.on.tile) === tileKey(on.tile)
           ? inspection
@@ -424,8 +427,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       const opening = tileOwn ? cards.findIndex((card) => card.kind !== 'unit') : 0;
       const stepped = already === undefined ? opening : (already.card + 1) % cards.length;
       panel.show(cards, stepped, on.at, already !== undefined && stepped !== already.card);
-      inspection = { on, cards, card: stepped };
+      inspection = { on, face, cards, card: stepped };
     };
+
+    /** The cards an inspection steps on a tile the map draws so, as the screen now shows the discs. */
+    const cardsOn = (face: Drawn): Card[] =>
+      cardsOf(CATALOGUE, face, this.current, (coord) => view.drawnAs(coord)?.tile, discsShown);
 
     this.drawSigns = () => {
       view.showSigns();
@@ -645,9 +652,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       showYields();
     };
 
-    /** Whether the discs of every tile's row stand on the map. */
-    let discsShown = true;
-
     const iconsButton = createIconsButton(this, ui.pinned, () => {
       switchDiscs();
     });
@@ -655,6 +659,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     const showDiscs = (): void => {
       view.showDiscs(discsShown);
       iconsButton.sink(discsShown);
+      if (inspection === undefined) return;
+      inspection = { ...inspection, cards: cardsOn(inspection.face) };
+      panel.reread(inspection.cards[inspection.card]);
     };
 
     const switchDiscs = (): void => {

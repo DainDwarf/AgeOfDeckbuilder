@@ -9,7 +9,6 @@ import { unitAt } from '../src/rules/units';
 import { yieldParts } from '../src/rules/yields';
 import { capstoneText } from '../src/ui/event-text';
 import { capstoneLore } from '../src/ui/lore';
-import { terrainName } from '../src/ui/text';
 import {
   beforeTheLanding,
   chronicleOf,
@@ -19,7 +18,7 @@ import {
   idsOf,
   onScreen,
   openSaved,
-  panelRows,
+  panelFace,
   playedOut,
   playerCityTile,
   readings,
@@ -28,6 +27,8 @@ import {
   shownCard,
   standing,
   stoppedTurn,
+  terrainRead,
+  terrainSeen,
   watch,
   wonCampaign,
 } from './chronicle-screen';
@@ -59,7 +60,7 @@ function beforeTheWinter(campaign: Campaign): {
   );
 }
 
-test('the long winter’s landing raises its window, adds its Cold nights to the discard pile, and the city’s tile reads no food of its terrain', async ({
+test('the long winter’s landing raises its window, adds its Cold nights to the discard pile, and the city’s tile’s terrain card reads what the tile gives under it, no food of its terrain', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -106,10 +107,7 @@ test('the long winter’s landing raises its window, adds its Cold nights to the
     await page.keyboard.press('i');
     await expect.poll(() => shownCard(page)).toBe(card);
   }
-  expect(await panelRows(page)).toContainEqual({
-    text: terrainName(face.terrain),
-    yields: terrain?.yields,
-  });
+  expect(terrainSeen(await panelFace(page))).toEqual(terrainRead(landed, city));
 
   expect(problems).toEqual([]);
 });

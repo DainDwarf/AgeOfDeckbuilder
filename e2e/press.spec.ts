@@ -41,12 +41,14 @@ import {
   onTheBand,
   openSaved,
   overflowingPiles,
+  panelFace,
   pileTop,
   pinnedAchievement,
   playedAtNothing,
   playedOn,
   playedOut,
   playerCityTile,
+  type Reading,
   readings,
   rested,
   ringedLitAndInspecting,
@@ -931,17 +933,23 @@ test('a left click anywhere on the infopanel reaches no tile under it, and lets 
     await rested(page);
   };
 
-  // A row's tooltip zone, a row's name beside it, and the head.
-  for (const on of ['infopanel-row-0', 'panel-row-0-name', 'panel-name']) {
+  // The face's kind label, which raises a tooltip, and its window, which reacts to nothing.
+  const places: ((face: Reading) => { x: number; y: number })[] = [
+    (face) => face.kindLabelOnScreen,
+    (face) => face.windowOnScreen,
+  ];
+  for (const placeOn of places) {
     await aimedAndInspected();
-    await click(page, on);
+    const on = placeOn(await panelFace(page));
+    await page.mouse.click(on.x, on.y);
     await expect.poll(() => standing(page, 'aim')).toBe(false);
     expect(await shownCard(page)).toBeDefined();
     await expect.poll(() => selected(page, index, home)).toBe(false);
     expect(await chronicleOf(page)).toEqual(opened);
   }
 
-  await click(page, 'panel-name');
+  const window = (await panelFace(page)).windowOnScreen;
+  await page.mouse.click(window.x, window.y);
   await rested(page);
   expect(await shownCard(page)).toBeDefined();
   expect(await ringedTile(page)).toBeUndefined();

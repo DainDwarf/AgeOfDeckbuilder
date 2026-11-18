@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import type { Refusal } from '../rules/state';
-import { ART_SHEET_KEY, artFrameOf, artScaleOf } from './art-sheet';
+import { ART_SHEET_KEY, artScaleOf, artWorn } from './art-sheet';
 import {
   BACK,
   BADGES,
@@ -120,6 +120,9 @@ const LABEL_OVER_FOOT = 1.5;
 
 /** How many lines of the text's type its room holds, its lines drawn closer where they would not fit. */
 const TEXT_LINES = 3;
+
+/** How many faces have been made: what names the texture of each one's own art box. */
+let facesMade = 0;
 
 /**
  * A measure of the content set at that size in a text's style. Measured a hundred times larger: the
@@ -634,6 +637,11 @@ export function createCardFace(
     .setOrigin(0, 0)
     .setScale(unit, down)
     .setName('art-box');
+  /** The texture a picture its art box paints as it is read stands under, let go with the face. */
+  const ownArt = `face-art-${facesMade++}`;
+  root.once('destroy', () => {
+    if (scene.textures.exists(ownArt)) scene.textures.remove(ownArt);
+  });
   /** The unit its window holds, made the first time the face reads one. */
   let windowUnit: Phaser.GameObjects.Container | undefined;
   const frontImage = scene.add.image(0, 0, CARDS_SHEET_KEY);
@@ -812,8 +820,9 @@ export function createCardFace(
 
     wearShadow(shadow, next.front, width).setPosition(-width / 2, -height);
     const glass = placed(shape.glass);
+    const worn = artWorn(scene.textures, next.art, frontWindowOf(next.front), ownArt);
     art
-      .setTexture(ART_SHEET_KEY, artFrameOf(next.art, frontWindowOf(next.front)))
+      .setTexture(worn.key, worn.frame)
       .setPosition(glass.x, glass.y)
       .setTint(next.art === undefined ? multiplied(paleOf(next.front), tint) : tint);
     const held = next.unit;

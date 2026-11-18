@@ -5,7 +5,6 @@ import type { Chronicle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
 import { type YieldPart, yieldParts } from '../src/rules/yields';
 import { cardFaceAtStart } from '../src/ui/face';
-import { buildingName } from '../src/ui/text';
 import {
   aimed,
   campaignWith,
@@ -20,12 +19,13 @@ import {
   marksIn,
   openSaved,
   panelFace,
-  panelRows,
   playedOn,
   playedOut,
   RAFT,
   readings,
   shownCard,
+  terrainRead,
+  terrainSeen,
   watch,
 } from './chronicle-screen';
 
@@ -66,14 +66,15 @@ test('the Fishery played at the coast tile inside the border its embarked worker
   expect(problems).toEqual([]);
 });
 
-test('a Fishery built gives the coast beside it what the overlay glyphs and its terrain card reads, and its own tile’s building card is the face of the card that built it', async ({
+test('a Fishery built gives the coast beside it what the overlay glyphs and its terrain card reads in its sum and names, and its own tile’s building card is the face of the card that built it', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, tile, index, beside } = fisheryAdmitted(CAMPAIGN);
   const built = playedOn(chronicle, index, tile);
-  const given = partOf(built, beside, 'beside');
-  if (given === undefined) throw new Error(`the ${FISHERY} gives nothing to ${tileKey(beside)}`);
+  if (partOf(built, beside, 'beside') === undefined) {
+    throw new Error(`the ${FISHERY} gives nothing to ${tileKey(beside)}`);
+  }
   const card = chronicle.hand[index].id;
 
   await openSaved(page, built, CAMPAIGN);
@@ -87,10 +88,9 @@ test('a Fishery built gives the coast beside it what the overlay glyphs and its 
   // Nothing stands on the coast beside and nothing is built there: its terrain card comes first.
   await page.mouse.click(coast.x, coast.y, { button: 'right' });
   await expect.poll(() => shownCard(page)).toBe('terrain');
-  expect(await panelRows(page)).toContainEqual({
-    text: buildingName(FISHERY),
-    yields: given.yields,
-  });
+  const coastCard = await panelFace(page);
+  expect(terrainSeen(coastCard)).toEqual(terrainRead(built, beside));
+  expect(coastCard.references).toContainEqual({ kind: 'building', id: FISHERY });
 
   await page.keyboard.press('Escape');
   await expect.poll(() => shownCard(page)).toBeUndefined();

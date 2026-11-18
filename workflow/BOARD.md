@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The terrain on the infopanel as a card** — the infopanel's terrain card is the terrain's face read off the tile (the tile's yield without its building, a neighbour's gift counted; the feature, improvements and giving buildings named; the tile's cost on the disc; the tile in the window without building or unit), the grey ledger and its texts gone, and `e2e/inspect.spec.ts` proves it. Doc-impact: `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/terrain-on-infopanel.md](board/terrain-on-infopanel.md)
 - **A named unit kind's face, proven** — `e2e/reference.spec.ts` proves a unit kind named in a text raises, small at a rest, the face of a unit fresh of that kind in the halo of the faction the text names: the lean season's "[enemy:warrior]" and Bow and Arrow's goal's "[player:scout]". Doc-impact: none. [board/named-unit-face.md](board/named-unit-face.md)
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
 - **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.
