@@ -21,4 +21,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **A building on the infopanel as its card** — an inspected building, with its tile's improvements, is shown on the infopanel as the face of its card.
 - **A unit on the infopanel as its card** — an inspected unit is shown on the infopanel as the face of its card, reading what it holds now.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
+- **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.
 - **The look page names its artist throughout** — `docs/LOOK.md` names David Baumgart once and then says "his" about forty times; reword it so the artist is named wherever a reader could lose whose hand is meant.
