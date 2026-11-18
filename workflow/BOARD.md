@@ -17,5 +17,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
 
 ## Lines
-
-- **The look page names its artist throughout** — `docs/LOOK.md` names David Baumgart once and then says "his" about forty times; reword it so the artist is named wherever a reader could lose whose hand is meant.
