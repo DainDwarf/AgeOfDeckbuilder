@@ -84,6 +84,7 @@ Eleven lines at the cut, twelve since the first one's intake, what each intake r
   - A leader with a state line reaches its card's foot: its last row's box ends at 182.5 of 182, the text's padding counted.
   - The infopanel building card's "No yield" drops under a site's name the head's room test refuses, the test counting both texts' 2-unit padding; "Old cairn" keeps it beside; kept over a fold measuring by ink.
   - The Mountain's infopanel name and its "Mv —" reading overlap by 1.5 units of ink.
+  - The faces of the buildings no card places (a site, a camp, the neutral's city; the building line's intake, 2026-11-18) wear the BUILDING label, whose tooltip reads "Built once by a worker on a tile inside your border", false for them: "messy but that's ok for now". The terrain line meets the same question for its own label.
 - **A small card's tooltip closes on the way**: hovering a small card's tooltip, the pointer crossing another name closes it, and it should not (moved off the board, 2026-11-06). It needs no mockup and may ship at any place in the order.
 
 ## The chrome
