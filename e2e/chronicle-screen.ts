@@ -346,8 +346,8 @@ const DRAG = 140;
 /** Where a named object's centre sits on the page, and what one design unit measures there. */
 export type OnScreen = { x: number; y: number; unit: number };
 
-/** Where a line of text a face draws sits on the page, its middle, and how tall it stands there. */
-type Spot = { x: number; y: number; height: number };
+/** Where a line of text a face draws sits on the page, its middle, and how wide and tall it stands there. */
+type Spot = { x: number; y: number; width: number; height: number };
 
 /** A name a face draws: where it sits on the page, and what it names. */
 type DrawnName = { spot: Spot; reference: Reference };
@@ -792,7 +792,7 @@ export async function readNames(page: Page): Promise<void> {
         if (inside === undefined) throw new Error(complaint);
         return inside;
       };
-      /** Where a Text sits on the page, its middle, and how tall it stands there. */
+      /** Where a Text sits on the page, its middle, and how wide and tall it stands there. */
       const textOnScreen = (label: Phaser.GameObjects.Text): Spot => {
         const middle = label
           .getWorldTransformMatrix()
@@ -801,7 +801,12 @@ export async function readNames(page: Page): Promise<void> {
             (0.5 - label.originY) * label.height,
           );
         const shown = onPage(found().camera, middle.x, middle.y);
-        return { x: shown.x, y: shown.y, height: label.height * shown.unit };
+        return {
+          x: shown.x,
+          y: shown.y,
+          width: label.width * shown.unit,
+          height: label.height * shown.unit,
+        };
       };
       /** Where a Text the object holds sits on the page, its middle, and how tall it stands there. */
       const partOnScreen = (named: string, complaint: string): Spot =>
@@ -897,10 +902,16 @@ export async function readNames(page: Page): Promise<void> {
           const drawn = (data('names') as Name[] | undefined) ?? [];
           if (drawn.length === 0) return [];
           const at = matrix();
-          return drawn.map(({ x, y, height, reference }) => {
+          return drawn.map(({ x, y, width, height, reference }) => {
             const middle = at.transformPoint(x, y);
             const shown = onPage(camera, middle.x, middle.y);
-            return { spot: { x: shown.x, y: shown.y, height: height * shown.unit }, reference };
+            const spot = {
+              x: shown.x,
+              y: shown.y,
+              width: width * shown.unit,
+              height: height * shown.unit,
+            };
+            return { spot, reference };
           });
         }),
         onScreen: answer(() => {
@@ -1364,6 +1375,9 @@ export async function restedOnDeal(page: Page): Promise<void> {
   });
   await rested(page);
 }
+
+/** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
+export const PAST_HANDOVER = 400;
 
 /** Waits out a span of the clock a scene's timers run on. */
 export function waitGameClock(page: Page, span: number): Promise<void> {

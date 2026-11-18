@@ -44,6 +44,7 @@ import {
   onScreen,
   openCampaign,
   openSaved,
+  PAST_HANDOVER,
   pileStacks,
   type Reading,
   readings,
@@ -108,9 +109,6 @@ async function raisedFreshUnit(
 
 /** The cursor over something that reacts to a press. */
 const HAND = 'pointer';
-
-/** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
-const PAST_HANDOVER = 400;
 
 /**
  * The first answer the deal standing offers whose text names a thing of the kind: the answer, where

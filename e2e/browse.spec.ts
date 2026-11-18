@@ -25,6 +25,7 @@ import {
   onScreen,
   openSaved,
   overflowingPiles,
+  PAST_HANDOVER,
   panKeys,
   pannedToEndsThenTapped,
   pileStacks,
@@ -45,9 +46,6 @@ import {
   watch,
   wheel,
 } from './chronicle-screen';
-
-/** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
-const PAST_HANDOVER = 400;
 
 /** The cursor over something that reacts to a left click or a rest. */
 const HAND = 'pointer';

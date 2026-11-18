@@ -116,15 +116,18 @@ export function createSmallCards(
     const spot = raiser.where();
     const half = CARD_WIDTH / 2;
     const above = spot.top - STANDOFF;
+    const standsAbove = above - CARD_HEIGHT >= MARGIN;
     const x = Math.min(Math.max(spot.x, MARGIN + half), DESIGN_WIDTH - MARGIN - half);
-    const y =
-      above - CARD_HEIGHT >= MARGIN
-        ? above
-        : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN);
+    const y = standsAbove
+      ? above
+      : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN);
     const off = { x: x - spot.x, y: y - spot.top };
     const link: Link = { raiser, root, off, onCard: false, under: undefined };
+    const toName = standsAbove ? spot.top - y : spot.bottom - (y - CARD_HEIGHT);
 
-    pressedOnFace(face).setName(`small-card-${level}`).setPosition(x, y);
+    pressedOnFace(face, { reach: () => toName })
+      .setName(`small-card-${level}`)
+      .setPosition(x, y);
     reactsToPress(root);
     onClick(root, () => inspect(raiser.name), 'right', 'within slack');
     onHover(

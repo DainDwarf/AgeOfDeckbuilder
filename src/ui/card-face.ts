@@ -375,7 +375,7 @@ export type CardFace = {
   footAt(x: number, y: number): FootLabel | undefined;
   /**
    * Whether a point of its own space lands on what the face draws as it reads now, its body reaching
-   * that much further down.
+   * that much further down, or up where the reach is negative.
    */
   drawsAt(x: number, y: number, reach?: number): boolean;
   /** Whether what the face draws lies under a point of the surface it is drawn on. */
@@ -1150,7 +1150,7 @@ export function createCardFace(
 
 /**
  * The face's root made interactive on what the face draws, its body reaching `reach()` further down
- * at each hit test, and draggable where told.
+ * at each hit test, or up where it is negative, and draggable where told.
  */
 export function pressedOnFace(
   face: CardFace,

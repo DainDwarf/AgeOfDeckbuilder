@@ -125,4 +125,12 @@ describe('a card’s face', () => {
       false,
     );
   });
+
+  it('takes the pointer over its top beside its rim as far as its body is made to reach up, and no further', () => {
+    const over = at(BODY.width / 2 + 200, -10);
+
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, over)).toBe(false);
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, over, -4)).toBe(true);
+    expect(cardDrawsAt(SILHOUETTES, BARE, WIDTH, at(BODY.width / 2 + 200, -30), -4)).toBe(false);
+  });
 });

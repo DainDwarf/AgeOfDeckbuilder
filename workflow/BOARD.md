@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A small card's tooltip closes on the way** — a small card catches the pointer across the clear water between it and the name that raised it, the card's body wide, above the name or under it; `docs/INTERFACE.md` says so; `e2e/small-card-bridge.spec.ts` passes. Doc-impact: `docs/INTERFACE.md`. [board/small-card-bridge.md](board/small-card-bridge.md)
 - **The river named on the terrain card** — add the [River] reference on terrains next to a river.
 - **The infopanel's pile wears the dark back** — on piled infopanels, use the dark back for the pile of cards under the one shown.
 - **The browse windows' "xN" badges** — the "xN" badges on the browse windows hide too much of the card now, and need to change.

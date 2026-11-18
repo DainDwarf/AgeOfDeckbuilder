@@ -109,10 +109,16 @@ export function inRoundedBox({ x, y }: Point, box: Box, radius: number): boolean
 
 /**
  * Whether a point of a picture of a card's front or back, in its pixels, lands on what it draws: its
- * body, the corner handed, reaching that many pixels further down, or the rest of what it draws solid.
+ * body, the corner handed, reaching that many pixels further down, or up where the reach is negative,
+ * or the rest of what it draws solid.
  */
 function pictureDrawsAt(solid: Solid, body: PackPoint, at: Point, reach: number): boolean {
-  const box = { x: body.x, y: body.y, width: BODY.width, height: BODY.height + reach };
+  const box = {
+    x: body.x,
+    y: body.y + Math.min(reach, 0),
+    width: BODY.width,
+    height: BODY.height + Math.abs(reach),
+  };
   return inRoundedBox(at, box, BODY_RADIUS) || solidAt(solid, at.x, at.y);
 }
 
@@ -155,7 +161,8 @@ export type Laid = {
 
 /**
  * Whether a point of a face's own space, about its bottom centre at a card that wide, lands on what
- * it has laid: its body, reaching that much further down, its front, each disc and each badge.
+ * it has laid: its body, reaching that much further down, or up where the reach is negative, its
+ * front, each disc and each badge.
  */
 export function cardDrawsAt(
   silhouettes: Silhouettes,
