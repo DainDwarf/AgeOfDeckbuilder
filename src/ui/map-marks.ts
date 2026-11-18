@@ -37,12 +37,14 @@ import {
   buildingPaintingsOf,
   CANOE,
   CANOE_WIDTH,
+  cornerOnLattice,
   DISC_PITCH,
   DISC_RADIUS,
   DISC_RIM,
   type DiscLook,
   type DiscPicture,
   discFeatureOf,
+  ditchLaying,
   FACE_SCALE,
   FACE_SHEET,
   FEATURE_DISC,
@@ -58,7 +60,6 @@ import {
   leavesRoom,
   liesOf,
   MARK_EDGE,
-  PAINTED_SCALE,
   PAINTING,
   PONDS,
   paintIn,
@@ -69,7 +70,6 @@ import {
   RIVER_CUT,
   RIVER_SHEET,
   SITE_POINTER,
-  SQUASH,
   shorePaintingsOf,
   TILE_SIZE,
   UNIT_SHEET,
@@ -717,13 +717,15 @@ export function improvementLyingOf(
     const name = `improvement-painting-${improvement}-${place}-${tileKey(coord)}`;
     const { x, y } = positionOf(coord);
     const at = lies[place];
+    const { scale, down } = pieceLaying(at.size);
     return [
       {
         name,
         paint: (image, dark) =>
           asDarkened(image, dark)
             .setTexture(FEATURE_SHEET_KEY, lies.painting)
-            .setScale(at.size * PAINTED_SCALE)
+            .setOrigin(0.5, down)
+            .setScale(scale)
             .setFlipX(false)
             .setPosition(x + at.x, y + at.y)
             .setName(name),
@@ -741,24 +743,12 @@ export function ditchesOf(
   rivers: readonly River[],
 ): Lying<Phaser.GameObjects.Container>[] {
   const key = tileKey(coord);
-  const { q, r } = coord;
+  const centre = positionOf(CENTRE);
   return face.improvements.flatMap((improvement) => {
     const lies = liesOf(improvement);
     if (lies.kind !== 'ditches') return [];
-    const middle = positionOf(coord);
-    const corners = cornersOf(coord).map(cornerAt);
     return edgesAlong(rivers, coord).map((edge) => {
-      const from = corners[edge];
-      const to = corners[(edge + 1) % corners.length];
-      const edgeMiddle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
-      const way = Math.atan2(middle.y - edgeMiddle.y, middle.x - edgeMiddle.x);
-      const held = {
-        x: edgeMiddle.x + Math.cos(way) * lies.inset,
-        y: edgeMiddle.y + Math.sin(way) * lies.inset,
-      };
-      const even = pickOf(q * 17 + edge, r * 23 + 3 * edge + 1, 1001) / 1000;
-      const roll = Phaser.Math.DegToRad((even * 2 - 1) * lies.roll);
-      const mirror = pickOf(q * 29 + 5 * edge, r * 31 + edge + 2, 2) === 1 ? -1 : 1;
+      const { at, origin, scale, rotation } = ditchLaying(lies, coord, edge);
       const name = `improvement-ditch-${improvement}-${edge}-${key}`;
       return {
         name,
@@ -766,15 +756,15 @@ export function ditchesOf(
           // A mirror by a flip turns the frame about its own middle and moves the paint off the river.
           asDarkened(container.getAt<Phaser.GameObjects.Image>(0), dark)
             .setTexture(RIVER_SHEET.key, lies.file)
-            .setOrigin(lies.held.x / PAINTING.width, lies.held.y / PAINTING.height)
+            .setOrigin(origin.x, origin.y)
             .setPosition(0, 0)
-            .setScale(lies.along, mirror * lies.across)
-            .setRotation(way + Math.PI + roll)
+            .setScale(scale.x, scale.y)
+            .setRotation(rotation)
             .setFlip(false, false)
             .setAlpha(1)
             .setVisible(true)
             .setName(`improvement-ditch-paint-${improvement}-${edge}-${key}`);
-          return container.setPosition(held.x, held.y).setName(name);
+          return container.setPosition(centre.x + at.x, centre.y + at.y).setName(name);
         },
       };
     });
@@ -1422,10 +1412,8 @@ export function showCityBar(
 }
 
 /** Where a corner of the tile lattice stands on the map's own surface. */
-export function cornerAt({ x, y }: Corner): Phaser.Math.Vector2 {
+export function cornerAt(corner: Corner): Phaser.Math.Vector2 {
   const middle = positionOf(CENTRE);
-  return new Phaser.Math.Vector2(
-    middle.x + x * (Math.sqrt(3) / 2) * TILE_SIZE,
-    middle.y + ((y * TILE_SIZE) / 2) * SQUASH,
-  );
+  const { x, y } = cornerOnLattice(corner);
+  return new Phaser.Math.Vector2(middle.x + x, middle.y + y);
 }

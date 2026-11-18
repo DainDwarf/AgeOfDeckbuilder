@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import {
   ARMS,
+  CENTRE,
   type Corner,
   cornerKey,
   type River,
@@ -12,19 +13,18 @@ import {
   water,
 } from '../rules/map';
 import type { MapContent } from '../rules/map-kinds';
-import { asDarkened, cornerAt, fogDark } from './map-marks';
+import { asDarkened, cornerAt, fogDark, positionOf } from './map-marks';
 import {
+  armOf,
   mouthPaintingsOf,
   PAINTING,
+  PIECE_SCALE,
   paintingAtCorner,
-  riverPaintingsOf,
+  riverPieceAt,
+  riverPieceLaying,
   SQUASH,
   STRAIGHT_RIVER,
-  TILE_SIZE,
 } from './marks';
-
-/** How much smaller than his file a piece is drawn: his leg, the apothem, half an edge. */
-const PIECE_SCALE = TILE_SIZE / PAINTING.width;
 
 /** The middles of his edges about his hexagon's middle, in his pixels, in the order his masks name them. */
 const EDGE_MIDDLES: readonly { readonly x: number; readonly y: number }[] = [
@@ -56,11 +56,6 @@ export type RiverPiece =
       readonly painting: string;
       readonly inFog: boolean;
     };
-
-/** The arm from a corner to one an edge away, by its place in the rules' list: the place of his edge in his masks. */
-function armOf(from: Corner, to: Corner): number {
-  return ARMS.findIndex((arm) => arm.x === to.x - from.x && arm.y === to.y - from.y);
-}
 
 /**
  * The piece every corner of the rivers' runs along the drawn tiles wears, by its key, in fog where no
@@ -105,8 +100,7 @@ export function riverPieces(
       const inFog = !tilesAtCorner(corner).some((tile) => live.has(tileKey(tile)));
       const arrived = mouths.get(key);
       if (arrived === undefined) {
-        const painting = paintingAtCorner(riverPaintingsOf(arms), corner);
-        return [key, { kind: 'piece', corner, painting, inFog }];
+        return [key, { kind: 'piece', corner, painting: riverPieceAt(arms, corner), inFog }];
       }
       const painting = paintingAtCorner(mouthPaintingsOf(arrived), corner);
       return [key, { kind: 'mouth', corner, arrived, painting, inFog }];
@@ -123,13 +117,14 @@ function onCorner(
   { corner, painting, inFog }: RiverPiece,
   held: { readonly x: number; readonly y: number },
 ): Phaser.GameObjects.Image {
-  const { x, y } = cornerAt(corner);
+  const centre = positionOf(CENTRE);
+  const { at, origin, scale, rotation } = riverPieceLaying(corner, held);
   return asDarkened(image, fogDark(inFog))
     .setFrame(painting)
-    .setOrigin(0.5 + held.x / PAINTING.width, (PAINTING.middle + held.y) / PAINTING.height)
-    .setPosition(x, y)
-    .setRotation(Math.PI / 2)
-    .setScale(PIECE_SCALE * SQUASH, PIECE_SCALE / SQUASH);
+    .setOrigin(origin.x, origin.y)
+    .setPosition(centre.x + at.x, centre.y + at.y)
+    .setRotation(rotation)
+    .setScale(scale.x, scale.y);
 }
 
 /** An image from the river sheet made to wear a corner's piece, held about his hexagon's middle. */

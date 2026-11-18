@@ -92,9 +92,9 @@ export type ArtPicture = {
 };
 
 /**
- * What stands in a card's art box where it holds what its play places: its unit, its building, or the
- * building of the city section it is drawn under, and nothing under none; a card placing anything
- * else is refused.
+ * What stands in a card's art box where it holds what its play places: its unit, its building, its
+ * improvement, or the building of the city section it is drawn under, and nothing under none; a card
+ * placing nothing is refused.
  */
 function placedThingOf(
   catalogue: Catalogue,
@@ -111,7 +111,7 @@ function placedThingOf(
     case 'city':
       return city === undefined ? undefined : { kind: 'building', building: city };
     case 'improvement':
-      throw new Error(`no painting holds the improvement the card ${id} places`);
+      return { kind: 'improvement', improvement: placing.improvement };
   }
 }
 

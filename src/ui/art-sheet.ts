@@ -1,20 +1,41 @@
 import type { Catalogue } from '../rules/catalogue';
-import { CENTRE, discAround, type Terrain } from '../rules/map';
+import {
+  CENTRE,
+  type Corner,
+  cornerKey,
+  cornersOf,
+  discAround,
+  edgesAlong,
+  type ImprovementId,
+  type River,
+  type Terrain,
+  type Tile,
+} from '../rules/map';
 import { type ArtThing, cardArtOf } from './art-box';
+import type { Point } from './border-loops';
 import { artShapeOf, BODY, CARD_WIDTH, FRONTS } from './card-frames';
 import { type ArtPicture, artPictureOf, citySectionBuildings, type FrontWindow } from './face';
 import { css, LOOK } from './look';
 import {
+  armOf,
   BUILDING_PATCH,
   BUILDING_SHEET,
   buildingPaintingsOf,
+  type Ditches,
+  ditchLaying,
   FACE_SCALE,
+  FEATURE_SHEET_KEY,
   facePaintingOn,
   latticeAt,
+  liesOf,
   PAINTING,
   paintIn,
   paintingOn,
   pieceLaying,
+  RIVER_SHEET,
+  type RiverLaying,
+  riverPieceAt,
+  riverPieceLaying,
   TILE_SIZE,
   UNIT_SHEET,
   unitPaintingOf,
@@ -40,10 +61,16 @@ const TILE_SHARE = 0.9;
 const ICON_SHARE = 0.75;
 
 /**
- * How far above the oval window's middle the middle of the tile a building stands on stands, in units
- * of a card wherever it stands but large.
+ * How far above each window's middle the middle of what is painted of a building or an improvement
+ * stands, in units of a card wherever it stands but large.
  */
-const BUILDING_RISE = 5;
+const PAINTED_RISE: Readonly<Record<FrontWindow, number>> = { oval: 8, arched: 0 };
+
+/**
+ * How far under the window's middle the middle tile's middle stands under an improvement the map
+ * tells by ditches, in the same units.
+ */
+const DITCHES_DROP = 16;
 
 /** How many rings of tiles lie round the middle tile of an art box's ground. */
 const GROUND_RINGS = 2;
@@ -58,8 +85,12 @@ function thingKey(holds: ArtThing): string {
       return `unit:${holds.type}`;
     case 'building':
       return `building:${holds.building}`;
+    case 'improvement':
+      return `improvement:${holds.improvement}`;
     case 'icon':
       return holds.file;
+    case 'nothing':
+      return 'nothing';
   }
 }
 
@@ -89,21 +120,49 @@ function drawnAbout(on: CanvasRenderingContext2D, from: InSheet, scale: number):
   drawnAt(on, from, (-from.width * scale) / 2, (-from.height * scale) / 2, scale);
 }
 
+/** A painting of the river sheet drawn as it is laid, about the point the context stands at. */
+function drawnLaid(
+  on: CanvasRenderingContext2D,
+  from: InSheet,
+  { at, origin, scale, rotation }: RiverLaying,
+): void {
+  on.save();
+  on.translate(at.x, at.y);
+  on.rotate(rotation);
+  on.scale(scale.x, scale.y);
+  drawnAt(on, from, -origin.x * from.width, -origin.y * from.height, 1);
+  on.restore();
+}
+
+/** What the middle tile of a picture's ground carries: the building or the improvement on it. */
+function carriedOf(holds: ArtThing): Pick<Tile, 'building' | 'improvements'> {
+  switch (holds.kind) {
+    case 'building':
+      return { building: holds.building, improvements: [] };
+    case 'improvement':
+      return { building: undefined, improvements: [holds.improvement] };
+    case 'unit':
+    case 'icon':
+    case 'nothing':
+      return { building: undefined, improvements: [] };
+  }
+}
+
 /**
  * An art box's ground about the middle tile's middle, in the map's units: the terrain on that tile
  * and on the rings round it, back row first, each wearing the painting its place on the map picks,
- * the middle tile his clearing where a building stands on it and he painted one.
+ * the middle tile the one the map gives a tile carrying what it carries.
  */
 function paintGround(
   on: CanvasRenderingContext2D,
   paintingIn: PaintingIn,
   terrain: Terrain,
-  building: string | undefined,
+  carried: Pick<Tile, 'building' | 'improvements'>,
 ): void {
   const tiles = discAround(CENTRE, GROUND_RINGS).sort((one, other) => one.r - other.r);
   for (const coord of tiles) {
     const middle = coord.q === CENTRE.q && coord.r === CENTRE.r;
-    const tile = { terrain, building: middle ? building : undefined, improvements: [] };
+    const tile = middle ? { terrain, ...carried } : { terrain, improvements: [] };
     const { sheet, painting } = facePaintingOn(tile, coord);
     const from = paintingIn(sheet, painting);
     const { x, y } = latticeAt(coord);
@@ -127,6 +186,40 @@ function paintUnit(on: CanvasRenderingContext2D, paintingIn: PaintingIn, type: s
   drawnAbout(on, paintingIn(UNIT_SHEET.key, painting), scale);
 }
 
+/** The river along the upper edges of the ground's middle row, from one side of the ground to the other. */
+function groundRiver(): River {
+  const above = new Map<string, Corner>();
+  for (let q = -GROUND_RINGS; q <= GROUND_RINGS; q++) {
+    for (const corner of cornersOf({ q, r: CENTRE.r })) {
+      if (corner.y < 0) above.set(cornerKey(corner), corner);
+    }
+  }
+  return [...above.values()].sort((one, other) => one.x - other.x);
+}
+
+/**
+ * A river along the middle tile's two upper edges and the ditches an improvement runs from it into
+ * that tile, about the middle tile's middle, in the map's units: each corner wearing his piece the map
+ * picks there, each ditch laid as the map lays it there.
+ */
+function paintRiverAndDitches(
+  on: CanvasRenderingContext2D,
+  paintingIn: PaintingIn,
+  ditches: Ditches,
+): void {
+  const river = groundRiver();
+  river.forEach((corner, at) => {
+    const beside = [river[at - 1], river[at + 1]].filter((one) => one !== undefined);
+    const arms = new Set(beside.map((to) => armOf(corner, to)));
+    const piece = riverPieceAt(arms, corner);
+    drawnLaid(on, paintingIn(RIVER_SHEET.key, piece), riverPieceLaying(corner, { x: 0, y: 0 }));
+  });
+  const ditch = paintingIn(RIVER_SHEET.key, ditches.file);
+  for (const edge of edgesAlong([river], CENTRE)) {
+    drawnLaid(on, ditch, ditchLaying(ditches, CENTRE, edge));
+  }
+}
+
 /** A box, from its top-left corner. */
 type Box = {
   readonly x: number;
@@ -136,8 +229,8 @@ type Box = {
 };
 
 /**
- * One painting of a building laid about its tile's middle, in the map's units: what it draws, its
- * top-left corner, its scale, and the box his paint fills.
+ * One painting laid about its tile's middle, in the map's units: what it draws, its top-left corner,
+ * its scale, and the box his paint fills.
  */
 type Laid = {
   readonly from: InSheet;
@@ -199,8 +292,38 @@ function laidPieces(paintingIn: PaintingIn, building: string): Laid[] {
   ];
 }
 
+/** An improvement's painting as the map lays it alone on a tile, and nothing for one told by ditches. */
+function laidImprovement(paintingIn: PaintingIn, improvement: ImprovementId): Laid[] {
+  const lies = liesOf(improvement);
+  switch (lies.kind) {
+    case 'painting': {
+      const { size, x, y } = lies.alone;
+      const { scale, down } = pieceLaying(size);
+      return [
+        laidAt(paintingIn(FEATURE_SHEET_KEY, lies.painting), lies.painting, { x, y }, scale, down),
+      ];
+    }
+    case 'ditches':
+      return [];
+  }
+}
+
+/** The paintings laid on the middle tile and centred on what is painted: a building's and an improvement's. */
+function laidOf(paintingIn: PaintingIn, holds: ArtThing): Laid[] {
+  switch (holds.kind) {
+    case 'building':
+      return laidPieces(paintingIn, holds.building);
+    case 'improvement':
+      return laidImprovement(paintingIn, holds.improvement);
+    case 'unit':
+    case 'icon':
+    case 'nothing':
+      return [];
+  }
+}
+
 /** The middle of the box what is painted fills, laid as the pieces are. */
-function paintedMiddle(laid: readonly Laid[]): { x: number; y: number } {
+function paintedMiddle(laid: readonly Laid[]): Point {
   const left = Math.min(...laid.map(({ painted }) => painted.x));
   const top = Math.min(...laid.map(({ painted }) => painted.y));
   const right = Math.max(...laid.map(({ painted }) => painted.x + painted.width));
@@ -209,36 +332,42 @@ function paintedMiddle(laid: readonly Laid[]): { x: number; y: number } {
 }
 
 /**
- * Where the middle tile's middle stands in an art box, about the box its glass lies in: under a
- * building in the oval window raised over the window's middle, under one in the arched window where
- * what is painted is centred on it, and on it under anything else.
+ * Where the middle tile's middle stands in an art box, about the box its glass lies in: under what is
+ * painted where that is centred, dropped under an improvement told by ditches, else on its middle.
  */
 function groundMiddleOf(
   picture: ArtPicture,
-  middle: { x: number; y: number },
+  middle: Point,
   scale: number,
   laid: readonly Laid[],
-): { x: number; y: number } {
-  switch (picture.holds.kind) {
+): Point {
+  const centred = (): Point => {
+    const painted = paintedMiddle(laid);
+    const rise = PAINTED_RISE[picture.window] * PIXELS;
+    return { x: middle.x - painted.x * scale, y: middle.y - rise - painted.y * scale };
+  };
+  const { holds } = picture;
+  switch (holds.kind) {
     case 'unit':
     case 'icon':
+    case 'nothing':
       return middle;
     case 'building':
-      switch (picture.window) {
-        case 'oval':
-          return { x: middle.x, y: middle.y - BUILDING_RISE * PIXELS };
-        case 'arched': {
-          const painted = paintedMiddle(laid);
-          return { x: middle.x - painted.x * scale, y: middle.y - painted.y * scale };
-        }
+      return centred();
+    case 'improvement':
+      switch (liesOf(holds.improvement).kind) {
+        case 'painting':
+          return centred();
+        case 'ditches':
+          return { x: middle.x, y: middle.y + DITCHES_DROP * PIXELS };
       }
   }
 }
 
 /**
  * What stands on an art box's ground painted over it, in the front's pixels: a unit on the window's
- * middle, a building's paintings about the middle tile's, an icon on the window's middle as wide as
- * `ICON_SHARE` says.
+ * middle, a building's or an improvement's paintings about the middle tile's, a river and its ditches
+ * about it, an icon on the window's middle as wide as `ICON_SHARE` says, or nothing.
  */
 function paintThing(
   on: CanvasRenderingContext2D,
@@ -246,8 +375,8 @@ function paintThing(
   holds: ArtThing,
   at: {
     readonly window: { readonly width: number; readonly height: number };
-    readonly middle: { readonly x: number; readonly y: number };
-    readonly ground: { readonly x: number; readonly y: number };
+    readonly middle: Point;
+    readonly ground: Point;
     readonly scale: number;
     readonly laid: readonly Laid[];
   },
@@ -259,9 +388,13 @@ function paintThing(
       paintUnit(on, paintingIn, holds.type);
       return;
     case 'building':
+    case 'improvement': {
       on.setTransform(scale, 0, 0, scale, ground.x, ground.y);
       for (const { from, x, y, scale: own } of laid) drawnAt(on, from, x, y, own);
+      const lies = holds.kind === 'improvement' ? liesOf(holds.improvement) : undefined;
+      if (lies?.kind === 'ditches') paintRiverAndDitches(on, paintingIn, lies);
       return;
+    }
     case 'icon': {
       const from = paintingIn(ART_SHEET_KEY, holds.file);
       const side = ICON_SHARE * Math.min(window.width, window.height);
@@ -269,6 +402,8 @@ function paintThing(
       drawnAbout(on, from, side / Math.max(from.width, from.height));
       return;
     }
+    case 'nothing':
+      return;
   }
   const unlisted: never = holds;
   throw new Error(`nothing stands in an art box as ${JSON.stringify(unlisted)}`);
@@ -296,15 +431,10 @@ function pictureMade(picture: ArtPicture, shapeOf: ShapeOf): Made {
       const scale =
         (TILE_SHARE * Math.max(window.width, window.height)) / (Math.sqrt(3) * TILE_SIZE);
       const { holds } = picture;
-      const laid = holds.kind === 'building' ? laidPieces(paintingIn, holds.building) : [];
+      const laid = laidOf(paintingIn, holds);
       const ground = groundMiddleOf(picture, middle, scale, laid);
       on.setTransform(scale, 0, 0, scale, ground.x, ground.y);
-      paintGround(
-        on,
-        paintingIn,
-        picture.ground,
-        holds.kind === 'building' ? holds.building : undefined,
-      );
+      paintGround(on, paintingIn, picture.ground, carriedOf(holds));
       on.setTransform(1, 0, 0, 1, 0, 0);
       on.globalCompositeOperation = 'multiply';
       on.fillStyle = css(LOOK.cardArtGround);
@@ -362,7 +492,7 @@ export function artSheet(catalogue: Catalogue): Sheet {
           .map((picture) => pictureMade(picture, shapeOf)),
       ),
     ],
-    side: 2048,
+    side: 4096,
     rowGap: 8,
   };
 }

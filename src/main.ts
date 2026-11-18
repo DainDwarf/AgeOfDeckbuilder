@@ -33,7 +33,7 @@ import {
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
-import { drawSheet, queueSheet, type Sheet } from './ui/sheet';
+import { drawSheets, queueSheet, type Sheet } from './ui/sheet';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -90,8 +90,9 @@ class LoadScene extends Phaser.Scene {
   private sheets: readonly Sheet[] = [];
 
   preload(): void {
-    // The art and features sheets last: the cards' pictures, the features' tinted paintings, the
-    // river's cut and the deer in his net are drawn off the others'.
+    // The features and art sheets last, the art sheet after the features: the features' tinted
+    // paintings, the river's cut and the deer in his net are drawn off the others', and the cards'
+    // pictures off every other.
     this.sheets = [
       CARDS_SHEET,
       FACE_SHEET,
@@ -99,14 +100,14 @@ class LoadScene extends Phaser.Scene {
       BUILDING_SHEET,
       UNIT_SHEET,
       GLYPH_SHEET,
-      artSheet(CATALOGUE),
       featureSheet(CATALOGUE),
+      artSheet(CATALOGUE),
     ];
     for (const sheet of this.sheets) queueSheet(this.load, sheet);
   }
 
   create(): void {
-    for (const sheet of this.sheets) drawSheet(this.textures, sheet);
+    drawSheets(this.textures, this.sheets);
     // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
     // after it has no handle yet to be reached by, and the boot throws.
     game.scene.start('console');

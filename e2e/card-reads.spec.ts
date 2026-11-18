@@ -1,8 +1,11 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { STONE } from '../src/content/stone';
+import type { Campaign } from '../src/rules/campaign';
 import { cardOf, placingOf, unitKind } from '../src/rules/catalogue';
 import { buildingKind } from '../src/rules/map-kinds';
 import { RESOURCES, type Resources } from '../src/rules/resources';
+import type { Chronicle } from '../src/rules/state';
 import { artFrameOf } from '../src/ui/art-sheet';
 import { BADGES } from '../src/ui/card-frames';
 import { glyphFileOf } from '../src/ui/cast';
@@ -96,6 +99,25 @@ test('a card that builds a building reads at the foot of its window the terrains
   expect(problems).toEqual([]);
 });
 
+/** Each card of the chronicle's hand, opened on the campaign, wears in its art box the picture its card holds. */
+async function handWearsItsPictures(
+  page: Page,
+  chronicle: Chronicle,
+  campaign?: Campaign,
+): Promise<void> {
+  const city = chronicle.citySection.building;
+  const faces = chronicle.hand.map((_, at) => `hand-${at}`);
+  const held = chronicle.hand.map((card) => {
+    const { art, front } = cardFace(CATALOGUE, card, city);
+    if (art === undefined) throw new Error(`the card ${card.id} holds no painting`);
+    return { card: card.id, art: artFrameOf(art, frontWindowOf(front)) };
+  });
+
+  await openSaved(page, chronicle, campaign);
+  const read = await readings(page, faces);
+  expect(faces.map((face) => ({ card: read(face).card, art: read(face).art }))).toEqual(held);
+}
+
 test('each card of a Nomadic hand wears in its art box the picture its card holds, the oval window’s and the arched one’s alike', async ({
   page,
 }) => {
@@ -106,17 +128,33 @@ test('each card of a Nomadic hand wears in its art box the picture its card hold
     const windows = opened.hand.map((card) => frontWindowOf(cardFace(CATALOGUE, card, city).front));
     return new Set(windows).size === 2 ? { chronicle: opened } : undefined;
   });
-  const city = chronicle.citySection.building;
-  const faces = chronicle.hand.map((_, at) => `hand-${at}`);
-  const held = chronicle.hand.map((card) => {
-    const { art, front } = cardFace(CATALOGUE, card, city);
-    if (art === undefined) throw new Error(`the card ${card.id} holds no painting`);
-    return { card: card.id, art: artFrameOf(art, frontWindowOf(front)) };
-  });
 
-  await openSaved(page, chronicle);
-  const read = await readings(page, faces);
-  expect(faces.map((face) => ({ card: read(face).card, art: read(face).art }))).toEqual(held);
+  await handWearsItsPictures(page, chronicle);
+
+  expect(problems).toEqual([]);
+});
+
+test('each card of a hand of a Stone deck wears in its art box the picture its card holds, a card that places an improvement among them', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = campaignWith(
+    Object.values(STONE.brings.technologies ?? {}).flatMap(({ unlocks }) =>
+      Object.keys(unlocks.cards),
+    ),
+  );
+  const { chronicle } = firstSeed(
+    'opens turn 1 with a card that places an improvement in hand',
+    (seed) => {
+      const opened = settledOn(seed, [], campaign);
+      const improving = opened.hand.some(
+        ({ id }) => placingOf(cardOf(CATALOGUE, id))?.thing === 'improvement',
+      );
+      return improving ? { chronicle: opened } : undefined;
+    },
+  );
+
+  await handWearsItsPictures(page, chronicle, campaign);
 
   expect(problems).toEqual([]);
 });

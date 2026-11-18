@@ -1,6 +1,7 @@
-import type { Corner, Tile, TileCoords } from '../rules/map';
+import { ARMS, type Corner, cornersOf, type Tile, type TileCoords } from '../rules/map';
 import { featureKind, improvementKind, type MapContent } from '../rules/map-kinds';
 import { ARMS_ICONS, GOODS_ICONS } from './art-box';
+import type { Point } from './border-loops';
 import { EVERY_GLYPH_FILE } from './cast';
 import { grownOf, haloOf } from './fade';
 import { css, LOOK, type Wash } from './look';
@@ -65,6 +66,11 @@ export const FACE_SCALE = PAINTED_SCALE * FACE_OVERLAP;
 /** Where a tile's middle stands on the map's lattice about the middle of the tile at its centre. */
 export function latticeAt({ q, r }: TileCoords): { x: number; y: number } {
   return { x: Math.sqrt(3) * TILE_SIZE * (q + r / 2), y: 1.5 * TILE_SIZE * SQUASH * r };
+}
+
+/** Where a corner of the tile lattice stands about the middle of the tile at the map's centre. */
+export function cornerOnLattice({ x, y }: Corner): Point {
+  return { x: x * (Math.sqrt(3) / 2) * TILE_SIZE, y: ((y * TILE_SIZE) / 2) * SQUASH };
 }
 
 /** What a feature looks like; a feature with no icon is refused. */
@@ -188,9 +194,9 @@ export type BuildingPiece = {
 };
 
 /**
- * How a building's piece is laid about its place: his whole tile at a face's scale, his hexagon's
- * middle on that place, and any other at its size about its own middle; how far down his file that
- * place lies is a share of the file's height.
+ * How a building's piece or an improvement's painting is laid about its place: his whole tile at a
+ * face's scale, his hexagon's middle on that place, and any other at its size about its own middle;
+ * how far down his file that place lies is a share of the file's height.
  */
 export function pieceLaying(size: BuildingPiece['size']): {
   readonly scale: number;
@@ -564,7 +570,55 @@ type Box = {
   readonly height: number;
 };
 
-/** Where his paint lies in each file a building is drawn with and each frame a unit kind's painting stands in, in its pixels. */
+/**
+ * His deer behind his net, in his deer's pixels: the deer's side and the room about it on each side of
+ * the frame; the net's side, and how far its middle lies right of and below the deer's, as shares of
+ * the deer's side.
+ */
+const DEER_IN_NET_OF = { deer: 128, room: 9, net: 0.8, x: -0.04, y: 0.17 };
+
+const DEER_IN_NET_SIDE = DEER_IN_NET_OF.deer + 2 * DEER_IN_NET_OF.room;
+
+/** His deer behind his net, the head showing over it, the deer's middle the frame's: the picture a trapping is told by. */
+export const DEER_IN_NET: Made = {
+  frame: 'deer-in-net',
+  width: DEER_IN_NET_SIDE,
+  height: DEER_IN_NET_SIDE,
+  paint: (context, paintingIn) => {
+    const { deer, net, x, y } = DEER_IN_NET_OF;
+    const middle = DEER_IN_NET_SIDE / 2;
+    const drawnAt = (
+      sheet: string,
+      painting: string,
+      at: number,
+      down: number,
+      side: number,
+    ): void => {
+      const from = paintingIn(sheet, painting);
+      context.drawImage(
+        from.canvas,
+        from.x,
+        from.y,
+        from.width,
+        from.height,
+        at - side / 2,
+        down - side / 2,
+        side,
+        side,
+      );
+    };
+    drawnAt(FEATURE_SHEET_KEY, featureIconOf('deer'), middle, middle, deer);
+    drawnAt(BUILDING_SHEET.key, NET, middle + x * deer, middle + y * deer, net * deer);
+  },
+};
+
+const CORRAL = `${LOCATIONS}/corral00_cows.png`;
+const CLAY_PIT = `${LOCATIONS}/clayPit01.png`;
+
+/**
+ * Where his paint lies in each file a building is drawn with, each painting an improvement lays and
+ * each frame a unit kind's painting stands in, in its pixels.
+ */
 const PAINT: Readonly<Record<string, Box>> = {
   ...LINED_PAINT,
   [YURT]: { x: 1, y: 5, width: 96, height: 76 },
@@ -591,6 +645,9 @@ const PAINT: Readonly<Record<string, Box>> = {
   [TALL_BARROW]: { x: 0, y: 0, width: 78, height: 77 },
   [LOW_BARROW]: { x: 0, y: 3, width: 94, height: 58 },
   [IVORY]: { x: 2, y: 1, width: 122, height: 126 },
+  [DEER_IN_NET.frame]: { x: 12, y: 9, width: 113, height: 137 },
+  [CORRAL]: { x: 1, y: 0, width: 101, height: 88 },
+  [CLAY_PIT]: { x: 1, y: 0, width: 238, height: 199 },
 };
 
 /** Where his paint lies in a frame drawn off his file, in his pixels; nothing where it fills the frame. */
@@ -673,7 +730,7 @@ function riverFiles(folder: string, stem: string, mask: string, count: number): 
 }
 
 /** The paintings of his river piece whose edges are these; edges no piece of his has are refused. */
-export function riverPaintingsOf(edges: ReadonlySet<number>): string[] {
+function riverPaintingsOf(edges: ReadonlySet<number>): string[] {
   const mask = riverMask(edges);
   const count = drawn(RIVER_PIECES, mask, 'no river piece is painted along the edges');
   return riverFiles('Rivers', 'hexRiver', mask, count);
@@ -729,6 +786,72 @@ export const RIVER_SHEET: Sheet = {
   side: 2048,
 };
 
+/** How much smaller than his file a river's piece is drawn: his leg, the apothem, half an edge. */
+export const PIECE_SCALE = TILE_SIZE / PAINTING.width;
+
+/** The arm from a corner to one an edge away, by its place in the rules' list: the place of his edge in his masks. */
+export function armOf(from: Corner, to: Corner): number {
+  return ARMS.findIndex((arm) => arm.x === to.x - from.x && arm.y === to.y - from.y);
+}
+
+/** The one of his river pieces whose edges are these arms that a corner wears, picked by its place. */
+export function riverPieceAt(arms: ReadonlySet<number>, corner: Corner): string {
+  return paintingAtCorner(riverPaintingsOf(arms), corner);
+}
+
+/**
+ * How a painting of the river sheet is laid: where the point it is held at stands about the middle of
+ * the tile at the map's centre, that point in its file as shares of its width and height, its scales
+ * along its width and its height, and its turn; scaled before it is turned.
+ */
+export type RiverLaying = {
+  readonly at: Point;
+  readonly origin: Point;
+  readonly scale: Point;
+  readonly rotation: number;
+};
+
+/**
+ * A painting of a river's corner laid on the corner, held at that point of his file about his
+ * hexagon's middle, turned a quarter turn onto the corner lattice and squashed across it as the
+ * lattice is.
+ */
+export function riverPieceLaying(corner: Corner, held: Point): RiverLaying {
+  return {
+    at: cornerOnLattice(corner),
+    origin: { x: 0.5 + held.x / PAINTING.width, y: (PAINTING.middle + held.y) / PAINTING.height },
+    scale: { x: PIECE_SCALE * SQUASH, y: PIECE_SCALE / SQUASH },
+    rotation: Math.PI / 2,
+  };
+}
+
+/**
+ * A ditch from the river along the edge of a tile at that place, laid into the tile: held in from the
+ * edge's middle toward the tile's, pointing at it, rolled and mirrored as the tile's place and the
+ * edge's pick.
+ */
+export function ditchLaying(lies: Ditches, coord: TileCoords, edge: number): RiverLaying {
+  const { q, r } = coord;
+  const middle = latticeAt(coord);
+  const corners = cornersOf(coord).map(cornerOnLattice);
+  const from = corners[edge];
+  const to = corners[(edge + 1) % corners.length];
+  const edgeMiddle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
+  const way = Math.atan2(middle.y - edgeMiddle.y, middle.x - edgeMiddle.x);
+  const even = pickOf(q * 17 + edge, r * 23 + 3 * edge + 1, 1001) / 1000;
+  const roll = ((even * 2 - 1) * lies.roll * Math.PI) / 180;
+  const mirror = pickOf(q * 29 + 5 * edge, r * 31 + edge + 2, 2) === 1 ? -1 : 1;
+  return {
+    at: {
+      x: edgeMiddle.x + Math.cos(way) * lies.inset,
+      y: edgeMiddle.y + Math.sin(way) * lies.inset,
+    },
+    origin: { x: lies.held.x / PAINTING.width, y: lies.held.y / PAINTING.height },
+    scale: { x: lies.along, y: mirror * lies.across },
+    rotation: way + Math.PI + roll,
+  };
+}
+
 /** The file of his resource icon a feature wears, under the assets folder; a feature with none is refused. */
 export function featureIconOf(feature: string): string {
   return `${GOODS_ICONS}/${featureLookOf(feature).icon}.png`;
@@ -770,48 +893,6 @@ export type Ditches = {
   readonly along: number;
   readonly across: number;
   readonly roll: number;
-};
-
-/**
- * His deer behind his net, in his deer's pixels: the deer's side and the room about it on each side of
- * the frame; the net's side, and how far its middle lies right of and below the deer's, as shares of
- * the deer's side.
- */
-const DEER_IN_NET_OF = { deer: 128, room: 9, net: 0.8, x: -0.04, y: 0.17 };
-
-const DEER_IN_NET_SIDE = DEER_IN_NET_OF.deer + 2 * DEER_IN_NET_OF.room;
-
-/** His deer behind his net, the head showing over it, the deer's middle the frame's: the picture a trapping is told by. */
-export const DEER_IN_NET: Made = {
-  frame: 'deer-in-net',
-  width: DEER_IN_NET_SIDE,
-  height: DEER_IN_NET_SIDE,
-  paint: (context, paintingIn) => {
-    const { deer, net, x, y } = DEER_IN_NET_OF;
-    const middle = DEER_IN_NET_SIDE / 2;
-    const drawnAt = (
-      sheet: string,
-      painting: string,
-      at: number,
-      down: number,
-      side: number,
-    ): void => {
-      const from = paintingIn(sheet, painting);
-      context.drawImage(
-        from.canvas,
-        from.x,
-        from.y,
-        from.width,
-        from.height,
-        at - side / 2,
-        down - side / 2,
-        side,
-        side,
-      );
-    };
-    drawnAt(FEATURE_SHEET_KEY, featureIconOf('deer'), middle, middle, deer);
-    drawnAt(BUILDING_SHEET.key, NET, middle + x * deer, middle + y * deer, net * deer);
-  },
 };
 
 /** What an improvement's disc wears, by its frame in the features sheet, and how wide it stands, in the map's units. */
@@ -862,7 +943,7 @@ const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
     kind: 'feature',
     lies: {
       kind: 'painting',
-      painting: `${LOCATIONS}/corral00_cows.png`,
+      painting: CORRAL,
       alone: { size: 1.5, x: 0, y: 3 },
       beside: { size: 0.85, x: 10, y: 8 },
     },
@@ -873,7 +954,7 @@ const IMPROVEMENT_LOOKS: Readonly<Record<string, ImprovementLook>> = {
     width: 14,
     lies: {
       kind: 'painting',
-      painting: `${LOCATIONS}/clayPit01.png`,
+      painting: CLAY_PIT,
       alone: { size: 0.7, x: 0, y: 3 },
       beside: { size: 0.4, x: 10, y: 8 },
     },

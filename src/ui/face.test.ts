@@ -130,6 +130,16 @@ describe('a card’s art box', () => {
     });
     expect(artPictureOf(CATALOGUE, 'PH_Settle', art, undefined)).toBeUndefined();
   });
+
+  it('on a card whose play places an improvement holds that improvement, on its ground in the oval window', () => {
+    const art: CardArt = { ground: 'hills', holds: 'placed' };
+
+    expect(artPictureOf(CATALOGUE, 'PH_Mine', art, undefined)).toEqual({
+      window: 'oval',
+      ground: 'hills',
+      holds: { kind: 'improvement', improvement: 'PH_Mine' },
+    });
+  });
 });
 
 describe('a card named on a face', () => {

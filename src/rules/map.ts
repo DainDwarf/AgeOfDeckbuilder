@@ -513,7 +513,7 @@ export type Corner = { readonly x: number; readonly y: number };
 /** A river: the corners it runs through in order, one edge between each pair of them. */
 export type River = readonly Corner[];
 
-// Kept in the order his river masks name his edges under the quarter turn (`armOf` in `src/ui/map-rivers.ts`).
+// Kept in the order his river masks name his edges under the quarter turn (`armOf` in `src/ui/marks.ts`).
 /** The six arms of a tile's middle, in the order its faces turn: each corner stands one arm off it. */
 export const ARMS: readonly Corner[] = [
   { x: 1, y: -1 },

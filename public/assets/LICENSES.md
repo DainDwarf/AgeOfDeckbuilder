@@ -38,6 +38,12 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **From:** David Baumgart, <https://dgbaumgart.itch.io/>, version 1.0.2 of 11 October 2025, the files as released.
 - **Licence:** his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
 
+## Icons: Crafting, Tools, Foraging, Herbalism
+
+- **What:** David Baumgart's painted icons of crafting tools, crafted goods and what is foraged, 118 icons of 128 px, in `store/icons-crafting-tools-foraging-herbalism/`, his description beside them.
+- **From:** David Baumgart, <https://dgbaumgart.itch.io/>, bought on 2026-11-18, version 1.2.1 of 28 April 2024, the files as released.
+- **Licence:** his own terms, as his email of 2026-11-02 confirmed them for his packs: a free or commercial game may use them, modified and remixed at will; no training of an image model on them; never repackaged, sold or given away on their own. Credit to "David Baumgart" is asked, a link to <https://dgbaumgart.com> welcome. The files sit in the store, never in this repository.
+
 ## Nice Card Game Template 2
 
 - **What:** chicogames' card fronts, plain and decorated, card backs, name plates, discs and badges, in `store/nice-card-game-template-2/`, the pack's `License.txt` beside them.

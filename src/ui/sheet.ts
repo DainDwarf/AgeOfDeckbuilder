@@ -246,11 +246,11 @@ export function paintMade(
 }
 
 /**
- * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, their
- * own textures let go, then each tinted painting, then each frame made by code; a file that did not
- * load, and a painting its sheet does not hold, are refused.
+ * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, then
+ * each tinted painting, then each frame made by code; a file that did not load, and a painting its
+ * sheet does not hold, are refused.
  */
-export function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void {
+function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void {
   const { key, files, rasterised, tinted = [], made = [], side, rowGap = 0 } = drawn;
   const sheet = textures.createCanvas(key, side, side);
   if (sheet === null) throw new Error(`a texture stands under ${key} already`);
@@ -261,7 +261,6 @@ export function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet
     const { width, height } = textures.getFrame(file);
     const at = roomIn(sheet, file, width, height, rowGap);
     sheet.drawFrame(file, undefined, at.x, at.y, false);
-    textures.remove(file);
   }
 
   const paintingIn = paintingsIn(textures);
@@ -275,4 +274,20 @@ export function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet
 
   for (const one of made) paintMade(textures, drawn, sheet, one);
   sheet.refresh();
+}
+
+/**
+ * Each sheet drawn in turn, as `drawSheet` draws one, then the textures of the files they loaded let
+ * go: a file two sheets name is loaded once and drawn into both.
+ */
+export function drawSheets(
+  textures: Phaser.Textures.TextureManager,
+  sheets: readonly Sheet[],
+): void {
+  for (const sheet of sheets) drawSheet(textures, sheet);
+  const loaded = sheets.flatMap(({ files, rasterised }) => [
+    ...files,
+    ...(rasterised?.files ?? []),
+  ]);
+  for (const file of new Set(loaded)) textures.remove(file);
 }

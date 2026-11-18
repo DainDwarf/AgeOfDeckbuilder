@@ -53,6 +53,7 @@ import {
   featureIconOf,
   groundColourOf,
   improvementLookOf,
+  liesOf,
   paintingsOf,
   terrainColourOf,
   unitPaintingOf,
@@ -75,7 +76,6 @@ import {
 } from '../ui/text';
 import { layOutRun, type Reference, type ReferenceKind } from '../ui/text-run';
 import { CATALOGUE } from './catalogue';
-import { NOMADIC } from './nomadic';
 
 const AGES = Object.keys(CATALOGUE.ages);
 
@@ -182,10 +182,10 @@ test('every card of the catalogue has a name, and a text on its face read at the
   }
 });
 
-test('every card the Nomadic Age brings holds a painting in its art box under each city’s building, and under no city section for a card no city section holds; each names a ground, a unit, a building or a file the screen draws, and the art sheet paints it', () => {
+test('every card of the catalogue holds a painting in its art box under each city’s building, and under no city section for a card no city section holds; each names a ground, a unit, a building, an improvement or a file the screen draws, or nothing on its ground, and the art sheet paints it', () => {
   const sheet = artSheet(CATALOGUE);
   const made = new Set((sheet.made ?? []).map(({ frame }) => frame));
-  for (const id of Object.keys(NOMADIC.brings.cards ?? {})) {
+  for (const id of Object.keys(CATALOGUE.cards)) {
     for (const city of citiesUnder(id)) {
       const face = cardFaceAtStart(CATALOGUE, id, city);
       const picture = face.art;
@@ -200,8 +200,13 @@ test('every card the Nomadic Age brings holds a painting in its art box under ea
         case 'building':
           expect(() => buildingPaintingsOf(holds.building)).not.toThrow();
           break;
+        case 'improvement':
+          expect(() => liesOf(holds.improvement)).not.toThrow();
+          break;
         case 'icon':
           expect(sheet.files).toContain(holds.file);
+          break;
+        case 'nothing':
           break;
       }
       expect(made).toContain(artFrameOf(picture, frontWindowOf(face.front)));
