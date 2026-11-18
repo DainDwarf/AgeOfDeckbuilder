@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { type Catalogue, damageOf } from '../rules/catalogue';
 import { preparedAs } from '../rules/enemies';
-import { groundCost, movementCost, runsAlong, type TilesBeside } from '../rules/map';
-import { featureKind, improvementKind, terrainKind } from '../rules/map-kinds';
+import { movementCost, runsAlong, type TilesBeside } from '../rules/map';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import { unitShown } from '../rules/sight';
 import { type Chronicle, NO_REFUSAL } from '../rules/state';
@@ -19,7 +18,14 @@ import {
 import { CARD_WIDTH } from './card-frames';
 import { stopMotion } from './card-motion';
 import { addText, onHover, type Stratum, UI_FONT } from './design-space';
-import { buildingFace, type Face, inMovePoints, type UnitReading, unitFace } from './face';
+import {
+  buildingFace,
+  type Face,
+  inMovePoints,
+  movementCostRead,
+  type UnitReading,
+  unitFace,
+} from './face';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import type { Drawn, TileFace } from './map';
@@ -33,14 +39,13 @@ import {
   terrainMark,
 } from './map-marks';
 import { buildingName, featureName, improvementName, terrainName, text } from './text';
-import type { Reference } from './text-run';
 import type { Tooltip } from './tooltip';
 
-/** How wide a card of the infopanel's grey paper stands, and a thing named shown small. */
-export const PAPER_WIDTH = 130;
+/** How wide a card of the infopanel's grey paper stands. */
+const PAPER_WIDTH = 130;
 
 /** Every measure inside a card of grey paper is a multiple of `em`, so one width scales it whole. */
-export function paperMetricsOf(width: number): {
+function paperMetricsOf(width: number): {
   height: number;
   em: number;
   pad: number;
@@ -51,7 +56,7 @@ export function paperMetricsOf(width: number): {
 }
 
 /** How tall a card of grey paper stands at `PAPER_WIDTH`. */
-export const PAPER_HEIGHT = paperMetricsOf(PAPER_WIDTH).height;
+const PAPER_HEIGHT = paperMetricsOf(PAPER_WIDTH).height;
 
 /** The smallest type on a card of grey paper, as a share of its `em`; `addText` refuses less at `PAPER_WIDTH`. */
 const SMALLEST_TYPE = 0.66;
@@ -92,71 +97,8 @@ export type Card =
       readonly movementCost: number | undefined;
     };
 
-/**
- * What a card of grey paper is drawn from: the terrain's an inspection steps through, or a feature or
- * an improvement named alone.
- */
-type Drawing =
-  | Extract<Card, { readonly kind: 'terrain' }>
-  | { readonly kind: 'feature' | 'improvement'; readonly rows: readonly Row[] };
-
-/** A thing a name names that is neither a card, a building nor a unit kind, each of which a face shows. */
-export type Thing = Exclude<Reference, { readonly kind: 'card' | 'building' | 'player' | 'enemy' }>;
-
-/** The card the infopanel reads a thing named by: its one row. */
-function drawingOf(catalogue: Catalogue, thing: Thing): Drawing {
-  switch (thing.kind) {
-    case 'terrain':
-      return {
-        kind: 'terrain',
-        rows: [
-          { kind: 'terrain', terrain: thing.id, yields: terrainKind(catalogue, thing.id).yields },
-        ],
-        movementCost: costRead((embarked) => groundCost(catalogue, thing.id, embarked)),
-      };
-    case 'feature':
-      return {
-        kind: 'feature',
-        rows: [
-          { kind: 'feature', feature: thing.id, yields: featureKind(catalogue, thing.id).yields },
-        ],
-      };
-    case 'improvement':
-      return {
-        kind: 'improvement',
-        rows: [
-          {
-            kind: 'improvement',
-            improvement: thing.id,
-            yields: improvementKind(catalogue, thing.id).yields,
-          },
-        ],
-      };
-  }
-}
-
-/**
- * What the terrain card reads in its corner, out of what entering costs a unit embarked or ashore:
- * the cost ashore, or, where none is, the cost embarked; nothing where nothing crosses it.
- */
-function costRead(cost: (embarked: boolean) => number | undefined): number | undefined {
-  return cost(false) ?? cost(true);
-}
-
-/**
- * A thing named, drawn as the card the infopanel reads it by at `width`, about its own bottom centre
- * as a card face is, and carrying what it stands in its data as `reference`. Its rows raise nothing.
- */
-export function createThingCard(
-  scene: Phaser.Scene,
-  catalogue: Catalogue,
-  thing: Thing,
-  width: number,
-): Phaser.GameObjects.Container {
-  const paper = buildPaper(scene, catalogue, drawingOf(catalogue, thing), width, undefined);
-  paper.root.setPosition(-width / 2, -paperMetricsOf(width).height);
-  return scene.add.container(0, 0, [paper.root]).setData('reference', thing);
-}
+/** The terrain card an inspection steps through, which stands on grey paper. */
+type TerrainCard = Extract<Card, { readonly kind: 'terrain' }>;
 
 /**
  * The row a part of a tile's yield is on the terrain card, and whether it stands ahead of the river's
@@ -212,7 +154,7 @@ export function cardsOf(
   cards.push({
     kind: 'terrain',
     rows: [...rows('ground'), ...river, ...rows('beside')],
-    movementCost: costRead((embarked) => movementCost(catalogue, tile, embarked)),
+    movementCost: movementCostRead((embarked) => movementCost(catalogue, tile, embarked)),
   });
 
   return cards;
@@ -493,14 +435,14 @@ export function createInfoPanel(
 
 /**
  * A card of grey paper: its head over its rows, laid out in the card's own type and spacing at
- * `width`, from its top-left corner; a row raises a bubble only where its reactions are handed.
+ * `width`, from its top-left corner, each row raising its bubble through the reactions.
  */
 function buildPaper(
   scene: Phaser.Scene,
   catalogue: Catalogue,
-  card: Drawing,
+  card: TerrainCard,
   width: number,
-  reactions: RowReactions | undefined,
+  reactions: RowReactions,
 ): Paper {
   const { em, pad } = paperMetricsOf(width);
   const style = stylesOf(em);
@@ -528,14 +470,11 @@ function buildPaper(
   contents.push(rule);
   const hovers: Phaser.GameObjects.Zone[] = [];
 
-  const movement = movementOf(card);
-  if (movement !== undefined) {
-    contents.push(
-      addText(scene, right, middle, movement, style.label)
-        .setOrigin(1, 0.5)
-        .setName('panel-movement'),
-    );
-  }
+  contents.push(
+    addText(scene, right, middle, movementOf(card), style.label)
+      .setOrigin(1, 0.5)
+      .setName('panel-movement'),
+  );
 
   /** The box a resource raises its bubble from, named so a spec finds the rows in the order drawn. */
   const listen = (
@@ -545,7 +484,6 @@ function buildPaper(
     down: number,
     resource: Resource,
   ): void => {
-    if (reactions === undefined) return;
     const hover = scene.add
       .zone(x, rowTop, across, down)
       .setOrigin(0, 0)
@@ -646,20 +584,11 @@ function buildPaper(
   return { root: scene.add.container(0, 0, contents), hovers };
 }
 
-/**
- * What the card reads in the corner of its head: what entering the tile costs on the terrain card, a
- * dash where nothing crosses it, and nothing at all on any other card.
- */
-function movementOf(card: Drawing): string | undefined {
-  switch (card.kind) {
-    case 'feature':
-    case 'improvement':
-      return undefined;
-    case 'terrain':
-      return card.movementCost === undefined
-        ? text('panel.no-movement')
-        : text('panel.movement', { cost: inMovePoints(card.movementCost) });
-  }
+/** What the terrain card reads in the corner of its head: what entering the tile costs, a dash where nothing crosses it. */
+function movementOf(card: TerrainCard): string {
+  return card.movementCost === undefined
+    ? text('panel.no-movement')
+    : text('panel.movement', { cost: inMovePoints(card.movementCost) });
 }
 
 function markOf(scene: Phaser.Scene, catalogue: Catalogue, row: Row): Mark {

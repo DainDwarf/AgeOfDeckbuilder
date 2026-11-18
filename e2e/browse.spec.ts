@@ -20,7 +20,6 @@ import {
   inside,
   kindLabelOnScreen,
   namedIn,
-  namedOn,
   nameOnScreen,
   offsetOf,
   onScreen,
@@ -37,6 +36,7 @@ import {
   selected,
   settledOn,
   standing,
+  standsFor,
   tappedDown,
   titleOf,
   tooltipText,
@@ -396,10 +396,10 @@ test('on the discard pile’s top card a rest on a name raises the named thing s
   const face = 'discard-pile-top';
   const name = await nameOnScreen(page, face);
   expect(await cursorAt(page, name)).toBe(HAND);
-  await expect.poll(() => namedOn(page, 'small-card-0')).toEqual(named);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(named));
 
   await page.mouse.click(name.x, name.y, { button: 'right' });
-  await expect.poll(() => namedOn(page, 'inspection')).toEqual(named);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(standsFor(named));
   await rested(page);
   expect(await standing(page, 'browse')).toBe(false);
   await page.keyboard.press('Escape');

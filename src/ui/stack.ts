@@ -20,8 +20,7 @@ import {
   onHover,
   type Stratum,
 } from './design-space';
-import { buildingFace, type Face, freshUnitFace, namedCardFace } from './face';
-import { createThingCard, paperMetricsOf, type Thing } from './infopanel';
+import { type Face, namedFace } from './face';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf } from './small-card';
 import { createTooltip } from './tooltip';
@@ -33,28 +32,6 @@ const BAND = 14;
 
 /** The most cards shown large that stand at once. */
 const HOLDS = 12;
-
-/** One card shown large: a face, or a thing a name names. */
-type Inspected =
-  | { readonly shows: 'face'; readonly face: Face }
-  | { readonly shows: 'thing'; readonly thing: Thing };
-
-/** What a name names, as it stands large: a card, a building and a unit kind as their faces. */
-function inspectedOf(catalogue: Catalogue, { reference, reading }: Name): Inspected {
-  switch (reference.kind) {
-    case 'card':
-      return { shows: 'face', face: namedCardFace(catalogue, reference.id, reading) };
-    case 'building':
-      return { shows: 'face', face: buildingFace(catalogue, reference.id) };
-    case 'player':
-    case 'enemy':
-      return { shows: 'face', face: freshUnitFace(catalogue, reference.id, reference.kind) };
-    case 'terrain':
-    case 'feature':
-    case 'improvement':
-      return { shows: 'thing', thing: reference };
-  }
-}
 
 type Stack = {
   /** Whether a card stands large. */
@@ -74,11 +51,11 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
   const small = createSmallCards(scene, scene.strata.smallCard, catalogue, footBubble, (name) => {
     named(name);
   });
-  let cards: readonly Inspected[] = [];
+  let cards: readonly Face[] = [];
   let drawn: Phaser.GameObjects.GameObject[] = [];
 
   /** The stack centred on its whole extent, each card a band up and to the left of the one over it. */
-  const lay = (next: readonly Inspected[]): void => {
+  const lay = (next: readonly Face[]): void => {
     small.down();
     for (const object of drawn) object.destroy();
     cards = next;
@@ -86,47 +63,31 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
     const newest = cards.length - 1;
     const left = (DESIGN_WIDTH - WIDTH - newest * BAND) / 2;
     const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
-    const drawnOf = (
-      inspected: Inspected,
-      index: number,
-    ): { readonly root: Phaser.GameObjects.Container; readonly height: number } => {
-      switch (inspected.shows) {
-        case 'face': {
-          const face: CardFace = createCardFace(scene, inspected.face, NO_REFUSAL, {
-            width: WIDTH,
-            names:
-              index === newest
-                ? {
-                    over: (name) => {
-                      small.over(name === undefined ? undefined : raiserOf(face, name));
-                    },
-                    inspect: (name) => {
-                      named(name);
-                    },
-                    footOver: (label) => {
-                      footBubble.over(face, label);
-                    },
-                  }
-                : undefined,
-          });
-          return { root: face.root, height };
-        }
-        case 'thing':
-          return {
-            root: createThingCard(scene, catalogue, inspected.thing, WIDTH),
-            height: paperMetricsOf(WIDTH).height,
-          };
-      }
-    };
-    drawn = cards.map((inspected, index) => {
-      const card = drawnOf(inspected, index);
-      const root = card.root
+    drawn = cards.map((shown, index) => {
+      const face: CardFace = createCardFace(scene, shown, NO_REFUSAL, {
+        width: WIDTH,
+        names:
+          index === newest
+            ? {
+                over: (name) => {
+                  small.over(name === undefined ? undefined : raiserOf(face, name));
+                },
+                inspect: (name) => {
+                  named(name);
+                },
+                footOver: (label) => {
+                  footBubble.over(face, label);
+                },
+              }
+            : undefined,
+      });
+      const root = face.root
         .setName(index === newest ? 'inspection' : `inspection-${index}`)
         .setPosition(left + index * BAND + WIDTH / 2, top + index * BAND + height)
         // The card is interactive so that both presses on it reach nothing beneath, the scrim
         // included; only its names react to one.
         .setInteractive({
-          hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -card.height, WIDTH, card.height),
+          hitArea: new Phaser.Geom.Rectangle(-WIDTH / 2, -height, WIDTH, height),
           hitAreaCallback: Phaser.Geom.Rectangle.Contains,
         });
       scene.strata.large.layer.add(root);
@@ -134,8 +95,8 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
     });
   };
 
-  const named = (name: Name): void => {
-    if (cards.length < HOLDS) lay([...cards, inspectedOf(catalogue, name)]);
+  const named = ({ reference, reading }: Name): void => {
+    if (cards.length < HOLDS) lay([...cards, namedFace(catalogue, reference, reading)]);
   };
 
   return {
@@ -143,7 +104,7 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
       return cards.length > 0;
     },
     show(face: Face): void {
-      lay([{ shows: 'face', face }]);
+      lay([face]);
     },
     named,
     takeDownNewest(): boolean {

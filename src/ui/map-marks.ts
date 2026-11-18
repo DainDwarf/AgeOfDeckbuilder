@@ -52,7 +52,8 @@ import {
   featureDressOf,
   featureIconOf,
   GLYPH_SHEET,
-  HERD_COPIES,
+  HERD_WIDTH,
+  herdOn,
   ICON_WIDTH,
   improvementLookOf,
   latticeAt,
@@ -120,13 +121,6 @@ const CITY_BADGE_INKS: Record<CityFaction, number> = {
  */
 const UNIT_DROP = 8;
 const CANOE_DROP = 8;
-
-/** How far above a tile's middle the row of its feature and its improvements stands. */
-export const ROW_RISE = 15;
-
-/** How wide a copy of a herd's animal is, and how far across and down from the middle each may lie. */
-const HERD_WIDTH = 8;
-const HERD_SPREAD = { x: 16, y: 5 };
 
 /**
  * A tile's yield glyphs: a side of a glyph's square, how many of them a row holds, and how far the
@@ -613,18 +607,16 @@ export function lyingOf(feature: FeatureId, coord: TileCoords): Lying[] {
   const dress = featureDressOf(feature);
   switch (dress.kind) {
     case 'herd':
-      return Array.from({ length: HERD_COPIES }, (_, copy) => {
+      return herdOn(coord).map((laid, copy) => {
         const name = `herd-${key}-${copy}`;
-        const across = pickOf(q * 7 + copy, r * 13 + 3 * copy, 1000) / 1000;
-        const down = pickOf(r * 11 + 5 * copy, q * 3 + copy, 1000) / 1000;
         return {
           name,
           paint: (image, dark) =>
             asDarkened(image, dark)
               .setTexture(FEATURE_SHEET_KEY, featureIconOf(feature))
               .setDisplaySize(HERD_WIDTH, HERD_WIDTH)
-              .setFlipX(pickOf(q + copy, r - copy, 2) === 1)
-              .setPosition(x + (across * 2 - 1) * HERD_SPREAD.x, y + (down * 2 - 1) * HERD_SPREAD.y)
+              .setFlipX(laid.flipped)
+              .setPosition(x + laid.x, y + laid.y)
               .setName(name),
         };
       });

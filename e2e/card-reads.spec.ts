@@ -20,6 +20,7 @@ import {
 import { text } from '../src/ui/text';
 import {
   campaignWith,
+  cardOnFace,
   firstSeed,
   idsOf,
   liftedName,
@@ -29,9 +30,9 @@ import {
   openSaved,
   reading,
   readings,
-  referenceOnFace,
   type StatShown,
   settledOn,
+  standsFor,
   tooltipLines,
   tooltipUp,
   WORKER,
@@ -71,7 +72,7 @@ test('a card that builds a building reads at the foot of its window the terrains
   expect(placing.over).toBeUndefined();
   expect(building.features).toBeUndefined();
   expect(building.river).toBeUndefined();
-  const marks = building.terrains.map((id) => ({ kind: 'terrain', id }));
+  const marks = building.terrains.map((id) => ({ kind: 'terrain' as const, id }));
   const { chronicle, index } = firstSeed('opens turn 1 with the megalith in hand', (seed) => {
     const opened = settledOn(seed, [], CAMPAIGN);
     const at = idsOf(opened.hand).indexOf(MEGALITH);
@@ -94,7 +95,7 @@ test('a card that builds a building reads at the foot of its window the terrains
   await page.mouse.move(card.x, card.y);
   const mark = await liftedName(page, lying, face, last);
   await page.mouse.move(mark.x, mark.y, { steps: 5 });
-  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(marks[last]);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(marks[last]));
 
   expect(problems).toEqual([]);
 });

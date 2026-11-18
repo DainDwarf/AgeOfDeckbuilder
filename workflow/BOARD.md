@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Every name in a text as a card** — a terrain or a feature named or marked raises a face of its own (the terrain on a loam-brown front, the feature on the brown decorated front), an improvement named raises the face of the card placing it, no name raises grey paper, the infopanel's terrain card keeps it, and `e2e/reference.spec.ts` proves it. Doc-impact: `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`, `docs/GLOSSARY.md`. [board/every-name-as-card.md](board/every-name-as-card.md)
 - **The terrain on the infopanel as a card** — the infopanel's terrain card becomes one card face read off the tile, summing up everything on it outside the building and the unit: its terrain, its features, its improvements and the river along its edges.
 - **A named unit kind's face, proven** — no spec covers a unit kind named in a text (a raid's or the siege's "[enemy:…]", the Stone goal's "[player:scout]") shown as its unit's face; one needs a fixture that reaches such a text.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.

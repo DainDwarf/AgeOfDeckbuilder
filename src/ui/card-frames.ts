@@ -1,5 +1,5 @@
-import { CARD_KINDS, type CardKind } from '../rules/cards';
-import type { BadgeStat, CardFront, FrontWindow } from './face';
+import { CARD_KINDS } from '../rules/cards';
+import type { BadgeStat, CardFront, DecoratedColour, FrontColour, FrontWindow } from './face';
 import { type KindColour, LOOK } from './look';
 import { blankCanvas, type InSheet, type Made, type PaintingIn, type Sheet } from './sheet';
 
@@ -147,13 +147,20 @@ export const HIGHEST_RISE = Math.max(
 /** How far a front's body corners are rounded. */
 export const BODY_RADIUS = 33;
 
+/** Every colour a plain front is turned to. */
+const FRONT_COLOURS: readonly FrontColour[] = [...CARD_KINDS, 'terrain'];
+
+/** Every colour the decorated front is turned to. */
+const DECORATED_COLOURS: readonly DecoratedColour[] = ['settle', 'terrain'];
+
 /**
- * The windows a plain front of the kind is drawn with: a unit card's play always places its unit, and
- * a hazard's and a challenge's never place a thing.
+ * The windows a plain front of the colour is drawn with: a unit card's play always places its unit, a
+ * hazard's and a challenge's never place a thing, and a terrain's face holds its tile.
  */
-function windowsOf(kind: CardKind): readonly FrontWindow[] {
-  switch (kind) {
+function windowsOf(colour: FrontColour): readonly FrontWindow[] {
+  switch (colour) {
     case 'unit':
+    case 'terrain':
       return ['oval'];
     case 'hazard':
     case 'challenge':
@@ -179,11 +186,15 @@ export function frontOf(
     case 'plain':
       return {
         ...FRONTS[front.window],
-        frame: `front-${front.kind}-${front.window}`,
+        frame: `front-${front.colour}-${front.window}`,
         shadow: shadowFrameOf(front.window),
       };
     case 'decorated':
-      return { ...DECORATED, frame: 'front-decorated', shadow: shadowFrameOf('oval') };
+      return {
+        ...DECORATED,
+        frame: `front-decorated-${front.colour}`,
+        shadow: shadowFrameOf('oval'),
+      };
   }
 }
 
@@ -288,14 +299,9 @@ function hslAt(pixels: Uint8ClampedArray, at: number): [number, number, number] 
   return toHsl(pixels[4 * at] / 0xff, pixels[4 * at + 1] / 0xff, pixels[4 * at + 2] / 0xff);
 }
 
-/** The colour a front is turned to: its kind's, and the settle cards' on the decorated front. */
+/** The colour a front is turned to. */
 function colourOf(front: CardFront): KindColour {
-  switch (front.front) {
-    case 'plain':
-      return LOOK.cardKind[front.kind];
-    case 'decorated':
-      return LOOK.cardKind.settle;
-  }
+  return LOOK.cardFront[front.colour];
 }
 
 /** The colour a window holding no painting shows: its front's hue, pale. */
@@ -487,9 +493,9 @@ function paintChanged(
 }
 
 /**
- * Every plain front a card can wear, its paper turned to its kind's colour off the pack's file; and
- * the decorated front, its body turned to the settle cards' colour as the plain oval paper is, its
- * lightness brought to where that paper's stands; each with its glass thinned.
+ * Every plain front a face can wear, its paper turned to its colour off the pack's file; and the
+ * decorated front in each of its colours, its body turned to that colour as the plain oval paper is,
+ * its lightness brought to where that paper's stands; each with its glass thinned.
  */
 function frontsMade(): Made[] {
   const papers = new Map<string, Uint8Array>();
@@ -504,9 +510,9 @@ function frontsMade(): Made[] {
     glasses.set(front.file, glass);
     return glass;
   };
-  const plain = CARD_KINDS.flatMap((kind) =>
-    windowsOf(kind).map((window): Made => {
-      const front: CardFront = { front: 'plain', kind, window };
+  const plain = FRONT_COLOURS.flatMap((colour) =>
+    windowsOf(colour).map((window): Made => {
+      const front: CardFront = { front: 'plain', colour, window };
       const shape = frontOf(front);
       return {
         frame: shape.frame,
@@ -520,12 +526,11 @@ function frontsMade(): Made[] {
       };
     }),
   );
-  const decorated: CardFront = { front: 'decorated' };
-  const shape = frontOf(decorated);
   const oval = FRONTS.oval;
-  return [
-    ...plain,
-    {
+  const decorated = DECORATED_COLOURS.map((colour): Made => {
+    const front: CardFront = { front: 'decorated', colour };
+    const shape = frontOf(front);
+    return {
       frame: shape.frame,
       width: shape.width,
       height: shape.height,
@@ -540,15 +545,16 @@ function frontsMade(): Made[] {
         paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) => {
           const body = bodyOf(pixels);
           const { lightness } = meanOf(pixels, body);
-          turned(pixels, body, colourOf(decorated), (_saturation, own) => [
+          turned(pixels, body, colourOf(front), (_saturation, own) => [
             paper.saturation,
             (own * paper.lightness) / lightness,
           ]);
           thinned(pixels, glassIn(pixels, shape));
         });
       },
-    },
-  ];
+    };
+  });
+  return [...plain, ...decorated];
 }
 
 /**

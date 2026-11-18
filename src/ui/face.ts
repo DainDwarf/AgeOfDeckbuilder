@@ -17,25 +17,41 @@ import {
   unitKind,
 } from '../rules/catalogue';
 import type { PreparedAs } from '../rules/enemies';
-import { MOVE_POINT, type Terrain } from '../rules/map';
+import {
+  type FeatureId,
+  groundCost,
+  type ImprovementId,
+  MOVE_POINT,
+  type Terrain,
+} from '../rules/map';
 import {
   type BuildingKind,
   buildingKind,
+  featureKind,
   improvementKind,
   type LayerKind,
+  terrainKind,
 } from '../rules/map-kinds';
 import { RESOURCES, type Resource, type Resources } from '../rules/resources';
 import type { CardId, Cost, MadeCard } from '../rules/state';
 import type { Faction, Unit } from '../rules/units';
 import { type ArtThing, buildingGroundOf, type CardArt, cardArtOf, unitGroundOf } from './art-box';
-import { buildingName, cardName, cardRules, text, unitName } from './text';
+import {
+  buildingName,
+  cardName,
+  cardRules,
+  featureName,
+  terrainName,
+  text,
+  unitName,
+} from './text';
 import type { Reference } from './text-run';
 
 /**
  * What the label at a face's foot reads, and what its tooltip says: an action's names the worker, the
  * one unit content plays an action through.
  */
-export type FaceKind = Exclude<CardKind, 'action'> | 'worker-action';
+export type FaceKind = Exclude<CardKind, 'action'> | 'worker-action' | 'terrain' | 'feature';
 
 /** What the label at a face's foot reads. */
 export function kindLabel(kind: FaceKind): string {
@@ -67,19 +83,26 @@ export function labelledKind(card: Card): FaceKind {
 /** The two windows a plain front is drawn with. */
 export type FrontWindow = 'arched' | 'oval';
 
-/** The front a card wears: a plain one in its kind's colour through one of its windows, or the decorated one. */
+/** The colour a front is turned to: a card kind's, or a terrain's face's. */
+export type FrontColour = CardKind | 'terrain';
+
+/** The colours the decorated front is turned to: the settle cards', and a terrain's face's. */
+export type DecoratedColour = Extract<FrontColour, 'settle' | 'terrain'>;
+
+/** The front a face wears: a plain one in its colour through one of its windows, or the decorated one in its colour. */
 export type CardFront =
-  | { readonly front: 'plain'; readonly kind: CardKind; readonly window: FrontWindow }
-  | { readonly front: 'decorated' };
+  | { readonly front: 'plain'; readonly colour: FrontColour; readonly window: FrontWindow }
+  | { readonly front: 'decorated'; readonly colour: DecoratedColour };
 
 /**
- * A card's front: the decorated one on the card whose play places the city, else the plain one in its
- * kind's colour, the oval window on a card whose play places a thing and the arched on the rest.
+ * A card's front: the decorated one in the settle cards' colour on the card whose play places the
+ * city, else the plain one in its kind's colour, the oval window on a card whose play places a thing
+ * and the arched on the rest.
  */
 export function cardFront(card: Card): CardFront {
   const placing = placingOf(card);
-  if (placing?.thing === 'city') return { front: 'decorated' };
-  return { front: 'plain', kind: card.kind, window: placing === undefined ? 'arched' : 'oval' };
+  if (placing?.thing === 'city') return { front: 'decorated', colour: 'settle' };
+  return { front: 'plain', colour: card.kind, window: placing === undefined ? 'arched' : 'oval' };
 }
 
 /** The window a front is drawn with: the decorated front's is the plain oval one's. */
@@ -188,9 +211,25 @@ export function statReading(stat: CardStat, amount: number): string {
   }
 }
 
-/** What the tooltip of a stat a unit's card reads says: the stat's name, over its sentence. */
-export function statTooltip(stat: CardStat): { readonly name: string; readonly sentence: string } {
+/**
+ * What the tooltip of a stat a unit's card reads says, or of the movement cost a terrain's face
+ * reads: its name, over its sentence.
+ */
+export function statTooltip(stat: CardStat | 'movement-cost'): {
+  readonly name: string;
+  readonly sentence: string;
+} {
   return { name: text(`label.${stat}`), sentence: text(`tooltip.${stat}`) };
+}
+
+/**
+ * What entering a terrain is read to cost, out of what entering costs a unit embarked or ashore: the
+ * cost ashore, or, where none is, the cost embarked; nothing where nothing crosses it.
+ */
+export function movementCostRead(
+  cost: (embarked: boolean) => number | undefined,
+): number | undefined {
+  return cost(false) ?? cost(true);
 }
 
 /**
@@ -210,8 +249,14 @@ export type GoesOn =
   | { readonly kind: 'river' };
 
 /**
+ * What the disc at a face's foot's right corner reads where no influence stands there: a symbol's
+ * glyph beside its reading.
+ */
+export type FootDisc = { readonly symbol: 'range' | 'move'; readonly reading: string };
+
+/**
  * What a face reads; `id` is what it stands, for whoever reads that back off the object it is drawn
- * on, and an influence or a range of nought is none.
+ * on, and an influence of nought is none.
  */
 export type Face = {
   readonly id: string;
@@ -227,7 +272,8 @@ export type Face = {
   /** One resource to each point that thing gives at income, and to each it takes as its upkeep. */
   readonly gives: readonly Resource[];
   readonly takes: readonly Resource[];
-  readonly range: number;
+  /** The range a building gives over, or what entering a terrain costs; nothing on any other face. */
+  readonly footDisc: FootDisc | undefined;
   /**
    * What each stat reads of the unit the card places, its kind's, or of the unit the face reads; and
    * nothing on a face reading no unit.
@@ -282,11 +328,11 @@ function goesOnOf({ terrains, features, river }: LayerKind, over: string | undef
 }
 
 /** What a face reads of the thing its card places on the ground, and the text that leads its own. */
-type PlacedReading = Pick<Face, 'goesOn' | 'gives' | 'takes' | 'range'> & {
+type PlacedReading = Pick<Face, 'goesOn' | 'gives' | 'takes' | 'footDisc'> & {
   readonly leads?: string;
 };
 
-const NOTHING_PLACED: PlacedReading = { goesOn: [], gives: [], takes: [], range: 0 };
+const NOTHING_PLACED: PlacedReading = { goesOn: [], gives: [], takes: [], footDisc: undefined };
 
 /**
  * What a card's face reads of the thing it places on the ground: what it goes on, and what it gives
@@ -313,7 +359,7 @@ function thingReading({
   const goesOn = goesOnOf(kind, over);
   const takes = onePerPoint(kind.upkeep ?? {});
   if (kind.givesBeside === undefined) {
-    return { goesOn, gives: onePerPoint(kind.yields), takes, range: 0 };
+    return { goesOn, gives: onePerPoint(kind.yields), takes, footDisc: undefined };
   }
   const values = {
     gives: numbersRun('gives', onePerPoint(kind.givesBeside.yields)),
@@ -323,7 +369,13 @@ function thingReading({
     takes.length === 0
       ? text('face.in-range', values)
       : text('face.in-range-taking', { ...values, takes: numbersRun('takes', takes) });
-  return { goesOn, gives: [], takes: [], range: BESIDE_RANGE, leads };
+  return {
+    goesOn,
+    gives: [],
+    takes: [],
+    footDisc: { symbol: 'range', reading: String(BESIDE_RANGE) },
+    leads,
+  };
 }
 
 /** The stats a card reads of the unit it places, its kind's, and nothing for a card placing none. */
@@ -392,22 +444,35 @@ export type BuildingFacing =
 type PlacedBy = { readonly card: CardId; readonly city: string | undefined };
 
 /**
+ * The one card whose play `places` holds of, and nothing where none does; a thing two cards place is
+ * refused, `thing` naming it.
+ */
+function placedByOne(
+  catalogue: Catalogue,
+  thing: string,
+  places: (placing: Placing, card: Card) => boolean,
+): CardId | undefined {
+  const placing = Object.entries(catalogue.cards).flatMap(([id, card]) => {
+    const placed = placingOf(card);
+    return placed !== undefined && places(placed, card) ? [id] : [];
+  });
+  if (placing.length > 1) throw new Error(`${thing} is placed by both ${placing.join(' and ')}`);
+  return placing[0];
+}
+
+/**
  * What the building's face is; a building two cards place is refused, and so is one no card places
  * that no age holds as its camp, a site or its neutral's city.
  */
 export function buildingFacing(catalogue: Catalogue, building: string): BuildingFacing {
   const cities = citySectionBuildings(catalogue);
-  const placing = Object.entries(catalogue.cards).flatMap(([card, content]): PlacedBy[] => {
-    const places = placingOf(content);
-    if (places === undefined || !placesBuilding(places, building, cities)) return [];
-    return [{ card, city: places.thing === 'city' ? building : undefined }];
-  });
-  if (placing.length > 1) {
-    const cards = placing.map(({ card }) => card).join(' and ');
-    throw new Error(`the building ${building} is placed by both ${cards}`);
+  const card = placedByOne(catalogue, `the building ${building}`, (places) =>
+    placesBuilding(places, building, cities),
+  );
+  if (card !== undefined) {
+    const city = placingOf(cardOf(catalogue, card))?.thing === 'city' ? building : undefined;
+    return { wears: 'card', card, city };
   }
-  const [placed] = placing;
-  if (placed !== undefined) return { wears: 'card', ...placed };
   for (const age of Object.keys(catalogue.ages)) {
     const capture = captureOf(catalogue, age, building);
     if (capture !== undefined) return { wears: 'own', captured: capture.takes };
@@ -448,27 +513,102 @@ export function buildingFace(catalogue: Catalogue, building: string): Face {
   }
 }
 
-/** The face of its own a building no card places wears, what it is in its age's content. */
-function ownFace(catalogue: Catalogue, building: string, captured: Captured): Face {
-  const { leads, ...placed } = thingReading({ kind: buildingKind(catalogue, building) });
-  const ground = buildingGroundOf(building);
+/**
+ * A face of its own, of a thing no card places: what it is, its front, its text and its picture, and
+ * what it reads of the thing on the ground, no cost, no influence and no stats.
+ */
+function ownFaceOf(
+  own: Pick<Face, 'id' | 'name' | 'kind' | 'front' | 'rules' | 'art'>,
+  placed: Omit<PlacedReading, 'leads'> = NOTHING_PLACED,
+): Face {
   return {
-    id: building,
-    name: buildingName(building),
-    kind: 'building',
-    front: { front: 'plain', kind: 'building', window: 'oval' },
-    rules: ledBy(leads, text(`face.${captured}`)),
+    ...own,
     costs: [],
     influence: 0,
     playedByNothing: false,
     ...placed,
     stats: undefined,
-    art:
-      ground === undefined
-        ? undefined
-        : { window: 'oval', ground, holds: { kind: 'building', building } },
     unit: undefined,
   };
+}
+
+/** The face of its own a building no card places wears, what it is in its age's content. */
+function ownFace(catalogue: Catalogue, building: string, captured: Captured): Face {
+  const { leads, ...placed } = thingReading({ kind: buildingKind(catalogue, building) });
+  const ground = buildingGroundOf(building);
+  return ownFaceOf(
+    {
+      id: building,
+      name: buildingName(building),
+      kind: 'building',
+      front: { front: 'plain', colour: 'building', window: 'oval' },
+      rules: ledBy(leads, text(`face.${captured}`)),
+      art:
+        ground === undefined
+          ? undefined
+          : { window: 'oval', ground, holds: { kind: 'building', building } },
+    },
+    placed,
+  );
+}
+
+/** The face a terrain wears, reading a bare tile of it: no feature, improvement or river adds to it. */
+export function terrainFace(catalogue: Catalogue, terrain: Terrain): Face {
+  const cost = movementCostRead((embarked) => groundCost(catalogue, terrain, embarked));
+  return ownFaceOf(
+    {
+      id: terrain,
+      name: terrainName(terrain),
+      kind: 'terrain',
+      front: { front: 'plain', colour: 'terrain', window: 'oval' },
+      rules: cost === undefined ? text('face.impassable') : '',
+      art: { window: 'oval', ground: terrain, holds: { kind: 'tile', feature: undefined } },
+    },
+    {
+      goesOn: [],
+      gives: onePerPoint(terrainKind(catalogue, terrain).yields),
+      takes: [],
+      footDisc: {
+        symbol: 'move',
+        reading: cost === undefined ? text('face.no-movement-cost') : inMovePoints(cost),
+      },
+    },
+  );
+}
+
+/** The face a feature wears, its window holding its terrain's tile carrying it. */
+export function featureFace(catalogue: Catalogue, feature: FeatureId): Face {
+  const { terrain, yields } = featureKind(catalogue, feature);
+  return ownFaceOf(
+    {
+      id: feature,
+      name: featureName(feature),
+      kind: 'feature',
+      front: { front: 'decorated', colour: 'terrain' },
+      rules: '',
+      art: { window: 'oval', ground: terrain, holds: { kind: 'tile', feature } },
+    },
+    { goesOn: [], gives: onePerPoint(yields), takes: [], footDisc: undefined },
+  );
+}
+
+/**
+ * The card whose play places the improvement; an improvement no card places is refused, and so is one
+ * two cards place.
+ */
+export function improvementFacing(catalogue: Catalogue, improvement: ImprovementId): CardId {
+  const card = placedByOne(
+    catalogue,
+    `the improvement ${improvement}`,
+    (places) => places.thing === 'improvement' && places.improvement === improvement,
+  );
+  if (card === undefined) throw new Error(`no card places the improvement ${improvement}`);
+  return card;
+}
+
+/** The face an improvement wears: the face of the card whose play places it, as its content makes it. */
+export function improvementFace(catalogue: Catalogue, improvement: ImprovementId): Face {
+  return cardFaceAtStart(catalogue, improvementFacing(catalogue, improvement), undefined);
 }
 
 /** What a unit kind's face is: the face of the one unit card whose play places it, or its own. */
@@ -481,15 +621,11 @@ export type UnitFacing =
  * counting for nothing; a kind two unit cards place is refused.
  */
 export function unitFacing(catalogue: Catalogue, kind: string): UnitFacing {
-  const placing = Object.entries(catalogue.cards).flatMap(([card, content]) => {
-    if (content.kind !== 'unit') return [];
-    const places = placingOf(content);
-    return places?.thing === 'unit' && places.unit === kind ? [card] : [];
-  });
-  if (placing.length > 1) {
-    throw new Error(`the unit kind ${kind} is placed by both ${placing.join(' and ')}`);
-  }
-  const [card] = placing;
+  const card = placedByOne(
+    catalogue,
+    `the unit kind ${kind}`,
+    (places, content) => content.kind === 'unit' && places.thing === 'unit' && places.unit === kind,
+  );
   return card === undefined ? { wears: 'own' } : { wears: 'card', card };
 }
 
@@ -573,20 +709,14 @@ function unitKindFace(catalogue: Catalogue, kind: string): Face {
 function ownUnitFace(catalogue: Catalogue, kind: string): Face {
   const bonus = bonusOf(catalogue, unitKind(catalogue, kind));
   const ground = unitGroundOf(kind);
-  return {
+  return ownFaceOf({
     id: kind,
     name: unitName(kind),
     kind: 'unit',
-    front: { front: 'plain', kind: 'unit', window: 'oval' },
+    front: { front: 'plain', colour: 'unit', window: 'oval' },
     rules: bonus > 0 ? text('face.bonus', { count: bonus }) : '',
-    costs: [],
-    influence: 0,
-    playedByNothing: false,
-    ...NOTHING_PLACED,
-    stats: undefined,
     art: ground === undefined ? undefined : { window: 'oval', ground, holds: { kind: 'nothing' } },
-    unit: undefined,
-  };
+  });
 }
 
 /**
@@ -632,4 +762,31 @@ export function namedCardMade(catalogue: Catalogue, id: CardId, reading: AnswerR
  */
 export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerReading): Face {
   return cardFace(catalogue, namedCardMade(catalogue, id, reading), undefined);
+}
+
+/**
+ * The face a name shows of the thing it names, in a text read as `reading`: a card's as that text
+ * makes it, a unit kind's of a unit fresh of it of the faction the name names, and the face any other
+ * thing wears.
+ */
+export function namedFace(
+  catalogue: Catalogue,
+  reference: Reference,
+  reading: AnswerReading,
+): Face {
+  switch (reference.kind) {
+    case 'card':
+      return namedCardFace(catalogue, reference.id, reading);
+    case 'building':
+      return buildingFace(catalogue, reference.id);
+    case 'player':
+    case 'enemy':
+      return freshUnitFace(catalogue, reference.id, reference.kind);
+    case 'terrain':
+      return terrainFace(catalogue, reference.id);
+    case 'feature':
+      return featureFace(catalogue, reference.id);
+    case 'improvement':
+      return improvementFace(catalogue, reference.id);
+  }
 }

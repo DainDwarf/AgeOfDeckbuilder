@@ -30,8 +30,31 @@ const FEATURE_LOOKS: Readonly<
 /** How many copies of its animal a herd's tile carries. */
 export const HERD_COPIES = 3;
 
+/** How wide a copy of a herd's animal is, and how far across and down from the middle each may lie. */
+export const HERD_WIDTH = 8;
+const HERD_SPREAD = { x: 16, y: 5 };
+
+/** A copy of a herd's animal on its tile: its middle about the tile's, and whether it is flipped. */
+export type HerdCopy = { readonly x: number; readonly y: number; readonly flipped: boolean };
+
+/** The copies of its animal a herd lays on the tile at that place, each `HERD_WIDTH` wide. */
+export function herdOn({ q, r }: TileCoords): HerdCopy[] {
+  return Array.from({ length: HERD_COPIES }, (_, copy) => {
+    const across = pickOf(q * 7 + copy, r * 13 + 3 * copy, 1000) / 1000;
+    const down = pickOf(r * 11 + 5 * copy, q * 3 + copy, 1000) / 1000;
+    return {
+      x: (across * 2 - 1) * HERD_SPREAD.x,
+      y: (down * 2 - 1) * HERD_SPREAD.y,
+      flipped: pickOf(q + copy, r - copy, 2) === 1,
+    };
+  });
+}
+
 /** How wide a feature's icon stands, in the map's units. */
 export const ICON_WIDTH = 14;
+
+/** How far above a tile's middle the row of its feature and its improvements stands. */
+export const ROW_RISE = 15;
 
 /** The disc under an icon of a tile's row, and its rim, in the map's units. */
 export const DISC_RADIUS = 9;
@@ -497,6 +520,11 @@ function paintPointer(context: CanvasRenderingContext2D): void {
   context.arc(0, 0, DISC_RADIUS, lowest + POINTER_LEAVES, lowest - POINTER_LEAVES);
   context.lineTo(0, DISC_RADIUS + POINTER_TIP);
   context.closePath();
+  paintFeatureDisc(context);
+}
+
+/** The path the context holds painted as the feature's disc: its dark, its pale rim, the rim's corners rounded. */
+export function paintFeatureDisc(context: CanvasRenderingContext2D): void {
   const { fill, rim } = FEATURE_DISC;
   context.globalAlpha = fill.strength;
   context.fillStyle = css(fill.colour);
@@ -506,6 +534,7 @@ function paintPointer(context: CanvasRenderingContext2D): void {
   context.lineWidth = DISC_RIM;
   context.lineJoin = 'round';
   context.stroke();
+  context.globalAlpha = 1;
 }
 
 // Every (symbol, square) outline asked for in play is packed into this one sheet, and a full one throws mid-play.

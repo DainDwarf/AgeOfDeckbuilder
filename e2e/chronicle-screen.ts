@@ -112,6 +112,7 @@ import { glyphFileOf } from '../src/ui/cast';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { eventName } from '../src/ui/event-text';
+import { namedFace } from '../src/ui/face';
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import { unitPaintingOf } from '../src/ui/marks';
@@ -134,7 +135,6 @@ type PageReading = {
   dimmed: boolean | undefined;
   selected: boolean | undefined;
   card: string | undefined;
-  reference: { kind: string; id: string } | undefined;
   shows: Answer<boolean>;
   fill: Answer<number | undefined>;
   bar: Answer<BarParts>;
@@ -812,7 +812,6 @@ export async function readNames(page: Page): Promise<void> {
         dimmed: data('dimmed') as boolean | undefined,
         selected: data('selected') as boolean | undefined,
         card: object === undefined ? undefined : (data('card') as string),
-        reference: data('reference') as { kind: string; id: string } | undefined,
         shows: answer(
           () =>
             (found().object as Partial<Phaser.GameObjects.Components.Visible>).visible as boolean,
@@ -1628,31 +1627,17 @@ export async function standing(page: Page, name: string): Promise<boolean> {
 }
 
 /**
- * Which card the named face stands, and nothing where no such face is up: a browse's cards and the
- * card shown large each carry theirs.
+ * What the named face stands, by the id of its card or of the thing it is a face of its own of, and
+ * nothing where no such face is up: a browse's cards, a small card and the card shown large each
+ * carry theirs.
  */
 export async function cardOnFace(page: Page, name: string): Promise<string | undefined> {
   return (await reading(page, name)).card;
 }
 
-/**
- * What the named card of a thing a name names stands, by its kind and id, and nothing where no such
- * card is up: a small card and a card shown large each carry theirs.
- */
-export async function referenceOnFace(
-  page: Page,
-  name: string,
-): Promise<{ kind: string; id: string } | undefined> {
-  return (await reading(page, name)).reference;
-}
-
-/** What the named card a name raised stands: a card by its face, any other thing by its reference. */
-export async function namedOn(
-  page: Page,
-  name: string,
-): Promise<{ kind: string; id: string } | undefined> {
-  const { card, reference } = await reading(page, name);
-  return card === undefined ? reference : { kind: 'card', id: card };
+/** What the face a name of the thing raises stands, as `cardOnFace` reads it. */
+export function standsFor(reference: Reference): string {
+  return namedFace(CATALOGUE, reference, {}).id;
 }
 
 /**
@@ -1690,8 +1675,6 @@ export type Reading = {
   /** Whether a launch screen's option stands selected. */
   readonly selected: boolean | undefined;
   readonly card: string | undefined;
-  /** What the card of a thing a name names stands, by its kind and id. */
-  readonly reference: { kind: string; id: string } | undefined;
   readonly shows: boolean;
   /**
    * What the object is painted, a drawn one's fill read from its data; an object that carries no
@@ -1776,7 +1759,6 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     dimmed: answered?.dimmed,
     selected: answered?.selected,
     card: answered?.card,
-    reference: answered?.reference,
     get shows() {
       return owed(name, answered?.shows);
     },

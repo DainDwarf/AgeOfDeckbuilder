@@ -13,7 +13,6 @@ import {
   click,
   launchedAs,
   launchedFromScreen,
-  namedOn,
   openLaunch,
   optionsSelected,
   plantCampaign,
@@ -24,6 +23,7 @@ import {
   readsOf,
   rested,
   standing,
+  standsFor,
   titleOf,
   tooltipText,
   tooltipUp,
@@ -57,9 +57,11 @@ const UNLOCKED_AGE = `launch-age-${UNLOCKED}`;
 /** The civilization's browse: the count of its cards, and its stacks in the order the browse stands them in. */
 const { count: CARDS, stacks: STACKS } = browseOf(CATALOGUE, CAMPAIGN, CIVILIZATION, cardName);
 
-/** What the first name a face draws names, and nothing where no face stands or it draws none. */
-function firstNamed(face: Reading): Reference | undefined {
-  return face.standing ? face.references[0] : undefined;
+/** What the first name a face draws names; a face standing nowhere, or drawing none, throws. */
+function firstNamed(face: Reading): Reference {
+  const [first] = face.standing ? face.references : [];
+  if (first === undefined) throw new Error('the face draws no name');
+  return first;
 }
 
 test('on the launch screen the kind label on the civilization’s pile raises what the kind is; a right click on the pile raises its browse, the civilization’s name and count over a stack per card it holds, the city section’s card first, each reading its copies; a right click on a stack shows its card large, the back key takes it down onto the browse, then closes the browse and raises no menu; a right click on a name on the pile shows the named thing large and raises no browse', async ({
@@ -117,10 +119,9 @@ test('on the launch screen the kind label on the civilization’s pile raises wh
   expect(closed('menu').standing).toBe(false);
 
   const named = firstNamed(closed(CITY_CARD));
-  expect(named).toBeDefined();
   const name = closed(CITY_CARD).nameOnScreen;
   await page.mouse.click(name.x, name.y, { button: 'right' });
-  await expect.poll(() => namedOn(page, 'inspection')).toEqual(named);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(standsFor(named));
   await rested(page);
   expect(await standing(page, BROWSE)).toBe(false);
 
@@ -134,11 +135,10 @@ test('on the launch screen the pointer resting on a name on the city card raises
   await openLaunch(page);
   const opened = await reading(page, CITY_CARD);
   const named = firstNamed(opened);
-  expect(named).toBeDefined();
 
   const name = opened.nameOnScreen;
   await page.mouse.move(name.x, name.y);
-  await expect.poll(() => namedOn(page, 'small-card-0')).toEqual(named);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(named));
 
   await page.mouse.click(name.x, name.y);
   await rested(page);

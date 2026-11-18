@@ -21,8 +21,7 @@ import {
   reactsToPress,
   type Stratum,
 } from './design-space';
-import { buildingFace, type Face, freshUnitFace, namedCardFace } from './face';
-import { createThingCard, PAPER_HEIGHT, PAPER_WIDTH } from './infopanel';
+import { type Face, namedFace } from './face';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
 /** The clear water between a small card and the line of the name that raised it. */
@@ -105,57 +104,22 @@ export function createSmallCards(
     return face;
   };
 
-  /**
-   * What a name names, drawn small: a card, a building and a unit kind as their faces, anything else
-   * as its infopanel card, which wears no kind label.
-   */
-  const drawnOf = (
-    { reference, reading }: Name,
-    over: (under: Raiser | undefined) => void,
-  ): {
-    root: Phaser.GameObjects.Container;
-    face: CardFace | undefined;
-    width: number;
-    height: number;
-  } => {
-    const asFace = (shown: Face) => {
-      const face = faceOf(shown, over);
-      return { root: face.root, face, width: CARD_WIDTH, height: CARD_HEIGHT };
-    };
-    switch (reference.kind) {
-      case 'card':
-        return asFace(namedCardFace(catalogue, reference.id, reading));
-      case 'building':
-        return asFace(buildingFace(catalogue, reference.id));
-      case 'player':
-      case 'enemy':
-        return asFace(freshUnitFace(catalogue, reference.id, reference.kind));
-      case 'terrain':
-      case 'feature':
-      case 'improvement':
-        return {
-          root: createThingCard(scene, catalogue, reference, PAPER_WIDTH),
-          face: undefined,
-          width: PAPER_WIDTH,
-          height: PAPER_HEIGHT,
-        };
-    }
-  };
-
   const raise = (raiser: Raiser, level: number): void => {
     cut(level);
-    const { root, face, width, height } = drawnOf(raiser.name, (under) => {
+    const { reference, reading } = raiser.name;
+    const face = faceOf(namedFace(catalogue, reference, reading), (under) => {
       link.under = under;
       settle();
     });
+    const { root } = face;
     const spot = raiser.where();
-    const half = width / 2;
+    const half = CARD_WIDTH / 2;
     const above = spot.top - STANDOFF;
     const x = Math.min(Math.max(spot.x, MARGIN + half), DESIGN_WIDTH - MARGIN - half);
     const y =
-      above - height >= MARGIN
+      above - CARD_HEIGHT >= MARGIN
         ? above
-        : Math.min(spot.bottom + STANDOFF + height, DESIGN_HEIGHT - MARGIN);
+        : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN);
     const off = { x: x - spot.x, y: y - spot.top };
     const link: Link = { raiser, root, off, onCard: false, under: undefined };
 
@@ -163,7 +127,7 @@ export function createSmallCards(
       .setName(`small-card-${level}`)
       .setPosition(x, y)
       .setInteractive({
-        hitArea: new Phaser.Geom.Rectangle(-half, -height, width, height),
+        hitArea: new Phaser.Geom.Rectangle(-half, -CARD_HEIGHT, CARD_WIDTH, CARD_HEIGHT),
         hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       });
     reactsToPress(root);
@@ -176,18 +140,16 @@ export function createSmallCards(
       },
       () => {
         link.onCard = false;
-        if (face !== undefined) footBubble.over(face, undefined);
+        footBubble.over(face, undefined);
         settle();
       },
     );
     // A zone over a label would take the root's hover and its right click: the small card would go
     // down under a pointer resting on its own label.
-    if (face !== undefined) {
-      root.on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        const at = on.at(pointer.x, pointer.y);
-        footBubble.over(face, face.footAt(at.x, at.y));
-      });
-    }
+    root.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      const at = on.at(pointer.x, pointer.y);
+      footBubble.over(face, face.footAt(at.x, at.y));
+    });
     on.layer.add(root);
     chain.push(link);
     if (level === 0) raiser.hold?.(true);

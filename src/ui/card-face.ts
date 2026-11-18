@@ -322,14 +322,16 @@ function inlineOf({ gives, takes, rules }: Face): string {
 }
 
 /**
- * What stands at a face's foot and raises a tooltip: the kind label, the influence it gains, and a
- * stat a unit's card reads, on a badge at the foot or in the text box.
+ * What stands at a face's foot and raises a tooltip: the kind label, the influence it gains, the
+ * movement cost a terrain's face reads on its disc, and a stat a unit's card reads, on a badge at the
+ * foot or in the text box.
  */
-export type FootLabel = 'kind' | 'influence' | CardStat;
+export type FootLabel = 'kind' | 'influence' | 'movement-cost' | CardStat;
 
 const FOOT_LABELS = Object.keys({
   kind: true,
   influence: true,
+  'movement-cost': true,
   damage: true,
   health: true,
   move: true,
@@ -561,35 +563,40 @@ function discMarkOf(scene: Phaser.Scene, width: number, numberSize: number): Dis
 }
 
 /**
- * A disc made to read the symbol's glyph and the amount at its middle, the pair centred on it, the
- * disc under the tint, the number in its ink, both through the tone.
+ * A disc made to read the symbol's glyph and the reading at its middle, the pair centred on it, the
+ * disc under the tint, the number in its ink, the glyph in its symbol's colour unless told, all
+ * through the tone.
  */
 function showDisc(
   { root, disc, glyph, number }: DiscMark,
   {
     symbol,
-    amount,
+    reading,
     ink,
+    glyphColour,
     tint,
     tone,
     at,
   }: {
     readonly symbol: CastSymbol;
-    readonly amount: number;
+    readonly reading: string;
     readonly ink: number;
+    readonly glyphColour?: number;
     readonly tint: number;
     readonly tone: Tone;
     readonly at: { readonly x: number; readonly y: number };
   },
 ): void {
   disc.setTint(tint);
-  inked(number, tone(ink)).setText(String(amount));
+  inked(number, tone(ink)).setText(reading);
   const size = Number.parseFloat(number.style.fontSize as string);
   const square = DISC_GLYPH_SHARE * size;
   const gap = DISC_GAP * size;
   const wide = ownBoxOf(number).width;
   const span = square + gap + wide;
-  asGlyph(glyph, symbol, square, { tone, outlined: false }).setX(-span / 2 + square / 2);
+  asGlyph(glyph, symbol, square, { tone, colour: glyphColour, outlined: false }).setX(
+    -span / 2 + square / 2,
+  );
   number.setX(span / 2 - wide / 2);
   root.setPosition(at.x, at.y);
 }
@@ -665,7 +672,7 @@ export function createCardFace(
 
   const influence = discMarkOf(scene, width, discNumber);
   influence.number.setName('influence-label');
-  const range = discMarkOf(scene, width, discNumber);
+  const footDisc = discMarkOf(scene, width, discNumber);
 
   const signDisc = discOf(scene, width);
   const signGlyph = glyphMark(scene);
@@ -726,7 +733,7 @@ export function createCardFace(
     ...boxed.map(({ root: stat }) => stat),
     kind,
     influence.root,
-    range.root,
+    footDisc.root,
     ...badges.map(({ root: badge }) => badge),
     sign,
   ]);
@@ -767,6 +774,8 @@ export function createCardFace(
         return true;
       case 'influence':
         return reads.influence !== 0;
+      case 'movement-cost':
+        return reads.footDisc?.symbol === 'move';
       case 'damage':
       case 'health':
       case 'move':
@@ -783,6 +792,7 @@ export function createCardFace(
       case 'kind':
         return { x: kind.x, y: kindMiddle, width: kind.width, height: kind.height };
       case 'influence':
+      case 'movement-cost':
         return { x: influenceAt.x, y: influenceAt.y, width: painted, height: painted };
       case 'damage':
       case 'health':
@@ -916,7 +926,7 @@ export function createCardFace(
     for (const [at, { resource, amount }] of next.costs.entries()) {
       showDisc(costs.take(), {
         symbol: resource,
-        amount,
+        reading: String(amount),
         ink: LOOK.cardDiscInk,
         tint: refused.unaffordable.includes(resource) ? toned(LOOK.unaffordableDisc) : tint,
         tone: toned,
@@ -936,7 +946,7 @@ export function createCardFace(
     if (gains) {
       showDisc(influence, {
         symbol: 'influence',
-        amount: next.influence,
+        reading: String(next.influence),
         ink: LOOK.cardDiscInk,
         tint,
         tone: toned,
@@ -944,13 +954,14 @@ export function createCardFace(
       });
     }
 
-    const ranged = next.range !== 0;
-    range.root.setVisible(ranged);
-    if (ranged) {
-      showDisc(range, {
-        symbol: 'range',
-        amount: next.range,
+    const corner = next.footDisc;
+    footDisc.root.setVisible(corner !== undefined);
+    if (corner !== undefined) {
+      showDisc(footDisc, {
+        symbol: corner.symbol,
+        reading: corner.reading,
         ink: LOOK.cardDiscInk,
+        glyphColour: LOOK.cardDiscInk,
         tint,
         tone: toned,
         at: influenceAt,
@@ -1066,6 +1077,7 @@ export function createCardFace(
         case 'influence':
           besideBox(text('tooltip.influence'));
           return;
+        case 'movement-cost':
         case 'damage':
         case 'health':
         case 'move':

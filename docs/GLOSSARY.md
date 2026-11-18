@@ -108,7 +108,7 @@ Each row lists the forbidden near-synonyms so the review and the lint hook can c
 | **growth threshold** | The food the next population costs. | step, growth cost, food cap |
 | **biome** | A stretch of map the generator spreads or deals as one kind — land, sea, … — weighting the terrain of each tile in it. | patch, zone, area, ecosystem |
 | **terrain** | A tile's base layer: plain, forest, hills, …; one per tile, changed only by terraforming. | tile type |
-| **movement cost** | What entering a tile spends of a unit's move points; a tile that names none for a unit is not entered by it. | move cost, terrain cost, travel cost, difficulty, impassable |
+| **movement cost** | What entering a tile spends of a unit's move points; a tile that names none for a unit is not entered by it. | move cost, terrain cost, travel cost, difficulty |
 | **terraform** | To change a tile's terrain into another. | transform, convert, reshape |
 | **feature** | An extra on a tile, dealt by the generator or by an event's answer: a fertile plain. | — |
 | **river** | A watercourse the generator runs along the edges between tiles, from a mountain range to the sea. | stream, creek, waterway |

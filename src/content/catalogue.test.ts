@@ -48,8 +48,11 @@ import {
   buildingFace,
   cardFaceAtStart,
   citySectionBuildings,
+  featureFace,
   freshUnit,
   frontWindowOf,
+  improvementFace,
+  terrainFace,
   unitFace,
 } from '../ui/face';
 import { clustersOf } from '../ui/launch-layout';
@@ -213,6 +216,11 @@ test('every card of the catalogue holds a painting in its art box under each cit
         case 'icon':
           expect(sheet.files).toContain(holds.file);
           break;
+        case 'tile': {
+          const { feature } = holds;
+          if (feature !== undefined) expect(() => featureIconOf(feature)).not.toThrow();
+          break;
+        }
         case 'nothing':
           break;
       }
@@ -242,6 +250,29 @@ test('every unit kind of the catalogue wears one face, the face of the one unit 
 
       expect(made).toContain(artFrameOf(face.art, frontWindowOf(face.front)));
     }
+  }
+});
+
+test('every improvement of the catalogue wears the face of the one card whose play places it', () => {
+  for (const id of Object.keys(CATALOGUE.improvements)) {
+    expect(() => improvementFace(CATALOGUE, id)).not.toThrow();
+  }
+});
+
+test('every terrain and every feature of the catalogue wears a face of its own, on a front and a shadow the cards sheet makes, holding a picture the art sheet paints', () => {
+  const painted = new Set((artSheet(CATALOGUE).made ?? []).map(({ frame }) => frame));
+  const made = new Set((CARDS_SHEET.made ?? []).map(({ frame }) => frame));
+  const faces = [
+    ...Object.keys(CATALOGUE.terrains).map((id) => terrainFace(CATALOGUE, id)),
+    ...Object.keys(CATALOGUE.features).map((id) => featureFace(CATALOGUE, id)),
+  ];
+  for (const face of faces) {
+    if (face.art === undefined) throw new Error(`the face of ${face.id} holds no picture`);
+    const { frame, shadow } = frontOf(face.front);
+
+    expect(painted).toContain(artFrameOf(face.art, frontWindowOf(face.front)));
+    expect(made).toContain(frame);
+    expect(made).toContain(shadow);
   }
 });
 

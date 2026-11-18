@@ -109,7 +109,6 @@ import {
   type PopulationBadge,
   populationBadge,
   positionOf,
-  ROW_RISE,
   rowDisc,
   rowOf,
   shoreOn,
@@ -153,6 +152,7 @@ import {
   onBuildingPatch,
   paintingOn,
   RIVER_SHEET,
+  ROW_RISE,
   SQUASH,
   TILE_SIZE,
 } from './marks';

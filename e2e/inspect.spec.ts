@@ -59,7 +59,6 @@ import {
   reacted,
   reading,
   readings,
-  referenceOnFace,
   rested,
   ringedLitAndInspecting,
   ringedTile,
@@ -67,6 +66,7 @@ import {
   settledOn,
   shownCard,
   standing,
+  standsFor,
   TRAPPING,
   unitEntered,
   WARRIOR,
@@ -353,7 +353,7 @@ test('a building card is the face of the card whose play places the building, as
 
   const mark = face.nameOnScreen;
   await page.mouse.move(mark.x, mark.y, { steps: 5 });
-  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(face.references[0]);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(face.references[0]));
 
   expect(problems).toEqual([]);
 });

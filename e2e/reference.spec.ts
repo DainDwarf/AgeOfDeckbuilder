@@ -1,10 +1,24 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { earningOf, technologyOf } from '../src/rules/catalogue';
 import { buildingKind } from '../src/rules/map-kinds';
+import { freshCampaign } from '../src/rules/save';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import type { Chronicle } from '../src/rules/state';
+import { artFrameOf } from '../src/ui/art-sheet';
+import { glyphFileOf } from '../src/ui/cast';
 import { answerShown } from '../src/ui/event-text';
-import { cardFaceAtStart, namedCardFace } from '../src/ui/face';
+import {
+  cardFaceAtStart,
+  type Face,
+  featureFace,
+  frontWindowOf,
+  improvementFace,
+  namedCardFace,
+  terrainFace,
+} from '../src/ui/face';
+import { achievementGoal, cardRules, text } from '../src/ui/text';
+import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   besideTheDeal,
   browse,
@@ -13,16 +27,20 @@ import {
   civilizationOpened,
   cursorOverCanvas,
   firstDealtAlone,
+  firstSeed,
+  HUNT,
+  idsOf,
   kindLabelOnScreen,
   launchedAs,
   liftedName,
   namedIn,
   nameOnScreen,
   onScreen,
+  openCampaign,
   openSaved,
   pileStacks,
+  type Reading,
   readings,
-  referenceOnFace,
   rested,
   restedOnDeal,
   selected,
@@ -36,6 +54,32 @@ import {
 
 /** The event the first spec opens on. */
 const LEAN_SEASON = 'lean-season';
+
+/** The technology whose goal names an improvement. */
+const TANNING = 'tanning';
+
+/** What a face shows that tells it from another: what it stands, its text, its row, and its picture. */
+type FaceRead = { card: string | undefined; rules: string; numbers: string[]; art: string };
+
+/** What the face drawn on the page shows, as `FaceRead` reads it. */
+function faceSeen({ card, rules, numbers, art }: Reading): FaceRead {
+  return { card, rules, numbers: [...numbers], art };
+}
+
+/**
+ * What the face shows, as `FaceRead` reads it, where its row of what its thing gives stands over its
+ * text: the sign and one glyph to each point, nothing where it gives none.
+ */
+function faceRead(face: Face): FaceRead {
+  if (face.art === undefined) throw new Error(`the face of ${face.id} holds no picture`);
+  const glyphs = face.gives.map(glyphFileOf);
+  return {
+    card: face.id,
+    rules: face.rules,
+    numbers: glyphs.length === 0 ? [] : [text('face.gives'), ...glyphs],
+    art: artFrameOf(face.art, frontWindowOf(face.front)),
+  };
+}
 
 /** The cursor over something that reacts to a press. */
 const HAND = 'pointer';
@@ -186,13 +230,14 @@ test('a card named on a card shown large stands over it at a right click on the 
   expect(problems).toEqual([]);
 });
 
-test('a terrain marked on the settle card raises its card small at a rest and shows it large at a right click, alone or on top of the settle card shown large', async ({
+test('a terrain marked on the settle card raises its own face small at a rest and shows it large at a right click, alone or on top of the settle card shown large', async ({
   page,
 }) => {
   const problems = watch(page);
   const { city: section } = civilizationOpened();
   const settle = section.card;
-  const marked = { kind: 'terrain', id: buildingKind(CATALOGUE, section.building).terrains[0] };
+  const marked = buildingKind(CATALOGUE, section.building).terrains[0];
+  const face = faceRead(terrainFace(CATALOGUE, marked));
 
   await openSaved(page, launchedAs(1));
   const opened = await chronicleOf(page);
@@ -203,13 +248,13 @@ test('a terrain marked on the settle card raises its card small at a rest and sh
   await page.mouse.move(card.x, card.y);
   const name = await liftedName(page, lying);
   await page.mouse.move(name.x, name.y, { steps: 5 });
-  await expect.poll(() => referenceOnFace(page, 'small-card-0')).toEqual(marked);
-  expect(await cardOnFace(page, 'small-card-0')).toBeUndefined();
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(marked);
+  expect(faceSeen((await readings(page, ['small-card-0']))('small-card-0'))).toEqual(face);
 
   const small = await onScreen(page, 'small-card-0');
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await waitGameClock(page, PAST_HANDOVER);
-  expect(await referenceOnFace(page, 'small-card-0')).toEqual(marked);
+  expect(await cardOnFace(page, 'small-card-0')).toBe(marked);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const menu = await onScreen(page, 'menu-button');
@@ -219,7 +264,8 @@ test('a terrain marked on the settle card raises its card small at a rest and sh
   await page.mouse.move(card.x, card.y, { steps: 5 });
   const again = await liftedName(page, lying);
   await page.mouse.click(again.x, again.y, { button: 'right' });
-  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(marked);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(marked);
+  expect(faceSeen((await readings(page, ['inspection']))('inspection'))).toEqual(face);
   expect(await standing(page, 'inspection-0')).toBe(false);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
@@ -235,7 +281,7 @@ test('a terrain marked on the settle card raises its card small at a rest and sh
   await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
 
   await page.mouse.click(named.x, named.y, { button: 'right' });
-  await expect.poll(() => referenceOnFace(page, 'inspection')).toEqual(marked);
+  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(marked);
   expect(await cardOnFace(page, 'inspection-0')).toBe(settle);
 
   await page.keyboard.press('Escape');
@@ -247,6 +293,54 @@ test('a terrain marked on the settle card raises its card small at a rest and sh
   expect(await selected(page, 0, card)).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
+
+  expect(problems).toEqual([]);
+});
+
+test('a feature named on a card of the hand raises its own face small at a rest', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, index } = firstSeed('opens turn 1 with a hunt in hand', (seed) => {
+    const opened = settledOn(seed);
+    const at = idsOf(opened.hand).indexOf(HUNT);
+    return at === -1 ? undefined : { chronicle: opened, index: at };
+  });
+  const hand = `hand-${index}`;
+  const [named] = namedIn(cardRules(chronicle.hand[index]));
+  if (named?.kind !== 'feature') throw new Error(`${HUNT} names no feature first`);
+
+  await openSaved(page, chronicle);
+  const card = await onScreen(page, hand);
+  const lying = await nameOnScreen(page, hand);
+  await page.mouse.move(card.x, card.y);
+  const name = await liftedName(page, lying, hand);
+  await page.mouse.move(name.x, name.y, { steps: 5 });
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named.id);
+  expect(faceSeen((await readings(page, ['small-card-0']))('small-card-0'))).toEqual(
+    faceRead(featureFace(CATALOGUE, named.id)),
+  );
+
+  expect(problems).toEqual([]);
+});
+
+test('an improvement named in a technology’s goal raises the face of the card whose play places it small at a rest', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { needs } = technologyOf(CATALOGUE, TANNING);
+  const campaign = learnedWithNeeds(CATALOGUE, freshCampaign(CATALOGUE), needs);
+  const { id, achievement } = earningOf(CATALOGUE, TANNING);
+  const [named] = namedIn(achievementGoal(id, achievement.need));
+  if (named?.kind !== 'improvement')
+    throw new Error(`${TANNING}'s goal names no improvement first`);
+  const { card, art } = faceRead(improvementFace(CATALOGUE, named.id));
+
+  await openCampaign(page, campaign);
+  const name = await nameOnScreen(page, `plate-${TANNING}`);
+  await page.mouse.move(name.x, name.y);
+  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(card);
+  expect((await readings(page, ['small-card-0']))('small-card-0').art).toBe(art);
 
   expect(problems).toEqual([]);
 });

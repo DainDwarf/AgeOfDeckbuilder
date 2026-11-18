@@ -1,6 +1,5 @@
-import type { CardKind } from '../rules/cards';
 import type { Resource } from '../rules/resources';
-import type { BadgeStat } from './face';
+import type { BadgeStat, FrontColour } from './face';
 
 /**
  * A kind's colour as a card's frame wears it: the hue its paper is turned to, in degrees, the
@@ -146,8 +145,8 @@ export type Look = {
   readonly cardEdge: number;
   /** The ground of the badge reading a browse's stack's copies. */
   readonly copiesBadge: number;
-  /** Each kind's colour, on the frame of every card of that kind. */
-  readonly cardKind: Readonly<Record<CardKind, KindColour>>;
+  /** Each front's colour: a card kind's on the frame of every card of that kind, and a terrain's face's. */
+  readonly cardFront: Readonly<Record<FrontColour, KindColour>>;
   /** The ink a card's name reads in on its plate. */
   readonly cardNameInk: number;
   /** The ink a card's text reads in on its paper, and its kind label. */
@@ -288,7 +287,7 @@ export const LOOK: Look = {
   modeButtonEdge: 0x5c6068,
   cardEdge: 0x6f757d,
   copiesBadge: 0x232833,
-  cardKind: {
+  cardFront: {
     settle: { hue: 210, saturation: 0.06, darkness: 0.72 },
     unit: { hue: 46, saturation: 0.85, darkness: 0.84 },
     building: { hue: 176, saturation: 0.5, darkness: 0.52 },
@@ -298,6 +297,7 @@ export const LOOK: Look = {
     hazard: { hue: 356, saturation: 0.78, darkness: 0.6 },
     challenge: { hue: 344, saturation: 0.6, darkness: 0.38 },
     trophy: { hue: 38, saturation: 0.7, darkness: 0.78 },
+    terrain: { hue: 24, saturation: 0.4, darkness: 0.42 },
   },
   cardNameInk: 0x34240f,
   cardTextInk: 0x2a2010,

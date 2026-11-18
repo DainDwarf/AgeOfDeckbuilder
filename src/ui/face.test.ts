@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { builds, enters } from '../rules/cards';
+import { builds, enters, placesImprovement } from '../rules/cards';
 import { type Card, cardOf, catalogued, unitKind } from '../rules/catalogue';
 import {
   CAMP,
@@ -14,6 +14,7 @@ import {
   SITE,
   TILLAGE,
 } from '../rules/fixtures';
+import { MOVE_POINT } from '../rules/map';
 import { answerOf } from '../rules/schedule';
 import type { CardArt } from './art-box';
 import {
@@ -21,12 +22,16 @@ import {
   buildingFacing,
   cardFront,
   cardStats,
+  featureFace,
   freshUnit,
+  improvementFacing,
+  inMovePoints,
   labelledKind,
   namedCardMade,
   numbersRun,
   placedReading,
   statReading,
+  terrainFace,
   type UnitReading,
   unitFacing,
   unitStats,
@@ -46,15 +51,15 @@ describe('a card’s face', () => {
   it('wears the plain front of its kind, the oval window where its play places a thing and the arched where it places nothing, and the decorated front where its play places the city', () => {
     const front = (id: string) => cardFront(cardOf(CATALOGUE, id));
 
-    expect(front('PH_Worker')).toEqual({ front: 'plain', kind: 'unit', window: 'oval' });
-    expect(front('PH_Band')).toEqual({ front: 'plain', kind: 'settle', window: 'oval' });
-    expect(front('PH_Stores')).toEqual({ front: 'plain', kind: 'settle', window: 'arched' });
-    expect(front(SILO)).toEqual({ front: 'plain', kind: 'action', window: 'oval' });
-    expect(front('PH_Mine')).toEqual({ front: 'plain', kind: 'improvement', window: 'oval' });
-    expect(front('PH_Hunt')).toEqual({ front: 'plain', kind: 'action', window: 'arched' });
-    expect(front('PH_Harvest')).toEqual({ front: 'plain', kind: 'instant', window: 'arched' });
-    expect(front('PH_Hunger')).toEqual({ front: 'plain', kind: 'hazard', window: 'arched' });
-    expect(front('PH_Settle')).toEqual({ front: 'decorated' });
+    expect(front('PH_Worker')).toEqual({ front: 'plain', colour: 'unit', window: 'oval' });
+    expect(front('PH_Band')).toEqual({ front: 'plain', colour: 'settle', window: 'oval' });
+    expect(front('PH_Stores')).toEqual({ front: 'plain', colour: 'settle', window: 'arched' });
+    expect(front(SILO)).toEqual({ front: 'plain', colour: 'action', window: 'oval' });
+    expect(front('PH_Mine')).toEqual({ front: 'plain', colour: 'improvement', window: 'oval' });
+    expect(front('PH_Hunt')).toEqual({ front: 'plain', colour: 'action', window: 'arched' });
+    expect(front('PH_Harvest')).toEqual({ front: 'plain', colour: 'instant', window: 'arched' });
+    expect(front('PH_Hunger')).toEqual({ front: 'plain', colour: 'hazard', window: 'arched' });
+    expect(front('PH_Settle')).toEqual({ front: 'decorated', colour: 'settle' });
   });
 });
 
@@ -82,12 +87,16 @@ describe('a face of a card that places a thing on the ground', () => {
     expect(reading(SHRINE)).toMatchObject({
       gives: [],
       takes: ['production', 'production', 'production', 'culture'],
-      range: 0,
+      footDisc: undefined,
     });
-    expect(reading('PH_Mill')).toMatchObject({ gives: ['production'], takes: [], range: 0 });
+    expect(reading('PH_Mill')).toMatchObject({
+      gives: ['production'],
+      takes: [],
+      footDisc: undefined,
+    });
   });
 
-  it('of a building giving to the tiles beside it and nothing on its own tile reads one text of what it gives, on which terrain, and what it takes, and a range of one, and no numbers', () => {
+  it('of a building giving to the tiles beside it and nothing on its own tile reads one text of what it gives, on which terrain, and what it takes, and a range of one on its foot’s disc, and no numbers', () => {
     const jetty = 'PH_Jetty';
     const beside = { terrain: 'coast', yields: { food: 2 } };
     const content = catalogued(
@@ -104,7 +113,7 @@ describe('a face of a card that places a thing on the ground', () => {
       goesOn: [{ kind: 'terrain', id: 'coast' }],
       gives: [],
       takes: [],
-      range: 1,
+      footDisc: { symbol: 'range', reading: '1' },
       leads: text('face.in-range-taking', {
         gives: numbersRun('gives', ['food', 'food']),
         terrain: 'coast',
@@ -238,6 +247,90 @@ describe('a building’s face', () => {
 
     expect(() => buildingFacing(twice, 'PH_Farm')).toThrow();
     expect(() => buildingFacing(unplaced, 'PH_Hut')).toThrow();
+  });
+});
+
+describe('a terrain’s face', () => {
+  const content = changed({
+    terrains: {
+      ...CATALOGUE.terrains,
+      ocean: { yields: { food: 1 }, water: true, elevation: 0 },
+      desert: { yields: {}, movementCost: MOVE_POINT, water: false, elevation: 0 },
+    },
+  });
+  const face = (terrain: string) => terrainFace(content, terrain);
+
+  it('reads one resource to each point a bare tile of it gives, and on its foot’s disc what entering it costs a unit in move points', () => {
+    expect(face('forest')).toMatchObject({
+      kind: 'terrain',
+      gives: ['food', 'production'],
+      takes: [],
+      footDisc: { symbol: 'move', reading: inMovePoints(2 * MOVE_POINT) },
+      rules: '',
+    });
+  });
+
+  it('reads on its disc what entering it costs an embarked unit where no unit ashore enters it', () => {
+    expect(face('coast').footDisc).toEqual({ symbol: 'move', reading: inMovePoints(MOVE_POINT) });
+  });
+
+  it('reads a dash on its disc and Impassable as its text where nothing enters it, ashore or embarked', () => {
+    expect(face('ocean')).toMatchObject({
+      footDisc: { symbol: 'move', reading: text('face.no-movement-cost') },
+      rules: text('face.impassable'),
+    });
+  });
+
+  it('of a terrain giving nothing reads no resource and no text', () => {
+    expect(face('desert')).toMatchObject({ gives: [], takes: [], rules: '' });
+  });
+
+  it('wears the plain oval front in a terrain’s face’s colour and holds its tile, lit and carrying nothing', () => {
+    expect(face('plain').front).toEqual({ front: 'plain', colour: 'terrain', window: 'oval' });
+    expect(face('plain').art).toEqual({
+      window: 'oval',
+      ground: 'plain',
+      holds: { kind: 'tile', feature: undefined },
+    });
+  });
+});
+
+describe('a feature’s face', () => {
+  const content = changed({
+    features: { ...CATALOGUE.features, deer: { terrain: 'forest', yields: { food: 2 } } },
+  });
+
+  it('reads one resource to each point it gives and nothing on its disc, on the decorated front in a terrain’s face’s colour, holding its terrain’s tile carrying it', () => {
+    expect(featureFace(content, 'deer')).toMatchObject({
+      kind: 'feature',
+      front: { front: 'decorated', colour: 'terrain' },
+      gives: ['food', 'food'],
+      takes: [],
+      footDisc: undefined,
+      rules: '',
+      art: { window: 'oval', ground: 'forest', holds: { kind: 'tile', feature: 'deer' } },
+    });
+  });
+});
+
+describe('an improvement’s face', () => {
+  it('is the face of the card whose play places it', () => {
+    expect(improvementFacing(CATALOGUE, 'PH_Mine')).toBe('PH_Mine');
+  });
+
+  it('is refused for an improvement two cards place, and for one no card places', () => {
+    const twice = changed({
+      cards: {
+        ...CATALOGUE.cards,
+        PH_Quarry: { kind: 'improvement', cost: {}, ...placesImprovement('PH_Mine') },
+      },
+    });
+    const unplaced = changed({
+      improvements: { ...CATALOGUE.improvements, PH_Peat: { terrains: ['plain'], yields: {} } },
+    });
+
+    expect(() => improvementFacing(twice, 'PH_Mine')).toThrow();
+    expect(() => improvementFacing(unplaced, 'PH_Peat')).toThrow();
   });
 });
 
