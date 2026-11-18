@@ -133,7 +133,7 @@ A card is 124 units wide and 182 tall wherever it stands, and a card shown large
 
 **The launch screen's selected pile** wears a ring round its card: a line of the selection's white 3 units wide, 3.5 units off the card's body, a dark line a unit wide along each of its sides, drawn under the card's frame, so the rim of an oval window and a disc rising over the body stand over it. A pile that is not selected is dimmed as one thing, to half its strength over the page, its backs never showing through its card.
 
-The glyphs on the discs and in a card's text are symbols. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face, a tile's terrain its own face, and a terrain, a feature or an improvement named in a text wears a face.
+The glyphs on the discs and in a card's text are symbols. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face, a tile's terrain its own face, and a thing named in a text wears a face.
 
 ## The type ✅
 
