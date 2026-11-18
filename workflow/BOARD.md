@@ -17,7 +17,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The Stone cards' paintings** — every card of the Stone Age wears David Baumgart's painting in its art box.
+- **The Stone cards' paintings** — every card of the catalogue wears David Baumgart's painting in its art box, the Stone Age's forty cast as the dossier lists them: an improvement card holds its improvement as the map lays it, the one the map tells by ditches a river and its ditches, a card may hold a ground alone, and a building or an improvement in the oval window is centred on what is painted, 8 units above the window's middle; the Nomadic Cave paintings holds its twin's red ochre; Baumgart's crafting and foraging icons stand in the store with their licence entry; the catalogue's test finds every card's painting; `docs/LOOK.md` says so; `e2e/card-reads.spec.ts` passes. Doc-impact: `docs/LOOK.md`. [board/the-stone-cards-paintings.md](board/the-stone-cards-paintings.md)
 - **A building on the infopanel as its card** — an inspected building, with its tile's improvements, is shown on the infopanel as the face of its card.
 - **A unit on the infopanel as its card** — an inspected unit is shown on the infopanel as the face of its card, reading what it holds now.
 - **A small card's tooltip closes on the way** — hovering a small card's tooltip, the pointer crossing another name closes it, and it should not.
