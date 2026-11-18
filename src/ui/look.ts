@@ -129,6 +129,8 @@ export type Look = {
   readonly unpaidInk: number;
   /** The strength an option of the launch screen rests at while another of its row is selected. */
   readonly unselected: number;
+  /** The strength the backs waiting under the infopanel's card rest at. */
+  readonly waitingUnder: number;
   readonly arrowEdge: number;
   readonly regionEdge: number;
   readonly deckCounts: number;
@@ -276,6 +278,7 @@ export const LOOK: Look = {
   greyedInk: 0x2a2e34,
   unpaidInk: 0x9aa1a9,
   unselected: 0.5,
+  waitingUnder: 0.7,
   arrowEdge: 0x0d1117,
   regionEdge: 0x0d1014,
   deckCounts: 0x9aa1a9,

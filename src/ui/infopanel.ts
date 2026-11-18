@@ -27,6 +27,7 @@ import {
   type UnitReading,
   unitFace,
 } from './face';
+import { dimmedTo, LOOK } from './look';
 import type { Drawn, TileFace } from './map';
 import { rootedPoolOf } from './pool';
 import type { Tooltip } from './tooltip';
@@ -102,7 +103,7 @@ export type PanelNames = {
 const STANDOFF = 12;
 
 /** How far each back under the card stands out of the one above it, down and to the right. */
-const BACK_OFFSET = 4;
+const BACK_OFFSET = 6;
 
 /** How long one card takes to dissolve into the next. */
 const CYCLE_MS = 150;
@@ -134,7 +135,11 @@ export function createInfoPanel(
   // Under the stop, where `show` puts the card just above it: a back made later draws over the earlier.
   const backs = rootedPoolOf(
     { scene, add: (back) => panel.addAt(back, panel.getIndex(stop)) },
-    () => createCardBack(scene),
+    () => {
+      const back = createCardBack(scene);
+      back.wear(dimmedTo(LOOK.waitingUnder));
+      return back;
+    },
   );
   const footBubble = createFootBubble(tooltip);
 
