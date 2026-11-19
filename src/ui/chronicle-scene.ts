@@ -30,7 +30,6 @@ import { offerEntries, resetConsole } from './debug-console';
 import {
   addText,
   awayUnder,
-  type Box,
   COVERED,
   holdDesignSpace,
   MARGIN,
@@ -62,7 +61,6 @@ import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { campaignHeld, keepChronicle, type Opening } from './save-entry';
-import { createShownEvent } from './shown-event';
 import { createSmallCards } from './small-card';
 import { createStanding } from './standing';
 import { text } from './text';
@@ -847,7 +845,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       hand,
       { render: faces.cards.lose },
       endTurn,
-      createShownEvent(this, ui.endTurn, endTurn.box),
       { render: showSettleStanding },
       createPinnedAchievements(
         this,
@@ -865,13 +862,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     paint();
   }
 
-  private addEndTurn(
-    on: Stratum,
-    endTurn: () => void,
-  ): Part & {
-    live(on: boolean): void;
-    readonly box: Box;
-  } {
+  private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
     const button = this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
@@ -968,7 +959,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
         wanted = on;
         paint();
       },
-      box: { x: x - width / 2, y: y - height / 2, width, height },
     };
     return part;
   }

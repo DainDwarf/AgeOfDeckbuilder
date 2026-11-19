@@ -65,8 +65,8 @@ export type Rewards = Readonly<Record<CardId, number>>;
 
 /**
  * One deal waiting on the take: an event, which deals its answers; a capture's rewards, under the
- * building captured; or the cards a card of the hand deals, the card and the cards dealt by key, in
- * the order dealt.
+ * building captured; or the cards of the draw pile a card of the hand deals, the card and the cards
+ * dealt by key, in the order dealt.
  */
 export type Deal =
   | { readonly of: 'event'; readonly event: string }
@@ -152,11 +152,6 @@ export type Chronicle = {
   /** The turn the events phase deals next on, and the capstone. */
   readonly timeline: Timeline;
   /**
-   * The turn of the next landing a card last showed, which stays once that turn has come: it is read
-   * through `turnShown`. Nothing at all where no card has shown one.
-   */
-  readonly shownTurn?: number;
-  /**
    * The deals waiting on the take, the one standing first, and none at all while no deal stands.
    * While one does the chronicle waits on the take, and every other command is refused.
    */
@@ -222,8 +217,8 @@ export type TileBlock =
 
 /**
  * What stands against a card, an answer or a claim the cost alone would let through: what the city,
- * the hand, the piles, the border, the map or a turn already shown hold against it, a card nothing
- * plays, and every reason an aim turns a tile down.
+ * the hand, the piles, the border or the map hold against it, a card nothing plays, and every reason
+ * an aim turns a tile down.
  */
 export type Block =
   | 'population'
@@ -231,7 +226,6 @@ export type Block =
   | 'city'
   | 'hand'
   | 'no-card'
-  | 'turn-shown'
   | 'played-by-nothing'
   | 'no-camp-tile'
   | TileBlock;
@@ -325,15 +319,19 @@ export function dealingCard(
   return held;
 }
 
-/** The cards a card's deal deals, as their piles hold them, in the order dealt. A key no pile holds throws. */
+/**
+ * The cards a card's deal deals, as the draw pile holds them, in the order dealt. A key the draw pile
+ * does not hold throws.
+ */
 export function dealtCards(
-  chronicle: Pick<Chronicle, 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile'>,
+  chronicle: Pick<Chronicle, 'drawPile'>,
   { dealt }: Extract<Deal, { readonly of: 'card' }>,
 ): ChronicleCard[] {
-  const held = cardsInPiles(chronicle);
   return dealt.map((key) => {
-    const card = cardKeyed(held, key);
-    if (card === undefined) throw new Error(`a deal named the key ${key}, which no pile held`);
+    const card = cardKeyed(chronicle.drawPile, key);
+    if (card === undefined) {
+      throw new Error(`a deal named the key ${key}, which the draw pile did not hold`);
+    }
     return card;
   });
 }
@@ -344,12 +342,6 @@ export function cardsOutOfHand(
   after: Pick<Chronicle, 'hand'>,
 ): ChronicleCard[] {
   return before.hand.filter(({ key }) => cardKeyed(after.hand, key) === undefined);
-}
-
-/** The turn of the next landing a card has shown, and nothing once that turn has come. */
-export function turnShown(chronicle: Chronicle): number | undefined {
-  const { shownTurn } = chronicle;
-  return shownTurn !== undefined && chronicle.turn < shownTurn ? shownTurn : undefined;
 }
 
 /** Whether the tile is inside the city's border: what a card's aim and a city-mode click both ask. */

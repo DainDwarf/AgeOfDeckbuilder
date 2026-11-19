@@ -31,7 +31,7 @@ import {
   capstoneReading,
   timelineOf,
 } from '../rules/schedule';
-import type { Landed } from '../rules/stages';
+import { followed, type Landed } from '../rules/stages';
 import { type Chronicle, keysDealt, type Rewards } from '../rules/state';
 import { yieldParts } from '../rules/yields';
 import { artFrameOf, artSheet } from '../ui/art-sheet';
@@ -360,16 +360,20 @@ test('every card of the catalogue answers its refusal, and its admitted tiles, o
 
 /**
  * What a card's effect lands on the chronicle at its cheapest answer: at nothing where nothing blocks
- * it, at the first tile its aim admits, at the first card of the hand; and nothing at all where the
- * rules leave it nothing to land on.
+ * it, a card that deals then taking the first card it deals, at the first tile its aim admits, at the
+ * first card of the hand; and nothing at all where the rules leave it nothing to land on.
  */
 function cheapestEffect(chronicle: Chronicle, id: string): Landed | undefined {
   const card = aimOf(cardOf(CATALOGUE, id));
   switch (card.aim) {
-    case 'none':
-      return refusalOf(CATALOGUE, chronicle, id).blocked.length === 0
-        ? card.effect(CATALOGUE, chronicle)
-        : undefined;
+    case 'none': {
+      if (refusalOf(CATALOGUE, chronicle, id).blocked.length > 0) return undefined;
+      const landing = card.effect(CATALOGUE, chronicle);
+      const { deals } = card;
+      if (deals === undefined) return landing;
+      const [first] = deals.dealt(CATALOGUE, landing.chronicle);
+      return followed(landing, (left) => deals.takes(CATALOGUE, left, first));
+    }
     case 'tile':
     case 'unit': {
       const [at] = admitted(CATALOGUE, chronicle, card);

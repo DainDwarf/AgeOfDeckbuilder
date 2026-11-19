@@ -64,7 +64,7 @@ Its fall to the player deals three trophies, each several copies of one card, an
 - **Pasture**, an improvement giving food, placed through a worker for production on a tile carrying cattle and nowhere else. It goes with the cattle, so a Hunt played there removes both.
 - **Archer**, costing military: one population leaves the tiles to become a unit.
 - **Clay pit**, an improvement giving production, placed through a worker for production on hills and nowhere else.
-- **Calendar**, an instant costing science, aimed at nothing: the turn of the next event is shown until that turn comes, the capstone's turn read as an event's where it lands first, and the card is refused while a turn is shown.
+- **Calendar**, an instant costing science, aimed at nothing: it deals cards off the top of the draw pile and the player draws the one chosen, the others shuffled back into the draw pile; it is refused while the draw pile and the discard pile are both empty.
 - **Bread**, an instant costing food, aimed at nothing: the player's city gains culture, so food is either kept for the next population or paid toward the next claim.
 - **Tannery**, a building giving money, built through a worker for production and taking production as its upkeep, on a tile carrying deer or cattle and nowhere else. It goes with the feature, so a Hunt played there removes both.
 - **Raft**, costing production: one population leaves the tiles to become a raft, on a coast tile inside the border. A unit embarks onto a raft and crosses the coast as slowly as the raft does, so the rafts the player's city has are how many of its units are on the water at once.

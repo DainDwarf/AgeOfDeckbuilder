@@ -3,6 +3,7 @@ import {
   builds,
   claimableTile,
   discarded,
+  drawsOneOfTheTop,
   enters,
   entersInside,
   firstRefusal,
@@ -46,7 +47,6 @@ import {
   removalNear,
   removedNear,
   rewarded,
-  showsNextLanding,
   terraformedNear,
 } from '../rules/schedule';
 import { followed, type Landed, unchanged } from '../rules/stages';
@@ -592,7 +592,7 @@ export const STONE: Slice = {
         cost: { production: 3 },
         ...placesImprovement('clay-pit'),
       },
-      calendar: { kind: 'instant', cost: { science: 2 }, ...showsNextLanding() },
+      calendar: { kind: 'instant', cost: { science: 2 }, ...drawsOneOfTheTop(3) },
       bread: {
         kind: 'instant',
         cost: { food: 2 },

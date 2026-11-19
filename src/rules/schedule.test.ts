@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest';
 import { chartedTile } from './cards';
 import { ageOf, type Catalogue, capstoneOf, catalogued, eventOf } from './catalogue';
-import { apply, type Command, launched, outcome, refusalOf } from './chronicle';
+import { apply, type Command, launched, outcome } from './chronicle';
 import { bordered, growthThreshold } from './city';
 import {
   AGE,
@@ -79,7 +79,6 @@ import {
   NO_REFUSAL,
   type Snapshot,
   type Timeline,
-  turnShown,
 } from './state';
 
 /** The seeds a test over a whole walk runs: enough of them for both orders to be drawn. */
@@ -1742,44 +1741,4 @@ test('the schedule keeps dealing past the capstone’s landing while its count f
   expect(landings[0]).toEqual({ turn: CAPSTONE });
   expect(dealt.length).toBeGreaterThan(4);
   expect(dealt[dealt.length - 1].turn).toBeGreaterThan(CAPSTONE + 30);
-});
-
-test('a card showing the turn of the next landing shows the next due turn, and is refused while that turn is shown and played again once it has come', () => {
-  const city = cityOf(['urban'], {
-    ...dealing({ turn: 3, event: 'PH_Exodus' }),
-    hand: ['PH_Almanac', 'PH_Almanac'],
-    drawPile: ['PH_Almanac'],
-  });
-  const shown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
-  const next = endedTurn(shown, 'PH_Stay');
-  const due = endedTurn(next, 'PH_Stay');
-
-  expect(turnShown(city)).toBeUndefined();
-  expect(turnShown(shown)).toBe(city.timeline.next);
-  expect(shown.timeline).toEqual(city.timeline);
-  expect(refusalOf(CATALOGUE, shown, 'PH_Almanac').blocked).toEqual(['turn-shown']);
-  expect(stagedBy(shown, aimedAtNothing(shown))).toEqual(['refused']);
-  expect(next.turn).toBe(city.turn + 1);
-  expect(refusalOf(CATALOGUE, next, 'PH_Almanac').blocked).toEqual(['turn-shown']);
-  expect(due.turn).toBe(city.timeline.next);
-  expect(turnShown(due)).toBeUndefined();
-  expect(refusalOf(CATALOGUE, due, 'PH_Almanac').blocked).toEqual([]);
-  expect(turnShown(outcome(apply(CATALOGUE, due, aimedAtNothing(due))))).toBeGreaterThan(due.turn);
-});
-
-test('a card showing the turn of the next landing shows the capstone’s where it lands before the next due turn, and the due turn once the capstone has landed', () => {
-  const capstone = 3;
-  const city = cityOf(['urban'], {
-    timeline: { ...NO_DEALS, next: capstone + 2, capstone: { id: 'PH_Tillage', turn: capstone } },
-    hand: ['PH_Almanac'],
-    drawPile: ['PH_Almanac'],
-  });
-  const shown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
-  const landed = endedTurn(endedTurn(shown));
-  const after = outcome(apply(CATALOGUE, landed, aimedAtNothing(landed)));
-
-  expect(turnShown(shown)).toBe(capstone);
-  expect(landed.turn).toBe(capstone);
-  expect(landed.timeline.next).toBeGreaterThan(capstone);
-  expect(turnShown(after)).toBe(landed.timeline.next);
 });

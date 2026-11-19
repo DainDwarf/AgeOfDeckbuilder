@@ -9,7 +9,7 @@ import {
   unpinned,
 } from './campaign';
 import { bonusOf, catalogued, entered } from './catalogue';
-import { apply, type Command, outcome, refusalOf } from './chronicle';
+import { apply, type Command, outcome } from './chronicle';
 import { enemyEntering } from './enemies';
 import {
   AGE,
@@ -33,7 +33,6 @@ import {
   GRANARY,
   HOARD,
   hoardedVictory,
-  NO_DEALS,
   namesOf,
   onTheNeutralCity,
   openedWithACamp,
@@ -65,7 +64,6 @@ import {
   type Counters,
   FIRST_KEY,
   type NeutralCity,
-  turnShown,
 } from './state';
 import { FIRST_UNIT_NUMBER, LEAST_STATS, type Unit } from './units';
 
@@ -262,24 +260,6 @@ test('a chronicle saved after a strike set its card’s counters reads back with
   expect(read.chronicle).toEqual(save);
 });
 
-test('a chronicle saved with a turn shown reads back with it shown', () => {
-  const city = cityOf(['urban'], {
-    timeline: { ...NO_DEALS, next: 4 },
-    hand: ['PH_Almanac', 'PH_Almanac'],
-  });
-  const shown = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
-  const save = { chronicle: shown, civilization: CIVILIZATION_ID };
-
-  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
-
-  expect(turnShown(shown)).toBe(city.timeline.next);
-  expect(read.chronicle).toEqual(save);
-  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
-  expect(refusalOf(CATALOGUE, read.chronicle.chronicle, 'PH_Almanac').blocked).toEqual([
-    'turn-shown',
-  ]);
-});
-
 test('a chronicle saved waiting on a capture’s rewards reads back with the deal standing, and takes as it would have', () => {
   const site = { q: 2, r: 0 };
   const city = cityOf(['urban'], {
@@ -337,8 +317,8 @@ test('a chronicle saved waiting on a card’s deal reads back with the deal stan
   expect(dealing({ card: city.hand[1].key })).toEqual([
     "fixture: the save's chronicle.deals[0].card names the card PH_Harvest, which deals nothing",
   ]);
-  expect(dealing({ dealt: [dealt.nextKey] })).toEqual([
-    `fixture: the save's chronicle.deals[0].dealt[0] names the key ${dealt.nextKey}, which no pile holds`,
+  expect(dealing({ dealt: [city.hand[1].key] })).toEqual([
+    `fixture: the save's chronicle.deals[0].dealt[0] names the key ${city.hand[1].key}, which the draw pile does not hold`,
   ]);
   expect(dealing({ dealt: [] })).toEqual([
     "fixture: the save's chronicle.deals[0].dealt deals no card",
@@ -516,11 +496,6 @@ test.each<[string, (chronicle: Chronicle) => object, string]>([
     (chronicle) => ({ ...chronicle, resources: { ...chronicle.resources, [resource]: -1 } }),
     `chronicle.resources holds a stock of -1 ${resource}`,
   ]),
-  [
-    'a turn shown that is negative',
-    (chronicle) => ({ ...chronicle, shownTurn: -1 }),
-    'chronicle shows turn -1',
-  ],
   [
     'a negative population',
     (chronicle) => ({ ...chronicle, population: -1 }),

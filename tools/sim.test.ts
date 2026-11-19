@@ -1608,7 +1608,7 @@ test('a unit that attacks off the tiles the city may claim walks to its landing 
 test('the builder plays the card aimed at nothing whose trial raises the stocksâ€™ sum, passing one that raises nothing and a unit card', () => {
   const gaining = cityOf(['urban'], {
     population: 2,
-    hand: ['PH_Almanac', 'PH_Worker', 'PH_Harvest'],
+    hand: ['PH_Blank', 'PH_Worker', 'PH_Harvest'],
     resources: onlyStocks({ food: 2, science: 1 }),
   });
 
@@ -1618,7 +1618,7 @@ test('the builder plays the card aimed at nothing whose trial raises the stocksâ
 test('the builder plays the card aimed at nothing whose trial raises a resource the income gives less of than each resource the card costs, and not where the income gives as much of it or more', () => {
   const offering = (inside: Terrain[]): Chronicle =>
     cityOf(inside, {
-      hand: ['PH_Almanac', 'PH_Offering'],
+      hand: ['PH_Blank', 'PH_Offering'],
       resources: onlyStocks({ food: 1 }),
     });
 
@@ -1636,7 +1636,7 @@ test('the builder reads an income the upkeep takes below nothing as below nothin
     {
       population: 3,
       assigned: [],
-      hand: ['PH_Almanac', 'PH_Offering'],
+      hand: ['PH_Blank', 'PH_Offering'],
       resources: onlyStocks({ food: 1 }),
     },
   );

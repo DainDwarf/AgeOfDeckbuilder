@@ -101,7 +101,6 @@ type PlainChange =
   | 'counters-set'
   | 'turn'
   | 'rolled'
-  | 'shown'
   | 'dealt'
   | 'taken'
   | 'ended'

@@ -17,5 +17,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
 
 ## Lines
-
-- **Calendar draws one of the top three cards** — Calendar played deals the top three cards of the draw pile in the deal window and draws the one chosen, the others shuffled back, going to the discard pile only after the choice and refused while both piles are empty; the shown turn is gone from the rules, the save, the screen and the pages; `e2e/calendar.spec.ts` proves it. Doc-impact: `docs/ages/STONE.md`, `docs/CHRONICLE.md`, `docs/SCHEDULE.md`, `docs/CHRONICLE-SCREEN.md`, `DOGMAS.md`. [board/calendar-draws-from-the-top.md](board/calendar-draws-from-the-top.md)

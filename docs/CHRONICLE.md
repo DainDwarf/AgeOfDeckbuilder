@@ -14,7 +14,7 @@ The section holds settle cards and nothing else, and a settle card played is ban
 
 A chronicle is a sequence of **turns**. Each turn, in this order:
 
-1. **Draw.** The player draws a **hand** of **five** cards from the draw pile. 🔧 Buildings, a civilization or an effect may change the number. An empty draw pile is refilled by shuffling the discard pile into it.
+1. **Draw.** The player draws a **hand** of **five** cards from the draw pile. 🔧 Buildings, a civilization or an effect may change the number. A draw pile short of the cards drawn or dealt from it has the discard pile shuffled in under what it still holds.
 2. **Events.** On a due turn the schedule deals one of its events and that event deals its answers; the player chooses one, which lands and resolves at once, on what the player's city has; play waits on the choice. On the capstone's turn the capstone lands instead, and nothing is dealt. Events land after the draw: an event turns on the player's city's stocks and on what stands on the map, which the hand does not change, so the turn opens on its hand every time and a card an answer adds to a pile waits there for its cycle.
 3. **Play.** The player plays cards from the hand, in any order, paying each card's resource cost, and moves and attacks with the units on the map. Nothing else limits play: the hand, the player's city's resources and what the units hold are the whole budget.
 4. **End.** The player ends the turn.
@@ -98,6 +98,8 @@ An **influence card** is a trophy or a challenge: it carries influence of its ow
 A card **aimed** at a tile lands on no tile its aim does not admit, and the map lights the tiles it does. A card aimed at a **unit** is refused on a tile no unit of the player's stands on, before what the card itself asks of that tile. A card that aims at nothing needs nothing of the map: it is played where it stands.
 
 A card aimed at the hand lands on another card of the hand, whichever the player chooses, and never on itself. A hand holding no other card blocks it in the hand. The card played goes to its pile before it lands, the discard pile or the exhaust pile, so a card it discards lies over it.
+
+**A card may deal** cards off a pile, of which the player chooses one; what becomes of the chosen card and of the others is the card's to say. Its deal stands as an event's does: the chronicle takes no command but the choice until it is chosen from. The card played stays in the hand, paid, until then, and goes to its pile once the choice is made, so it is never among what it deals.
 
 ## The schedule
 

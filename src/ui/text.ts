@@ -83,7 +83,6 @@ const TEXT = {
   'button.end-settle-phase': 'End settle phase',
   'button.city-mode': 'City mode',
   'button.icons': 'Icons',
-  'shown-event.turn': 'Event on turn {turn}',
   'kind.settle': 'Settle',
   'kind.unit': 'Unit',
   'kind.building': 'Building',
@@ -158,7 +157,7 @@ const TEXT = {
   'card.clay-pit': 'Clay pit',
   'rules.clay-pit': '',
   'card.calendar': 'Calendar', // glossary exception: calendar
-  'rules.calendar': 'Show the turn of the next event', // glossary exception: calendar
+  'rules.calendar': 'Draw 1 of the top 3 cards', // glossary exception: calendar
   'card.bread': 'Bread',
   'rules.bread': 'Gain 2[culture]',
   'card.tannery': 'Tannery',
@@ -271,7 +270,6 @@ const TEXT = {
   'refusal.health-full': 'Unit health is full',
   'refusal.hand': 'No other card in the hand',
   'refusal.no-card': 'No card to draw',
-  'refusal.turn-shown': 'The next event is already shown',
   'refusal.played-by-nothing': 'Cannot be played',
   'refusal.no-camp-tile': 'No tile takes a camp',
   'refusal.no-claim': 'Your city cannot claim that tile',

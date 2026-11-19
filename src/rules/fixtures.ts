@@ -99,7 +99,6 @@ import {
   offered,
   removalNear,
   removedNear,
-  showsNextLanding,
   terraformedNear,
   tileCharted,
   unitDamaged,
@@ -671,8 +670,13 @@ const TABLES: Omit<Tables, 'technologies'> = {
       aim: 'hand',
       effect: (_catalogue, paid, key) => discarded(paid, [key]),
     },
-    PH_Almanac: { kind: 'instant', cost: {}, ...showsNextLanding() },
     PH_Augury: { kind: 'instant', cost: { science: 1 }, ...drawsOneOfTheTop(AUGURED) },
+    PH_Blank: {
+      kind: 'instant',
+      cost: {},
+      aim: 'none',
+      effect: (_catalogue, paid) => unchanged(paid),
+    },
     PH_Spoils: {
       kind: 'trophy',
       cost: {},

@@ -46,7 +46,6 @@ import {
   type CityRows,
   type CitySection,
   cardKeyed,
-  cardsInPiles,
   type Deal,
   type DefeatCause,
   type Ending,
@@ -560,9 +559,6 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     ...cityRowsOf(catalogue, slot, tiles),
     turn: count(catalogue, field('turn'), slot, (turn) => `stands on turn ${turn}`),
     timeline: timelineOf(catalogue, field('timeline'), age, region),
-    shownTurn: optional(field('shownTurn'), (item) =>
-      count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
-    ),
     deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item, piles)),
     neutral: optional(field('neutral'), (item) => ({
       city: onMap(catalogue, record(catalogue, item)('city'), tiles),
@@ -701,12 +697,12 @@ function timelineOf(catalogue: Catalogue, slot: Slot, age: string, region: strin
 
 /**
  * A deal of the chronicle's: a card's deal naming a key the hand does not hold, a card that deals
- * nothing, a key no pile holds, or no card dealt, is refused.
+ * nothing, a key the draw pile does not hold, or no card dealt, is refused.
  */
 function dealOf(
   catalogue: Catalogue,
   slot: Slot,
-  piles: Pick<Chronicle, 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile'>,
+  piles: Pick<Chronicle, 'drawPile' | 'hand'>,
 ): Deal {
   const field = record(catalogue, slot);
   const kind = field('of');
@@ -730,12 +726,11 @@ function dealOf(
       if (cardDealOf(cardOf(catalogue, dealing.id)) === undefined) {
         refused(catalogue, cardSlot, `names the card ${dealing.id}, which deals nothing`);
       }
-      const held = cardsInPiles(piles);
       const dealtSlot = field('dealt');
       const dealt = list(catalogue, dealtSlot, (item) => {
         const key = integer(catalogue, item);
-        if (cardKeyed(held, key) === undefined) {
-          refused(catalogue, item, `names the key ${key}, which no pile holds`);
+        if (cardKeyed(piles.drawPile, key) === undefined) {
+          refused(catalogue, item, `names the key ${key}, which the draw pile does not hold`);
         }
         return key;
       });

@@ -649,7 +649,6 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       case 'banished':
       case 'turn':
       case 'rolled':
-      case 'shown':
       case 'dealt':
       case 'taken':
       case 'ended':

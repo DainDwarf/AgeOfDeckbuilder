@@ -539,8 +539,9 @@ export function createOverlay({
       }
       const { ending, deals } = stage.chronicle;
       if (ending !== undefined && !endingScreen.raised) return raiseEnding(stage.chronicle, ending);
-      // Every capture deals before the captures after it resolve: the window waits for the render
-      // the play-out ends on, which a render of this stage would pre-empt.
+      // A deal stands before its play-out ends — a capture's before the captures after it resolve, a
+      // card's before what its play reads — so the window waits for the render the play-out ends
+      // on, which a render of this stage would pre-empt.
       return deals.length > 0 ? Promise.resolve() : undefined;
     },
   };
@@ -556,14 +557,13 @@ function dealt(
   chronicle: Chronicle,
   deal: Deal,
 ): { heading: string; lore: string; entries: readonly Offered[] } {
-  const ids = offered(catalogue, chronicle, deal);
   const { building } = chronicle.citySection;
   switch (deal.of) {
     case 'event':
       return {
         heading: eventName(deal.event),
         lore: eventLore(deal.event),
-        entries: ids.map(
+        entries: offered(catalogue, chronicle, deal).map(
           (id, at): Offered => ({
             shows: 'answer',
             answer: answerShown(catalogue, chronicle, deal.event, id),
@@ -577,7 +577,7 @@ function dealt(
       return {
         heading: buildingName(deal.building),
         lore: captureLore(deal.building),
-        entries: ids.map((id, at) =>
+        entries: offered(catalogue, chronicle, deal).map((id, at) =>
           offeredCard(cardFaceAtStart(catalogue, id, building), at, deal.rewards[id]),
         ),
       };

@@ -178,8 +178,8 @@ export type Aim =
     };
 
 /**
- * A card's deal: the cards it deals, by key, in the order dealt, read on the chronicle its effect left;
- * and what becomes of the card of the key chosen among them and of the others, on the chronicle the
+ * A card's deal: the cards of the draw pile it deals, by key, in the order dealt, read on what its
+ * effect left; and what becomes of the card of the key chosen and of the others, on the chronicle the
  * card played left for its pile.
  */
 export type CardDeal = {
