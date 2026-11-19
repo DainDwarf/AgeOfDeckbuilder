@@ -18,5 +18,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
+- **The slow schedule test** — `src/rules/schedule.test.ts`'s "a deal is due on the third turn to the seventh…" runs about 5 s against Vitest's 5 s limit and failed once under load; it passes with room to spare.
+- **The infopanel's face re-read in place** — turning the faction signs on rebuilds the infopanel's face through `show` in `src/ui/chronicle-scene.ts`, where `InfoPanel.reread` re-reads it in place as the Icons switch does.
 - **No look measures on the design pages** — every measure a look carries, units, percentages and dim strengths alike, leaves `docs/LOOK.md` and every other design page, each look keeping its shape, and the ruling enters `DOGMAS.md`: measurements are implementation detail, too low level for documentation, and live in the code.
 - **Draw one card out of the top of the draw pile** — a card costing science that offers the top few cards of the draw pile and draws one of them, the fallback for the card Calendar; feared too strong, and showing them alone felt underwhelming in the previous game.
