@@ -13,6 +13,7 @@ How this project is built. Human-chosen; every session works by them, `/intake` 
 - **Unforeseen corner cases are reported, never resolved silently.** The implementer's report has a _Deviations_ section; "none" is a valid entry, absence is not.
 - **A sentence the implementer authored is put to the user at the hand-back.** A player-facing entry or a `docs/` sentence the dossier did not write out verbatim is listed in the report under _Authored_, and the hand-back quotes each with where it shows; "none" is a valid entry, absence is not. Why: the hand-back relays deviations and advisories, and a sentence that is neither reads as settled.
 - **Verify a cheap claim before asserting it.** A claim never survives a second telling unchecked, an agent's finding included: it is checked against the tree before it is relayed. If only expensive measurement would settle it, say it is unverified.
+- **A question names the thing as the player meets it** — the card's real text, the screen it stands on — never by a word of Claude's own.
 - **A side finding gets one line and a pointer.** If it keeps growing across turns, stop.
 - **"jot: …"** appends one line to `workflow/IDEAS.md` and the current task continues. Offer to jot something you noticed; don't add your own without asking.
 - **A bug is never an idea.** `workflow/IDEAS.md` holds features that may or may not happen; a defect or trap in what already exists is reported to the user the turn it emerges and, unless fixed on the spot, becomes a board line through `/todo` on the user's order.
@@ -54,6 +55,7 @@ How an age is authored:
 - **A player-facing entry ends in no period**, the ending screen's and a window's own sentences excepted, and an answer addresses the player and reads its cost in its text.
 - **A count never stands in a sentence's subject.** A player-facing sentence takes a singular subject so one entry serves every number, and a reference is never pluralised.
 - **UI tooltips are glanceable one-liners** — what it is, where it comes from. They name no specific card or scenario and explain no mechanic; the codex is for learning, tooltips are for players who already know.
+- **A person is named in the sentence that leans on their work**, on a page, in a reply, in a hand-back or on a mockup; a pronoun stands only in that sentence or the next. Why: a reader who comes to a sentence alone has no name to tie the pronoun to.
 - **Explanatory text stays generic.** Onboarding copy describes systems, never the specific content the player is about to meet.
 
 ## Code
