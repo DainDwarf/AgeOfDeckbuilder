@@ -436,9 +436,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
 
     this.drawSigns = () => {
       view.showSigns();
-      if (inspection !== undefined) {
-        panel.show(inspection.cards, inspection.card, inspection.on.at, false);
-      }
+      if (inspection !== undefined) panel.reread(inspection.cards[inspection.card]);
     };
 
     const act = async (found: PressedTile): Promise<void> => {
