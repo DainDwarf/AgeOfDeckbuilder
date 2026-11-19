@@ -18,4 +18,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Draw one card out of the top of the draw pile** — a card costing science that offers the top few cards of the draw pile and draws one of them, the fallback for the card Calendar; feared too strong, and showing them alone felt underwhelming in the previous game.
+- **Calendar draws one of the top three cards** — Calendar played deals the top three cards of the draw pile in the deal window and draws the one chosen, the others shuffled back, going to the discard pile only after the choice and refused while both piles are empty; the shown turn is gone from the rules, the save, the screen and the pages; `e2e/calendar.spec.ts` proves it. Doc-impact: `docs/ages/STONE.md`, `docs/CHRONICLE.md`, `docs/SCHEDULE.md`, `docs/CHRONICLE-SCREEN.md`, `DOGMAS.md`. [board/calendar-draws-from-the-top.md](board/calendar-draws-from-the-top.md)

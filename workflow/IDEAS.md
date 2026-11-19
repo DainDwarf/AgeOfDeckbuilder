@@ -9,6 +9,7 @@ The unordered pool of features that may or may not happen. Nothing here is promi
 - **The warlord embarks**: the warlord crosses the water on its way to a camp or a site across it, embarking onto a raft and disembarking where the cheapest way steps onto the coast, so its cell on the archipelago means something: 93 of 100 archipelago camps and 5 of 100 temperate ones lie across the water. The end-of-Stone deck in `decks/` then takes Raft and Fishery, one copy each, left out of it while no persona embarks.
 - **The builder goes for a site**: a gambit that walks a unit onto a charted site and holds it to the capture, so the builder has culture on Nomadic temperate, where the sites are culture's only source; today it never claims there, never builds the shelter and never wins.
 - **A persona weighs the deck before entering a unit**: whether to enter the unit the hand offers now or hold the population a turn for a stronger one the draw pile still holds, read off the piles' counts; a lookahead over turns, which the simulator page forbids a gambit today, so the page changes with it.
+- **A gambit for a draw choice**: the personas take the first card Calendar offers, as they take the first entry of any deal; a gambit of their own picks among the cards a draw choice offers, Calendar's and any later card's that draws by choice.
 
 ## Game
 
