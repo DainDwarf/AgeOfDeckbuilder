@@ -17,3 +17,5 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
 
 ## Lines
+
+- **No look measures on the design pages** — every measure a look carries, units, percentages and dim strengths alike, leaves `docs/LOOK.md` and every other design page, each look keeping its shape, and the ruling enters `DOGMAS.md`: measurements are implementation detail, too low level for documentation, and live in the code.

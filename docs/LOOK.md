@@ -15,7 +15,7 @@ A painted world under flat symbols is the convention of the genre, and the two f
 
 ## The cast ✅
 
-Each symbol wears one glyph, and a meaning wears that one sign wherever it is read: health's heart at the foot of a health bar and on a unit's card, the flame and the flag on a prepared unit's badge, on the map and in its card's window, move's arrows for a terrain's movement cost, population's sign for the idle count, for a worked tile and for a number of population in a text.
+Each symbol wears one glyph, and a meaning wears that one sign wherever it is read: health's heart at the foot of a health bar, the flame and the flag on a prepared unit's badge, on the map and in its card's window, move's arrows for a terrain's movement cost, population's sign for the idle count, for a worked tile and for a number of population in a text.
 
 A glyph stands in a square and is as large as that square's side. It is drawn in its colour over a dark outline grown out of its shape, half a unit wide at every size it is drawn at and on every ground, so a pale glyph holds on pale paper and any glyph on any terrain. A glyph standing on a disc that has a rim of its own wears no outline, and neither does a stat's glyph in the text box of a unit's card.
 
@@ -32,13 +32,10 @@ A glyph stands in a square and is as large as that square's side. It is drawn in
 | Population | a head and shoulders | Material Design Icons, `account` |
 | Influence | a star | Material Design Icons, `star` |
 | Health | a heart | Material Design Icons, `heart` |
-| Damage | a sword | Material Design Icons, `sword` |
-| Bonus | two chevrons pointing up | Material Design Icons, `chevron-double-up` |
 | Range | a ring under a cross, a sight's | Material Design Icons, `target` |
 | Move | four arrows from one point | Material Design Icons, `arrow-all` |
 | Action | a fist | game-icons.net, Skoll's Fist |
 | Sight | an eye | Material Design Icons, `eye` |
-| Embarked | an anchor | Material Design Icons, `anchor` |
 | Pillaging | a flame | game-icons.net, sbed's Fire |
 | Capturing | a flag | Material Design Icons, `flag-variant` |
 | Hostile | two crossed axes | game-icons.net, Lorc's Crossed axes |
