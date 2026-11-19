@@ -164,9 +164,17 @@ export function createPiles(
     exhausted.show(exhaustPile.length);
   };
 
-  /** The shuffle: the discard pile's top is carried to the draw pile's place, turning over on the way. */
-  const shuffle = async ({ before, chronicle }: Change): Promise<void> => {
-    const face = cards.of(before.discardPile[before.discardPile.length - 1].key);
+  /**
+   * The shuffle: where the discard pile went into the draw pile, its top is carried to the draw
+   * pile's place, turning over on the way; a draw pile shuffled alone moves nothing.
+   */
+  const shuffle = ({ before, chronicle }: Change): Promise<void> | undefined =>
+    chronicle.discardPile.length < before.discardPile.length
+      ? shuffleIn(before.discardPile[before.discardPile.length - 1], chronicle)
+      : undefined;
+
+  const shuffleIn = async (top: ChronicleCard, chronicle: Chronicle): Promise<void> => {
+    const face = cards.of(top.key);
     const from = PILE_PLACE['discard-pile'];
     carried = face;
     carrier.add(face.root.setPosition(0, 0));
@@ -270,6 +278,7 @@ export function createPiles(
       case 'deal':
       case 'answer':
       case 'reward':
+      case 'choice':
       case 'attack':
       case 'capture':
         return undefined;

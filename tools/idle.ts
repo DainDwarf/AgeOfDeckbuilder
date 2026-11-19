@@ -5,7 +5,7 @@ import { answerRefusal, offered } from '../src/rules/schedule';
 import { type Chronicle, type Deal, onSettlePhase, playable } from '../src/rules/state';
 import type { Gambit, Persona } from './sim-driver';
 
-/** Whether the entry of the deal by that id is refused on the chronicle: a reward never is. */
+/** Whether the entry of the deal by that id is refused on the chronicle: a reward or a card never is. */
 export function refusedEntry(
   catalogue: Catalogue,
   chronicle: Chronicle,
@@ -16,6 +16,7 @@ export function refusedEntry(
     case 'event':
       return !playable(answerRefusal(catalogue, chronicle, deal.event, id));
     case 'capture':
+    case 'card':
       return false;
   }
 }
@@ -24,7 +25,7 @@ export function refusedEntry(
 function firstTaken(catalogue: Catalogue, chronicle: Chronicle): Command | undefined {
   const [deal] = chronicle.deals;
   if (deal === undefined) return undefined;
-  const at = offered(catalogue, deal).findIndex(
+  const at = offered(catalogue, chronicle, deal).findIndex(
     (id) => !refusedEntry(catalogue, chronicle, deal, id),
   );
   return at === -1 ? undefined : { type: 'take', at };

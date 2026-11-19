@@ -128,7 +128,7 @@ function namingAnswer(
 } {
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  for (const [at, answer] of offered(CATALOGUE, deal).entries()) {
+  for (const [at, answer] of offered(CATALOGUE, dealt, deal).entries()) {
     const names = namedIn(answerShown(CATALOGUE, dealt, deal.event, answer).text);
     const name = names.findIndex((reference) => reference.kind === kind);
     if (name !== -1) return { answer, at, named: names[name].id, name };

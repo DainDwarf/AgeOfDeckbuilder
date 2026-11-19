@@ -3,9 +3,11 @@ import {
   actionSpent,
   aimOf,
   built,
+  cardDealOf,
   discarded,
   goesTo,
   lyingAs,
+  refilled,
   refuses,
   steppedOnto,
   struck,
@@ -127,6 +129,7 @@ import {
   capstoneLanded,
   cardKeyed,
   cityRows,
+  dealingCard,
   FIRST_KEY,
   keysDealt,
   type MadeCard,
@@ -452,6 +455,7 @@ function conditionsRead(
             case 'deal':
             case 'answer':
             case 'reward':
+            case 'choice':
             case 'attack':
             case 'capture':
               break;
@@ -869,9 +873,10 @@ function course(chronicle: Chronicle, steps: readonly ((left: Chronicle) => Sequ
   return resolving;
 }
 
-/** One change where a step moved its row, and nothing where it left the chronicle as it stood. */
-function moved(name: 'drawn' | 'shuffled', before: Chronicle, after: Chronicle): Landed {
-  return after === before ? unchanged(before) : landedAs(change(name, after, before));
+/** Cards off the draw pile into the hand as `draw` takes them: one `drawn`, and nothing where it took none. */
+function drawnOff(chronicle: Chronicle): Landed {
+  const after = draw(chronicle);
+  return after === chronicle ? unchanged(chronicle) : landedAs(change('drawn', after, chronicle));
 }
 
 function endOfTurn(catalogue: Catalogue, chronicle: Chronicle): Sequence {
@@ -1054,12 +1059,12 @@ function refreshedUnit(chronicle: Chronicle, unit: Unit): Landed {
 /**
  * One entry of the deal standing taken, by its place in the order dealt. The turn's event is dealt
  * behind every capture's rewards, so an answer resolves nothing after its landing, and the last
- * reward taken resumes the end of turn at its opening.
+ * reward taken resumes the end of turn at its opening; a card's deal resumes nothing.
  */
 function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence {
   const [deal, ...waiting] = chronicle.deals;
   if (deal === undefined) return refused(chronicle);
-  const id = offered(catalogue, deal)[at];
+  const id = offered(catalogue, chronicle, deal)[at];
   if (id === undefined) return refused(chronicle);
 
   const taken = landedAs(change('taken', { ...chronicle, deals: waiting }, chronicle));
@@ -1081,19 +1086,32 @@ function take(catalogue: Catalogue, chronicle: Chronicle, at: number): Sequence 
       );
       return followed<Stage>(rewarding, (left) => openedUnlessDealt(catalogue, left));
     }
+    case 'card': {
+      const card = dealingCard(chronicle, deal);
+      const dealing = cardDealOf(cardOf(catalogue, card.id));
+      if (dealing === undefined) {
+        refuse(catalogue, `the card ${card.id} stands a deal and deals nothing`);
+      }
+      return grouped(
+        { name: 'choice' },
+        course(chronicle, [
+          () => taken,
+          (left) => landedAs(playedAway(catalogue, left, card)),
+          (left) => dealing.takes(catalogue, left, deal.dealt[at]),
+        ]),
+      );
+    }
   }
 }
 
 /**
- * What fills the hand: the draw, the shuffle a dry draw pile needs, and the draw that follows it,
- * each where it moved cards.
+ * What fills the hand: the draw, the refill of a draw pile left short of the hand, and the draw that
+ * follows it, each where it moved cards.
  */
 function drawn(chronicle: Chronicle): Landed {
   return followed(
-    followed(moved('drawn', chronicle, draw(chronicle)), (left) =>
-      moved('shuffled', left, shuffle(left)),
-    ),
-    (left) => moved('drawn', left, draw(left)),
+    followed(drawnOff(chronicle), (left) => refilled(left, HAND_SIZE - left.hand.length)),
+    drawnOff,
   );
 }
 
@@ -1146,9 +1164,9 @@ function blocked(catalogue: Catalogue, chronicle: Chronicle, id: CardId): Block[
 }
 
 /**
- * One card played: the aim is judged on the chronicle as it stands, the same one the map lit its
- * tiles from; then, in the one `played` group, the card leaves the hand, its cost is paid, and its
- * effect lands; a play refused is `refused`, nothing paid or discarded.
+ * One card played, its aim judged on the chronicle the map lit its tiles from: in one `played` group,
+ * the card leaves the hand, one that deals staying there until the take, its cost is paid, and its
+ * effect lands, then its deal stands; a play refused is `refused`, nothing paid or discarded.
  */
 function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand): Sequence {
   const held = cardKeyed(chronicle.hand, command.key);
@@ -1160,9 +1178,26 @@ function play(catalogue: Catalogue, chronicle: Chronicle, command: PlayCommand):
 
   const costs = costOf(catalogue, held.id);
   const cost = (left: Chronicle): Landed => costPaid(left, 'player', costs);
+  const deal = cardDealOf(cardOf(catalogue, held.id));
+  const leaving =
+    deal === undefined ? landedAs(playedAway(catalogue, chronicle, held)) : unchanged(chronicle);
+  const landing = followed(followed(leaving, cost), effect);
   return grouped(
     { name: 'played', card: held.key, aimed: aimedBy(command) },
-    followed(followed(landedAs(playedAway(catalogue, chronicle, held)), cost), effect),
+    deal === undefined
+      ? landing
+      : followed(landing, (left) => cardDealt(left, held.key, deal.dealt(catalogue, left))),
+  );
+}
+
+/** The cards a card of the hand deals standing as its deal: the one `dealt`. */
+function cardDealt(chronicle: Chronicle, card: number, dealt: readonly number[]): Landed {
+  return landedAs(
+    change(
+      'dealt',
+      { ...chronicle, deals: [...chronicle.deals, { of: 'card', card, dealt }] },
+      chronicle,
+    ),
   );
 }
 
@@ -1513,15 +1548,6 @@ function draw(chronicle: Chronicle): Chronicle {
     hand: [...chronicle.hand, ...chronicle.drawPile.slice(0, taken)],
     drawPile: chronicle.drawPile.slice(taken),
   };
-}
-
-/** The discard pile shuffled into a draw pile that ran out, while the hand is still short. */
-function shuffle(chronicle: Chronicle): Chronicle {
-  if (chronicle.hand.length >= HAND_SIZE) return chronicle;
-  if (chronicle.drawPile.length > 0 || chronicle.discardPile.length === 0) return chronicle;
-
-  const shuffled = shuffleItems(chronicle.rng, chronicle.discardPile);
-  return { ...chronicle, rng: shuffled.rng, drawPile: shuffled.items, discardPile: [] };
 }
 
 /**

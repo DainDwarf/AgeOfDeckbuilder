@@ -4,6 +4,7 @@ import {
   type AimedUnitEntry,
   ageOf,
   type Card,
+  type CardDeal,
   type Catalogue,
   cardMade,
   cardOf,
@@ -39,6 +40,7 @@ import {
   terrainKind,
 } from './map-kinds';
 import { RESOURCES, type Resources, summed } from './resources';
+import { shuffle } from './rng';
 import {
   change,
   changeOn,
@@ -990,4 +992,90 @@ export function gained(paid: Chronicle, gain: Partial<Resources>): Landed {
   const resources = { ...paid.resources };
   for (const resource of RESOURCES) resources[resource] += gain[resource] ?? 0;
   return landedAs(change('stock', { ...paid, resources }, paid));
+}
+
+/**
+ * A draw pile short of `count` cards with the discard pile shuffled in under what it still holds:
+ * the one `shuffled`, and nothing where the draw pile holds that many or the discard pile none.
+ */
+export function refilled(chronicle: Chronicle, count: number): Landed {
+  if (chronicle.drawPile.length >= count || chronicle.discardPile.length === 0) {
+    return unchanged(chronicle);
+  }
+  const shuffled = shuffle(chronicle.rng, chronicle.discardPile);
+  return landedAs(
+    change(
+      'shuffled',
+      {
+        ...chronicle,
+        rng: shuffled.rng,
+        drawPile: [...chronicle.drawPile, ...shuffled.items],
+        discardPile: [],
+      },
+      chronicle,
+    ),
+  );
+}
+
+/** A card's deal, and nothing for a card that deals none. */
+export function cardDealOf(card: Card): CardDeal | undefined {
+  const aim = aimOf(card);
+  switch (aim.aim) {
+    case 'none':
+      return aim.deals;
+    case 'tile':
+    case 'unit':
+    case 'hand':
+      return undefined;
+  }
+}
+
+/**
+ * How a card deals the top `count` cards of the draw pile and the player draws the one chosen, the
+ * others shuffled back into it: blocked while the draw pile and the discard pile are both empty, it
+ * refills a draw pile short of `count` before it deals.
+ */
+export function drawsOneOfTheTop(count: number): Aim & { readonly aim: 'none' } {
+  if (!Number.isInteger(count) || count < 1) {
+    throw new Error(`a card deals a whole number of cards, one at least, not ${count}`);
+  }
+  return {
+    aim: 'none',
+    blocked: (_catalogue, chronicle) =>
+      chronicle.drawPile.length === 0 && chronicle.discardPile.length === 0 ? ['no-card'] : [],
+    effect: (_catalogue, paid) => refilled(paid, count),
+    deals: {
+      dealt: (_catalogue, chronicle) => chronicle.drawPile.slice(0, count).map(({ key }) => key),
+      takes: (_catalogue, chronicle, key) => followed(drawnKeyed(chronicle, key), drawPileShuffled),
+    },
+  };
+}
+
+/**
+ * The card of the draw pile carrying the key drawn into the hand: the one `drawn`; a key the draw pile
+ * does not hold is a `runtime-error` and draws nothing.
+ */
+function drawnKeyed(chronicle: Chronicle, key: number): Landed {
+  const card = cardKeyed(chronicle.drawPile, key);
+  if (card === undefined) return landedAs(change('runtime-error', chronicle, chronicle));
+  return landedAs(
+    change(
+      'drawn',
+      {
+        ...chronicle,
+        hand: [...chronicle.hand, card],
+        drawPile: chronicle.drawPile.filter((other) => other.key !== key),
+      },
+      chronicle,
+    ),
+  );
+}
+
+/** The draw pile shuffled whole: the one `shuffled`, and nothing where it holds fewer than two cards. */
+function drawPileShuffled(chronicle: Chronicle): Landed {
+  if (chronicle.drawPile.length < 2) return unchanged(chronicle);
+  const shuffled = shuffle(chronicle.rng, chronicle.drawPile);
+  return landedAs(
+    change('shuffled', { ...chronicle, rng: shuffled.rng, drawPile: shuffled.items }, chronicle),
+  );
 }

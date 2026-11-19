@@ -64,12 +64,14 @@ export type Timeline = {
 export type Rewards = Readonly<Record<CardId, number>>;
 
 /**
- * One deal waiting on the take: an event, which deals its answers, or a capture's rewards, under the
- * building captured.
+ * One deal waiting on the take: an event, which deals its answers; a capture's rewards, under the
+ * building captured; or the cards a card of the hand deals, the card and the cards dealt by key, in
+ * the order dealt.
  */
 export type Deal =
   | { readonly of: 'event'; readonly event: string }
-  | { readonly of: 'capture'; readonly building: string; readonly rewards: Rewards };
+  | { readonly of: 'capture'; readonly building: string; readonly rewards: Rewards }
+  | { readonly of: 'card'; readonly card: number; readonly dealt: readonly number[] };
 
 /** An achievement's tally: named numbers of its own, by name. */
 export type Tally = Readonly<Record<string, number>>;
@@ -220,14 +222,15 @@ export type TileBlock =
 
 /**
  * What stands against a card, an answer or a claim the cost alone would let through: what the city,
- * the hand, the border, the map or a turn already shown hold against it, a card nothing plays, and
- * every reason an aim turns a tile down.
+ * the hand, the piles, the border, the map or a turn already shown hold against it, a card nothing
+ * plays, and every reason an aim turns a tile down.
  */
 export type Block =
   | 'population'
   | 'idle'
   | 'city'
   | 'hand'
+  | 'no-card'
   | 'turn-shown'
   | 'played-by-nothing'
   | 'no-camp-tile'
@@ -308,6 +311,31 @@ export function keysDealt(
 /** The card of the pile carrying the key, and nothing where the pile holds none. */
 export function cardKeyed(pile: readonly ChronicleCard[], key: number): ChronicleCard | undefined {
   return pile.find((card) => card.key === key);
+}
+
+/** The card of the hand a card's deal stands for. A hand that does not hold it throws. */
+export function dealingCard(
+  chronicle: Pick<Chronicle, 'hand'>,
+  { card }: Extract<Deal, { readonly of: 'card' }>,
+): ChronicleCard {
+  const held = cardKeyed(chronicle.hand, card);
+  if (held === undefined) {
+    throw new Error(`a deal named the key ${card}, which the hand did not hold`);
+  }
+  return held;
+}
+
+/** The cards a card's deal deals, as their piles hold them, in the order dealt. A key no pile holds throws. */
+export function dealtCards(
+  chronicle: Pick<Chronicle, 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile'>,
+  { dealt }: Extract<Deal, { readonly of: 'card' }>,
+): ChronicleCard[] {
+  const held = cardsInPiles(chronicle);
+  return dealt.map((key) => {
+    const card = cardKeyed(held, key);
+    if (card === undefined) throw new Error(`a deal named the key ${key}, which no pile held`);
+    return card;
+  });
 }
 
 /** The cards of the hand in `before` whose keys the hand in `after` does not hold, in hand order. */

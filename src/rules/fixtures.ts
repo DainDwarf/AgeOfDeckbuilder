@@ -8,6 +8,7 @@ import {
   builds,
   claimableTile,
   discarded,
+  drawsOneOfTheTop,
   enters,
   entersInside,
   entersOn,
@@ -178,6 +179,9 @@ export const FREEZE = 5;
 
 /** The food the fixture's curse strikes off the stock. */
 export const CURSE = 3;
+
+/** How many cards off the top of the draw pile the fixture's augury deals. */
+export const AUGURED = 2;
 
 /** What the counter of the fixture's tithe starts at: the food its first strike takes. */
 export const TITHE = 2;
@@ -668,6 +672,7 @@ const TABLES: Omit<Tables, 'technologies'> = {
       effect: (_catalogue, paid, key) => discarded(paid, [key]),
     },
     PH_Almanac: { kind: 'instant', cost: {}, ...showsNextLanding() },
+    PH_Augury: { kind: 'instant', cost: { science: 1 }, ...drawsOneOfTheTop(AUGURED) },
     PH_Spoils: {
       kind: 'trophy',
       cost: {},
@@ -1961,7 +1966,7 @@ export function endedTurn(
 ): Chronicle {
   let standing = outcome(apply(catalogue, chronicle, { type: 'end-turn' }));
   for (let deal = standing.deals[0]; deal !== undefined; deal = standing.deals[0]) {
-    const at = placeOf(catalogue, deal, wanted);
+    const at = placeOf(catalogue, standing, deal, wanted);
     const taken = outcome(apply(catalogue, standing, { type: 'take', at }));
     if (taken === standing) throw new Error(`the take at ${at} is refused`);
     standing = taken;
@@ -1970,8 +1975,13 @@ export function endedTurn(
 }
 
 /** Where a deal offers `wanted`, and the first place where it does not or nothing is wanted. */
-function placeOf(catalogue: Catalogue, deal: Deal, wanted: string | undefined): number {
-  const at = wanted === undefined ? -1 : offered(catalogue, deal).indexOf(wanted);
+function placeOf(
+  catalogue: Catalogue,
+  chronicle: Chronicle,
+  deal: Deal,
+  wanted: string | undefined,
+): number {
+  const at = wanted === undefined ? -1 : offered(catalogue, chronicle, deal).indexOf(wanted);
   return at < 0 ? 0 : at;
 }
 

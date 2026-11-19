@@ -135,6 +135,8 @@ export type Aim =
       readonly aim: 'none';
       readonly blocked?: (catalogue: Catalogue, chronicle: Chronicle) => Block[];
       readonly effect: (catalogue: Catalogue, paid: Chronicle) => Landed;
+      /** The deal the card stands once its effect has landed, where it deals. */
+      readonly deals?: CardDeal;
     }
   | {
       readonly aim: 'tile';
@@ -174,6 +176,16 @@ export type Aim =
       readonly aim: 'hand';
       readonly effect: (catalogue: Catalogue, paid: Chronicle, key: number) => Landed;
     };
+
+/**
+ * A card's deal: the cards it deals, by key, in the order dealt, read on the chronicle its effect left;
+ * and what becomes of the card of the key chosen among them and of the others, on the chronicle the
+ * card played left for its pile.
+ */
+export type CardDeal = {
+  readonly dealt: (catalogue: Catalogue, chronicle: Chronicle) => readonly number[];
+  readonly takes: (catalogue: Catalogue, chronicle: Chronicle, key: number) => Landed;
+};
 
 /**
  * The noun a card names — the unit it puts on the map, the building it builds — is named by its

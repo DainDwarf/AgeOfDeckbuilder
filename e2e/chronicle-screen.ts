@@ -3978,7 +3978,7 @@ function dealStanding(chronicle: Chronicle): Deal {
 
 /** What the deal standing on the chronicle offers, in the order dealt. */
 export function offeredOn(chronicle: Chronicle): readonly string[] {
-  return offered(CATALOGUE, dealStanding(chronicle));
+  return offered(CATALOGUE, chronicle, dealStanding(chronicle));
 }
 
 /**
@@ -4000,18 +4000,22 @@ export async function eventDealRead(
   return shown;
 }
 
-/** The first place the deal standing offers an entry the rules admit: an answer nothing refuses, or a reward. */
+/**
+ * The first place the deal standing offers an entry the rules admit: an answer nothing refuses, a
+ * reward, or a card.
+ */
 export function firstAdmitted(chronicle: Chronicle): number {
   const deal = dealStanding(chronicle);
   switch (deal.of) {
     case 'event': {
-      const at = offered(CATALOGUE, deal).findIndex((id) =>
+      const at = offered(CATALOGUE, chronicle, deal).findIndex((id) =>
         playable(answerRefusal(CATALOGUE, chronicle, deal.event, id)),
       );
       if (at < 0) throw new Error(`turn ${chronicle.turn} deals no answer the rules admit`);
       return at;
     }
     case 'capture':
+    case 'card':
       return 0;
   }
 }

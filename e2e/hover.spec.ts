@@ -344,7 +344,7 @@ test("a reward's kind label on a capture's window raises the overlay's bubble re
   const captured = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
   const [deal] = captured.deals;
   if (deal?.of !== 'capture') throw new Error('the camp is not captured');
-  const [reward] = offered(CATALOGUE, deal);
+  const [reward] = offered(CATALOGUE, captured, deal);
   const { kind } = cardFaceAtStart(CATALOGUE, reward, captured.citySection.building);
 
   await openSaved(page, captured);

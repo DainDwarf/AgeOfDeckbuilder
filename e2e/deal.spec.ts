@@ -49,7 +49,7 @@ function unpaid(): { dealt: Chronicle; answer: string } {
       const dealt = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
       const [deal] = dealt.deals;
       if (deal?.of === 'event') {
-        const answer = offered(CATALOGUE, deal).find(
+        const answer = offered(CATALOGUE, dealt, deal).find(
           (id) => answerRefusal(CATALOGUE, dealt, deal.event, id).unaffordable.length > 0,
         );
         if (answer !== undefined) return { dealt, answer };
@@ -134,7 +134,7 @@ test('a left click on an answer the city cannot pay for says why over it, takes 
   const { dealt, answer } = unpaid();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
-  const at = offered(CATALOGUE, deal).indexOf(answer);
+  const at = offered(CATALOGUE, dealt, deal).indexOf(answer);
   const said = refused(
     answerCost(CATALOGUE, dealt, answerOf(CATALOGUE, deal.event, answer)),
     answerRefusal(CATALOGUE, dealt, deal.event, answer),

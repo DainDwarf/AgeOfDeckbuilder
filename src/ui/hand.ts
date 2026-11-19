@@ -658,6 +658,7 @@ export function createHand(
       case 'deal':
       case 'answer':
       case 'reward':
+      case 'choice':
       case 'attack':
       case 'capture':
         return undefined;

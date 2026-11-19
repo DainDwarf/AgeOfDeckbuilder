@@ -632,7 +632,7 @@ function* dealTaken(catalogue: Catalogue, chronicle: Chronicle): Generator<Comma
   if (deal === undefined) return;
   const enemies = actingAsEnemies(chronicle);
   const striking = strikingCards(catalogue, chronicle);
-  const entries = offered(catalogue, deal).flatMap((id, at) => {
+  const entries = offered(catalogue, chronicle, deal).flatMap((id, at) => {
     if (refusedEntry(catalogue, chronicle, deal, id)) return [];
     const command: Command = { type: 'take', at };
     return [{ command, after: trial(catalogue, chronicle, command) }];

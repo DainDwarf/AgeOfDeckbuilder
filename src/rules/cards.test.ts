@@ -33,6 +33,7 @@ import { admitted, apply, byHand, type Command, outcome, reckoned, refusalOf } f
 import { growthThreshold } from './city';
 import {
   AGE,
+  AUGURED,
   actionOf,
   aimedAt,
   aimedAtHand,
@@ -108,6 +109,7 @@ import {
 } from './map';
 import { buildingKind, improvementKind, terrainKind } from './map-kinds';
 import { RESOURCES, type Resources, summed } from './resources';
+import { seedRng } from './rng';
 import { followed, idInHand, plays, walked } from './stages';
 import {
   type CardId,
@@ -340,6 +342,102 @@ test('a discard of a card the hand does not hold raises a runtime error and disc
     expect(landing.stages.map(({ name }) => name)).toEqual(['runtime-error']);
     expect(landing.chronicle).toBe(city);
   }
+});
+
+/** The keys of the cards, in the order handed. */
+function keysOf(cards: readonly { readonly key: number }[]): number[] {
+  return cards.map(({ key }) => key);
+}
+
+test('a card that deals stands its deal over the top of the draw pile in pile order, held in the hand and paid, and every other command is refused while it stands', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Augury', 'PH_Harvest'],
+    drawPile: ['PH_Farm', 'PH_Mine', 'PH_Stake'],
+    discardPile: ['PH_Worker'],
+    resources: science(2),
+  });
+  const [augury] = city.hand;
+
+  const stages = apply(CATALOGUE, city, aimedAtNothing(city));
+  const dealt = outcome(stages);
+  const others: Command[] = [aimedAtNothing(dealt), aimedAtNothing(dealt, 1), { type: 'end-turn' }];
+
+  expect(namesOf(stages)).toEqual(['played', 'stock', 'dealt']);
+  expect(dealt.deals).toEqual([
+    { of: 'card', card: augury.key, dealt: keysOf(city.drawPile.slice(0, AUGURED)) },
+  ]);
+  expect([dealt.hand, dealt.drawPile, dealt.discardPile]).toEqual([
+    city.hand,
+    city.drawPile,
+    city.discardPile,
+  ]);
+  expect(dealt.resources.science).toBe(1);
+  for (const command of others) expect(stagedBy(dealt, command)).toEqual(['refused']);
+});
+
+test('the take of a card’s deal sends the card that dealt to the discard pile, draws the card chosen, and shuffles the others back into the draw pile from the seed', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Augury'],
+    drawPile: ['PH_Farm', 'PH_Mine', 'PH_Stake', 'PH_Snare', 'PH_Lodge'],
+    discardPile: ['PH_Worker'],
+    resources: science(1),
+  });
+  const [augury] = city.hand;
+  const [first, chosen, ...rest] = city.drawPile;
+  const dealt = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
+  const choose: Command = { type: 'take', at: 1 };
+
+  const stages = apply(CATALOGUE, dealt, choose);
+  const taken = outcome(stages);
+  const reseeded = outcome(apply(CATALOGUE, { ...dealt, rng: seedRng(99) }, choose));
+
+  expect(namesOf(stages)).toEqual(['choice', 'taken', 'discarded', 'drawn', 'shuffled']);
+  expect(taken.deals).toEqual([]);
+  expect(taken.hand).toEqual([chosen]);
+  expect(taken.discardPile).toEqual([...city.discardPile, augury]);
+  expect(keysOf(taken.drawPile).sort()).toEqual(keysOf([first, ...rest]).sort());
+  expect(outcome(apply(CATALOGUE, dealt, choose))).toEqual(taken);
+  expect(reseeded.drawPile).not.toEqual(taken.drawPile);
+  expect(stagedBy(dealt, { type: 'take', at: AUGURED })).toEqual(['refused']);
+});
+
+test('a draw pile short of the cards a card deals has the discard pile shuffled in under what it holds, the card that deals never among them, and both piles short deal what they hold', () => {
+  const short = cityOf(['urban'], {
+    hand: ['PH_Augury'],
+    drawPile: ['PH_Farm'],
+    discardPile: ['PH_Mine', 'PH_Stake', 'PH_Snare'],
+    resources: science(1),
+  });
+  const thin = cityOf(['urban'], {
+    hand: ['PH_Augury'],
+    discardPile: ['PH_Mine'],
+    resources: science(1),
+  });
+
+  const stages = apply(CATALOGUE, short, aimedAtNothing(short));
+  const refilled = outcome(stages);
+
+  expect(namesOf(stages)).toEqual(['played', 'stock', 'shuffled', 'dealt']);
+  expect(refilled.discardPile).toEqual([]);
+  expect(refilled.drawPile[0]).toEqual(short.drawPile[0]);
+  expect(keysOf(refilled.drawPile.slice(1)).sort()).toEqual(keysOf(short.discardPile).sort());
+  expect(refilled.deals).toEqual([
+    { of: 'card', card: short.hand[0].key, dealt: keysOf(refilled.drawPile.slice(0, AUGURED)) },
+  ]);
+  expect(outcome(apply(CATALOGUE, thin, aimedAtNothing(thin))).deals).toEqual([
+    { of: 'card', card: thin.hand[0].key, dealt: keysOf(thin.discardPile) },
+  ]);
+});
+
+test('a card that deals is blocked while the draw pile and the discard pile are both empty, and its play refused', () => {
+  const bare = cityOf(['urban'], {
+    hand: ['PH_Augury', 'PH_Harvest'],
+    exhaustPile: ['PH_Mine'],
+    resources: science(1),
+  });
+
+  expect(refusalOf(CATALOGUE, bare, 'PH_Augury').blocked).toEqual(['no-card']);
+  expect(stagedBy(bare, aimedAtNothing(bare))).toEqual(['refused']);
 });
 
 test('the refresh instant refreshes move points alone, and leaves a spent action spent', () => {

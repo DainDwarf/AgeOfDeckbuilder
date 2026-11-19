@@ -141,7 +141,8 @@ type PlainGroup =
   | 'capstone-continued'
   | 'deal'
   | 'answer'
-  | 'reward';
+  | 'reward'
+  | 'choice';
 
 export function change(
   name: PlainChange | 'stock' | 'population',

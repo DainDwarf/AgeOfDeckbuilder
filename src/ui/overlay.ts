@@ -7,6 +7,8 @@ import {
   type ChronicleCard,
   type Cost,
   type Deal,
+  dealingCard,
+  dealtCards,
   type Ending,
   NO_REFUSAL,
   playable,
@@ -495,6 +497,7 @@ export function createOverlay({
       case 'deal':
       case 'answer':
       case 'reward':
+      case 'choice':
       case 'attack':
       case 'capture':
         return undefined;
@@ -544,16 +547,17 @@ export function createOverlay({
 }
 
 /**
- * What the deal window reads of a deal: the name and lore of the event or of the building captured
- * over it, and its entries in the order dealt — an answer as it reads on the chronicle, with what
- * refuses it there, a reward as the card of the deck it is, in its copies.
+ * What the deal window reads of a deal: its title, what stands where the lore does, and its entries
+ * in the order dealt — an answer as it reads on the chronicle, with what refuses it there, a reward as
+ * the card of the deck it is, in its copies, a card dealt as the card of the pile it is.
  */
 function dealt(
   catalogue: Catalogue,
   chronicle: Chronicle,
   deal: Deal,
 ): { heading: string; lore: string; entries: readonly Offered[] } {
-  const ids = offered(catalogue, deal);
+  const ids = offered(catalogue, chronicle, deal);
+  const { building } = chronicle.citySection;
   switch (deal.of) {
     case 'event':
       return {
@@ -574,11 +578,15 @@ function dealt(
         heading: buildingName(deal.building),
         lore: captureLore(deal.building),
         entries: ids.map((id, at) =>
-          offeredCard(
-            cardFaceAtStart(catalogue, id, chronicle.citySection.building),
-            at,
-            deal.rewards[id],
-          ),
+          offeredCard(cardFaceAtStart(catalogue, id, building), at, deal.rewards[id]),
+        ),
+      };
+    case 'card':
+      return {
+        heading: cardName(dealingCard(chronicle, deal).id),
+        lore: text('deal.card'),
+        entries: dealtCards(chronicle, deal).map((card, at) =>
+          offeredCard(cardFace(catalogue, card, building), at, 1),
         ),
       };
   }

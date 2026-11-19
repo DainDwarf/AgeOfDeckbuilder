@@ -308,6 +308,43 @@ test('a chronicle saved waiting on a capture’s rewards reads back with the dea
   ).toEqual(["fixture: the save's chronicle.deals[0].rewards deals 0 copies of PH_Idol"]);
 });
 
+test('a chronicle saved waiting on a card’s deal reads back with the deal standing and the card in the hand, and takes as it would have', () => {
+  const city = cityOf(['urban'], {
+    hand: ['PH_Augury', 'PH_Harvest'],
+    drawPile: ['PH_Farm', 'PH_Mine', 'PH_Stake'],
+    resources: { food: 0, production: 0, military: 0, money: 0, science: 1, culture: 0 },
+  });
+  const dealt = outcome(apply(CATALOGUE, city, aimedAtNothing(city)));
+  const save = { chronicle: dealt, civilization: CIVILIZATION_ID };
+  const take: Command = { type: 'take', at: 1 };
+  const [deal] = dealt.deals;
+  const dealing = (changed: object): readonly string[] =>
+    chronicleDropped(
+      tampered(save, (chronicle) => ({ ...chronicle, deals: [{ ...deal, ...changed }] })),
+    );
+
+  const read = readSave(CATALOGUE, writeSave(CATALOGUE, campaign(), save));
+
+  expect(deal).toMatchObject({ of: 'card', card: city.hand[0].key });
+  expect(read.chronicle).toEqual(save);
+  if (read.chronicle === undefined) throw new Error('the chronicle was dropped');
+  expect(outcome(apply(CATALOGUE, read.chronicle.chronicle, take))).toEqual(
+    outcome(apply(CATALOGUE, dealt, take)),
+  );
+  expect(dealing({ card: city.drawPile[0].key })).toEqual([
+    `fixture: the save's chronicle.deals[0].card names the key ${city.drawPile[0].key}, which the hand does not hold`,
+  ]);
+  expect(dealing({ card: city.hand[1].key })).toEqual([
+    "fixture: the save's chronicle.deals[0].card names the card PH_Harvest, which deals nothing",
+  ]);
+  expect(dealing({ dealt: [dealt.nextKey] })).toEqual([
+    `fixture: the save's chronicle.deals[0].dealt[0] names the key ${dealt.nextKey}, which no pile holds`,
+  ]);
+  expect(dealing({ dealt: [] })).toEqual([
+    "fixture: the save's chronicle.deals[0].dealt deals no card",
+  ]);
+});
+
 test('a chronicle saved once the neutral’s city has fallen reads back without it, its relations hostile', () => {
   const fallen = endedTurn(onTheNeutralCity());
   const save = { chronicle: fallen, civilization: CIVILIZATION_ID };

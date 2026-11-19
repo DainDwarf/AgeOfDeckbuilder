@@ -817,7 +817,7 @@ test('a unit killed is read under its faction by kind, and a deal taken with the
       command: (catalogue, chronicle) => {
         const [deal] = chronicle.deals;
         if (deal === undefined) return undefined;
-        return { type: 'take', at: offered(catalogue, deal).indexOf(answer) };
+        return { type: 'take', at: offered(catalogue, chronicle, deal).indexOf(answer) };
       },
     },
     { sentence: 'End the turn', command: () => ({ type: 'end-turn' }) },
@@ -1068,7 +1068,7 @@ test('the builder takes of a deal the entry leaving the most stock, never one ad
 
   expect(answerOf('builder', 1, blight)).toEqual({
     type: 'take',
-    at: offered(CATALOGUE, deal).indexOf('PH_Levy'),
+    at: offered(CATALOGUE, blight, deal).indexOf('PH_Levy'),
   });
   expect(answerOf('builder', 1, dealt('PH_Hardship'))).toEqual({ type: 'take', at: 0 });
 });

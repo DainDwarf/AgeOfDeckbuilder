@@ -9,6 +9,7 @@ import {
   paidInto,
   unavailable,
 } from './campaign';
+import { cardDealOf } from './cards';
 import {
   achievementOf,
   ageOf,
@@ -44,6 +45,8 @@ import {
   type CityFaction,
   type CityRows,
   type CitySection,
+  cardKeyed,
+  cardsInPiles,
   type Deal,
   type DefeatCause,
   type Ending,
@@ -534,6 +537,12 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     { next: 'the next key', numbered: 'card' },
   );
   const tiles = list(catalogue, field('tiles'), (item) => tileOf(catalogue, item));
+  const piles = {
+    drawPile: drawPile.map(({ card }) => card),
+    hand: hand.map(({ card }) => card),
+    discardPile: discardPile.map(({ card }) => card),
+    exhaustPile: exhaustPile.map(({ card }) => card),
+  };
   return {
     content,
     age,
@@ -554,7 +563,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     shownTurn: optional(field('shownTurn'), (item) =>
       count(catalogue, item, slot, (turn) => `shows turn ${turn}`),
     ),
-    deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item)),
+    deals: list(catalogue, field('deals'), (item) => dealOf(catalogue, item, piles)),
     neutral: optional(field('neutral'), (item) => ({
       city: onMap(catalogue, record(catalogue, item)('city'), tiles),
       ...cityRowsOf(catalogue, item, tiles),
@@ -563,10 +572,7 @@ function chronicleOf(catalogue: Catalogue, slot: Slot): Chronicle {
     units: units.map(({ unit }) => unit),
     nextUnit,
     nextKey,
-    drawPile: drawPile.map(({ card }) => card),
-    hand: hand.map(({ card }) => card),
-    discardPile: discardPile.map(({ card }) => card),
-    exhaustPile: exhaustPile.map(({ card }) => card),
+    ...piles,
     achievements: list(catalogue, field('achievements'), (item) => {
       const held = record(catalogue, item);
       return {
@@ -693,7 +699,15 @@ function timelineOf(catalogue: Catalogue, slot: Slot, age: string, region: strin
   };
 }
 
-function dealOf(catalogue: Catalogue, slot: Slot): Deal {
+/**
+ * A deal of the chronicle's: a card's deal naming a key the hand does not hold, a card that deals
+ * nothing, a key no pile holds, or no card dealt, is refused.
+ */
+function dealOf(
+  catalogue: Catalogue,
+  slot: Slot,
+  piles: Pick<Chronicle, 'drawPile' | 'hand' | 'discardPile' | 'exhaustPile'>,
+): Deal {
   const field = record(catalogue, slot);
   const kind = field('of');
   const of = string(catalogue, kind) as Deal['of'];
@@ -706,6 +720,28 @@ function dealOf(catalogue: Catalogue, slot: Slot): Deal {
         building: id(catalogue, field('building'), buildingKind),
         rewards: rewardsIn(catalogue, field('rewards')),
       };
+    case 'card': {
+      const cardSlot = field('card');
+      const card = integer(catalogue, cardSlot);
+      const dealing = cardKeyed(piles.hand, card);
+      if (dealing === undefined) {
+        refused(catalogue, cardSlot, `names the key ${card}, which the hand does not hold`);
+      }
+      if (cardDealOf(cardOf(catalogue, dealing.id)) === undefined) {
+        refused(catalogue, cardSlot, `names the card ${dealing.id}, which deals nothing`);
+      }
+      const held = cardsInPiles(piles);
+      const dealtSlot = field('dealt');
+      const dealt = list(catalogue, dealtSlot, (item) => {
+        const key = integer(catalogue, item);
+        if (cardKeyed(held, key) === undefined) {
+          refused(catalogue, item, `names the key ${key}, which no pile holds`);
+        }
+        return key;
+      });
+      if (dealt.length === 0) refused(catalogue, dealtSlot, 'deals no card');
+      return { of, card, dealt };
+    }
   }
   const unlisted: never = of;
   return refused(catalogue, kind, `names no kind of deal ${unlisted}`);

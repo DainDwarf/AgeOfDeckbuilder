@@ -686,6 +686,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
       case 'enemy-phase':
       case 'deal':
       case 'reward':
+      case 'choice':
       case 'capture':
         return undefined;
     }

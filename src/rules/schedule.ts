@@ -43,6 +43,7 @@ import {
   cityOn,
   costsOf,
   type Deal,
+  dealtCards,
   holderOf,
   holds,
   keysDealt,
@@ -136,13 +137,18 @@ export function showsNextLanding(): Aim & { readonly aim: 'none' } {
   };
 }
 
-/** What a deal offers to be taken, by id, in the order dealt: its event's answers, or a capture's rewards. */
-export function offered(catalogue: Catalogue, deal: Deal): readonly string[] {
+/**
+ * What a deal standing on the chronicle offers to be taken, by id, in the order dealt: its event's
+ * answers, a capture's rewards, or the cards a card deals.
+ */
+export function offered(catalogue: Catalogue, chronicle: Chronicle, deal: Deal): readonly string[] {
   switch (deal.of) {
     case 'event':
       return Object.keys(eventOf(catalogue, deal.event).answers);
     case 'capture':
       return Object.keys(deal.rewards);
+    case 'card':
+      return dealtCards(chronicle, deal).map(({ id }) => id);
   }
 }
 

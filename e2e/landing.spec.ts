@@ -78,7 +78,7 @@ function herdDealt(): { before: Chronicle; at: number; tile: TileCoords } {
     const [deal, ...behind] = dealt.deals;
     if (deal?.of !== 'event' || deal.event !== HERD || behind.length > 0) return undefined;
 
-    const at = offered(CATALOGUE, deal).indexOf(FOLLOW);
+    const at = offered(CATALOGUE, dealt, deal).indexOf(FOLLOW);
     const [tile] = [...walked(apply(CATALOGUE, dealt, { type: 'take', at }))].flatMap((stage) =>
       stage.name === 'charted' ? [stage.tile] : [],
     );

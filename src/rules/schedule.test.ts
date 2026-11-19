@@ -124,7 +124,10 @@ function walkedFrom(
   while (chronicle.turn < through && chronicle.ending === undefined) {
     resolve({ type: 'end-turn' });
     for (let deal = chronicle.deals[0]; deal !== undefined; deal = chronicle.deals[0]) {
-      resolve({ type: 'take', at: Math.max(offered(catalogue, deal).indexOf(wanted), 0) });
+      resolve({
+        type: 'take',
+        at: Math.max(offered(catalogue, chronicle, deal).indexOf(wanted), 0),
+      });
     }
   }
   return { landings, turn: chronicle.turn, chronicle };
@@ -526,7 +529,7 @@ function answerTaken(city: Chronicle, answer: string): { dealt: Chronicle; stage
   const dealt = outcome(apply(CATALOGUE, city, { type: 'end-turn' }));
   const [deal] = dealt.deals;
   if (deal === undefined) throw new Error(`no deal stands to take ${answer} from`);
-  const at = offered(CATALOGUE, deal).indexOf(answer);
+  const at = offered(CATALOGUE, dealt, deal).indexOf(answer);
   return { dealt, stages: apply(CATALOGUE, dealt, { type: 'take', at }) };
 }
 
@@ -683,7 +686,7 @@ test('an event placing a camp near the city is dealt where no tile takes a camp,
   const landing = eventOf(CATALOGUE, 'PH_Rivals').answers.PH_Encampment.lands(CATALOGUE, dealt);
 
   expect(dealt.deals).toEqual([{ of: 'event', event: 'PH_Rivals' }]);
-  expect(offered(CATALOGUE, dealt.deals[0])[encamping.at]).toBe('PH_Encampment');
+  expect(offered(CATALOGUE, dealt, dealt.deals[0])[encamping.at]).toBe('PH_Encampment');
   expect(answerRefusal(CATALOGUE, dealt, 'PH_Rivals', 'PH_Encampment')).toEqual({
     unaffordable: [],
     blocked: ['no-camp-tile'],

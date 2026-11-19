@@ -136,6 +136,6 @@ function fixedTake(
   if (taken === undefined) return undefined;
   return {
     sentBy: fixedNamed(taken),
-    command: { type: 'take', at: offered(catalogue, deal).indexOf(taken.answer) },
+    command: { type: 'take', at: offered(catalogue, chronicle, deal).indexOf(taken.answer) },
   };
 }

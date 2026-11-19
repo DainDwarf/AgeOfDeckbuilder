@@ -34,7 +34,7 @@ import {
   type Stage,
   walked,
 } from '../src/rules/stages';
-import { type Chronicle, cardsInPiles } from '../src/rules/state';
+import { type Chronicle, cardsInPiles, dealingCard } from '../src/rules/state';
 import { type Faction, type Unit, unitAt } from '../src/rules/units';
 import { type FlagValues, listFlag, readFlags, stringFlag, wholeFlag, wholeNumber } from './flags';
 import {
@@ -651,13 +651,16 @@ function unitKilled({ before, tile }: Change & { readonly tile: TileCoords }): U
 
 /** The deal a take's stages opened on and the entry taken of it, by its place in the order dealt. */
 function dealTaken(catalogue: Catalogue, stages: readonly Stage[], at: number): string {
-  const [deal] = stages[0].before.deals;
-  const entry = offered(catalogue, deal)[at];
+  const { before } = stages[0];
+  const [deal] = before.deals;
+  const entry = offered(catalogue, before, deal)[at];
   switch (deal.of) {
     case 'event':
       return `${deal.event}>${entry}`;
     case 'capture':
       return `${deal.building}>${entry}`;
+    case 'card':
+      return `${dealingCard(before, deal).id}>${entry}`;
   }
 }
 
