@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { INTERFACE_SIZES, type InterfaceSize, sizeRead } from '../src/ui/interface-size';
 import { text } from '../src/ui/text';
 import {
   capstoneClosed,
@@ -11,7 +12,9 @@ import {
   openSaved,
   playedOut,
   playing,
+  readings,
   reloadedOnCapstone,
+  rested,
   settledOn,
   standing,
   textOf,
@@ -22,6 +25,10 @@ const OPENED = settledOn(1);
 
 const ROW = 'graphics-animation-speed';
 const FULLSCREEN = 'graphics-fullscreen';
+const SIZE = 'graphics-interface-size';
+
+const WIDE = { width: 1920, height: 1080 };
+const DESIGN_WINDOW = { width: 1280, height: 720 };
 
 /** What the Animation speed row's button reads at that speed. */
 function speedRead(speed: number): string {
@@ -73,6 +80,94 @@ function scenesPlayAt(page: Page): Promise<(number | undefined)[]> {
     ['map', 'ui', 'overlay'].map((key) => window.game?.scene.getScene(key).tweens.timeScale),
   );
 }
+
+/** A press on the Interface size row, waited for until it reads that size and the screen is drawn at it. */
+async function sizedTo(page: Page, size: InterfaceSize): Promise<void> {
+  await click(page, SIZE);
+  await expect.poll(() => textOf(page, `${SIZE}-label`)).toBe(sizeRead(size));
+  await rested(page);
+}
+
+/**
+ * How wide the hand's first card stands on the page, how many CSS pixels a unit of the chronicle
+ * screen is drawn across, and how far the Graphics window's title stands off the window's middle.
+ */
+async function drawnAt(
+  page: Page,
+  width: number,
+): Promise<{ card: number; unit: number; offMiddle: number }> {
+  const seen = await readings(page, ['hand-0', 'graphics-title']);
+  const card = seen('hand-0');
+  const title = seen('graphics-title').boundsOnScreen;
+  return {
+    card: card.boundsOnScreen.width,
+    unit: card.onScreen.unit,
+    offMiddle: title.x + title.width / 2 - width / 2,
+  };
+}
+
+test('the Graphics window lists Interface size third, and on a 1920 by 1080 window a press on it draws the chronicle screen under the menu at the next size at once, 200% and Largest at the size that holds 1280 by 720, kept across a reload', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const rows = [ROW, FULLSCREEN, SIZE, 'graphics-faction-signs'];
+  const most = Math.min(WIDE.width / DESIGN_WINDOW.width, WIDE.height / DESIGN_WINDOW.height);
+
+  await page.setViewportSize(WIDE);
+  await openSaved(page, OPENED);
+  await intoGraphics(page);
+  const seen = await readings(page, [...rows, `${SIZE}-label`]);
+  const downs = rows.map((row) => seen(row).boundsOnScreen.y);
+  expect(downs).toEqual([...downs].sort((a, b) => a - b));
+  expect(new Set(downs).size).toBe(rows.length);
+  expect(seen(`${SIZE}-label`).text).toBe(sizeRead(100));
+
+  const first = await drawnAt(page, WIDE.width);
+  expect(first.unit).toBeCloseTo(1, 6);
+
+  for (const [size, unit] of [
+    [125, 1.25],
+    [150, 1.5],
+    [200, most],
+    ['largest', most],
+    [100, 1],
+  ] as const) {
+    await sizedTo(page, size);
+    const drawn = await drawnAt(page, WIDE.width);
+    expect(drawn.unit).toBeCloseTo(unit, 6);
+    expect(drawn.card).toBeCloseTo(first.card * unit, 1);
+    expect(drawn.offMiddle).toBeCloseTo(0, 0);
+  }
+
+  await sizedTo(page, 125);
+  await reloadedOnCapstone(page);
+  expect((await readings(page, ['hand-0']))('hand-0').onScreen.unit).toBeCloseTo(1.25, 6);
+  await capstoneClosed(page);
+  await intoGraphics(page);
+  expect(await textOf(page, `${SIZE}-label`)).toBe(sizeRead(125));
+
+  expect(problems).toEqual([]);
+});
+
+test('on a 1280 by 720 window every interface size draws the chronicle screen alike', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await page.setViewportSize(DESIGN_WINDOW);
+  await openSaved(page, OPENED);
+  await intoGraphics(page);
+  const first = await drawnAt(page, DESIGN_WINDOW.width);
+
+  for (const size of [...INTERFACE_SIZES.slice(1), INTERFACE_SIZES[0]]) {
+    await sizedTo(page, size);
+    const drawn = await drawnAt(page, DESIGN_WINDOW.width);
+    expect(drawn.unit).toBeCloseTo(1, 6);
+    expect(drawn.card).toBeCloseTo(first.card, 1);
+  }
+
+  expect(problems).toEqual([]);
+});
 
 test('a press on the row moves the speed on, kept across a reload, and ×4 goes back to ×1', async ({
   page,

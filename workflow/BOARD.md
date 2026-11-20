@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Interface size in Graphics** — the Graphics window's third row reads 100%, 125%, 150%, 200% or Largest, a press moves it to the next and redraws the chronicle screen at once, the size is kept in the browser, and `e2e/graphics.spec.ts` proves it. Doc-impact: none. [board/interface-size-in-graphics.md](board/interface-size-in-graphics.md)
 - **The resource bar in glyphs** — each reading as its glyph and its number with no word, and a tooltip naming it.
 - **Piles and buttons as icons** — the draw, discard and exhaust piles, End turn, Menu and Icons: what wears an icon and what keeps its word.
 - **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.

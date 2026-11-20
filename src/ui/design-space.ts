@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PRESSES, type Press, pressOf } from './bindings';
+import { interfaceSize, pixelsAt } from './interface-size';
 import { css, LOOK } from './look';
 
 export const DESIGN_WIDTH = 1280;
@@ -43,9 +44,6 @@ export function hexagon(size: number): number[] {
   return corners(raw);
 }
 
-/** How many CSS pixels a unit of the chronicle screen is drawn across where the window holds them. */
-const INTERFACE_SIZE = 1;
-
 /**
  * How the screen standing is laid out: on a design space of the window's shape, the chronicle
  * screen's, or as the one 1280 by 720 design of a meta screen.
@@ -72,7 +70,7 @@ function unitPixels(): number {
   const fit = Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT);
   switch (shape) {
     case 'window':
-      return Math.min(INTERFACE_SIZE, fit);
+      return Math.min(pixelsAt(interfaceSize()), fit);
     case 'design':
       return fit;
   }

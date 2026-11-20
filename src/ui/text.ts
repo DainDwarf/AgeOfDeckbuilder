@@ -318,6 +318,9 @@ const TEXT = {
   'graphics.animation-speed': 'Animation speed', // glossary exception: speed
   'graphics.speed': '×{speed}', // glossary exception: speed
   'graphics.fullscreen': 'Fullscreen',
+  'graphics.interface-size': 'Interface size',
+  'graphics.size': '{size}%',
+  'graphics.largest': 'Largest',
   'graphics.faction-signs': 'Faction signs',
   'graphics.on': 'On',
   'graphics.off': 'Off',
