@@ -23,7 +23,7 @@ import { unitOf } from '../rules/units';
 import { chronicleScreenAtSpeed } from './animation-speed';
 import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
-import { CARD_BASELINE, CARD_HEIGHT, createFootBubble } from './card-face';
+import { CARD_HEIGHT, cardBaseline, createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { createChromeButton } from './chrome';
 import { createChronicleFaces } from './chronicle-faces';
@@ -37,8 +37,10 @@ import {
   onClick,
   onHover,
   onLetGoOffCanvas,
+  onResize,
   type Scrim,
   type Stratum,
+  screenSize,
   stopsThePointer,
   stratumOf,
   thingUnder,
@@ -55,7 +57,7 @@ import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
-import { createPiles, TAB_EDGE } from './piles';
+import { createPiles, tabEdge } from './piles';
 import { createPinnedAchievements } from './pinned-achievement';
 import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
@@ -189,7 +191,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
   /** The campaign screen opened. */
   leave(): void {
     this.letGo();
-    overlayAhead(this.scene);
+    overlayAhead(this.scene, 'design');
     this.scene.stop('map');
     this.scene.start('campaign');
   }
@@ -860,6 +862,16 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       overlay,
     );
     paint();
+
+    // A motion runs to the place its target held as it began (`travel`): a play-out a change of
+    // shape catches midway lands at once.
+    let shaped = screenSize();
+    onResize(this, () => {
+      const now = screenSize();
+      if (now.width === shaped.width && now.height === shaped.height) return;
+      shaped = now;
+      jumpToEnd();
+    });
   }
 
   private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
@@ -881,9 +893,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     }
     const width = widest + 56;
     const height = label.height + 24;
-    const x = TAB_EDGE - MARGIN - width / 2;
-    const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
-    label.setPosition(x, y);
+    /** Where the button's middle stands: over the discard pile, clear of the exhaust pile's tab. */
+    let x = 0;
+    let y = 0;
 
     /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
     let wanted = true;
@@ -893,12 +905,18 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     const chrome = createChromeButton(
       this,
       'gold',
-      { x: x - width / 2, y: y - height / 2, width, height },
+      { x: 0, y: 0, width, height },
       'end-turn',
       live,
     );
     const button = chrome.face;
     on.layer.add([button, label]);
+    onResize(this, () => {
+      x = tabEdge() - MARGIN - width / 2;
+      y = cardBaseline() - CARD_HEIGHT - 14 - height / 2;
+      chrome.place({ x: x - width / 2, y: y - height / 2, width, height });
+      label.setPosition(x, y);
+    });
 
     let turn = 1;
     let settlePhase = false;
@@ -977,7 +995,7 @@ export function openChronicle(
   scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager,
   opening: Opening,
 ): void {
-  overlayAhead(scenes);
+  overlayAhead(scenes, 'window');
   // A scene's plugin queues the start, and its own `start` would stop the scene calling it.
   if (scenes instanceof Phaser.Scenes.ScenePlugin) scenes.launch('map');
   else scenes.start('map');

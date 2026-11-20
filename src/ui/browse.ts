@@ -13,11 +13,13 @@ import {
   addText,
   type Box,
   createScrim,
-  DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
   MARGIN,
+  offMiddle,
+  onResize,
   ownBoxOf,
+  screenSize,
   UI_FONT,
 } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
@@ -209,10 +211,11 @@ export type Browser = Surface & {
   /** One thing raised on the scrim, which goes with what stands. */
   carries<T extends Phaser.GameObjects.GameObject>(object: T): T;
   /**
-   * The panel laid on the scrim, which goes with what stands: the wheel and the two keys that pan up
-   * and down scroll it, a card rising large holds it still, and a press beside what it holds steps back.
+   * The panel laid on the scrim from `top` to the screen's foot, which goes with what stands: what it
+   * holds is laid about the middle of 1280 units, the wheel and the two pan keys scroll it, a card
+   * rising large holds it still, and a press beside what it holds steps back.
    */
-  lay(of: Omit<PanelOf, 'beside'>): Panel;
+  lay(of: Omit<PanelOf, 'beside' | 'frame'> & { readonly top: number }): Panel;
   /** A browse raised under its title, its stacks eight to a line from the frame's top left. */
   browse(of: BrowseOf): void;
   /** What stands taken down, and the scrim with it. */
@@ -235,7 +238,23 @@ export function standBrowser(
   /** Whether the scrim stands, from the raise to the close. */
   let up = false;
   let panel: Panel | undefined;
+  /** Where the panel's frame starts down the screen. */
+  let panelTop = 0;
   let shown: Phaser.GameObjects.GameObject[] = [];
+
+  /** The panel's frame from its top to the screen's foot, a margin in from every edge. */
+  const panelFrame = (): Box => {
+    const { width, height } = screenSize();
+    return {
+      x: MARGIN,
+      y: panelTop,
+      width: width - 2 * MARGIN,
+      height: height - MARGIN - panelTop,
+    };
+  };
+  onResize(overlay, () => {
+    panel?.place(panelFrame(), offMiddle().x);
+  });
 
   // The overlay holds one taker and this is it: whatever stands hears a key only through `takes`.
   const large = standLarge(overlay, catalogue, screen.covering, {
@@ -305,14 +324,18 @@ export function standBrowser(
       shown.push(object);
       return object;
     },
-    lay(of) {
-      panel = createPanel(browser, {
+    lay({ top, ...of }) {
+      panelTop = top;
+      const laid = createPanel(browser, {
         ...of,
+        frame: panelFrame(),
         beside: () => {
           screen.back();
         },
       });
-      return panel;
+      laid.place(panelFrame(), offMiddle().x);
+      panel = laid;
+      return laid;
     },
     browse({ name, heading, stacks }) {
       void browser.raise();
@@ -321,12 +344,7 @@ export function standBrowser(
       const cells = stacks.map((stack, at) => stackCellOf(browser, name, { stack, at }));
       browser.lay({
         name,
-        frame: {
-          x: MARGIN,
-          y: top,
-          width: DESIGN_WIDTH - 2 * MARGIN,
-          height: DESIGN_HEIGHT - MARGIN - top,
-        },
+        top,
         ...linesOf(cells, { left: (DESIGN_WIDTH - spanOf(ACROSS)) / 2, top, across: ACROSS }),
       });
     },

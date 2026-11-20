@@ -64,7 +64,14 @@ import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf, thresholdOf } from './city-bar';
-import { cutTexts, onResize, type Stratum, thingUnder, whileUp } from './design-space';
+import {
+  cutTexts,
+  filtersFollow,
+  onResize,
+  type Stratum,
+  thingUnder,
+  whileUp,
+} from './design-space';
 import { factionSigns } from './faction-signs';
 import { glyphMark } from './glyphs';
 import { type HealthBar, healthBarOf } from './health-bar';
@@ -520,12 +527,7 @@ export function createMapView(
     rescale?.();
   });
 
-  // A Layer's filter camera takes the scroll and the zoom of the camera drawing it and not its place
-  // (`Filters.js:536-554`), and lays its sheet down at its own (`renderNodes/Camera.js:143-150`):
-  // copied ahead of every draw (`Systems.js:380-382`), wherever the frame was cut.
-  whileUp(scene, scene.events, Phaser.Scenes.Events.PRE_RENDER, () => {
-    marks.filterCamera.setPosition(map.camera.x, map.camera.y);
-  });
+  filtersFollow(marks, map.camera);
 
   /** The resources the yield overlay is showing; empty while it is off. */
   let showing: ReadonlySet<Resource> = new Set();

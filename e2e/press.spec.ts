@@ -67,9 +67,6 @@ import {
   workerStepped,
 } from './chronicle-screen';
 
-/** Taller than the design aspect, so the canvas letterboxes and bare page is left to release on. */
-const WINDOW = { width: 1280, height: 900 };
-
 /** How far up a card comes before the release plays it, in design units, and then some. */
 const LIFTED = 140;
 
@@ -149,7 +146,6 @@ test('a hand card released off the canvas comes home, plays nothing, and leaves 
   const problems = watch(page);
   const { opened, unit } = playableAtNothing();
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
   const card = `hand-${unit}`;
@@ -199,7 +195,6 @@ test('a unit carried stands through the right button pressed and let go off the 
     stepped,
   } = workerStepped('steps its first worker off the city', () => true);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
   const from = await onScreen(page, `tile-${tileKey(playerCityTile(opened))}`);
@@ -225,7 +220,6 @@ test('a hand card dragged stands through the right button pressed on the canvas 
   const problems = watch(page);
   const { opened, unit } = playableAtNothing();
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
   const home = await onScreen(page, `hand-${unit}`);
@@ -251,7 +245,6 @@ test('a click held on the end-turn button stands through the right button let go
   const problems = watch(page);
   const opened = settledOn(1);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
   const button = await onScreen(page, 'end-turn');
@@ -277,7 +270,6 @@ test('a hand card whose release the blur swallowed comes home, and the next pres
   const problems = watch(page);
   const { opened, unit } = playableAtNothing();
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
   const card = `hand-${unit}`;
@@ -313,7 +305,6 @@ test('a press the blur swallowed before it dragged is no click, and the next rig
   const problems = watch(page);
   const { opened, unit } = playableAtNothing();
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, opened);
 
   const card = `hand-${unit}`;
@@ -1262,7 +1253,6 @@ test('a browse released off the canvas stays open, and the next gesture scrolls 
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, overflowingPiles());
   await browse(page, 'draw-pile');
 

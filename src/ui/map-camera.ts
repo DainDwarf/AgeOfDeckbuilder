@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CENTRE, type Tile, type TileCoords } from '../rules/map';
-import { MAP_FRAME } from './band';
+import { mapFrame } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended } from './card-motion';
 import {
@@ -10,6 +10,7 @@ import {
   renderFactor,
   resolutionAt,
   type Stratum,
+  screenOnCanvas,
 } from './design-space';
 import { onHeldKeys, onKeyDown } from './keys';
 import { positionOf } from './map-marks';
@@ -139,16 +140,18 @@ export function createMapCamera(
 
   const place = (): void => {
     const factor = renderFactor();
+    const screen = screenOnCanvas(scene.game);
+    const frame = mapFrame();
     // Phaser's camera manager resizes only the cameras that filled the old canvas: a cropped
     // camera is cut here or not at all.
     camera.setViewport(
-      MAP_FRAME.x * factor,
-      MAP_FRAME.y * factor,
-      MAP_FRAME.width * factor,
-      MAP_FRAME.height * factor,
+      screen.x + frame.x * factor,
+      screen.y + frame.y * factor,
+      frame.width * factor,
+      frame.height * factor,
     );
     camera.setZoom(factor * zoom);
-    const span = { x: MAP_FRAME.width / zoom, y: MAP_FRAME.height / zoom };
+    const span = { x: frame.width / zoom, y: frame.height / zoom };
     centre.x = bounded(centre.x, box.left, box.right, span.x);
     centre.y = bounded(centre.y, box.top, box.bottom, span.y);
     camera.centerOn(centre.x, centre.y);
@@ -214,9 +217,10 @@ export function createMapCamera(
       const at = tiles.map(positionOf);
       const xs = at.map((point) => point.x);
       const ys = at.map((point) => point.y);
+      const frame = mapFrame();
       const to = {
-        x: holding(centre.x, Math.min(...xs), Math.max(...xs), MAP_FRAME.width / zoom),
-        y: holding(centre.y, Math.min(...ys), Math.max(...ys), MAP_FRAME.height / zoom),
+        x: holding(centre.x, Math.min(...xs), Math.max(...xs), frame.width / zoom),
+        y: holding(centre.y, Math.min(...ys), Math.max(...ys), frame.height / zoom),
       };
       const away = Math.hypot(to.x - centre.x, to.y - centre.y) * zoom;
       if (away === 0) return undefined;

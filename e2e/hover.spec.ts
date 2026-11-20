@@ -32,9 +32,6 @@ import {
   watch,
 } from './chronicle-screen';
 
-/** Taller than the design aspect, so the canvas letterboxes and bare page is left above it. */
-const WINDOW = { width: 1280, height: 900 };
-
 /** Longer than the rest a tooltip waits out, so one that were coming has had every chance to. */
 const PAST_REST = 800;
 
@@ -46,7 +43,6 @@ test('a pointer that leaves the canvas over a resource raises no tooltip behind 
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const food = await onScreen(page, 'reading-food');
@@ -66,7 +62,6 @@ test('a tooltip standing over a resource goes down when the pointer leaves the c
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const food = await onScreen(page, 'reading-food');
@@ -89,7 +84,6 @@ test('the end-turn button reads the turn again when the pointer leaves the canva
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const { turn } = await chronicleOf(page);
@@ -112,7 +106,6 @@ test('the end-turn button reads End turn under the pointer the last turn ended a
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
   await stoppedTurn(page);
 
@@ -133,7 +126,6 @@ test('the end-turn button reads End turn when the pointer comes back straight on
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const { turn } = await chronicleOf(page);
@@ -158,7 +150,6 @@ test('the end-turn button reads End turn when the pointer comes back straight on
 test('a reading hovered while the deal window stands raises no tooltip', async ({ page }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, firstDealt(1));
   await restedOnDeal(page);
 
@@ -178,7 +169,6 @@ test('a tooltip standing over a reading goes down when the back key raises the m
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const food = await onScreen(page, 'reading-food');
@@ -199,7 +189,6 @@ test('the end-turn button reads End turn the moment the menu falls under a point
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const { turn } = await chronicleOf(page);
@@ -224,7 +213,6 @@ test('the end-turn button reads the turn again when the pointer moves straight o
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const { turn } = await chronicleOf(page);
@@ -244,7 +232,6 @@ test('a hand card the pointer leaves the canvas over settles back into the hand'
 }) => {
   const problems = watch(page);
 
-  await page.setViewportSize(WINDOW);
   await openSaved(page, settledOn(1));
 
   const card = 'hand-0';

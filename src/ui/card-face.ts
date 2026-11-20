@@ -36,7 +36,6 @@ import {
   addText,
   type Box,
   cutTexts,
-  DESIGN_HEIGHT,
   inked,
   MARGIN,
   onClick,
@@ -45,6 +44,7 @@ import {
   reactsToPress,
   resolutionAt,
   type SizedStyle,
+  screenSize,
   TYPE_FLOOR,
   UI_FONT,
 } from './design-space';
@@ -90,7 +90,9 @@ export const CARD_HEIGHT = heightOf(CARD_WIDTH);
 export const CARD_RADIUS = BODY_RADIUS * unitOf(CARD_WIDTH);
 
 /** Where a card lying on the chronicle screen rests: its bottom edge, one margin off the bottom. */
-export const CARD_BASELINE = DESIGN_HEIGHT - MARGIN;
+export function cardBaseline(): number {
+  return screenSize().height - MARGIN;
+}
 
 /** How far a card comes out of the lane it lies in: the lift a hover gives it, and the selection's. */
 export const CARD_LIFT = 32;

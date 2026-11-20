@@ -14,10 +14,10 @@ import {
 import { createAimLine } from './aim-line';
 import { pressOf } from './bindings';
 import {
-  CARD_BASELINE,
   CARD_HEIGHT,
   CARD_LIFT,
   type CardFace,
+  cardBaseline,
   createCardBack,
   type FootBubble,
   type FootLabel,
@@ -40,7 +40,7 @@ import {
 } from './design-space';
 import { cardFace } from './face';
 import { LOOK } from './look';
-import { PILE_PLACE, pileOf } from './piles';
+import { pileOf, pilePlace } from './piles';
 import { asPainted, poolOf } from './pool';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
@@ -143,8 +143,6 @@ export function createHand(
   catalogue: Catalogue,
   presses: HandPresses,
 ): Hand {
-  const laneLeft = PILE_PLACE['draw-pile'].x + CARD_WIDTH / 2 + LANE_PAD;
-  const laneWidth = PILE_PLACE['discard-pile'].x - CARD_WIDTH / 2 - LANE_PAD - laneLeft;
   const note = createRefusalNote(scene, on.note);
   const line = createAimLine(scene, on.aimLine);
   /** The backs the cards drawn ride on. */
@@ -189,6 +187,21 @@ export function createHand(
     record.hovered || record.held || selected?.record === record;
 
   const restingY = (record: CardRecord): number => record.home.y - (raised(record) ? CARD_LIFT : 0);
+
+  /** Where the card at that place of a hand holding that many rests, in the lane between the piles as they stand. */
+  const homeOf = (index: number, held: number): CardRecord['home'] => {
+    const laneLeft = pilePlace('draw-pile').x + CARD_WIDTH / 2 + LANE_PAD;
+    const laneWidth = pilePlace('discard-pile').x - CARD_WIDTH / 2 - LANE_PAD - laneLeft;
+    const advance =
+      held > 1 ? Math.min(CARD_WIDTH + GAP, (laneWidth - CARD_WIDTH) / (held - 1)) : 0;
+    const first = laneLeft + (laneWidth - (CARD_WIDTH + (held - 1) * advance)) / 2;
+    const off = index - (held - 1) / 2;
+    return {
+      x: first + CARD_WIDTH / 2 + index * advance,
+      y: cardBaseline() + off * off * FAN * 1.6,
+      rotation: Phaser.Math.DegToRad(off * FAN),
+    };
+  };
 
   /**
    * The card back where it rests, lifted or lying, at once or over that long; the promise settles
@@ -357,7 +370,22 @@ export function createHand(
   // The scene's own cut at a resize, subscribed before this one, cuts every text for its own size
   // (followFactor), a lifted card's among them.
   onResize(scene, () => {
-    for (const record of laidOut) if (raised(record)) record.face.lift(true);
+    laidOut.forEach((record, index) => {
+      const was = record.home;
+      record.home = homeOf(index, laidOut.length);
+      if (dragged?.record !== record) {
+        settle(record, 0);
+        return;
+      }
+      const by = { x: record.home.x - was.x, y: record.home.y - was.y };
+      const { grabbed, lifted } = dragged;
+      dragged = {
+        record,
+        grabbed: { x: grabbed.x + by.x, y: grabbed.y + by.y },
+        lifted: { x: lifted.x + by.x, y: lifted.y + by.y },
+      };
+      record.face.lift(true);
+    });
   });
 
   /** The name of this card under the pointer, handed over as the small cards take one. */
@@ -484,22 +512,12 @@ export function createHand(
       if (cardKeyed(chronicle.hand, record.card.key) === undefined) letLeave(record);
     }
 
-    const held = chronicle.hand.length;
-    const advance =
-      held > 1 ? Math.min(CARD_WIDTH + GAP, (laneWidth - CARD_WIDTH) / (held - 1)) : 0;
-    const first = laneLeft + (laneWidth - (CARD_WIDTH + (held - 1) * advance)) / 2;
-
     laidOut = chronicle.hand.map((card, index) => {
-      const off = index - (held - 1) / 2;
       const record = records.get(card.key) ?? meet(card);
       const { face } = record;
       record.card = card;
       record.refusal = refusalOf(catalogue, chronicle, card.id);
-      record.home = {
-        x: first + CARD_WIDTH / 2 + index * advance,
-        y: CARD_BASELINE + off * off * FAN * 1.6,
-        rotation: Phaser.Math.DegToRad(off * FAN),
-      };
+      record.home = homeOf(index, chronicle.hand.length);
       face.read(cardFace(catalogue, card, chronicle.citySection.building), record.refusal);
       asPainted(face.root)
         .setRotation(record.home.rotation)
@@ -544,7 +562,7 @@ export function createHand(
           });
           if (renders !== leftOn) return;
         }
-        await travel(scene, face.root, { ...PILE_PLACE[pile], rotation: 0 }, index * STAGGER);
+        await travel(scene, face.root, { ...pilePlace(pile), rotation: 0 }, index * STAGGER);
       }),
     );
     // A render while these were in the air took them down and painted the hand it stands on.
@@ -576,7 +594,7 @@ export function createHand(
 
         root.setVisible(false);
         const place = index - standing.length;
-        const { x, y } = PILE_PLACE['draw-pile'];
+        const { x, y } = pilePlace('draw-pile');
         const back = fly(backs.take().setPosition(x, y).setRotation(0), place);
         await travel(scene, back, home, place * STAGGER);
         if (renders !== leftOn) return;

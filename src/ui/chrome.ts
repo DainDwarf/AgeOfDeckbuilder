@@ -138,6 +138,8 @@ export type ChromeButton = {
   dress(): void;
   /** The button sunk in a well, the kit's inactive tab, wearing no look of its own; or standing again. */
   latch(on: boolean): void;
+  /** The button laid on another box. */
+  place(box: Box): void;
 };
 
 /**
@@ -148,10 +150,11 @@ export type ChromeButton = {
 export function createChromeButton(
   scene: Phaser.Scene,
   piece: ButtonPiece,
-  box: Box,
+  laidOn: Box,
   name: string,
   live: () => boolean = () => true,
 ): ChromeButton {
+  let box = laidOn;
   const { looks } = BUTTONS[piece];
   const standing = buttonIn(piece, 'normal');
   const face = takesThePointer(sliceOf(scene, standing).setName(name));
@@ -200,6 +203,10 @@ export function createChromeButton(
     latch(on: boolean): void {
       if (on === latched) return;
       latched = on;
+      stand();
+    },
+    place(next: Box): void {
+      box = next;
       stand();
     },
   };

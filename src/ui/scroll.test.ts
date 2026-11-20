@@ -132,8 +132,8 @@ test('a card scrolled out of its panel reacts to nothing at the place it would s
   const cards = [first, last];
   const { scroll } = panelHolding(last.box.y + last.box.height - FRAME.y);
 
-  expect(heldAt(FRAME, scroll.offset, cards, 70, last.box.y + 70)).toBeUndefined();
-  expect(heldAt(FRAME, scroll.offset, cards, 70, first.box.y + 70)).toBe(first);
+  expect(heldAt(FRAME, { x: 0, y: -scroll.offset }, cards, 70, last.box.y + 70)).toBeUndefined();
+  expect(heldAt(FRAME, { x: 0, y: -scroll.offset }, cards, 70, first.box.y + 70)).toBe(first);
 
   scroll.wheel(200);
   const firstNow = first.box.y - scroll.offset;
@@ -141,6 +141,14 @@ test('a card scrolled out of its panel reacts to nothing at the place it would s
 
   const firstFoot = firstNow + first.box.height;
   expect(firstFoot).toBeLessThan(FRAME.y);
-  expect(heldAt(FRAME, scroll.offset, cards, 70, firstFoot - 10)).toBeUndefined();
-  expect(heldAt(FRAME, scroll.offset, cards, 70, lastNow + 70)).toBe(last);
+  expect(heldAt(FRAME, { x: 0, y: -scroll.offset }, cards, 70, firstFoot - 10)).toBeUndefined();
+  expect(heldAt(FRAME, { x: 0, y: -scroll.offset }, cards, 70, lastNow + 70)).toBe(last);
+});
+
+test('a card of a panel moved across reacts where it stands, and nothing where it was laid', () => {
+  const card = { box: { x: 20, y: FRAME.y, width: 100, height: 140 } };
+  const moved = { x: 150, y: 0 };
+
+  expect(heldAt(FRAME, moved, [card], 70, FRAME.y + 70)).toBeUndefined();
+  expect(heldAt(FRAME, moved, [card], 70 + moved.x, FRAME.y + 70)).toBe(card);
 });

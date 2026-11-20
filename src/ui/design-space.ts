@@ -43,20 +43,93 @@ export function hexagon(size: number): number[] {
   return corners(raw);
 }
 
-// `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
-// store equal the canvas's on-screen size in device pixels.
-/** How many device pixels one design pixel is drawn across. */
-export function renderFactor(): number {
-  return (
-    window.devicePixelRatio *
-    Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT)
-  );
+/** How many CSS pixels a unit of the chronicle screen is drawn across where the window holds them. */
+const INTERFACE_SIZE = 1;
+
+/**
+ * How the screen standing is laid out: on a design space of the window's shape, the chronicle
+ * screen's, or as the one 1280 by 720 design of a meta screen.
+ */
+export type Shape = 'window' | 'design';
+
+let shape: Shape = 'design';
+
+/**
+ * The screen about to open laid out on its shape, and everything standing laid out again for it: the
+ * menu and the console take the shape of the screen under them.
+ */
+export function shapeScreen(game: Phaser.Game, next: Shape): void {
+  if (next === shape) return;
+  shape = next;
+  game.scale.refresh();
 }
 
-/** The backing store the window calls for, in device pixels. */
+/**
+ * How many CSS pixels a unit is drawn across: the largest size that holds 1280 by 720 units, capped
+ * by the interface size on a screen of the window's shape.
+ */
+function unitPixels(): number {
+  const fit = Math.min(window.innerWidth / DESIGN_WIDTH, window.innerHeight / DESIGN_HEIGHT);
+  switch (shape) {
+    case 'window':
+      return Math.min(INTERFACE_SIZE, fit);
+    case 'design':
+      return fit;
+  }
+}
+
+/** How many device pixels one design pixel is drawn across. */
+export function renderFactor(): number {
+  return window.devicePixelRatio * unitPixels();
+}
+
+// `Phaser.Scale.FIT` in main.ts fits the canvas to the window by the backing store's shape, which
+// this keeps the window's own.
+/** The backing store the window calls for, in device pixels: the whole window. */
 export function backingSize(): { width: number; height: number } {
+  return {
+    width: Math.round(window.innerWidth * window.devicePixelRatio),
+    height: Math.round(window.innerHeight * window.devicePixelRatio),
+  };
+}
+
+/**
+ * The design space the screen standing is laid out on, in units from its top left corner: the
+ * window's shape, or 1280 by 720.
+ */
+export function screenSize(): { width: number; height: number } {
+  switch (shape) {
+    case 'window': {
+      const backing = backingSize();
+      const factor = renderFactor();
+      return { width: backing.width / factor, height: backing.height / factor };
+    }
+    case 'design':
+      return { width: DESIGN_WIDTH, height: DESIGN_HEIGHT };
+  }
+}
+
+/**
+ * How far the middle of the design space stands from the middle of 1280 by 720: what a group laid
+ * out about the one is moved by to stand about the other.
+ */
+export function offMiddle(): { x: number; y: number } {
+  const { width, height } = screenSize();
+  return { x: (width - DESIGN_WIDTH) / 2, y: (height - DESIGN_HEIGHT) / 2 };
+}
+
+/** Where the design space stands on the backing store, in whole device pixels: centred on it. */
+export function screenOnCanvas(game: Phaser.Game): Box {
   const factor = renderFactor();
-  return { width: Math.round(DESIGN_WIDTH * factor), height: Math.round(DESIGN_HEIGHT * factor) };
+  const size = screenSize();
+  const width = Math.round(size.width * factor);
+  const height = Math.round(size.height * factor);
+  return {
+    x: Math.round((game.scale.width - width) / 2),
+    y: Math.round((game.scale.height - height) / 2),
+    width,
+    height,
+  };
 }
 
 /**
@@ -68,7 +141,8 @@ export function followWindow(game: Phaser.Game): void {
   game.scale.on(Phaser.Scale.Events.RESIZE, () => {
     const backing = backingSize();
     if (game.scale.width === backing.width && game.scale.height === backing.height) return;
-    game.scale.resize(backing.width, backing.height);
+    // Not `resize`: under `FIT` it keeps the shape the canvas had (docs/PHASER.md).
+    game.scale.setGameSize(backing.width, backing.height);
   });
 }
 
@@ -142,6 +216,49 @@ export function whileUp<A extends unknown[]>(
 export function onResize(scene: Phaser.Scene, place: () => void): void {
   place();
   whileUp(scene, scene.scale, Phaser.Scale.Events.RESIZE, place);
+}
+
+/**
+ * Lays something out at the first draw after every change of window, once whatever it stands by has
+ * been laid out again.
+ */
+export function afterResize(scene: Phaser.Scene, place: () => void): void {
+  let resized = false;
+  whileUp(scene, scene.scale, Phaser.Scale.Events.RESIZE, () => {
+    resized = true;
+  });
+  whileUp(scene, scene.events, Phaser.Scenes.Events.PRE_RENDER, () => {
+    if (!resized) return;
+    resized = false;
+    place();
+  });
+}
+
+/** Lays an object out now, and again after every change of window for as long as it stands. */
+export function placedWhileUp<T extends Phaser.GameObjects.GameObject>(
+  object: T,
+  place: () => void,
+): T {
+  const { scene } = object;
+  place();
+  const off = whileUp(scene, scene.scale, Phaser.Scale.Events.RESIZE, place);
+  object.once(Phaser.GameObjects.Events.DESTROY, off);
+  return object;
+}
+
+// A filter camera takes the scroll and the zoom of the camera drawing its object and not its place
+// (`Filters.js:536-554`), and lays its sheet down at its own (`renderNodes/Camera.js:143-150`):
+// copied ahead of every draw (`Systems.js:380-382`), wherever the camera was cut.
+/** The object's filters laid down where the camera drawing it is cut, for as long as it stands. */
+export function filtersFollow(
+  object: Phaser.GameObjects.Layer | Phaser.GameObjects.Container,
+  camera: Phaser.Cameras.Scene2D.Camera,
+): void {
+  const { scene } = object;
+  const off = whileUp(scene, scene.events, Phaser.Scenes.Events.PRE_RENDER, () => {
+    object.filterCamera.setPosition(camera.x, camera.y);
+  });
+  object.once(Phaser.GameObjects.Events.DESTROY, off);
 }
 
 /** Every Text the scene holds, however deep in layers and containers it sits. */
@@ -239,15 +356,20 @@ export function followFactor(scene: Phaser.Scene): void {
 }
 
 /**
- * A camera that holds the whole of DESIGN_WIDTH × DESIGN_HEIGHT across the canvas, now and after
- * every change of window, and the scene it paints kept to its factor. A camera left unzoomed paints
- * the backing store at 1:1.
+ * A camera cut to where the design space stands on the canvas and holding the whole of it, its top
+ * left corner the design space's, now and after every change of window, and the scene it paints
+ * kept to its factor. A camera left unzoomed paints the backing store at 1:1.
  */
 export function holdDesignSpace(scene: Phaser.Scene, camera: Phaser.Cameras.Scene2D.Camera): void {
   onResize(scene, () => {
-    // The cameras' own size is Phaser's business: the camera manager subscribed to RESIZE at scene
-    // boot, ahead of this, and resizes every camera at the origin that had the old size.
-    camera.setZoom(renderFactor()).centerOn(DESIGN_WIDTH / 2, DESIGN_HEIGHT / 2);
+    // Phaser's camera manager resizes only the cameras that filled the old canvas
+    // (`CameraManager.js:694-697`): a camera cut to a box is cut again here.
+    const { x, y, width, height } = screenOnCanvas(scene.game);
+    const size = screenSize();
+    camera
+      .setViewport(x, y, width, height)
+      .setZoom(renderFactor())
+      .centerOn(size.width / 2, size.height / 2);
   });
   followFactor(scene);
 }
@@ -381,10 +503,14 @@ export function onClick(
  */
 export function createScrim(scene: Phaser.Scene, back: () => void): Phaser.GameObjects.Rectangle {
   const scrim = scene.add
-    .rectangle(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT, LOOK.scrim.colour, LOOK.scrim.strength)
+    .rectangle(0, 0, 1, 1, LOOK.scrim.colour, LOOK.scrim.strength)
     .setOrigin(0, 0)
     .setVisible(false)
     .setInteractive();
+  placedWhileUp(scrim, () => {
+    const { width, height } = screenSize();
+    scrim.setSize(width, height);
+  });
   onClick(scrim, back);
   onClick(scrim, back, 'right');
   return scrim;
@@ -571,7 +697,7 @@ export function headingOf(
   name: string,
   heading: string,
 ): Phaser.GameObjects.Text {
-  return addText(scene, DESIGN_WIDTH / 2, BAR_HEIGHT + MARGIN, heading, {
+  const title = addText(scene, 0, BAR_HEIGHT + MARGIN, heading, {
     fontFamily: UI_FONT,
     fontSize: '26px',
     fontStyle: 'bold',
@@ -579,4 +705,7 @@ export function headingOf(
   })
     .setName(`${name}-title`)
     .setOrigin(0.5, 0);
+  return placedWhileUp(title, () => {
+    title.setX(screenSize().width / 2);
+  });
 }

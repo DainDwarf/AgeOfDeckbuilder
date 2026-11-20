@@ -1,16 +1,19 @@
 import type Phaser from 'phaser';
 import type { AimedCard } from '../rules/catalogue';
 import type { CardId } from '../rules/state';
-import { CARD_BASELINE, CARD_HEIGHT, CARD_LIFT, CARD_RISE } from './card-face';
-import { addText, DESIGN_WIDTH, type Stratum, UI_FONT } from './design-space';
+import { CARD_HEIGHT, CARD_LIFT, CARD_RISE, cardBaseline } from './card-face';
+import { addText, placedWhileUp, type Stratum, screenSize, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import { cardName, text } from './text';
 
 /** The clear water between the line and the card being aimed under it. */
 const STANDOFF = 8;
 
-/** The line's bottom edge: clear of the highest thing a card lifted out of the hand reaches. */
-const BOTTOM = CARD_BASELINE - CARD_LIFT - LOOK.liftedCard * (CARD_HEIGHT + CARD_RISE) - STANDOFF;
+/**
+ * How far the line's bottom edge stands over the cards' baseline: clear of the highest thing a card
+ * lifted out of the hand reaches.
+ */
+const OVER_BASELINE = CARD_LIFT + LOOK.liftedCard * (CARD_HEIGHT + CARD_RISE) + STANDOFF;
 
 /** How far the sentence stands off the slab's edges. */
 const PAD_X = 10;
@@ -57,9 +60,13 @@ export function createAimLine(scene: Phaser.Scene, on: Stratum): AimLine {
       slab.lineStyle(1, LOOK.cardEdge);
       slab.strokeRect(0.5, 0.5, width - 1, height - 1);
 
-      line = scene.add
-        .container((DESIGN_WIDTH - width) / 2, BOTTOM - height, [slab, label])
-        .setName('aim-line');
+      const standing = scene.add.container(0, 0, [slab, label]).setName('aim-line');
+      line = placedWhileUp(standing, () => {
+        standing.setPosition(
+          (screenSize().width - width) / 2,
+          cardBaseline() - OVER_BASELINE - height,
+        );
+      });
       on.layer.add(line);
     },
 

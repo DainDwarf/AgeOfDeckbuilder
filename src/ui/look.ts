@@ -261,7 +261,7 @@ export const LOOK: Look = {
   metalInk: 0x0d1014,
   paleInk: 0xd4d7db,
   answerInk: 0x9aa1a9,
-  // `index.html`'s style reset holds this value too, for the letterbox around the canvas.
+  // `index.html`'s style reset holds this value too, for the page before the canvas covers it.
   page: 0x0d1117,
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,

@@ -9,10 +9,10 @@ import {
   NO_REFUSAL,
 } from '../rules/state';
 import {
-  CARD_BASELINE,
   CARD_HEIGHT,
   type CardBack,
   type CardFace,
+  cardBaseline,
   createCardBack,
   createEmptySlot,
   type FootBubble,
@@ -28,13 +28,14 @@ import type { ChronicleFaces } from './chronicle-faces';
 import {
   addText,
   type Box,
-  DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
+  onResize,
   pressedWhere,
   reactsToPress,
   type Stratum,
+  screenSize,
   UI_FONT,
 } from './design-space';
 import { cardFace } from './face';
@@ -60,17 +61,25 @@ export function pileOf(chronicle: Chronicle, pile: PileKind): readonly Chronicle
 const TAB_WIDTH = 32;
 
 /** The exhaust pile's tab's left edge. */
-export const TAB_EDGE = DESIGN_WIDTH - TAB_WIDTH;
+export function tabEdge(): number {
+  return screenSize().width - TAB_WIDTH;
+}
 
 /**
  * Where each pile's top card lies, about its own bottom centre, as a card is drawn; the exhaust
  * pile's is the tab's bottom centre, where a card flying to it lands.
  */
-export const PILE_PLACE: Record<PileKind, { readonly x: number; readonly y: number }> = {
-  'draw-pile': { x: MARGIN + CARD_WIDTH / 2, y: CARD_BASELINE },
-  'discard-pile': { x: TAB_EDGE - MARGIN - CARD_WIDTH / 2, y: CARD_BASELINE },
-  'exhaust-pile': { x: DESIGN_WIDTH - TAB_WIDTH / 2, y: CARD_BASELINE },
-};
+export function pilePlace(pile: PileKind): { readonly x: number; readonly y: number } {
+  const y = cardBaseline();
+  switch (pile) {
+    case 'draw-pile':
+      return { x: MARGIN + CARD_WIDTH / 2, y };
+    case 'discard-pile':
+      return { x: tabEdge() - MARGIN - CARD_WIDTH / 2, y };
+    case 'exhaust-pile':
+      return { x: tabEdge() + TAB_WIDTH / 2, y };
+  }
+}
 
 export type Piles = {
   render(chronicle: Chronicle): void;
@@ -176,14 +185,14 @@ export function createPiles(
 
   const shuffleIn = async (top: ChronicleCard, chronicle: Chronicle): Promise<void> => {
     const face = cards.of(top.key);
-    const from = PILE_PLACE['discard-pile'];
+    const from = pilePlace('discard-pile');
     carried = face;
     carrier.add(face.root.setPosition(0, 0));
     asPainted(carrier).setPosition(from.x, from.y);
     discarded.show(undefined, 0);
 
     await Promise.all([
-      travel(scene, carrier, { ...PILE_PLACE['draw-pile'], rotation: 0 }, 0, SHUFFLE),
+      travel(scene, carrier, { ...pilePlace('draw-pile'), rotation: 0 }, 0, SHUFFLE),
       turnOver(scene, carrier, () => {
         face.root.setVisible(false);
         shuffledBack.setVisible(true);
@@ -323,7 +332,6 @@ function createPile(
     readonly presses: PilePresses;
   },
 ): Pile {
-  const { x, y } = PILE_PLACE[pile];
   const pill = scene.add.graphics();
   const count = addText(scene, 0, 0, '', {
     fontFamily: UI_FONT,
@@ -334,18 +342,38 @@ function createPile(
     .setOrigin(0.5, 0.5)
     .setName(`${pile}-count`);
   /** Where the pill reading the count stands. */
-  let counted: Box = { x, y, width: 0, height: 0 };
+  let counted: Box = { x: 0, y: 0, width: 0, height: 0 };
   const press = pressedWhere(
-    scene.add.zone(x, y - CARD_HEIGHT / 2, CARD_WIDTH, CARD_HEIGHT).setName(pile),
+    scene.add.zone(0, 0, CARD_WIDTH, CARD_HEIGHT).setName(pile),
     (atX, atY) =>
       inRoundedBox(pill.getLocalPoint(atX, atY), counted, counted.height / 2) ||
       (shown ?? blank).cardAt(atX, atY),
   );
-  on.layer.add([blank.root.setPosition(x, y).setName(`${pile}-top`), pill, count, press]);
+  on.layer.add([blank.root.setName(`${pile}-top`), pill, count, press]);
 
   let shown: CardFace | undefined;
   /** Whether the small cards standing were raised off a name of this pile's top, and not the hand's. */
   let chained = false;
+
+  /** The pile laid where it stands: its top, the zone a press lands on, and the pill reading its count. */
+  const place = (): void => {
+    const { x, y } = pilePlace(pile);
+    blank.root.setPosition(x, y);
+    shown?.root.setPosition(x, y);
+    press.setPosition(x, y - CARD_HEIGHT / 2);
+    const width = Math.max(18, count.width) + 14;
+    const height = count.height + 6;
+    const centre = {
+      x: x + CARD_WIDTH / 2 + 10 - width / 2,
+      y: y - CARD_HEIGHT - 10 + height / 2,
+    };
+    count.setPosition(centre.x, centre.y);
+    counted = { x: centre.x - width / 2, y: centre.y - height / 2, width, height };
+    pill.clear();
+    pill.fillStyle(LOOK.pileCount);
+    pill.fillRoundedRect(counted.x, counted.y, width, height, height / 2);
+  };
+  onResize(scene, place);
 
   const nameUnder = (pointer: Phaser.Input.Pointer): Name | undefined => {
     const at = on.at(pointer.x, pointer.y);
@@ -406,28 +434,14 @@ function createPile(
       shown = top;
       blank.root.setVisible(top === undefined);
       if (top !== undefined) {
-        const root = asPainted(top.root)
-          .setPosition(x, y)
-          .setRotation(0)
-          .setDepth(0)
-          .setName(`${pile}-top`);
+        const root = asPainted(top.root).setRotation(0).setDepth(0).setName(`${pile}-top`);
         // A list's `add` and `addAt` leave a child it already holds where it stands.
         on.layer.add(root);
         on.layer.moveBelow(root, pill);
       }
 
       count.setText(String(remaining));
-      const width = Math.max(18, count.width) + 14;
-      const height = count.height + 6;
-      const centre = {
-        x: x + CARD_WIDTH / 2 + 10 - width / 2,
-        y: y - CARD_HEIGHT - 10 + height / 2,
-      };
-      count.setPosition(centre.x, centre.y);
-      counted = { x: centre.x - width / 2, y: centre.y - height / 2, width, height };
-      pill.clear();
-      pill.fillStyle(LOOK.pileCount);
-      pill.fillRoundedRect(counted.x, counted.y, width, height, height / 2);
+      place();
     },
   };
 }
@@ -438,15 +452,8 @@ function createTab(
   on: Stratum,
   presses: PilePresses,
 ): { show(count: number): void } {
-  const x = PILE_PLACE['exhaust-pile'].x;
-  const y = CARD_BASELINE - CARD_HEIGHT / 2;
-  const panel = standChromePanel(createChromePanel(scene, PANEL_RIMS.exhaustTab), {
-    x: x - TAB_WIDTH / 2,
-    y: y - CARD_HEIGHT / 2,
-    width: TAB_WIDTH,
-    height: CARD_HEIGHT,
-  });
-  const label = addText(scene, x, y, '', {
+  const panel = createChromePanel(scene, PANEL_RIMS.exhaustTab);
+  const label = addText(scene, 0, 0, '', {
     fontFamily: UI_FONT,
     fontSize: '15px',
     fontStyle: 'bold',
@@ -456,10 +463,22 @@ function createTab(
     .setRotation(-Math.PI / 2)
     .setName('exhaust-pile-label');
   const press = scene.add
-    .zone(x, y, TAB_WIDTH, CARD_HEIGHT)
+    .zone(0, 0, TAB_WIDTH, CARD_HEIGHT)
     .setName('exhaust-pile')
     .setInteractive();
   on.layer.add([panel, label, press]);
+  onResize(scene, () => {
+    const x = pilePlace('exhaust-pile').x;
+    const y = cardBaseline() - CARD_HEIGHT / 2;
+    standChromePanel(panel, {
+      x: x - TAB_WIDTH / 2,
+      y: y - CARD_HEIGHT / 2,
+      width: TAB_WIDTH,
+      height: CARD_HEIGHT,
+    });
+    label.setPosition(x, y);
+    press.setPosition(x, y);
+  });
   onClick(
     press,
     () => {

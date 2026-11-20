@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { createChromePanel, PANEL_RIMS, standChromePanel } from './chrome';
-import { addText, DESIGN_WIDTH, MARGIN, type Stratum, UI_FONT } from './design-space';
+import { addText, afterResize, MARGIN, type Stratum, screenSize, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** The clear water between a tooltip and what it points at. */
@@ -126,12 +126,15 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
     restY = at.y;
     rest();
   });
+  afterResize(scene, () => {
+    place?.();
+  });
 
   return {
     under(message: string, left: number, top: number): void {
       raise(() => {
         const { width } = measure(message);
-        const x = Math.min(left, DESIGN_WIDTH - MARGIN - width);
+        const x = Math.min(left, screenSize().width - MARGIN - width);
         place = undefined;
         tooltip.setScale(on.unit()).setPosition(x, top).setVisible(true);
       });

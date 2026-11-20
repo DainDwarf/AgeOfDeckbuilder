@@ -4,6 +4,7 @@ import { dashAlong } from './card-face';
 import { SLIDE_HOME, stopMotion, travel } from './card-motion';
 import {
   type Box,
+  filtersFollow,
   onClick,
   onHover,
   onLetGoOffCanvas,
@@ -17,8 +18,8 @@ import { createScroll, heldAt, pointInBox, reachOf, thumbOf } from './scroll';
 import type { Point, Reactions } from './stack';
 
 /**
- * What a press held on a thing carries: its copy, drawn where the thing stands unscrolled, and the
- * box of the design space a release lands it in, where it does what a left click on the thing does.
+ * What a press held on a thing carries: its copy, drawn where the thing was laid, and the box of the
+ * design space a release lands it in, where it does what a left click on the thing does.
  */
 export type Carry = {
   readonly copy: () => Phaser.GameObjects.Container;
@@ -26,12 +27,12 @@ export type Carry = {
 };
 
 /**
- * A thing a panel holds that reacts to the pointer, its box as it stands unscrolled. One that reacts
- * to no left click, or on a surface with no carrier, carries nothing, whatever carry it declares.
+ * A thing a panel holds that reacts to the pointer, its box as it was laid. One that reacts to no
+ * left click, or on a surface with no carrier, carries nothing, whatever carry it declares.
  */
 export type Held = {
   readonly box: Box;
-  /** Whether it lies under a point of the design space, the panel scrolled as it stands; its box answers where it says nothing. */
+  /** Whether it lies under a point of the design space, the panel moved as it stands; its box answers where it says nothing. */
   readonly liesUnder?: (x: number, y: number) => boolean;
   readonly reactions: Reactions;
   readonly press?: () => void;
@@ -43,10 +44,10 @@ export type Carrier = {
   /** Whether a card is carried: no panel points while one is. */
   readonly carrying: boolean;
   /**
-   * The thing's copy lifted off a panel scrolled this far, under a press that landed at `from` and
-   * stands at `at`; a landing runs `press`.
+   * The thing's copy lifted off a panel whose things stand `moved` from where they were laid, under a
+   * press that landed at `from` and stands at `at`; a landing runs `press`.
    */
-  lift(carry: Carry, press: () => void, offset: number, from: Point, at: Point): void;
+  lift(carry: Carry, press: () => void, moved: Point, from: Point, at: Point): void;
   /** The card carried and every one sliding home taken down at once. */
   down(): void;
 };
@@ -118,7 +119,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
     get carrying() {
       return carried !== undefined;
     },
-    lift(carry, press, offset, from, at) {
+    lift(carry, press, moved, from, at) {
       const copy = carry.copy();
       const { x, y, width, height } = carry.lands;
       const off = 6 + 2 / 2;
@@ -131,7 +132,14 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
         { x: x + off, y: y + off },
       ]);
       on.layer.add([edge, copy]);
-      carried = { carry, press, copy, edge, home: { x: copy.x, y: copy.y - offset }, from };
+      carried = {
+        carry,
+        press,
+        copy,
+        edge,
+        home: { x: copy.x + moved.x, y: copy.y + moved.y },
+        from,
+      };
       follow(at);
     },
     down() {
@@ -177,6 +185,10 @@ export type Surface = {
 export type Panel = {
   /** How far it is scrolled. */
   readonly offset: number;
+  /** How far across what it holds stands from where it was laid. */
+  readonly across: number;
+  /** Cut at another frame, what it holds standing `across` from where it was laid. */
+  place(frame: Box, across: number): void;
   /**
    * Whether the pointer is on it. Read from the game loop alone: a hit test inside an input handler
    * refills the list Phaser's dispatch is walking (docs/PHASER.md).
@@ -201,27 +213,22 @@ export type Panel = {
  */
 export function createPanel(
   { scene, on, follow, carrier }: Surface,
-  { name, frame, parts, held, foot, beside }: PanelOf,
+  { name, frame: laidIn, parts, held, foot, beside }: PanelOf,
   offset = 0,
 ): Panel {
+  let frame = laidIn;
   const root = scene.add.container(0, 0, [...parts]).setName(name);
   on.layer.add(root);
   // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
-  const stencil = new Phaser.GameObjects.Rectangle(
-    scene,
-    frame.x + frame.width / 2,
-    frame.y + frame.height / 2,
-    frame.width,
-    frame.height,
-    0xffffff,
-  );
+  const stencil = new Phaser.GameObjects.Rectangle(scene, 0, 0, 1, 1, 0xffffff);
   root.once(Phaser.GameObjects.Events.DESTROY, () => {
     stencil.destroy();
   });
   root.enableFilters().filters?.external.addMask(stencil, false, on.camera);
+  filtersFollow(root, on.camera);
 
   const zone = scene.add
-    .zone(frame.x + frame.width / 2, frame.y + frame.height / 2, frame.width, frame.height)
+    .zone(0, 0, 1, 1)
     .setName(`${name}-frame`)
     .setInteractive({ draggable: true });
   on.layer.add(zone);
@@ -231,20 +238,32 @@ export function createPanel(
    * pointer that may hold still, and each time it moves.
    */
   let moved = true;
-  const reach = reachOf(frame.height, foot - frame.y);
-  const bar = scrollbarOf(scene, on, name, frame, reach);
+  let bar: Scrollbar | undefined;
   const scroll = createScroll((offset) => {
     root.setY(-offset);
     bar?.stand(offset);
     follow();
     moved = true;
   });
-  root.setData('overflow', reach);
-  scroll.reach(reach);
+
+  const cut = (at: Box): void => {
+    frame = at;
+    const middle = { x: frame.x + frame.width / 2, y: frame.y + frame.height / 2 };
+    stencil.setPosition(middle.x, middle.y).setSize(frame.width, frame.height);
+    zone.setPosition(middle.x, middle.y).setSize(frame.width, frame.height);
+    const reach = reachOf(frame.height, foot - frame.y);
+    bar?.down();
+    bar = scrollbarOf(scene, on, name, frame, reach);
+    root.setData('overflow', reach);
+    scroll.reach(reach);
+    bar?.stand(scroll.offset);
+    moved = true;
+  };
+  cut(frame);
   scroll.stand(offset);
   reactsToPress(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);
-    const under = heldAt(frame, scroll.offset, held, at.x, at.y);
+    const under = heldAt(frame, root, held, at.x, at.y);
     return under !== undefined && (under.press !== undefined || under.reactions.rests(at));
   });
 
@@ -258,7 +277,7 @@ export function createPanel(
       pointer === undefined || scroll.dragged || carrier?.carrying === true
         ? undefined
         : on.at(pointer.x, pointer.y);
-    const under = at === undefined ? undefined : heldAt(frame, scroll.offset, held, at.x, at.y);
+    const under = at === undefined ? undefined : heldAt(frame, root, held, at.x, at.y);
     if (pointed !== under) pointed?.reactions.point(undefined);
     pointed = under;
     under?.reactions.point(at);
@@ -269,10 +288,10 @@ export function createPanel(
   });
   zone.on('dragstart', (pointer: Phaser.Input.Pointer) => {
     const from = on.at(pointer.downX, pointer.downY);
-    const under = heldAt(frame, scroll.offset, held, from.x, from.y);
+    const under = heldAt(frame, root, held, from.x, from.y);
     if (carrier === undefined || under?.carry === undefined || under.press === undefined) {
       scroll.grab(from.y);
-    } else carrier.lift(under.carry, under.press, scroll.offset, from, on.at(pointer.x, pointer.y));
+    } else carrier.lift(under.carry, under.press, root, from, on.at(pointer.x, pointer.y));
   });
   // Phaser ends a drag at any button's release (docs/PHASER.md): the scroll reads the scene's own
   // moves and releases.
@@ -301,7 +320,7 @@ export function createPanel(
     zone,
     (pointer) => {
       const at = on.at(pointer.x, pointer.y);
-      const under = heldAt(frame, scroll.offset, held, at.x, at.y);
+      const under = heldAt(frame, root, held, at.x, at.y);
       if (under === undefined) beside?.();
       else under.reactions.inspect(at);
     },
@@ -309,7 +328,7 @@ export function createPanel(
   );
   onClick(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);
-    const under = heldAt(frame, scroll.offset, held, at.x, at.y);
+    const under = heldAt(frame, root, held, at.x, at.y);
     if (under === undefined) beside?.();
     else under.press?.();
   });
@@ -333,6 +352,13 @@ export function createPanel(
   return {
     get offset() {
       return scroll.offset;
+    },
+    get across() {
+      return root.x;
+    },
+    place(at, across) {
+      root.setX(across);
+      cut(at);
     },
     get pointed() {
       return thingUnder(scene.game) === zone;

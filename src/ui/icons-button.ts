@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
-import { MAP_FRAME } from './band';
-import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { inked, type Stratum } from './design-space';
+import { mapFrame } from './band';
+import { CARD_HEIGHT, cardBaseline } from './card-face';
+import { inked, onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
 import { createSilverButton, silverButtonSize } from './menu';
 import { SUNK } from './resource-bar';
@@ -22,16 +22,31 @@ export function createIconsButton(
 ): IconsButton {
   const reads = text('button.icons');
   const { width, height } = silverButtonSize(scene, reads);
-  const x = MAP_FRAME.x + CHIP_INSET + width / 2;
-  const y = CARD_BASELINE - CARD_HEIGHT - OVER_THE_PILE - height / 2;
-  const { button, label } = createSilverButton(scene, 'icons-button', reads, { x, y }, pressed);
+  const { button, label } = createSilverButton(
+    scene,
+    'icons-button',
+    reads,
+    { x: 0, y: 0 },
+    pressed,
+  );
   on.layer.add([button.face, label]);
+
+  /** Where the button's middle stands, and how far its label is sunk with it. */
+  let x = 0;
+  let y = 0;
+  let step = 0;
+  onResize(scene, () => {
+    x = mapFrame().x + CHIP_INSET + width / 2;
+    y = cardBaseline() - CARD_HEIGHT - OVER_THE_PILE - height / 2;
+    button.place({ x: x - width / 2, y: y - height / 2, width, height });
+    label.setPosition(x + step, y + step);
+  });
 
   const icons = {
     sink(sunk: boolean): void {
       button.latch(sunk);
       inked(label, sunk ? LOOK.charcoalInk : LOOK.metalInk);
-      const step = sunk ? SUNK : 0;
+      step = sunk ? SUNK : 0;
       label.setPosition(x + step, y + step);
     },
   };

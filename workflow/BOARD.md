@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The screen takes the window's shape** — the chronicle screen is laid out on the window's shape at 100% (or the largest size holding 1280 by 720 units), its pieces at their edges, the map's frame filling the rest, the scrim over the whole window with its windows centred, the meta screens fitted as today, and `e2e/window.spec.ts` proves it. Doc-impact: `docs/PHASER.md`. [board/screen-takes-window-shape.md](board/screen-takes-window-shape.md)
 - **Interface size in Graphics** — the Graphics window's third row reads 100%, 125%, 150%, 200% or Largest, a press moves it to the next and redraws the chronicle screen at once, the size is kept in the browser, and `e2e/graphics.spec.ts` proves it. Doc-impact: none. [board/interface-size-in-graphics.md](board/interface-size-in-graphics.md)
 - **The resource bar in glyphs** — each reading as its glyph and its number with no word, and a tooltip naming it.
 - **Piles and buttons as icons** — the draw, discard and exhaust piles, End turn, Menu and Icons: what wears an icon and what keeps its word.

@@ -24,10 +24,11 @@ import { pileStacksOf } from './collection-layout';
 import {
   addText,
   type Box,
-  DESIGN_HEIGHT,
   DESIGN_WIDTH,
   headingOf,
   MARGIN,
+  placedWhileUp,
+  screenSize,
   TITLE_INK,
   UI_FONT,
 } from './design-space';
@@ -208,7 +209,7 @@ export function createOverlay({
 
   /** A window's lore, named after the window it stands in, ending where its row starts. */
   const raiseLore = (name: string, lore: string): void => {
-    const line = addText(scene, DESIGN_WIDTH / 2, LORE_FOOT, lore, {
+    const line = addText(scene, 0, LORE_FOOT, lore, {
       fontFamily: UI_FONT,
       fontSize: '20px',
       color: TITLE_INK,
@@ -217,7 +218,11 @@ export function createOverlay({
     })
       .setName(`${name}-lore`)
       .setOrigin(0.5, 1);
-    carries(line);
+    carries(
+      placedWhileUp(line, () => {
+        line.setX(screenSize().width / 2);
+      }),
+    );
   };
 
   /**
@@ -292,9 +297,9 @@ export function createOverlay({
   };
 
   /**
-   * A window's entries on its panel in rows from `ROW_TOP`, each row centred, every entry of a row as
-   * tall as its tallest, a left click on one running `pressed` while `live` holds; the first is drawn
-   * first.
+   * A window's entries on its panel in rows from `ROW_TOP`, as many to a row as 1280 units hold, each
+   * row centred, every entry of a row as tall as its tallest, a left click on one running `pressed`
+   * while `live` holds; the first is drawn first.
    */
   const layWindow = (
     name: string,
@@ -303,15 +308,10 @@ export function createOverlay({
     pressed: (entry: Placed) => void,
     live: () => boolean = () => true,
   ): Laid => {
-    const frame = {
-      x: MARGIN,
-      y: top,
-      width: DESIGN_WIDTH - 2 * MARGIN,
-      height: DESIGN_HEIGHT - MARGIN - top,
-    };
+    const room = DESIGN_WIDTH - 2 * MARGIN;
     const unlaid = entries.map((offered, index) => unlaidOf(offered, name, index));
     const width = Math.max(...unlaid.map((each) => each.width));
-    const columns = Math.max(1, Math.floor((frame.width + GRID_GAP) / (width + GRID_GAP)));
+    const columns = Math.max(1, Math.floor((room + GRID_GAP) / (width + GRID_GAP)));
 
     const placed: Placed[] = [];
     let rowTop = ROW_TOP;
@@ -328,7 +328,7 @@ export function createOverlay({
 
     const panel = browser.lay({
       name,
-      frame,
+      top,
       parts: placed.map(({ part }) => part),
       held: placed.map(
         (entry): Held => ({
@@ -401,7 +401,8 @@ export function createOverlay({
       ({ costs, refusal, own, at }) => {
         if (!playable(refusal)) {
           const { x, y, width } = own;
-          note.overCard(refused(costs, refusal), x + width / 2, y - laid.panel.offset);
+          const { across, offset } = laid.panel;
+          note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
           return;
         }
         standingDeal = undefined;

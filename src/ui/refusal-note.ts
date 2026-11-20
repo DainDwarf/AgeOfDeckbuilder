@@ -3,11 +3,12 @@ import { type Press, pressOf } from './bindings';
 import { createChromePanel, PANEL_RIMS, standChromePanel } from './chrome';
 import {
   addText,
-  DESIGN_WIDTH,
   dragged,
   MARGIN,
   onLetGoOffCanvas,
+  onResize,
   type Stratum,
+  screenSize,
   UI_FONT,
 } from './design-space';
 import { css, LOOK } from './look';
@@ -78,6 +79,8 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
     if (pressing.standing === note) hide();
   };
 
+  // What a note points at may stand elsewhere after a change of window.
+  onResize(scene, hide);
   scene.input.on('pointerdown', pressLanded);
   // A held press's moves and every release reach this scene wherever the press landed (docs/PHASER.md).
   scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
@@ -124,7 +127,7 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
   return {
     overCard(said: Said, x: number, top: number): void {
       raise(said, (width, height) => ({
-        left: Math.min(Math.max(x - width / 2, MARGIN), DESIGN_WIDTH - MARGIN - width),
+        left: Math.min(Math.max(x - width / 2, MARGIN), screenSize().width - MARGIN - width),
         top: top - STANDOFF - height,
       }));
     },

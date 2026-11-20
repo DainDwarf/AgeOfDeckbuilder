@@ -13,14 +13,14 @@ import {
 } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import {
+  afterResize,
   COVERED,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
   MARGIN,
   onClick,
   onHover,
   reactsToPress,
   type Stratum,
+  screenSize,
 } from './design-space';
 import { type Face, namedFace } from './face';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
@@ -117,10 +117,11 @@ export function createSmallCards(
     const half = CARD_WIDTH / 2;
     const above = spot.top - STANDOFF;
     const standsAbove = above - CARD_HEIGHT >= MARGIN;
-    const x = Math.min(Math.max(spot.x, MARGIN + half), DESIGN_WIDTH - MARGIN - half);
+    const screen = screenSize();
+    const x = Math.min(Math.max(spot.x, MARGIN + half), screen.width - MARGIN - half);
     const y = standsAbove
       ? above
-      : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, DESIGN_HEIGHT - MARGIN);
+      : Math.min(spot.bottom + STANDOFF + CARD_HEIGHT, screen.height - MARGIN);
     const off = { x: x - spot.x, y: y - spot.top };
     const link: Link = { raiser, root, off, onCard: false, under: undefined };
     const toName = standsAbove ? spot.top - y : spot.bottom - (y - CARD_HEIGHT);
@@ -206,18 +207,21 @@ export function createSmallCards(
   });
   scene.input.on(COVERED, down);
 
+  // In chain order: a deeper card's name stands on the card before it, which has to move first.
+  const follow = (): void => {
+    for (const { raiser, root, off } of chain) {
+      const { x, top } = raiser.where();
+      root.setPosition(x + off.x, top + off.y);
+    }
+  };
+  afterResize(scene, follow);
+
   return {
     over(raiser: Raiser | undefined): void {
       surface = raiser;
       settle();
     },
-    // In chain order: a deeper card's name stands on the card before it, which has to move first.
-    follow(): void {
-      for (const { raiser, root, off } of chain) {
-        const { x, top } = raiser.where();
-        root.setPosition(x + off.x, top + off.y);
-      }
-    },
+    follow,
     down,
   };
 }

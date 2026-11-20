@@ -131,7 +131,7 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
       for (const key of META_SCREENS) {
         if (!scenes.isActive(key)) continue;
         const screen = scenes.getScene(key);
-        overlayAhead(screen.scene);
+        overlayAhead(screen.scene, 'design');
         screen.scene.start('campaign');
       }
     };

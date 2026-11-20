@@ -16,12 +16,12 @@ import { heightOf } from './card-shape';
 import {
   type Box,
   createScrim,
-  DESIGN_HEIGHT,
-  DESIGN_WIDTH,
   onClick,
   onHover,
+  onResize,
   pressedWhere,
   type Stratum,
+  screenSize,
 } from './design-space';
 import { type Face, namedFace } from './face';
 import type { OverlayScene } from './overlay-scene';
@@ -53,17 +53,26 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
     named(name);
   });
   let cards: readonly Face[] = [];
-  let drawn: Phaser.GameObjects.GameObject[] = [];
+  let drawn: Phaser.GameObjects.Container[] = [];
+  const height = heightOf(LARGE_WIDTH);
 
   /** The stack centred on its whole extent, each card a band up and to the left of the one over it. */
+  const place = (): void => {
+    const newest = cards.length - 1;
+    const screen = screenSize();
+    const left = (screen.width - LARGE_WIDTH - newest * BAND) / 2;
+    const top = (screen.height - height - newest * BAND) / 2;
+    drawn.forEach((root, index) => {
+      root.setPosition(left + index * BAND + LARGE_WIDTH / 2, top + index * BAND + height);
+    });
+  };
+  onResize(scene, place);
+
   const lay = (next: readonly Face[]): void => {
     small.down();
     for (const object of drawn) object.destroy();
     cards = next;
-    const height = heightOf(LARGE_WIDTH);
     const newest = cards.length - 1;
-    const left = (DESIGN_WIDTH - LARGE_WIDTH - newest * BAND) / 2;
-    const top = (DESIGN_HEIGHT - height - newest * BAND) / 2;
     drawn = cards.map((shown, index) => {
       const face: CardFace = createCardFace(scene, shown, NO_REFUSAL, {
         width: LARGE_WIDTH,
@@ -84,12 +93,13 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
       });
       // The card is interactive so that both presses on it reach nothing beneath, the scrim
       // included; only its names react to one.
-      const root = pressedOnFace(face)
-        .setName(index === newest ? 'inspection' : `inspection-${index}`)
-        .setPosition(left + index * BAND + LARGE_WIDTH / 2, top + index * BAND + height);
+      const root = pressedOnFace(face).setName(
+        index === newest ? 'inspection' : `inspection-${index}`,
+      );
       scene.strata.large.layer.add(root);
       return root;
     });
+    place();
   };
 
   const named = ({ reference, reading }: Name): void => {

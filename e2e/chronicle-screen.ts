@@ -1592,22 +1592,34 @@ export function inside(at: { x: number; y: number }, frame: Frame): boolean {
   );
 }
 
-/** Where the map's frame stands on the page: the rectangle its camera is cropped to. */
-export function mapFrame(page: Page): Promise<Frame> {
+/** Where each running scene's camera is cut on the page, by the scene's key. */
+export function cameraCuts(page: Page): Promise<Record<string, Frame>> {
   return page.evaluate(() => {
-    const camera = window.game?.scene.getScene('map')?.cameras.main;
-    if (camera === null || camera === undefined) throw new Error('the map camera is not running');
+    const game = window.game;
+    if (game === undefined) throw new Error('the game is not running');
     // A camera's viewport is measured in the backing store the canvas is drawn scaled down from.
-    const canvas = camera.scene.game.canvas;
-    const rect = canvas.getBoundingClientRect();
-    const unit = rect.width / canvas.width;
-    return {
-      x: rect.left + camera.x * unit,
-      y: rect.top + camera.y * unit,
-      width: camera.width * unit,
-      height: camera.height * unit,
-    };
+    const rect = game.canvas.getBoundingClientRect();
+    const unit = rect.width / game.canvas.width;
+    return Object.fromEntries(
+      game.scene.getScenes(true).map((scene) => {
+        const { x, y, width, height } = scene.cameras.main;
+        const cut = {
+          x: rect.left + x * unit,
+          y: rect.top + y * unit,
+          width: width * unit,
+          height: height * unit,
+        };
+        return [scene.scene.key, cut];
+      }),
+    );
   });
+}
+
+/** Where the map's frame stands on the page: the rectangle its camera is cropped to. */
+export async function mapFrame(page: Page): Promise<Frame> {
+  const cut = (await cameraCuts(page)).map;
+  if (cut === undefined) throw new Error('the map camera is not running');
+  return cut;
 }
 
 /** How far a press travels on the page before it is a drag and no longer a click. */
@@ -1624,16 +1636,14 @@ export function dragSlack(page: Page): Promise<number> {
 }
 
 /**
- * A point on the bare page above the canvas, which a window taller than the design's ratio leaves
- * letterboxed; the pointer is off the game there, and a press released there lands outside it.
+ * A point above the window, which the canvas fills: Chromium tells the canvas the pointer went out
+ * on a move there, and a press released there reaches the window off the canvas.
  */
-export async function offCanvas(page: Page): Promise<{ x: number; y: number }> {
-  const band = await page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+export function offCanvas(page: Page): Promise<{ x: number; y: number }> {
+  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    return { x: rect.left + rect.width / 2, y: rect.top - 20, room: rect.top };
+    return { x: rect.left + rect.width / 2, y: -20 };
   });
-  if (band.room < 40) throw new Error('the window leaves no bare page above the canvas');
-  return { x: band.x, y: band.y };
 }
 
 /** The corner of the canvas the resource bar stands in: on the scrim, beside a window's cards. */

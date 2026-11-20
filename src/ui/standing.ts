@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
-import { MAP_FRAME } from './band';
-import { addText, onClick, reactsToPress, type Stratum, UI_FONT } from './design-space';
+import { mapFrame } from './band';
+import { addText, onClick, onResize, reactsToPress, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
@@ -39,16 +39,11 @@ export type Stood = {
 /**
  * What the chronicle screen shows it is standing in — city mode, the settle phase: the map's frame
  * in that colour and the chip naming it in the frame's top-right corner, sized to its own word.
- * Both are laid out once and shown or hidden; what is on is the scene's.
+ * Both are laid out with the map's frame and shown or hidden; what is on is the scene's.
  */
 export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): Standing {
   const frame = scene.add
-    .rectangle(
-      MAP_FRAME.x + STROKE / 2,
-      MAP_FRAME.y + STROKE / 2,
-      MAP_FRAME.width - STROKE,
-      MAP_FRAME.height - STROKE,
-    )
+    .rectangle(0, 0, 1, 1)
     .setOrigin(0, 0)
     .setStrokeStyle(STROKE, stood.colour)
     .setName(`${stood.name}-frame`)
@@ -67,10 +62,17 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
 
   const width = label.width + PADDING.x;
   const height = label.height + PADDING.y;
-  const x = MAP_FRAME.x + MAP_FRAME.width - CHIP_INSET - width;
-  const y = MAP_FRAME.y + CHIP_INSET;
-  chip.setPosition(x, y).setSize(width, height);
-  label.setPosition(x + width / 2, y + height / 2);
+  chip.setSize(width, height);
+  onResize(scene, () => {
+    const map = mapFrame();
+    frame
+      .setPosition(map.x + STROKE / 2, map.y + STROKE / 2)
+      .setSize(map.width - STROKE, map.height - STROKE);
+    const x = map.x + map.width - CHIP_INSET - width;
+    const y = map.y + CHIP_INSET;
+    chip.setPosition(x, y);
+    label.setPosition(x + width / 2, y + height / 2);
+  });
 
   const leave = stood.leave;
   if (leave !== undefined) onClick(reactsToPress(chip), leave);

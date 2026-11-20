@@ -74,7 +74,7 @@ async function loadFace(file: string, weight: string): Promise<void> {
 function startFirst(screen: FirstScreen): void {
   switch (screen.on) {
     case 'campaign':
-      overlayAhead(game.scene);
+      overlayAhead(game.scene, 'design');
       game.scene.start('campaign');
       return;
     case 'chronicle':

@@ -21,8 +21,12 @@ import {
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
+  offMiddle,
   onClick,
+  onResize,
+  placedWhileUp,
   type SizedStyle,
+  screenSize,
   UI_FONT,
   whileUp,
 } from './design-space';
@@ -681,7 +685,15 @@ function layWindow(
 
   if (which === 'graphics') layGraphics(scene, root, body);
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;
-  return { root, binds };
+  return { root: aboutTheMiddle(root), binds };
+}
+
+/** A window laid out about the middle of 1280 by 720, standing about the middle of the screen. */
+function aboutTheMiddle(root: Phaser.GameObjects.Container): Phaser.GameObjects.Container {
+  return placedWhileUp(root, () => {
+    const { x, y } = offMiddle();
+    root.setPosition(x, y);
+  });
 }
 
 /**
@@ -713,7 +725,9 @@ export function createRefusedSaveWindow(
     text('control.back'),
     back,
   );
-  return scene.add.container(0, 0, [...chrome, title, line, face, label]).setName('refused-save');
+  return aboutTheMiddle(
+    scene.add.container(0, 0, [...chrome, title, line, face, label]).setName('refused-save'),
+  );
 }
 
 /** How far a window's gold band reaches past its title's foot. */
@@ -783,9 +797,21 @@ export function menuRoom(scene: Phaser.Scene): number {
   return silverButtonSize(scene, text('menu.menu')).width;
 }
 
-/** The Menu button where the bar leaves it room, on whatever screen stands under it. */
+/** The Menu button where the bar leaves it room, at the top right of whatever screen stands under it. */
 export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void {
-  const zone = menuZone(menuRoom(scene), DESIGN_WIDTH, MARGIN);
-  const centre = { x: zone.x + zone.width / 2, y: BAR_HEIGHT / 2 };
-  createSilverButton(scene, 'menu-button', text('menu.menu'), centre, pressed);
+  const reads = text('menu.menu');
+  const { width, height } = silverButtonSize(scene, reads);
+  const { button, label } = createSilverButton(
+    scene,
+    'menu-button',
+    reads,
+    { x: 0, y: 0 },
+    pressed,
+  );
+  onResize(scene, () => {
+    const zone = menuZone(width, screenSize().width, MARGIN);
+    const centre = { x: zone.x + zone.width / 2, y: BAR_HEIGHT / 2 };
+    button.place({ x: centre.x - width / 2, y: centre.y - height / 2, width, height });
+    label.setPosition(centre.x, centre.y);
+  });
 }

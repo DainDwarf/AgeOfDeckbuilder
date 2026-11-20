@@ -1,6 +1,13 @@
 import Phaser from 'phaser';
 import { type Bind, keyPressed } from './bindings';
-import { holdDesignSpace, type Stratum, stopsThePointer, stratumOf } from './design-space';
+import {
+  holdDesignSpace,
+  type Shape,
+  type Stratum,
+  shapeScreen,
+  stopsThePointer,
+  stratumOf,
+} from './design-space';
 import { onScrollKeys, onWheel, readsKeys, takesMouseKeys } from './keys';
 
 /** What the overlay asks of the menu scene, and all it ever holds of it: whether a window of it stands. */
@@ -86,10 +93,15 @@ export class OverlayScene extends Phaser.Scene {
 }
 
 /**
- * The overlay started anew, before the screen about to open is started: its keyboard plugin then
- * hears a key first, and nothing the screen before built on it reacts to one (docs/PHASER.md).
+ * The overlay started anew, before the screen about to open is started, on the shape that screen is
+ * laid out on: its keyboard plugin then hears a key first, and nothing the screen before built on it
+ * reacts to one (docs/PHASER.md).
  */
-export function overlayAhead(scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager): void {
+export function overlayAhead(
+  scenes: Phaser.Scenes.ScenePlugin | Phaser.Scenes.SceneManager,
+  shape: Shape,
+): void {
+  shapeScreen((scenes instanceof Phaser.Scenes.ScenePlugin ? scenes.manager : scenes).game, shape);
   // A scene's plugin queues the start, and its own `start` would stop the scene calling it.
   if (scenes instanceof Phaser.Scenes.ScenePlugin) scenes.launch('overlay');
   else scenes.start('overlay');

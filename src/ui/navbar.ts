@@ -98,7 +98,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
         .setInteractive();
       reactsToPress(face);
       onClick(face, () => {
-        overlayAhead(scene.scene);
+        overlayAhead(scene.scene, 'design');
         scene.scene.start(screen);
       });
     }

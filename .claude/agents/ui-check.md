@@ -69,9 +69,9 @@ A fresh `browser` and `context` per run is a fresh profile — storage, cookies 
 
 **Screenshot after Phaser has drawn.** `networkidle` only means the module graph loaded; a screenshot taken before the first frame is an empty canvas. Settle for ~500 ms after load and ~300 ms after any click that changes the scene.
 
-**Keep the viewport at 1280x720 for anything you click.** The game is authored in a 1280x720 design space that the camera maps onto the whole canvas, so at that viewport a mouse coordinate is the design coordinate a Phaser object was placed at, one to one. At any other size the canvas is scaled and letterboxed and the two stop agreeing, which turns every click into a guess. That viewport at `deviceScaleFactor: 1` is also the smallest window the game is read in (`docs/INTERFACE.md`): what reads there reads everywhere, so a readability check needs no other context.
+**Where a click lands.** The canvas fills the window. The chronicle screen is laid out on the window's shape, a unit one CSS pixel from the window's top left at every window holding 1280x720 CSS pixels: there a mouse coordinate is the design coordinate a Phaser object was placed at, one to one. A meta screen (campaign, launch, collection) is one 1280x720 design fitted to the window and centred, the margin bare: a mouse coordinate is a design coordinate at 1280x720 alone, and elsewhere it is `left + x * fit`, `top + y * fit`, with `fit = Math.min(width / 1280, height / 720)` and `left`, `top` the fitted box's corner. A window smaller than 1280x720 draws every screen at `fit`. The 1280x720 viewport at `deviceScaleFactor: 1` is the smallest window the game is read in (`docs/INTERFACE.md`): what reads there reads everywhere.
 
-**`deviceScaleFactor` moves pixels, not clicks.** The canvas backing store is the design size times `deviceScaleFactor` times the factor the canvas is fitted by, which at the 1280x720 viewport is 1; so a context there with `deviceScaleFactor: 1.5` gives a 1920x1080 backing store and screenshots 1920x1080 pixels wide. Mouse coordinates stay design coordinates; a coordinate you sample _pixels_ at — the `sample()` helper below, any crop — multiplies by the factor. The backing store is assertable directly:
+**`deviceScaleFactor` moves pixels, not clicks.** The canvas backing store is the window's size times `deviceScaleFactor`, so a 1280x720 context with `deviceScaleFactor: 1.5` gives a 1920x1080 backing store and screenshots 1920x1080 pixels wide. Mouse coordinates stay CSS pixels; a coordinate you sample _pixels_ at — the `sample()` helper below, any crop — multiplies by the factor. The backing store is assertable directly:
 
 ```js
 const context = await browser.newContext({
@@ -84,7 +84,7 @@ const backing = await page.evaluate(() => document.querySelector('canvas').width
 
 A smaller window is the same trick downward: `deviceScaleFactor: 0.75` at the 1280x720 viewport draws the game as a 960x540 window does, every click still a design coordinate.
 
-**A pixel-density check may run at a larger viewport** — 1920x1080, say — and is the one thing that may. Give it its own context, created at that size: the render factor is read once at page load, so resizing an already-loaded page measures a stale factor and reports a false FAIL. It is measurement-only: assert the backing store against the canvas's fitted on-screen size times `deviceScaleFactor`, and sample pixels at design coordinates multiplied by `deviceScaleFactor * Math.min(width / 1280, height / 720)`. **Never click in such a context** — the one-to-one coordinate mapping is what you gave up to get there.
+**A resize is followed.** The game lays the screen out again at every change of window, so one context may visit several sizes; settle ~300 ms after `setViewportSize` before reading or clicking. A pixel-density check asserts the backing store against the canvas's on-screen size times `deviceScaleFactor`.
 
 ```js
 const density = await page.evaluate(() => {

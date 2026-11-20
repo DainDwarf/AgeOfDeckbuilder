@@ -27,10 +27,12 @@ import {
   MARGIN,
   onClick,
   onHover,
+  onResize,
   ownBoxOf,
   reactsToPress,
   type SizedStyle,
   type Stratum,
+  screenSize,
   UI_FONT,
 } from './design-space';
 import { type GlyphPaint, glyphOf } from './glyphs';
@@ -118,21 +120,24 @@ export function createResourceBar(
   const { cityMode, toggleYield } = presses;
   const bar = scene.add.container(0, 0);
   on.layer.add(bar);
-  bar.add(
-    standChromePanel(createChromePanel(scene, PANEL_RIMS.strip), {
-      x: -PAST_THE_EDGE,
-      y: -PAST_THE_EDGE,
-      width: DESIGN_WIDTH + 2 * PAST_THE_EDGE,
-      height: BAR_HEIGHT + PAST_THE_EDGE,
-    }).setName('resource-bar-panel'),
-  );
+  const panel = createChromePanel(scene, PANEL_RIMS.strip).setName('resource-bar-panel');
   // Never marked as reacting to a press, or the pointer is the hand over the whole bar.
   const paper = scene.add
-    .zone(0, 0, DESIGN_WIDTH, BAR_HEIGHT)
+    .zone(0, 0, 1, BAR_HEIGHT)
     .setOrigin(0, 0)
     .setName('resource-bar')
     .setInteractive();
-  bar.add(paper);
+  bar.add([panel, paper]);
+  onResize(scene, () => {
+    const { width } = screenSize();
+    standChromePanel(panel, {
+      x: -PAST_THE_EDGE,
+      y: -PAST_THE_EDGE,
+      width: width + 2 * PAST_THE_EDGE,
+      height: BAR_HEIGHT + PAST_THE_EDGE,
+    });
+    paper.setSize(width, BAR_HEIGHT);
+  });
 
   const { slot, space } = digitSlot(scene);
 

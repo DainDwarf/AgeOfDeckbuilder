@@ -9,6 +9,8 @@ import {
   addText,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  offMiddle,
+  placedWhileUp,
   type SizedStyle,
   TITLE_INK,
   UI_FONT,
@@ -89,7 +91,13 @@ export function standEnding(
       const scrimRisen = browser.raise(climb);
       raisedYet = true;
       const drawn = drawEnding(scene, catalogue, on, leave);
-      browser.carries(drawn.screen.setAlpha(0).setY(12));
+      const centred = scene.add.container(0, 0, [drawn.screen.setAlpha(0).setY(12)]);
+      browser.carries(
+        placedWhileUp(centred, () => {
+          const { x, y } = offMiddle();
+          centred.setPosition(x, y);
+        }),
+      );
       rising = drawn;
       // A wipe destroys the screen mid-rise, and a destroyed button throws at `setInteractive`.
       drawn.screen.once('destroy', () => {

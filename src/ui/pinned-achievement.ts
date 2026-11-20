@@ -2,7 +2,7 @@ import type Phaser from 'phaser';
 import { achievementOf, type Catalogue } from '../rules/catalogue';
 import { countOn } from '../rules/chronicle';
 import type { Chronicle } from '../rules/state';
-import { MAP_FRAME } from './band';
+import { mapFrame } from './band';
 import type { Name, SmallCards } from './card-face';
 import {
   createChromePanel,
@@ -56,7 +56,7 @@ export function createPinnedAchievements(
   });
   return {
     render(standing: Chronicle): void {
-      let top = MAP_FRAME.y + CHIP_INSET;
+      let top = mapFrame().y + CHIP_INSET;
       for (const placed of plates) top += placed(standing, top) + GAP;
     },
   };
@@ -78,7 +78,7 @@ function createPinnedAchievement(
   const inner = PLATE_WIDTH - 2 * PAD_X;
   const nameHeight = 2 * PAD_Y + NAME_LINE;
   const fullHeight = nameHeight + TEXT_LINE * linesOf(scene, goal, inner);
-  const root = scene.add.container(MAP_FRAME.x + CHIP_INSET, 0).setName(plate);
+  const root = scene.add.container(mapFrame().x + CHIP_INSET, 0).setName(plate);
   // Interactive, so no press reaches the map under it, and never marked as reacting to one.
   const stop = scene.add
     .zone(0, 0, PLATE_WIDTH, fullHeight)

@@ -5,9 +5,10 @@ import {
   addText,
   BAR_HEIGHT,
   CONSOLE_FONT,
-  DESIGN_WIDTH,
   holdDesignSpace,
   MARGIN,
+  onResize,
+  screenSize,
 } from './design-space';
 import { readsKeys } from './keys';
 import { css, LOOK } from './look';
@@ -80,12 +81,16 @@ export class DebugConsole extends Phaser.Scene {
     holdDesignSpace(this, this.cameras.main);
 
     const root = this.add.container(0, 0).setName('console');
-    root.add([
-      this.add
-        .rectangle(0, 0, DESIGN_WIDTH, HEIGHT, LOOK.consolePanel.colour, LOOK.consolePanel.strength)
-        .setOrigin(0, 0),
-      this.add.rectangle(0, HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge).setOrigin(0, 0),
-    ]);
+    const panel = this.add
+      .rectangle(0, 0, 1, HEIGHT, LOOK.consolePanel.colour, LOOK.consolePanel.strength)
+      .setOrigin(0, 0);
+    const edge = this.add.rectangle(0, HEIGHT - 1, 1, 1, LOOK.panelEdge).setOrigin(0, 0);
+    root.add([panel, edge]);
+    onResize(this, () => {
+      const { width } = screenSize();
+      panel.setSize(width, HEIGHT);
+      edge.setSize(width, 1);
+    });
 
     const lines: Phaser.GameObjects.Text[] = [];
     for (let at = 0; at < HISTORY; at++) {
