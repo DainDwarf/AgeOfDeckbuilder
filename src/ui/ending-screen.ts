@@ -49,7 +49,7 @@ type Ended = Pick<Chronicle, 'timeline' | 'age'> & {
 /** The ending screen drawn, and its button. */
 type Drawn = {
   readonly screen: Phaser.GameObjects.Container;
-  readonly button: Phaser.GameObjects.Rectangle;
+  readonly button: Phaser.GameObjects.NineSlice;
 };
 
 type Part = Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Transform;

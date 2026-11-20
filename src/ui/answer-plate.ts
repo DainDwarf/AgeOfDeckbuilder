@@ -9,11 +9,11 @@ import {
   type Spot,
   spotOn,
 } from './card-face';
+import { createChromePanel, PANEL_RIMS, standChromePanel } from './chrome';
 import { addText, ownBoxOf, UI_FONT } from './design-space';
 import type { AnswerShown } from './event-text';
 import { glyphOf } from './glyphs';
-import { css, LOOK } from './look';
-import { paperOf } from './plate';
+import { css, darkeningOf, LOOK, multiplied } from './look';
 
 export const ANSWER_WIDTH = 220;
 
@@ -28,7 +28,7 @@ const TEXT_SIZE = 16;
 export type AnswerPlate = {
   readonly root: Phaser.GameObjects.Container;
   readonly height: number;
-  /** Its paper stood this tall, its name and its text where they stand from its top. */
+  /** Its panel stood this tall, its name and its text where they stand from its top. */
   standTall(height: number): void;
   /** The name lying under a point of the surface the answer is drawn on, and nothing where none does. */
   nameAt(x: number, y: number): Name | undefined;
@@ -37,18 +37,16 @@ export type AnswerPlate = {
 };
 
 /**
- * An answer as its name over its text on a plate's paper, both centred, the text's names made at the
- * answer's numbers; any refusal at all draws it on a refused answer's paper.
+ * An answer as its name over its text on a panel, both centred, the text's names made at the
+ * answer's numbers; any refusal at all darkens its panel and its words.
  */
 export function createAnswerPlate(
   scene: Phaser.Scene,
   shown: AnswerShown,
   refusal: Refusal,
 ): AnswerPlate {
-  const paint = playable(refusal)
-    ? { fill: LOOK.panelFill, ink: LOOK.ink }
-    : { fill: LOOK.refusedAnswer.face, ink: LOOK.refusedAnswer.ink };
-  const ink = css(paint.ink);
+  const darkening = playable(refusal) ? 0xffffff : darkeningOf(LOOK.refusedAnswer);
+  const ink = css(multiplied(LOOK.charcoalInk, darkening));
   const middle = ANSWER_WIDTH / 2;
   const inner = ANSWER_WIDTH - 2 * 16;
 
@@ -80,17 +78,19 @@ export function createAnswerPlate(
   const glyphs = marks.glyphs.map(({ symbol, x, y }) =>
     glyphOf(scene, symbol, GLYPH_SHARE * TEXT_SIZE).setPosition(x, y),
   );
-  const paper = paperOf(scene, ANSWER_WIDTH, height, paint.fill);
+  const panel = createChromePanel(scene, PANEL_RIMS.plate).setTint(darkening);
+  const standTall = (tall: number): void => {
+    standChromePanel(panel, { x: 0, y: 0, width: ANSWER_WIDTH, height: tall });
+  };
+  standTall(height);
   const root = scene.add
-    .container(0, 0, [paper, name, text, ...glyphs])
+    .container(0, 0, [panel, name, text, ...glyphs])
     .setData({ card: shown.id, names: marks.names });
 
   return {
     root,
     height,
-    standTall(tall: number): void {
-      paper.setSize(ANSWER_WIDTH, tall);
-    },
+    standTall,
     nameAt(x: number, y: number): Name | undefined {
       return namedAt(root, marks.names, x, y);
     },

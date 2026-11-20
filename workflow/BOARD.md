@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The chrome's paper** — the chronicle screen's panels, wells and buttons, with their hover and pressed looks, and the Menu button and its windows on every screen, drawn on DRStudios' metal kit from the store, the meta screens otherwise as they were, and `e2e/chrome.spec.ts` passing. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/MAP-SCREEN.md`, `public/assets/LICENSES.md`. [board/chrome-paper.md](board/chrome-paper.md)
 - **An interface size the player sets, sized out** — what a setting for how large the interface is drawn would cost and move, measured before the surfaces are laid out again, then taken as lines or sent back to the ideas.
 - **The resource bar in glyphs** — each reading as its glyph and its number with no word, and a tooltip naming it.
 - **Piles and buttons as icons** — the draw, discard and exhaust piles, End turn, Menu and Icons: what wears an icon and what keeps its word.

@@ -5,7 +5,6 @@ import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileAt, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
-import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
   aimed,
@@ -17,7 +16,6 @@ import {
   click,
   dragOut,
   drawnFaces,
-  endTurnFill,
   endTurnLabel,
   faceCounts,
   idsOf,
@@ -25,6 +23,7 @@ import {
   marksIn,
   onScreen,
   openSaved,
+  pieceWorn,
   playedOn,
   playedOut,
   rested,
@@ -58,7 +57,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await marksIn(page, 'border')).toBe(0);
 
   expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
-  expect(await endTurnFill(page)).toBe(LOOK.settlePhase);
+  expect((await pieceWorn(page, 'end-turn')).piece).toBe('gold');
   expect(await shows(page, 'settle-phase-frame')).toBe(true);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   await click(page, 'end-turn');
@@ -104,7 +103,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(ticked).toEqual(outcome(apply(CATALOGUE, settled, { type: 'end-turn' })));
   expect(ticked.turn).toBe(1);
   expect(await standing(page, 'capstone')).toBe(false);
-  expect(await endTurnFill(page)).toBe(LOOK.button);
+  expect((await pieceWorn(page, 'end-turn')).piece).toBe('gold');
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(ticked.hand).toHaveLength(5);

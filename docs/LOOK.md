@@ -11,6 +11,8 @@ Everything drawn is one of two families, and each has one job.
 
 **A card's frame** is neither: a painted piece of the interface from another hand, chicogames', taken because it sits quietly beside Baumgart's paintings, which stand in its window. The heart and the crossed swords a unit's card reads its health and its damage on are pieces of that frame.
 
+**The chrome** is neither either: DRStudios' metal kit, a piece of the interface from another hand, drawn round every panel, window and button the screens are worked through (_The chrome_, below).
+
 A painted world under flat symbols is the convention of the genre, and the two families do not read as two styles because they never do the same job.
 
 ## The cast ✅
@@ -132,6 +134,22 @@ A card has one size wherever it stands, and a card shown large is the one other 
 
 The glyphs on the discs and in a card's text are symbols. A card that places a building or an improvement reads on its face what the thing placed gives and takes and where it goes, and a unit's card its unit's stats; a building and a unit read on the infopanel wear their card's face, a tile's terrain its own face, and a thing named in a text wears a face.
 
+## The chrome ✅
+
+The chrome is DRStudios' metal kit, each piece drawn at any size from its corners, the corners as the kit paints them and its edges stretched between them, over the soft shadow the kit lays under it.
+
+**A panel** is the kit's panel: a thin polished silver rim round a charcoal body, its corners rounded. The resource bar, the band the hand and the piles stand in, a pinned achievement, an answer and the capstone's text, the exhaust pile's tab, a tooltip and a refusal's note each stand on one. The bar's panel runs on past the screen's top and sides, and the band's past its bottom and sides, so each shows only the rim along its inner edge.
+
+**A window** of the menu is a panel with the gold band of the kit's window laid inside its top edge, as tall as the window's title stands, the title on the gold.
+
+**A button** is the kit's: its gold for End turn, a window's buttons and the ending screen's, and its darker silver for the Menu button and the Icons button. Under the pointer a live button wears the kit's hover look, and while a press that landed on it is held on it, its pressed look; a dead button keeps its own look and wears no hover. End turn wears its gold on the settle phase as on any turn.
+
+**A well** is the kit's inactive tab: a latched reading of the resource bar, a reached pinned achievement and the latched Icons button sit in one. A reading whose act is waiting in city mode stands on a button's gold instead.
+
+Words on the charcoal read in a pale ink, and words on the silver and the gold in a dark one. An answer the player's city cannot pay for, or one refused, stands on its panel darkened, its words darkened with it.
+
+The Menu button and the menu's windows wear the chrome on every screen. The campaign, launch and collection screens otherwise keep a flat grey paper of their own, their buttons, wells and plates drawn on it. The aim's line keeps its dark slab, and a browse its copies badge and its scrollbar.
+
 ## The type ✅
 
 Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's humanist sans, drawn for interfaces, its figures lining and of one width so a counter ticks in place. The face ships with the build and is loaded before the first text is laid out, so every machine lays out the same screens, and a build whose face cannot be loaded does not start. The debug console's monospace is the machine's own. No text is set under one smallest size, the smallest that reads as a word on the smallest window the game is read in ([`INTERFACE.md`](INTERFACE.md)); a text on the map is measured at the map's designed zoom, the zoom being the player's own magnifier.
@@ -140,6 +158,7 @@ Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's
 
 - **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, his painted objects, his resource icons, his arms and armour icons and his crafting and foraging icons, and the ancient objects he sent by mail. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
 - **Nice Card Game Template 2**, chicogames', bought: the cards' fronts and back, the name's plate, the disc, and the heart and the crossed swords. Creative Commons Attribution-ShareAlike 3.0: chicogames is credited, and a file the game changes, a front turned to a kind's colour and its glass thinned among them, stays under the same terms. The files live in the store with the bought packs.
+- **DRStudios' UIForge kits**, a bundle of nine, bought: the metal kit draws the chrome, its panel, its window's gold band, its gold and darker silver buttons with their hover and pressed looks, and its inactive tab. Its terms: free and commercial games allowed, as many as are made, the raw files never handed out on their own. The files the game draws live in the store with the bought packs.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
 - **Material Design Icons**, the Pictogrammers' set, Apache 2.0 for every icon but those of its Brand / Logos category, which the game takes none of: each glyph's categories are read on its own page as it enters, its author is named in the licence record, a file the game changed says so, and the licence ships beside the files.
 - **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.

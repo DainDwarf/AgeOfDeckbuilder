@@ -23,6 +23,7 @@ import {
 import { CARD_WIDTH } from './card-frames';
 import { blockLength, SHUFFLE, stopMotion, TURN_OVER, travel, turnOver } from './card-motion';
 import { inRoundedBox } from './card-shape';
+import { createChromePanel, PANEL_RIMS, standChromePanel } from './chrome';
 import type { ChronicleFaces } from './chronicle-faces';
 import {
   addText,
@@ -439,14 +440,17 @@ function createTab(
 ): { show(count: number): void } {
   const x = PILE_PLACE['exhaust-pile'].x;
   const y = CARD_BASELINE - CARD_HEIGHT / 2;
-  const paper = scene.add
-    .rectangle(x, y, TAB_WIDTH, CARD_HEIGHT, LOOK.exhaustTab)
-    .setStrokeStyle(1, LOOK.exhaustTabEdge);
+  const panel = standChromePanel(createChromePanel(scene, PANEL_RIMS.exhaustTab), {
+    x: x - TAB_WIDTH / 2,
+    y: y - CARD_HEIGHT / 2,
+    width: TAB_WIDTH,
+    height: CARD_HEIGHT,
+  });
   const label = addText(scene, x, y, '', {
     fontFamily: UI_FONT,
     fontSize: '15px',
     fontStyle: 'bold',
-    color: css(LOOK.exhaustTabInk),
+    color: css(LOOK.charcoalInk),
   })
     .setOrigin(0.5, 0.5)
     .setRotation(-Math.PI / 2)
@@ -455,7 +459,7 @@ function createTab(
     .zone(x, y, TAB_WIDTH, CARD_HEIGHT)
     .setName('exhaust-pile')
     .setInteractive();
-  on.layer.add([paper, label, press]);
+  on.layer.add([panel, label, press]);
   onClick(
     press,
     () => {

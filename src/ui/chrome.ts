@@ -1,0 +1,206 @@
+import type Phaser from 'phaser';
+import { pressOf } from './bindings';
+import {
+  BUTTONS,
+  type ButtonLook,
+  type ButtonPiece,
+  CHROME_SHEET_KEY,
+  type Fitted,
+  PANEL,
+  type Piece,
+  RIM,
+  SHADOW_MARGIN,
+  TAB,
+  WINDOW_BAND,
+  WINDOW_RIM,
+} from './chrome-kit';
+import { type Box, onHover, onLetGoOffCanvas, reactsToPress } from './design-space';
+
+/**
+ * How many design units a pixel of the kit's files is drawn across on each kind of panel, which sets
+ * how thin its rim stands: a strip along the screen's edge, a plate, and the exhaust pile's tab.
+ */
+export const PANEL_RIMS = { strip: 0.16, plate: 0.12, exhaustTab: 0.1 } as const;
+
+/** How far the resource bar's panel and the band's run on past the screen's edges, their corners off it. */
+export const PAST_THE_EDGE = 30;
+
+/** A piece of the kit made, drawn nowhere until it is laid over a box. */
+function sliceOf(scene: Phaser.Scene, { frame, cuts }: Piece): Phaser.GameObjects.NineSlice {
+  const { left, top, right, bottom } = cuts;
+  return scene.add.nineslice(0, 0, CHROME_SHEET_KEY, frame, 1, 1, left, right, top, bottom);
+}
+
+/**
+ * The piece laid so its own box is the box handed, its shadow round it, each of its pixels drawn
+ * `scale` units across.
+ */
+function lay(
+  slice: Phaser.GameObjects.NineSlice,
+  { frame, cuts }: Piece,
+  box: Box,
+  scale: number,
+): Phaser.GameObjects.NineSlice {
+  if (slice.frame.name !== frame) slice.setFrame(frame);
+  const { left, top, right, bottom } = cuts;
+  const room = 2 * SHADOW_MARGIN;
+  slice.setSlices(box.width / scale + room, box.height / scale + room, left, right, top, bottom);
+  // `setSlices` leaves the display origin a hit test reads where the old size put it
+  // (phaser/src/gameobjects/nineslice/NineSlice.js:428-502, phaser/src/input/InputManager.js:966).
+  slice.updateDisplayOrigin();
+  return slice.setScale(scale).setPosition(box.x + box.width / 2, box.y + box.height / 2);
+}
+
+/** A piece fitted to the box's height. */
+function fit(slice: Phaser.GameObjects.NineSlice, piece: Fitted, box: Box): void {
+  lay(slice, piece, box, box.height / piece.height);
+}
+
+/** The piece taking the pointer on its own box alone, never on the shadow round it. */
+function takesThePointer(slice: Phaser.GameObjects.NineSlice): Phaser.GameObjects.NineSlice {
+  return slice.setInteractive({
+    hitArea: {},
+    hitAreaCallback: (_area: object, x: number, y: number) =>
+      x >= SHADOW_MARGIN &&
+      y >= SHADOW_MARGIN &&
+      x <= slice.width - SHADOW_MARGIN &&
+      y <= slice.height - SHADOW_MARGIN,
+  });
+}
+
+/** A panel of the kit, its rim drawn at that many units to a pixel of its file; `standChromePanel` lays it. */
+export function createChromePanel(scene: Phaser.Scene, rim: number): Phaser.GameObjects.NineSlice {
+  return sliceOf(scene, PANEL).setScale(rim);
+}
+
+/** The panel standing on the box, at the rim it was made at. */
+export function standChromePanel(
+  panel: Phaser.GameObjects.NineSlice,
+  box: Box,
+): Phaser.GameObjects.NineSlice {
+  return lay(panel, PANEL, box, panel.scaleX);
+}
+
+/**
+ * A window of the menu on the box: a panel at the window's rim, taking the pointer so that a press on
+ * it is no press on what stands under it, and the gold band laid inside its top edge down to `foot`,
+ * the dark line under it.
+ */
+export function createChromeWindow(
+  scene: Phaser.Scene,
+  box: Box,
+  foot: number,
+): Phaser.GameObjects.NineSlice[] {
+  const panel = takesThePointer(standChromePanel(createChromePanel(scene, WINDOW_RIM), box));
+  const inset = RIM.breadth * WINDOW_RIM;
+  const { frame, cuts } = WINDOW_BAND;
+  const { left, top, right, bottom } = cuts;
+  const across = (box.width - 2 * inset) / WINDOW_RIM;
+  const down = (foot - box.y - inset) / WINDOW_RIM + bottom;
+  const band = scene.add
+    .nineslice(0, 0, CHROME_SHEET_KEY, frame, across, down, left, right, top, bottom)
+    .setOrigin(0, 0)
+    .setScale(WINDOW_RIM)
+    .setPosition(box.x + inset, box.y + inset);
+  return [panel, band];
+}
+
+/** What a well is drawn as: the kit's inactive tab, or a button's gold. */
+export type WellPiece = 'tab' | 'gold';
+
+/** A button of the kit in one look, fitted as the button is. */
+function buttonIn(piece: ButtonPiece, look: ButtonLook): Fitted {
+  const { looks, cuts, height } = BUTTONS[piece];
+  return { frame: looks[look], cuts, height };
+}
+
+/** The piece each well is drawn as. */
+const WELLS: Readonly<Record<WellPiece, Fitted>> = { tab: TAB, gold: buttonIn('gold', 'normal') };
+
+/** A well, named `name`, drawn nowhere until `placeChromeWell` lays it. */
+export function createChromeWell(scene: Phaser.Scene, name: string): Phaser.GameObjects.NineSlice {
+  return sliceOf(scene, TAB).setName(name);
+}
+
+/** The well drawn as the piece over the box, fitted to its height. */
+export function placeChromeWell(
+  well: Phaser.GameObjects.NineSlice,
+  piece: WellPiece,
+  box: Box,
+): void {
+  fit(well, WELLS[piece], box);
+}
+
+/** A button of the kit: its face, which a press lands on, and the look it wears. */
+export type ChromeButton = {
+  readonly face: Phaser.GameObjects.NineSlice;
+  /** The look worn read again, for a button whose liveness has moved. */
+  dress(): void;
+  /** The button sunk in a well, the kit's inactive tab, wearing no look of its own; or standing again. */
+  latch(on: boolean): void;
+};
+
+/**
+ * A button of the kit on the box, its face named `name`, fitted to the box's height, reacting to a
+ * press where `live` holds. Live, it wears the hover look under the pointer, and the pressed look while
+ * a left press that landed on it is held on it; dead, it wears neither.
+ */
+export function createChromeButton(
+  scene: Phaser.Scene,
+  piece: ButtonPiece,
+  box: Box,
+  name: string,
+  live: () => boolean = () => true,
+): ChromeButton {
+  const { looks } = BUTTONS[piece];
+  const standing = buttonIn(piece, 'normal');
+  const face = takesThePointer(sliceOf(scene, standing).setName(name));
+  reactsToPress(face, live);
+  let latched = false;
+  let held = false;
+
+  const dress = (): void => {
+    if (latched) return;
+    const look: ButtonLook = !live() || !hover.hovered ? 'normal' : held ? 'pressed' : 'hover';
+    if (face.frame.name !== looks[look]) face.setFrame(looks[look]);
+  };
+  const hover = onHover(face, dress, dress);
+
+  face.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    if (pressOf(pointer) !== 'left') return;
+    held = true;
+    dress();
+  });
+  const letGo = (): void => {
+    held = false;
+    dress();
+  };
+  const released = (pointer: Phaser.Input.Pointer): void => {
+    if (pressOf(pointer) === 'left') letGo();
+  };
+  scene.input.on('pointerup', released);
+  const unheard = onLetGoOffCanvas(scene, (press) => {
+    if (press === 'left') letGo();
+  });
+  // The scene outlives the face: a window of the menu is laid again at every step.
+  face.once('destroy', () => {
+    scene.input.off('pointerup', released);
+    unheard();
+  });
+
+  const stand = (): void => {
+    fit(face, latched ? TAB : standing, box);
+    dress();
+  };
+  stand();
+
+  return {
+    face,
+    dress,
+    latch(on: boolean): void {
+      if (on === latched) return;
+      latched = on;
+      stand();
+    },
+  };
+}

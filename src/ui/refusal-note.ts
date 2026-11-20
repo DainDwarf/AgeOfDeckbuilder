@@ -1,10 +1,10 @@
 import type Phaser from 'phaser';
 import { type Press, pressOf } from './bindings';
+import { createChromePanel, PANEL_RIMS, standChromePanel } from './chrome';
 import {
   addText,
   DESIGN_WIDTH,
   dragged,
-  drawBubble,
   MARGIN,
   onLetGoOffCanvas,
   type Stratum,
@@ -14,16 +14,13 @@ import { css, LOOK } from './look';
 import type { TileFace } from './map';
 import type { Said } from './refusal-lines';
 
-/** The clear water between the note and what it points at; its tail crosses most of that. */
+/** The clear water between the note and what it points at. */
 const STANDOFF = 8;
 
-const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.ink) };
+const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.charcoalInk) };
 
-/** Where the note stands on its surface, laid out for the bubble it has measured. */
-type Place = (width: number, height: number, unit: number) => Placement;
-
-/** The note's own corner, and how far along its bottom edge the tail comes down. */
-type Placement = { left: number; top: number; at: number };
+/** Where the note's own corner stands on its surface, laid out for the bubble it has measured. */
+type Place = (width: number, height: number, unit: number) => { left: number; top: number };
 
 export type RefusalNote = {
   /**
@@ -31,7 +28,7 @@ export type RefusalNote = {
    * note keeps clear of — the card's top once a hover has lifted it.
    */
   overCard(said: Said, x: number, top: number): void;
-  /** Says its lines standing over the face a press landed on, with its tail down on the tile. */
+  /** Says its lines standing over the face a press landed on, centred over the tile. */
   overTile(said: Said, at: TileFace): void;
   /** Stands what it is saying over the same place again, at the size on screen it already had. */
   rescale(): void;
@@ -96,7 +93,6 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
     hide();
     if (said.length === 0) return;
 
-    const bubble = scene.add.graphics();
     const labels = said.map((reason) => addText(scene, 0, 0, reason, STYLE));
 
     let line = 7;
@@ -106,6 +102,12 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
     }
     const width = Math.max(...labels.map((label) => label.width)) + 20;
     const height = line + 7;
+    const bubble = standChromePanel(createChromePanel(scene, PANEL_RIMS.plate), {
+      x: 0,
+      y: 0,
+      width,
+      height,
+    });
 
     const raised = scene.add.container(0, 0, [bubble, ...labels]).setName('refusal');
     on.layer.add(raised);
@@ -113,8 +115,7 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
 
     stand = (): void => {
       const unit = on.unit();
-      const { left, top, at } = place(width, height, unit);
-      drawBubble(bubble, width, height, { edge: 'bottom', at });
+      const { left, top } = place(width, height, unit);
       raised.setScale(unit).setPosition(left, top);
     };
     stand();
@@ -122,17 +123,16 @@ export function createRefusalNote(scene: Phaser.Scene, on: Stratum): RefusalNote
 
   return {
     overCard(said: Said, x: number, top: number): void {
-      raise(said, (width, height) => {
-        const left = Math.min(Math.max(x - width / 2, MARGIN), DESIGN_WIDTH - MARGIN - width);
-        return { left, top: top - STANDOFF - height, at: x - left };
-      });
+      raise(said, (width, height) => ({
+        left: Math.min(Math.max(x - width / 2, MARGIN), DESIGN_WIDTH - MARGIN - width),
+        top: top - STANDOFF - height,
+      }));
     },
 
     overTile(said: Said, at: TileFace): void {
       raise(said, (width, height, unit) => ({
         left: at.x - (width / 2) * unit,
         top: at.y - at.radius - (STANDOFF + height) * unit,
-        at: width / 2,
       }));
     },
 

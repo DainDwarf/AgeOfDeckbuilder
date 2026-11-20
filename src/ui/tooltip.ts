@@ -1,8 +1,9 @@
 import type Phaser from 'phaser';
-import { addText, DESIGN_WIDTH, drawBubble, MARGIN, type Stratum, UI_FONT } from './design-space';
+import { createChromePanel, PANEL_RIMS, standChromePanel } from './chrome';
+import { addText, DESIGN_WIDTH, MARGIN, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 
-/** The clear water between a tooltip and what it points at; its tail crosses most of that. */
+/** The clear water between a tooltip and what it points at. */
 const STANDOFF = 8;
 
 /** How long the pointer rests still on a source before its tooltip appears. */
@@ -14,18 +15,15 @@ export const HANDOVER_MS = 120;
 /** The travel a rest tolerates, in design pixels: less than this and the hand is holding still. */
 export const JITTER = 3;
 
-const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.ink) };
+const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.charcoalInk) };
 
 export type Tooltip = {
-  /**
-   * Hangs under what was hovered, held inside the frame: `left` where the bubble wants its left
-   * edge, `tip` the x its tail points up at.
-   */
-  under(message: string, left: number, tip: number, top: number): void;
+  /** Hangs under what was hovered, held inside the frame: `left` where the bubble wants its left edge. */
+  under(message: string, left: number, top: number): void;
   /**
    * Stands to the right of the point `at` answers as the bubble is painted and at every `follow`,
-   * level with it, its tail pointing left back at it, the message under `title` in bold where one is
-   * handed. The bubble goes wherever that is, off the frame included.
+   * level with it, the message under `title` in bold where one is handed. The bubble goes wherever
+   * that is, off the frame included.
    */
   beside(message: string, at: () => { x: number; y: number }, title?: string): void;
   /** The bubble standing beside a point moved to where that point now stands; one hung under stays. */
@@ -42,7 +40,7 @@ export type Tooltip = {
  * bubble skips the wait.
  */
 export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
-  const bubble = scene.add.graphics();
+  const bubble = createChromePanel(scene, PANEL_RIMS.plate);
   const label = addText(scene, 10, 7, '', STYLE);
   const heading = addText(scene, 10, 7, '', { ...STYLE, fontStyle: 'bold' }).setVisible(false);
   const tooltip = scene.add
@@ -57,7 +55,9 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
     const over = title === undefined ? 0 : heading.height;
     label.setText(message).setY(7 + over);
     const widest = Math.max(label.width, title === undefined ? 0 : heading.width);
-    return { width: widest + 20, height: over + label.height + 14 };
+    const size = { width: widest + 20, height: over + label.height + 14 };
+    standChromePanel(bubble, { x: 0, y: 0, ...size });
+    return size;
   };
 
   let resting: Phaser.Time.TimerEvent | undefined;
@@ -108,9 +108,8 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
     at: () => { x: number; y: number },
     title?: string,
   ): void => {
-    const { width, height } = measure(message, title);
+    const { height } = measure(message, title);
     const unit = on.unit();
-    drawBubble(bubble, width, height, { edge: 'left', at: height / 2 });
     place = () => {
       const { x, y } = at();
       tooltip.setPosition(x + STANDOFF * unit, y - (height / 2) * unit);
@@ -129,11 +128,10 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
   });
 
   return {
-    under(message: string, left: number, tip: number, top: number): void {
+    under(message: string, left: number, top: number): void {
       raise(() => {
-        const { width, height } = measure(message);
+        const { width } = measure(message);
         const x = Math.min(left, DESIGN_WIDTH - MARGIN - width);
-        drawBubble(bubble, width, height, { edge: 'top', at: tip - x });
         place = undefined;
         tooltip.setScale(on.unit()).setPosition(x, top).setVisible(true);
       });

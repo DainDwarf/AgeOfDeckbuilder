@@ -4,8 +4,15 @@ import { countOn } from '../rules/chronicle';
 import type { Chronicle } from '../rules/state';
 import { MAP_FRAME } from './band';
 import type { Name, SmallCards } from './card-face';
+import {
+  createChromePanel,
+  createChromeWell,
+  PANEL_RIMS,
+  placeChromeWell,
+  standChromePanel,
+} from './chrome';
 import { addText, type Stratum } from './design-space';
-import { LOOK } from './look';
+import { css, LOOK } from './look';
 import {
   drawRun,
   linesOf,
@@ -13,11 +20,10 @@ import {
   NAME_STYLE,
   PAD_X,
   PAD_Y,
-  paperOf,
   TEXT_LINE,
   TEXT_STYLE,
 } from './plate';
-import { createWell, placeWell, SUNK } from './resource-bar';
+import { SUNK } from './resource-bar';
 import { CHIP_INSET } from './standing';
 import { achievementGoal, technologyName, text } from './text';
 import { PLATE_WIDTH } from './tree-layout';
@@ -79,18 +85,19 @@ function createPinnedAchievement(
     .setOrigin(0, 0)
     .setInteractive()
     .setName(`${plate}-stop`);
-  const paper = paperOf(scene, PLATE_WIDTH, fullHeight, LOOK.panelFill);
-  const { well } = createWell(scene, plate);
+  const panel = createChromePanel(scene, PANEL_RIMS.plate);
+  const well = createChromeWell(scene, `${plate}-well`);
   const content = scene.add.container(0, 0);
   const goalRun = scene.add.container(0, 0).setName(`${plate}-goal-run`);
-  root.add([stop, paper, well, content]);
+  root.add([stop, panel, well, content]);
   on.layer.add(root);
 
+  const ink = css(LOOK.charcoalInk);
   const nameLine = PAD_Y + NAME_LINE / 2;
-  const named = addText(scene, PAD_X, nameLine, name, NAME_STYLE)
+  const named = addText(scene, PAD_X, nameLine, name, { ...NAME_STYLE, color: ink })
     .setOrigin(0, 0.5)
     .setName(`${plate}-name`);
-  const count = addText(scene, PLATE_WIDTH - PAD_X, nameLine, '', TEXT_STYLE)
+  const count = addText(scene, PLATE_WIDTH - PAD_X, nameLine, '', { ...TEXT_STYLE, color: ink })
     .setOrigin(1, 0.5)
     .setName(`${plate}-count`);
   content.add([named, count, goalRun]);
@@ -100,6 +107,7 @@ function createPinnedAchievement(
     goal,
     { x: PAD_X, y: PAD_Y + NAME_LINE + TEXT_LINE / 2 },
     inner,
+    LOOK.charcoalInk,
     { over: (raiser, over) => small.over(over ? raiser : undefined), inspect },
   );
   run.label.setName(`${plate}-goal`);
@@ -112,8 +120,9 @@ function createPinnedAchievement(
     const height = reached ? nameHeight : fullHeight;
     root.setY(top);
     stop.setSize(PLATE_WIDTH, height);
-    paper.setSize(PLATE_WIDTH, height).setVisible(!reached);
-    placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height });
+    const box = { x: 0, y: 0, width: PLATE_WIDTH, height };
+    standChromePanel(panel, box).setVisible(!reached);
+    placeChromeWell(well, 'tab', box);
     well.setVisible(reached);
     goalRun.setVisible(!reached);
     content

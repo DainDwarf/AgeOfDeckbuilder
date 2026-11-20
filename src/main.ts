@@ -7,6 +7,7 @@ import { booted } from './failed-boot';
 import { artSheet } from './ui/art-sheet';
 import { CampaignScreen } from './ui/campaign-screen';
 import { CARDS_SHEET } from './ui/card-frames';
+import { CHROME_SHEET } from './ui/chrome-kit';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
 import { CollectionScreen } from './ui/collection-screen';
 import { DebugConsole } from './ui/debug-console';
@@ -94,6 +95,7 @@ class LoadScene extends Phaser.Scene {
     // paintings, the river's cut and the deer in his net are drawn off the others', and the cards'
     // pictures off every other.
     this.sheets = [
+      CHROME_SHEET,
       CARDS_SHEET,
       FACE_SHEET,
       RIVER_SHEET,

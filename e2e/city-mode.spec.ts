@@ -34,6 +34,7 @@ import {
   nearestUncharted,
   noGlyphs,
   openSaved,
+  type PieceWorn,
   playedOut,
   playerCityTile,
   type Reading,
@@ -51,9 +52,12 @@ import {
   unitMarksOn,
   unitsStrength,
   watch,
-  wellFill,
+  wellWorn,
   workerStepped,
 } from './chronicle-screen';
+
+/** What a reading stands on while its act in city mode waits: a button's gold, in its own look. */
+const ON_THE_GOLD: PieceWorn = { piece: 'gold', look: 'normal' };
 
 /** Seed 1's turn 1, the city settled and nothing else played. */
 function bareTurn(): Chronicle {
@@ -369,7 +373,7 @@ test('a press on culture or idle enters city mode, and the chip leaves it', asyn
   expect(problems).toEqual([]);
 });
 
-test('culture’s well fills while the city can pay for a tile it may claim, and empties once the claim is paid', async ({
+test('culture stands on the gold while the city can pay for a tile it may claim, and leaves it once the claim is paid', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -378,7 +382,7 @@ test('culture’s well fills while the city can pay for a tile it may claim, and
   const claimed = applied(paid, { type: 'claim', tile: near });
 
   await openSaved(page, paid);
-  await expect.poll(() => wellFill(page, 'culture')).toBe(LOOK.actWaiting);
+  await expect.poll(() => wellWorn(page, 'culture')).toEqual(ON_THE_GOLD);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -390,12 +394,12 @@ test('culture’s well fills while the city can pay for a tile it may claim, and
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(claimed);
-  await expect.poll(() => wellFill(page, 'culture')).toBeUndefined();
+  await expect.poll(() => wellWorn(page, 'culture')).toBeUndefined();
 
   expect(problems).toEqual([]);
 });
 
-test('idle’s well fills while one population is idle over a tile the city holds and nobody stands on, and empties once it is assigned', async ({
+test('idle stands on the gold while one population is idle over a tile the city holds and nobody stands on, and leaves it once it is assigned', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -405,7 +409,7 @@ test('idle’s well fills while one population is idle over a tile the city hold
   const assigned = applied(unassigned, { type: 'assign', tile: own });
 
   await openSaved(page, bare);
-  expect(await wellFill(page, 'idle')).toBeUndefined();
+  expect(await wellWorn(page, 'idle')).toBeUndefined();
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -417,13 +421,13 @@ test('idle’s well fills while one population is idle over a tile the city hold
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(unassigned);
   expect(await counted(page, 'assigned')).toBe(unassigned.assigned.length);
-  await expect.poll(() => wellFill(page, 'idle')).toBe(LOOK.actWaiting);
+  await expect.poll(() => wellWorn(page, 'idle')).toEqual(ON_THE_GOLD);
 
   await page.mouse.click(city.x, city.y);
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(assigned);
   expect(await counted(page, 'assigned')).toBe(assigned.assigned.length);
-  await expect.poll(() => wellFill(page, 'idle')).toBeUndefined();
+  await expect.poll(() => wellWorn(page, 'idle')).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

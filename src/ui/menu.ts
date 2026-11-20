@@ -14,6 +14,7 @@ import {
   WHEELED,
   type Wheeled,
 } from './bindings';
+import { type ChromeButton, createChromeButton, createChromeWindow } from './chrome';
 import {
   addText,
   BAR_HEIGHT,
@@ -21,7 +22,6 @@ import {
   DESIGN_WIDTH,
   MARGIN,
   onClick,
-  reactsToPress,
   type SizedStyle,
   UI_FONT,
   whileUp,
@@ -240,12 +240,14 @@ function rowAt(top: number, index: number): number {
 /** How far the rows reach below the top of the Controls window's body. */
 const ROWS_HEIGHT = rowsHeight(ROWS.length);
 
-/** The panel's own dark ink: a window stands in the panel language, not on the scrim. */
-const INK = css(LOOK.ink);
+/** A window's words on its charcoal, and on its gold band and its buttons. */
+const INK = css(LOOK.charcoalInk);
+const METAL_INK = css(LOOK.metalInk);
 
-const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: INK };
+const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: METAL_INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
-const SLOT_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
+const BUTTON_STYLE = { ...LABEL_STYLE, color: METAL_INK };
+const SLOT_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: METAL_INK };
 const LINE_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '18px',
@@ -267,21 +269,19 @@ export type Presses = {
   back(): void;
 };
 
-/** A face carrying a label: the one shape every button of a window is drawn as. */
+/** A face carrying a label, centred on `x` and `y`: the one shape every button of a window is drawn as. */
 function pressable(
   scene: Phaser.Scene,
   at: { x: number; y: number; width: number; height: number },
   name: string,
   style: SizedStyle,
   pressed: () => void,
-): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
-  const face = scene.add
-    .rectangle(at.x, at.y, at.width, at.height, LOOK.button)
-    .setName(name)
-    .setInteractive();
-  reactsToPress(face);
+): { face: Phaser.GameObjects.NineSlice; label: Phaser.GameObjects.Text } {
+  const { x, y, width, height } = at;
+  const box = { x: x - width / 2, y: y - height / 2, width, height };
+  const { face } = createChromeButton(scene, 'gold', box, name);
   onClick(face, pressed);
-  const label = addText(scene, at.x, at.y, '', style).setOrigin(0.5).setName(`${name}-label`);
+  const label = addText(scene, x, y, '', style).setOrigin(0.5).setName(`${name}-label`);
   return { face, label };
 }
 
@@ -293,12 +293,12 @@ export function createButton(
   name: string,
   reads: string,
   pressed: () => void,
-): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
+): { face: Phaser.GameObjects.NineSlice; label: Phaser.GameObjects.Text } {
   const { face, label } = pressable(
     scene,
     { x, y, width: BUTTON_WIDTH, height: BUTTON_HEIGHT },
     name,
-    LABEL_STYLE,
+    BUTTON_STYLE,
     pressed,
   );
   return { face, label: label.setText(reads) };
@@ -459,7 +459,7 @@ function layControls(
         height: BUTTON_HEIGHT,
       },
       name,
-      LABEL_STYLE,
+      BUTTON_STYLE,
       pressed,
     );
     root.add([face, label.setText(reads)]);
@@ -599,9 +599,8 @@ export function createWarning(
 }
 
 /**
- * One window: the box in the panel language, its title, its lines, the list said, its buttons, and
- * the line said under them. The box takes the pointer so that a press on it is not a press on the
- * scrim behind, which backs the window out. The caller takes the window down.
+ * One window: its panel with the gold band, its title on the gold, its lines, the list said, its
+ * buttons, and the line said under them. The caller takes the window down.
  */
 function layWindow(
   scene: Phaser.Scene,
@@ -637,11 +636,7 @@ function layWindow(
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
 
-  const box = scene.add
-    .rectangle(middle, top + height / 2, WIDTH, height, LOOK.panelFill)
-    .setStrokeStyle(1, LOOK.panelEdge)
-    .setInteractive();
-  title.setPosition(middle, top + PADDING);
+  const chrome = titledWindow(scene, title, top, height);
   let y = top + PADDING + title.height;
   for (const line of over) {
     line.setPosition(middle, y + PADDING);
@@ -664,7 +659,7 @@ function layWindow(
 
   const root = scene.add
     .container(0, 0, [
-      box,
+      ...chrome,
       title,
       ...over,
       ...(heading === undefined ? [] : [heading]),
@@ -691,7 +686,7 @@ function layWindow(
 
 /**
  * The window a refused save raises, centred on the design space: its title, the line under it, and
- * Back, which reacts with `back`. The box takes the pointer as a menu window's does.
+ * Back, which reacts with `back`, drawn as a window of the menu is.
  */
 export function createRefusedSaveWindow(
   scene: Phaser.Scene,
@@ -707,11 +702,7 @@ export function createRefusedSaveWindow(
   const height = PADDING + title.height + PADDING + line.height + PADDING + BUTTON_HEIGHT + PADDING;
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
-  const box = scene.add
-    .rectangle(middle, top + height / 2, WIDTH, height, LOOK.panelFill)
-    .setStrokeStyle(1, LOOK.panelEdge)
-    .setInteractive();
-  title.setPosition(middle, top + PADDING);
+  const chrome = titledWindow(scene, title, top, height);
   line.setPosition(middle, top + PADDING + title.height + PADDING);
 
   const { face, label } = createButton(
@@ -722,44 +713,66 @@ export function createRefusedSaveWindow(
     text('control.back'),
     back,
   );
-  return scene.add.container(0, 0, [box, title, line, face, label]).setName('refused-save');
+  return scene.add.container(0, 0, [...chrome, title, line, face, label]).setName('refused-save');
 }
 
-/** How tall a button drawn as the Menu button is stands, and how far it reaches around its word. */
-const PAPER_BUTTON_HEIGHT = 32;
-const PAPER_BUTTON_PADDING = 12;
+/** How far a window's gold band reaches past its title's foot. */
+const BAND_PAST_TITLE = 4;
 
-const PAPER_BUTTON_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: INK };
-
-function paperButtonWord(scene: Phaser.Scene, reads: string): Phaser.GameObjects.Text {
-  return addText(scene, 0, 0, reads, PAPER_BUTTON_STYLE).setOrigin(0.5, 0.5);
+/**
+ * A window as wide as every window, centred across the design space, that tall from `top` down: its
+ * title standing a padding under its top, and its gold band reaching past the title's foot.
+ */
+function titledWindow(
+  scene: Phaser.Scene,
+  title: Phaser.GameObjects.Text,
+  top: number,
+  height: number,
+): Phaser.GameObjects.NineSlice[] {
+  title.setPosition(DESIGN_WIDTH / 2, top + PADDING);
+  const box = { x: (DESIGN_WIDTH - WIDTH) / 2, y: top, width: WIDTH, height };
+  return createChromeWindow(scene, box, title.y + title.height + BAND_PAST_TITLE);
 }
 
-/** How wide a button drawn as the Menu button is stands, reading that word. */
-function paperButtonWidth(scene: Phaser.Scene, reads: string): number {
-  const word = paperButtonWord(scene, reads);
-  const width = word.width + 2 * PAPER_BUTTON_PADDING;
+/** How tall a button of the darker silver stands, and how far it reaches around its word. */
+const SILVER_HEIGHT = 32;
+const SILVER_PADDING = 12;
+
+const SILVER_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: METAL_INK };
+
+function silverWord(scene: Phaser.Scene, reads: string): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, reads, SILVER_STYLE).setOrigin(0.5, 0.5);
+}
+
+/** How wide and how tall a button of the darker silver stands, reading that word. */
+export function silverButtonSize(
+  scene: Phaser.Scene,
+  reads: string,
+): { width: number; height: number } {
+  const word = silverWord(scene, reads);
+  const width = word.width + 2 * SILVER_PADDING;
   word.destroy();
-  return width;
+  return { width, height: SILVER_HEIGHT };
 }
 
 /**
- * A button drawn as the Menu button is, reading `reads`, its face named `name` and sized to its word;
- * the caller places both, centred on one point.
+ * A button of the kit's darker silver reading `reads`, its face named `name`, sized to its word and
+ * centred on the point, its label named `<name>-label`; a click on it does what `pressed` does.
  */
-export function createPaperButton(
+export function createSilverButton(
   scene: Phaser.Scene,
   name: string,
   reads: string,
-): { face: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text } {
-  const face = scene.add
-    .rectangle(0, 0, 1, PAPER_BUTTON_HEIGHT, LOOK.panelFill)
-    .setStrokeStyle(1, LOOK.panelEdge)
-    .setName(name);
+  { x, y }: { x: number; y: number },
+  pressed: () => void,
+): { button: ChromeButton; label: Phaser.GameObjects.Text } {
+  const { width, height } = silverButtonSize(scene, reads);
+  const box = { x: x - width / 2, y: y - height / 2, width, height };
+  const button = createChromeButton(scene, 'silver', box, name);
+  onClick(button.face, pressed);
   // Added after the face: the display list paints in add order, so a label added first would be hidden.
-  const label = paperButtonWord(scene, reads);
-  face.setSize(label.width + 2 * PAPER_BUTTON_PADDING, PAPER_BUTTON_HEIGHT);
-  return { face, label };
+  const label = silverWord(scene, reads).setPosition(x, y).setName(`${name}-label`);
+  return { button, label };
 }
 
 /**
@@ -767,17 +780,12 @@ export function createPaperButton(
  * menu scene and the flow of whichever bar stands there ends before it, so both measure it here.
  */
 export function menuRoom(scene: Phaser.Scene): number {
-  return paperButtonWidth(scene, text('menu.menu'));
+  return silverButtonSize(scene, text('menu.menu')).width;
 }
 
 /** The Menu button where the bar leaves it room, on whatever screen stands under it. */
 export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void {
-  const { face, label } = createPaperButton(scene, 'menu-button', text('menu.menu'));
-  const zone = menuZone(face.width, DESIGN_WIDTH, MARGIN);
-  const x = zone.x + zone.width / 2;
-  const y = BAR_HEIGHT / 2;
-  face.setPosition(x, y);
-  label.setPosition(x, y);
-  reactsToPress(face.setInteractive());
-  onClick(face, pressed);
+  const zone = menuZone(menuRoom(scene), DESIGN_WIDTH, MARGIN);
+  const centre = { x: zone.x + zone.width / 2, y: BAR_HEIGHT / 2 };
+  createSilverButton(scene, 'menu-button', text('menu.menu'), centre, pressed);
 }

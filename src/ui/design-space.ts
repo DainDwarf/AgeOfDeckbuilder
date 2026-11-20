@@ -43,59 +43,6 @@ export function hexagon(size: number): number[] {
   return corners(raw);
 }
 
-const TAIL_LENGTH = 7;
-const TAIL_HALF = 6;
-
-/** The edge a bubble's tail leaves by, and how far along that edge it points. */
-export type Tail = { edge: 'top' | 'bottom' | 'left' | 'right'; at: number };
-
-/**
- * A bubble in the panel language: the box and its tail as one closed path, so the fill is
- * continuous and the stroke never crosses the seam. The tail reaches out of the edge nearer what
- * the bubble belongs to, and stays clear of both corners.
- */
-export function drawBubble(
-  bubble: Phaser.GameObjects.Graphics,
-  width: number,
-  height: number,
-  tail: Tail,
-): void {
-  const span = tail.edge === 'top' || tail.edge === 'bottom' ? width : height;
-  const at = Math.min(Math.max(tail.at, TAIL_HALF + 4), span - TAIL_HALF - 4);
-
-  bubble.clear();
-  bubble.fillStyle(LOOK.panelFill);
-  bubble.lineStyle(1, LOOK.panelEdge);
-  bubble.beginPath();
-  bubble.moveTo(0, 0);
-  if (tail.edge === 'top') {
-    bubble.lineTo(at - TAIL_HALF, 0);
-    bubble.lineTo(at, -TAIL_LENGTH);
-    bubble.lineTo(at + TAIL_HALF, 0);
-  }
-  bubble.lineTo(width, 0);
-  if (tail.edge === 'right') {
-    bubble.lineTo(width, at - TAIL_HALF);
-    bubble.lineTo(width + TAIL_LENGTH, at);
-    bubble.lineTo(width, at + TAIL_HALF);
-  }
-  bubble.lineTo(width, height);
-  if (tail.edge === 'bottom') {
-    bubble.lineTo(at + TAIL_HALF, height);
-    bubble.lineTo(at, height + TAIL_LENGTH);
-    bubble.lineTo(at - TAIL_HALF, height);
-  }
-  bubble.lineTo(0, height);
-  if (tail.edge === 'left') {
-    bubble.lineTo(0, at + TAIL_HALF);
-    bubble.lineTo(-TAIL_LENGTH, at);
-    bubble.lineTo(0, at - TAIL_HALF);
-  }
-  bubble.closePath();
-  bubble.fillPath();
-  bubble.strokePath();
-}
-
 // `Phaser.Scale.FIT` in main.ts fits the canvas by this same min, which is what makes the backing
 // store equal the canvas's on-screen size in device pixels.
 /** How many device pixels one design pixel is drawn across. */

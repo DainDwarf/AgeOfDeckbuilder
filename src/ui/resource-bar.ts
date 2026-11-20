@@ -8,11 +8,22 @@ import { type Chronicle, idle } from '../rules/state';
 import { layOutBar, type Placed } from './bar-layout';
 import { EASE, ended, stopMotion } from './card-motion';
 import type { CastSymbol } from './cast';
+import {
+  createChromePanel,
+  createChromeWell,
+  PANEL_RIMS,
+  PAST_THE_EDGE,
+  placeChromeWell,
+  standChromePanel,
+  type WellPiece,
+} from './chrome';
 import { thresholdOf } from './city-bar';
 import {
   addText,
   BAR_HEIGHT,
+  type Box,
   DESIGN_WIDTH,
+  inked,
   MARGIN,
   onClick,
   onHover,
@@ -28,11 +39,7 @@ import { menuRoom } from './menu';
 import { text } from './text';
 import type { Tooltip } from './tooltip';
 
-/** The word of a reading, and the ink it is lifted to while the reading is latched down. */
-const WORD_INK = css(LOOK.faintInk);
-const SUNK_WORD_INK = css(LOOK.ink);
-
-const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: WORD_INK };
+const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.faintInk) };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.ink) };
 const RECKONING_STYLE = { fontFamily: UI_FONT, fontSize: '13px', color: css(LOOK.ink) };
 
@@ -67,11 +74,24 @@ type Entry = Reading & {
   readonly reckoning: Phaser.GameObjects.Text;
   /** The chip, the word, the value and its reckoning together: what the well presses into the bar. */
   readonly face: Phaser.GameObjects.Container;
-  /** The well the reading sits in while it is latched down or its act waits; it stands only then. */
-  readonly well: Phaser.GameObjects.Container;
-  readonly floor: Phaser.GameObjects.Rectangle;
+  /**
+   * The well the reading sits in while it is latched down, or the gold it stands on while its act
+   * waits; it stands only then, over the box `wellBox` holds.
+   */
+  readonly well: Phaser.GameObjects.NineSlice;
+  readonly wellBox: Box;
   /** What the value reads, as the number a rise ticks through; the text follows it. */
   readonly ticking: { count: number };
+};
+
+/** What a reading stands on: the bar's charcoal, the well it is latched down in, or the gold of an act waiting. */
+type StandsOn = 'bar' | WellPiece;
+
+/** The inks a reading's word, value and reckoning read in on what it stands on, a reckoning taken past nothing aside. */
+const INKS: Readonly<Record<StandsOn, { word: number; value: number }>> = {
+  bar: { word: LOOK.charcoalFaintInk, value: LOOK.charcoalInk },
+  tab: { word: LOOK.charcoalInk, value: LOOK.charcoalInk },
+  gold: { word: LOOK.metalInk, value: LOOK.metalInk },
 };
 
 export type ResourceBar = {
@@ -98,30 +118,32 @@ export function createResourceBar(
   const { cityMode, toggleYield } = presses;
   const bar = scene.add.container(0, 0);
   on.layer.add(bar);
+  bar.add(
+    standChromePanel(createChromePanel(scene, PANEL_RIMS.strip), {
+      x: -PAST_THE_EDGE,
+      y: -PAST_THE_EDGE,
+      width: DESIGN_WIDTH + 2 * PAST_THE_EDGE,
+      height: BAR_HEIGHT + PAST_THE_EDGE,
+    }).setName('resource-bar-panel'),
+  );
   // Never marked as reacting to a press, or the pointer is the hand over the whole bar.
   const paper = scene.add
-    .rectangle(0, 0, DESIGN_WIDTH, BAR_HEIGHT, LOOK.panelFill)
+    .zone(0, 0, DESIGN_WIDTH, BAR_HEIGHT)
     .setOrigin(0, 0)
     .setName('resource-bar')
     .setInteractive();
   bar.add(paper);
-  bar.add(
-    scene.add
-      .rectangle(0, BAR_HEIGHT - 1, DESIGN_WIDTH, 1, LOOK.panelEdge)
-      .setOrigin(0, 0)
-      .setName('bar-edge'),
-  );
 
   const { slot, space } = digitSlot(scene);
 
-  const entries = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
+  const unplaced = READINGS.map((key) => createEntry(scene, bar, tooltip, key));
   const layout = layOutBar({
-    readings: entries.map((entry) => readingWidth(entry, slot)),
+    readings: unplaced.map((entry) => readingWidth(entry, slot)),
     menu: menuRoom(scene),
     width: DESIGN_WIDTH,
     margin: MARGIN,
   });
-  for (const [index, placed] of layout.readings.entries()) place(entries[index], placed);
+  const entries = unplaced.map((entry, index) => place(entry, layout.readings[index]));
 
   for (const entry of entries) {
     const { key } = entry;
@@ -138,18 +160,35 @@ export function createResourceBar(
   let latched: ReadonlySet<Resource> = new Set();
   let waiting: ReadonlySet<BarReading> = new Set();
 
+  /** The readings whose reckoning reads a stock taken past nothing, or the population taken. */
+  let taken: ReadonlySet<BarReading> = new Set();
+
+  /** What a reading stands on as the bar stands. */
+  const standsOn = ({ key }: Entry): StandsOn => {
+    if (waiting.has(key)) return 'gold';
+    return key !== 'idle' && latched.has(key) ? 'tab' : 'bar';
+  };
+
+  /** A reading's word, value and reckoning inked for what it stands on. */
+  const ink = (entry: Entry): void => {
+    const on = standsOn(entry);
+    inked(entry.word, INKS[on].word);
+    inked(entry.value, INKS[on].value);
+    inked(entry.reckoning, taken.has(entry.key) ? LOOK.takenPastNothing : INKS[on].value);
+  };
+
   /**
-   * Every reading put in its well or lifted out of it. A latch and a render each arrive without the
-   * other, so both states are painted from here.
+   * Every reading put in its well, stood on the gold or lifted out of both. A latch and a render each
+   * arrive without the other, so both states are painted from here.
    */
   const dress = (): void => {
     for (const entry of entries) {
-      const filled = waiting.has(entry.key);
-      const down = filled || (entry.key !== 'idle' && latched.has(entry.key));
+      const on = standsOn(entry);
+      const down = on !== 'bar';
       entry.well.setVisible(down);
-      entry.floor.setFillStyle(filled ? LOOK.actWaiting : LOOK.wellFill);
+      if (down) placeChromeWell(entry.well, on, entry.wellBox);
       entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
-      entry.word.setColor(down ? SUNK_WORD_INK : WORD_INK);
+      ink(entry);
     }
   };
 
@@ -162,14 +201,17 @@ export function createResourceBar(
   // income alone after the discard.
   const reckon = (): void => {
     const read = live && rendered !== undefined ? reckoned(catalogue, rendered) : undefined;
+    const pastNothing = new Set<BarReading>();
     for (const entry of entries) {
-      const { count, taken } =
+      const reckoning =
         read === undefined ? { count: 0, taken: false } : reckoningOf(read, entry.key);
-      entry.reckoning.setText(reckoningReads(count));
-      entry.reckoning.setColor(css(taken ? LOOK.takenPastNothing : LOOK.ink));
+      if (reckoning.taken) pastNothing.add(entry.key);
+      entry.reckoning.setText(reckoningReads(reckoning.count));
       const value = ownBoxOf(entry.value);
       entry.reckoning.x += value.x + value.width + space - ownBoxOf(entry.reckoning).x;
     }
+    taken = pastNothing;
+    for (const entry of entries) ink(entry);
   };
 
   const render = (chronicle: Chronicle): void => {
@@ -287,39 +329,6 @@ function digitSlot(scene: Phaser.Scene): { slot: number; space: number } {
   return { slot: measured('00/00', VALUE_STYLE).width + space + reckoning, space };
 }
 
-/**
- * A well: the floor what sits in it rests on, named `<name>-floor`, the edge it is cut into above and
- * to the left, and the light that catches below and to the right. Laid out by `placeWell`.
- */
-export function createWell(
-  scene: Phaser.Scene,
-  name: string,
-): { well: Phaser.GameObjects.Container; floor: Phaser.GameObjects.Rectangle } {
-  const [floor, ...edges] = [
-    LOOK.wellFill,
-    LOOK.panelEdge,
-    LOOK.panelEdge,
-    LOOK.wellLight,
-    LOOK.wellLight,
-  ].map((colour) => scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0));
-  floor.setName(`${name}-floor`);
-  const well = scene.add.container(0, 0, [floor, ...edges]).setName(`${name}-well`);
-  return { well, floor };
-}
-
-/** The well's five rectangles laid over a rectangle: the floor, then the four edges. */
-export function placeWell(
-  well: Phaser.GameObjects.Container,
-  { x, y, width, height }: { x: number; y: number; width: number; height: number },
-): void {
-  const [floor, top, left, bottom, right] = well.list as Phaser.GameObjects.Rectangle[];
-  floor.setPosition(x, y).setSize(width, height);
-  top.setPosition(x, y).setSize(width, 1);
-  left.setPosition(x, y).setSize(1, height);
-  bottom.setPosition(x, y + height - 1).setSize(width, 1);
-  right.setPosition(x + width - 1, y).setSize(1, height);
-}
-
 /** The symbol whose glyph a reading wears. */
 function chipSymbol(key: BarReading): CastSymbol {
   switch (key) {
@@ -370,7 +379,7 @@ export function createReading(
   onHover(
     hover,
     () => {
-      tooltip.under(shown.tip, hover.x, hover.x + hover.width / 2, BAR_HEIGHT + 8);
+      tooltip.under(shown.tip, hover.x, BAR_HEIGHT + 8);
     },
     () => tooltip.hide(),
   );
@@ -382,7 +391,7 @@ function createEntry(
   bar: Phaser.GameObjects.Container,
   tooltip: Tooltip,
   key: BarReading,
-): Entry {
+): Omit<Entry, 'wellBox'> {
   const reading = createReading(scene, tooltip, {
     name: key,
     symbol: chipSymbol(key),
@@ -394,11 +403,10 @@ function createEntry(
     .setOrigin(0, 0.5)
     .setName(`reading-${key}-reckoning`);
   // The well is added first, so the reading it holds is painted inside it.
-  const { well, floor } = createWell(scene, `reading-${key}`);
-  well.setVisible(false);
+  const well = createChromeWell(scene, `reading-${key}-well`).setVisible(false);
   const face = scene.add.container(0, 0, [chip, word, value, reckoning]);
   bar.add([well, face, hover]);
-  return { ...reading, key, reckoning, face, well, floor, ticking: { count: 0 } };
+  return { ...reading, key, reckoning, face, well, ticking: { count: 0 } };
 }
 
 /** How wide a reading's content stands for the bar's flow, its value taking the width handed. */
@@ -415,15 +423,13 @@ export function placeReading({ chip, word, value, hover }: Reading, { at, zone }
   hover.setPosition(zone.x, 0).setSize(zone.width, BAR_HEIGHT - 1);
 }
 
-/** One reading where the layout stands it: the press covers the zone the well is drawn in. */
-function place(entry: Entry, placed: Placed): void {
+/** One reading where the layout stands it, and the box its well is drawn over. */
+function place(entry: Omit<Entry, 'wellBox'>, placed: Placed): Entry {
   placeReading(entry, placed);
-  placeWell(entry.well, {
-    x: placed.zone.x,
-    y: 0,
-    width: placed.zone.width,
-    height: BAR_HEIGHT - 1,
-  });
+  return {
+    ...entry,
+    wellBox: { x: placed.zone.x, y: 0, width: placed.zone.width, height: BAR_HEIGHT },
+  };
 }
 
 /**

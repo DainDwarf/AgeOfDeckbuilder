@@ -81,6 +81,7 @@ import {
   neutralCampaign,
   onScreen,
   openSaved,
+  pieceOnScreen,
   pinnedAchievement,
   playedOn,
   playedOut,
@@ -447,9 +448,9 @@ test('the map is framed between the resource bar and the band, on the city', asy
   await openSaved(page, OPENED);
 
   const frame = await mapFrame(page);
-  const bar = await onScreen(page, 'bar-edge');
-  const band = await onScreen(page, 'band-edge');
-  expect(Math.abs(frame.y - bar.y)).toBeLessThan(2);
+  const bar = await pieceOnScreen(page, 'resource-bar-panel');
+  const band = await pieceOnScreen(page, 'band');
+  expect(Math.abs(frame.y - (bar.y + bar.height))).toBeLessThan(2);
   expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
   expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
 

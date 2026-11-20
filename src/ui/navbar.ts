@@ -15,14 +15,7 @@ import {
 import { css, LOOK } from './look';
 import { menuRoom } from './menu';
 import { overlayAhead } from './overlay-scene';
-import {
-  createReading,
-  createWell,
-  placeReading,
-  placeWell,
-  readingWidth,
-  SUNK,
-} from './resource-bar';
+import { createReading, placeReading, readingWidth, SUNK } from './resource-bar';
 import { campaignHeld } from './save-entry';
 import { type TextKey, text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
@@ -96,7 +89,7 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
     const y = first + index * (BUTTON_HEIGHT + BUTTON_GAP);
     const sunk = screen === standing;
     if (sunk) {
-      const { well } = createWell(scene, `navbar-${screen}`);
+      const well = createWell(scene, `navbar-${screen}`);
       placeWell(well, { x: MARGIN, y, width: BUTTON_WIDTH, height: BUTTON_HEIGHT });
     } else {
       const face = scene.add
@@ -145,4 +138,28 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
   const content = scene.add.layer();
   scene.children.bringToTop(bubbles.layer);
   return { content, bubbles, tooltip, readInfluence };
+}
+
+/**
+ * A well, named `<name>-well`: the floor what sits in it rests on, the edge it is cut into above and
+ * to the left, and the light that catches below and to the right. Laid out by `placeWell`.
+ */
+export function createWell(scene: Phaser.Scene, name: string): Phaser.GameObjects.Container {
+  const parts = [LOOK.wellFill, LOOK.panelEdge, LOOK.panelEdge, LOOK.wellLight, LOOK.wellLight].map(
+    (colour) => scene.add.rectangle(0, 0, 1, 1, colour).setOrigin(0, 0),
+  );
+  return scene.add.container(0, 0, parts).setName(`${name}-well`);
+}
+
+/** The well's five rectangles laid over a rectangle: the floor, then the four edges. */
+export function placeWell(
+  well: Phaser.GameObjects.Container,
+  { x, y, width, height }: { x: number; y: number; width: number; height: number },
+): void {
+  const [floor, top, left, bottom, right] = well.list as Phaser.GameObjects.Rectangle[];
+  floor.setPosition(x, y).setSize(width, height);
+  top.setPosition(x, y).setSize(width, 1);
+  left.setPosition(x, y).setSize(1, height);
+  bottom.setPosition(x, y + height - 1).setSize(width, 1);
+  right.setPosition(x + width - 1, y).setSize(1, height);
 }

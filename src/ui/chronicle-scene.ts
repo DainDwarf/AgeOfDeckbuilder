@@ -25,6 +25,7 @@ import { createBand } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { CARD_BASELINE, CARD_HEIGHT, createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
+import { createChromeButton } from './chrome';
 import { createChronicleFaces } from './chronicle-faces';
 import { offerEntries, resetConsole } from './debug-console';
 import {
@@ -36,7 +37,6 @@ import {
   onClick,
   onHover,
   onLetGoOffCanvas,
-  reactsToPress,
   type Scrim,
   type Stratum,
   stopsThePointer,
@@ -120,7 +120,7 @@ const LABEL_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '18px',
   fontStyle: 'bold',
-  color: css(LOOK.ink),
+  color: css(LOOK.metalInk),
 };
 
 export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, DrawsSigns {
@@ -863,11 +863,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
   }
 
   private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
-    const button = this.add.rectangle(0, 0, 1, 1, LOOK.button).setName('end-turn');
     const label = addText(this, 0, 0, '', LABEL_STYLE)
       .setOrigin(0.5, 0.5)
       .setName('end-turn-label');
-    on.layer.add([button, label]);
 
     // Measured at every label it ever takes, so neither the hover swap, the phase it stands on nor a
     // fourth digit in the turn resizes it.
@@ -885,20 +883,27 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     const height = label.height + 24;
     const x = TAB_EDGE - MARGIN - width / 2;
     const y = CARD_BASELINE - CARD_HEIGHT - 14 - height / 2;
-    // Interactive dead or live, so no press reaches the map under it.
-    button.setPosition(x, y).setSize(width, height).setInteractive();
     label.setPosition(x, y);
 
     /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
     let wanted = true;
     let standing = false;
     const live = (): boolean => wanted && standing;
-    reactsToPress(button, live);
+    // Interactive dead or live, so no press reaches the map under it.
+    const chrome = createChromeButton(
+      this,
+      'gold',
+      { x: x - width / 2, y: y - height / 2, width, height },
+      'end-turn',
+      live,
+    );
+    const button = chrome.face;
+    on.layer.add([button, label]);
 
     let turn = 1;
     let settlePhase = false;
     const paint = (): void => {
-      button.setFillStyle(settlePhase ? LOOK.settlePhase : LOOK.button);
+      chrome.dress();
       const hovered = hover.hovered && live();
       if (settlePhase) {
         label.setText(text(hovered ? 'button.end-settle-phase' : 'button.settle-phase'));

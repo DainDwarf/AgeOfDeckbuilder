@@ -2,7 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type Reckoning, reckoned } from '../src/rules/chronicle';
-import { arrived } from '../src/rules/city';
+import { arrived, assignWaiting, claimWaiting } from '../src/rules/city';
 import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
@@ -39,16 +39,37 @@ async function reckoningsShown(page: Page): Promise<Painted[]> {
   return names.map((name) => ({ text: seen(name).text, colour: seen(name).ink }));
 }
 
-/** What each reading's reckoning reads by the rules: what ending the turn on the chronicle would do. */
+/**
+ * What each reading's reckoning reads by the rules: what ending the turn on the chronicle would do,
+ * on the gold where the reading's act in city mode waits.
+ */
 function reckoningsOf(chronicle: Chronicle): Painted[] {
   const read = reckoned(CATALOGUE, chronicle);
-  return READINGS.map((key) => reckoningOf(read, key));
+  const waiting = (key: BarReading): boolean => {
+    switch (key) {
+      case 'culture':
+        return claimWaiting(CATALOGUE, chronicle);
+      case 'idle':
+        return assignWaiting(chronicle);
+      case 'food':
+      case 'production':
+      case 'military':
+      case 'money':
+      case 'science':
+        return false;
+    }
+  };
+  return READINGS.map((key) => reckoningOf(read, key, waiting(key)));
 }
 
-/** What one reading's reckoning reads, signed, in its colour where it is a take; nothing where none runs. */
-function reckoningOf(read: Reckoning | undefined, key: BarReading): Painted {
+/**
+ * What one reading's reckoning reads, signed, in its colour where it is a take and in the ink of
+ * what it stands on otherwise; nothing where none runs.
+ */
+function reckoningOf(read: Reckoning | undefined, key: BarReading, onGold: boolean): Painted {
   const painted = (count: number, taken: boolean): Painted => {
-    const colour = css(taken ? LOOK.takenPastNothing : LOOK.ink);
+    const ink = onGold ? LOOK.metalInk : LOOK.charcoalInk;
+    const colour = css(taken ? LOOK.takenPastNothing : ink);
     if (count > 0) return { text: text('reading.plus', { count }), colour };
     if (count < 0) return { text: text('reading.minus', { count: -count }), colour };
     return { text: '', colour };

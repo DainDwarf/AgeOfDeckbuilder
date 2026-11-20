@@ -30,7 +30,6 @@ export type Shadow = Wash & { readonly blur: number; readonly fall: number };
 export type Look = {
   readonly button: number;
   readonly cityMode: number;
-  readonly actWaiting: number;
   readonly civilization: number;
   readonly enemy: number;
   readonly neutral: number;
@@ -40,9 +39,6 @@ export type Look = {
    */
   readonly attack: number;
   readonly pileCount: number;
-  readonly exhaustTab: number;
-  readonly exhaustTabEdge: number;
-  readonly exhaustTabInk: number;
   readonly selected: number;
   /** The strength the selection's rim rests at on the selected tile's edge and on a unit's ring. */
   readonly selectionRim: number;
@@ -101,6 +97,12 @@ export type Look = {
   readonly panelEdge: number;
   readonly ink: number;
   readonly faintInk: number;
+  /** The ink words read in on the charcoal of the chrome's panels and in its wells. */
+  readonly charcoalInk: number;
+  /** The ink a reading's word reads in on the resource bar's charcoal. */
+  readonly charcoalFaintInk: number;
+  /** The ink words read in on the chrome's silver and gold: a button's, and a window's gold band. */
+  readonly metalInk: number;
   readonly paleInk: number;
   readonly answerInk: number;
   readonly page: number;
@@ -178,8 +180,8 @@ export type Look = {
   /** The ink of a stock ending the turn takes past nothing, and of the population it takes. */
   readonly takenPastNothing: number;
   readonly affordableCard: Paper;
-  /** The paper an answer the player's city cannot pay for, or one refused, stands on, and its ink. */
-  readonly refusedAnswer: Paper;
+  /** The strength an answer the player's city cannot pay for, or one refused, is darkened by, its panel and its words alike. */
+  readonly refusedAnswer: number;
   /** The dark under a tile's yield glyphs, at its strength over its middle. */
   readonly yieldPatch: Wash;
   /** The strength every unit is drawn at while city mode is on. */
@@ -217,15 +219,11 @@ export type Look = {
 export const LOOK: Look = {
   button: 0xd9a441,
   cityMode: 0xd9a441,
-  actWaiting: 0xd9a441,
   civilization: 0xd9a441,
   enemy: 0xb4453c,
   neutral: 0x2b4f7a,
   attack: 0xb4453c,
   pileCount: 0xd9a441,
-  exhaustTab: 0xd4d7db,
-  exhaustTabEdge: 0x6f757d,
-  exhaustTabInk: 0x0d1014,
   selected: 0xf2f6ff,
   selectionRim: 0.8,
   selectionLine: 0.9,
@@ -258,6 +256,9 @@ export const LOOK: Look = {
   panelEdge: 0x6f757d,
   ink: 0x0d1014,
   faintInk: 0x4a5058,
+  charcoalInk: 0xf2f6ff,
+  charcoalFaintInk: 0xaab0b8,
+  metalInk: 0x0d1014,
   paleInk: 0xd4d7db,
   answerInk: 0x9aa1a9,
   // `index.html`'s style reset holds this value too, for the letterbox around the canvas.
@@ -318,7 +319,7 @@ export const LOOK: Look = {
   emptyEdge: 0x4a5058,
   takenPastNothing: 0xc0392b,
   affordableCard: { face: 0xd4d7db, ink: 0x0d1014 },
-  refusedAnswer: { face: 0xa7abb1, ink: 0x3a3f45 },
+  refusedAnswer: 0.21,
   yieldPatch: { colour: 0x0d1014, strength: 0.7 },
   unitsInCityMode: 0.5,
   yieldNotGiven: 0.5,

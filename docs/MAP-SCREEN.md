@@ -68,7 +68,7 @@ The map marks the tiles the player's city can claim for as long as the mode is o
 
 ## The settle phase ✅
 
-**On the settle phase** the chronicle screen shows the centre part and nothing else, the hand holds the settle cards, the player's city has no border, and the end-turn button reads the phase and is dead until the player's city stands. The map's frame drawn in the settle phase's own colour, a chip naming the phase where city mode's chip stands, and the end-turn button filled in that same colour are how the chronicle screen shows the phase is on; the chip reacts to no press, and all three go as the turn ticks to turn 1. City mode is not entered while the player's city stands nowhere: the city key and the two readings that enter it do nothing. Entered once the player's city stands, its own frame and chip stand in place of the settle phase's until it is left, and the button keeps the phase's colour.
+**On the settle phase** the chronicle screen shows the centre part and nothing else, the hand holds the settle cards, the player's city has no border, and the end-turn button reads the phase and is dead until the player's city stands. The map's frame drawn in the settle phase's own colour and a chip naming the phase where city mode's chip stands are how the chronicle screen shows the phase is on; the chip reacts to no press, and both go as the turn ticks to turn 1. City mode is not entered while the player's city stands nowhere: the city key and the two readings that enter it do nothing. Entered once the player's city stands, its own frame and chip stand in place of the settle phase's until it is left.
 
 ## The yield overlay ✅
 

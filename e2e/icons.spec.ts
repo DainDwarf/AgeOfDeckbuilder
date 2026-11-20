@@ -12,6 +12,7 @@ import {
   onFeature,
   openSaved,
   paidOnGround,
+  pieceWornOf,
   playerCityTile,
   pressContinue,
   readings,
@@ -65,15 +66,15 @@ const GROUND = [
   `improvement-painting-${TRAPPING}-alone-${tileKey(TRAPPED)}`,
 ];
 
-const WELL = 'icons-button-well';
+const BUTTON = 'icons-button';
 
 /** Which of the discs and of what lies on the ground stand, and whether the button is sunk, in one question. */
 async function shown(page: Page): Promise<{ discs: boolean[]; ground: boolean[]; sunk: boolean }> {
-  const seen = await readings(page, [...DISCS, ...GROUND, WELL]);
+  const seen = await readings(page, [...DISCS, ...GROUND, BUTTON]);
   return {
     discs: DISCS.map((name) => seen(name).standing),
     ground: GROUND.map((name) => seen(name).standing),
-    sunk: seen(WELL).standing,
+    sunk: pieceWornOf(seen(BUTTON)).piece === 'tab',
   };
 }
 

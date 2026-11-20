@@ -47,9 +47,9 @@ export type RunNames = {
 };
 
 /**
- * An entry drawn on the face as a run wrapped at that width, from the middle of its first line at
- * that point down, its glyphs where the run stands them and a zone over each of its names; the names
- * react.
+ * An entry drawn on the face as a run wrapped at that width in that ink, from the middle of its first
+ * line at that point down, its glyphs where the run stands them and a zone over each of its names;
+ * the names react.
  */
 export function drawRun(
   scene: Phaser.Scene,
@@ -57,9 +57,10 @@ export function drawRun(
   entry: string,
   first: { readonly x: number; readonly y: number },
   width: number,
+  ink: number,
   reactions: RunNames,
 ): { label: Phaser.GameObjects.Text; lines: number; names: Name[] } {
-  const { label, run } = addRun(scene, entry, TEXT_STYLE, width);
+  const { label, run } = addRun(scene, entry, { ...TEXT_STYLE, color: css(ink) }, width);
   const lines = run.widths.length;
   const pitch = ownBoxOf(label).height / lines;
   const middleOf = (at: number): number => first.y + at * pitch;

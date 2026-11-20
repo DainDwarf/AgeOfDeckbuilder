@@ -16,7 +16,7 @@ import { glyphOf } from './glyphs';
 import { onHeldKeys } from './keys';
 import { css, LOOK } from './look';
 import { groundColourOf } from './marks';
-import { ROOM, type Worn } from './navbar';
+import { createWell, placeWell, ROOM, type Worn } from './navbar';
 import {
   drawRun,
   linesOf,
@@ -29,7 +29,7 @@ import {
   TEXT_LINE,
   TEXT_STYLE,
 } from './plate';
-import { createWell, placeWell, SUNK } from './resource-bar';
+import { SUNK } from './resource-bar';
 import { PAN_SPEED } from './scroll';
 import { createSmallCards } from './small-card';
 import { achievementGoal, ageName, regionName, technologyName, text } from './text';
@@ -242,7 +242,7 @@ export function createTree(
     const { technology, state } = plate;
     switch (state) {
       case 'learned': {
-        const { well } = createWell(scene, id);
+        const well = createWell(scene, id);
         placeWell(well, { x: 0, y: 0, width: PLATE_WIDTH, height: plateHeight });
         return { parts: [well] };
       }
@@ -326,6 +326,7 @@ export function createTree(
         entry,
         { x: values, y: lineMiddle(line) },
         width,
+        LOOK.ink,
         reactions,
       );
       drawn.label.setName(named);

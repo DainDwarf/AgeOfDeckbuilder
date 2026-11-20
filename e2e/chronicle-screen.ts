@@ -109,6 +109,13 @@ import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../
 import type { Point } from '../src/ui/border-loops';
 import type { Name } from '../src/ui/card-face';
 import { glyphFileOf } from '../src/ui/cast';
+import {
+  BUTTONS,
+  type ButtonLook,
+  type ButtonPiece,
+  SHADOW_MARGIN,
+  TAB,
+} from '../src/ui/chrome-kit';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { eventName } from '../src/ui/event-text';
@@ -1559,11 +1566,17 @@ export async function besideTiles(page: Page): Promise<{ x: number; y: number }>
   return { x: city.x - 440 * city.unit, y: city.y - 160 * city.unit };
 }
 
-/** A point on the band, inside its left end and short of the draw pile, which stands a margin in. */
+/**
+ * A point on the band, inside the canvas's left edge, which its panel runs on past, and short of the
+ * draw pile, which stands a margin in; halfway down what of it the canvas shows.
+ */
 export async function onTheBand(page: Page): Promise<{ x: number; y: number }> {
-  const band = await reading(page, 'band');
-  const { x, y, height } = band.boundsOnScreen;
-  return { x: x + 8 * band.onScreen.unit, y: y + height / 2 };
+  const band = await pieceOnScreen(page, 'band');
+  const canvas = await page
+    .locator('canvas')
+    .evaluate((shown: HTMLCanvasElement) => shown.getBoundingClientRect().toJSON() as DOMRect);
+  const bottom = Math.min(band.y + band.height, canvas.bottom);
+  return { x: Math.max(band.x, canvas.left) + 8 * band.unit, y: (band.y + bottom) / 2 };
 }
 
 /** A rectangle on the page. */
@@ -1690,15 +1703,40 @@ export async function shows(page: Page, name: string): Promise<boolean> {
   return (await reading(page, name)).shows;
 }
 
-/** What the floor of a reading's well is painted, and nothing at all while that well is down. */
-export function wellFill(page: Page, key: string): Promise<number | undefined> {
-  return page.evaluate((target) => {
-    const floor = window.named?.(`reading-${target}-floor`)?.object as
-      | Phaser.GameObjects.Rectangle
-      | undefined;
-    if (floor === undefined) throw new Error(`there is no well for ${target}`);
-    return floor.parentContainer.visible ? floor.fillColor : undefined;
-  }, key);
+/** What a piece of the chrome wears: a button of the kit in one of its looks, or the kit's inactive tab. */
+export type PieceWorn =
+  | { readonly piece: ButtonPiece; readonly look: ButtonLook }
+  | { readonly piece: 'tab' };
+
+/** What a piece of the chrome wears, read off the frame of the kit its reading draws. */
+export function pieceWornOf({ frame }: Reading): PieceWorn {
+  if (frame === TAB.frame) return { piece: 'tab' };
+  for (const [piece, { looks }] of Object.entries(BUTTONS)) {
+    for (const [look, file] of Object.entries(looks)) {
+      if (file === frame) return { piece: piece as ButtonPiece, look: look as ButtonLook };
+    }
+  }
+  throw new Error(`${frame} is no button of the kit and no well`);
+}
+
+/** What the named piece of the chrome wears, in one question to the page. */
+export async function pieceWorn(page: Page, name: string): Promise<PieceWorn> {
+  return pieceWornOf(await reading(page, name));
+}
+
+/** What a reading of the bar stands in, its well or the gold, and nothing while it stands in neither. */
+export async function wellWorn(page: Page, key: string): Promise<PieceWorn | undefined> {
+  const well = await reading(page, `reading-${key}-well`);
+  return well.shows ? pieceWornOf(well) : undefined;
+}
+
+/** Where a piece of the chrome's own box stands on the page, the shadow round it left out. */
+export async function pieceOnScreen(page: Page, name: string): Promise<Frame & { unit: number }> {
+  const piece = await reading(page, name);
+  const { x, y, width, height } = piece.boundsOnScreen;
+  const { unit } = piece.onScreen;
+  const room = SHADOW_MARGIN * piece.scale * unit;
+  return { x: x + room, y: y + room, width: width - 2 * room, height: height - 2 * room, unit };
 }
 
 /** How many objects of that name stand shown on the chronicle screen: one still painted, plus any left over. */
@@ -3363,11 +3401,6 @@ export async function fillOf(page: Page, name: string): Promise<number | undefin
 /** Whether the named stack stands dimmed, and nothing where no stack of that name stands. */
 export async function stackDimmed(page: Page, name: string): Promise<boolean | undefined> {
   return (await reading(page, name)).dimmed;
-}
-
-/** What the end-turn button is painted. */
-export function endTurnFill(page: Page): Promise<number | undefined> {
-  return fillOf(page, 'end-turn');
 }
 
 /** Which tile is selected, or nothing while none is. */

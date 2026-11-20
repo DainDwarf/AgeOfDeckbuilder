@@ -1,9 +1,10 @@
 import type Phaser from 'phaser';
 import { MAP_FRAME } from './band';
 import { CARD_BASELINE, CARD_HEIGHT } from './card-face';
-import { onClick, reactsToPress, type Stratum } from './design-space';
-import { createPaperButton } from './menu';
-import { createWell, placeWell, SUNK } from './resource-bar';
+import { inked, type Stratum } from './design-space';
+import { LOOK } from './look';
+import { createSilverButton, silverButtonSize } from './menu';
+import { SUNK } from './resource-bar';
 import { CHIP_INSET } from './standing';
 import { text } from './text';
 
@@ -19,33 +20,21 @@ export function createIconsButton(
   on: Stratum,
   pressed: () => void,
 ): IconsButton {
-  const { face, label } = createPaperButton(scene, 'icons-button-face', text('button.icons'));
-  label.setName('icons-button-label');
-  const { width, height } = face;
-  const left = MAP_FRAME.x + CHIP_INSET;
-  const top = CARD_BASELINE - CARD_HEIGHT - OVER_THE_PILE - height;
-  const x = left + width / 2;
-  const y = top + height / 2;
-  face.setPosition(x, y);
-  const { well } = createWell(scene, 'icons-button');
-  placeWell(well, { x: left, y: top, width, height });
-  // The face is hidden while the button is sunk, and a hidden object is never hit (docs/PHASER.md).
-  const press = scene.add
-    .zone(left, top, width, height)
-    .setOrigin(0, 0)
-    .setName('icons-button')
-    .setInteractive();
-  onClick(reactsToPress(press), pressed);
-  on.layer.add([face, well, label, press]);
+  const reads = text('button.icons');
+  const { width, height } = silverButtonSize(scene, reads);
+  const x = MAP_FRAME.x + CHIP_INSET + width / 2;
+  const y = CARD_BASELINE - CARD_HEIGHT - OVER_THE_PILE - height / 2;
+  const { button, label } = createSilverButton(scene, 'icons-button', reads, { x, y }, pressed);
+  on.layer.add([button.face, label]);
 
-  const button = {
+  const icons = {
     sink(sunk: boolean): void {
-      face.setVisible(!sunk);
-      well.setVisible(sunk);
+      button.latch(sunk);
+      inked(label, sunk ? LOOK.charcoalInk : LOOK.metalInk);
       const step = sunk ? SUNK : 0;
       label.setPosition(x + step, y + step);
     },
   };
-  button.sink(true);
-  return button;
+  icons.sink(true);
+  return icons;
 }
