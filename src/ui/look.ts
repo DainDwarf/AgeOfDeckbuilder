@@ -38,7 +38,10 @@ export type Look = {
    * to it, and the health the attack would remove on its health bar.
    */
   readonly attack: number;
-  readonly pileCount: number;
+  /** The veil a pile's round wears under the pointer, under its sign and its count. */
+  readonly pileUnderPointer: Wash;
+  /** The strength the sign of a pile holding no card is darkened by. */
+  readonly emptyPileSign: number;
   readonly selected: number;
   /** The strength the selection's rim rests at on the selected tile's edge and on a unit's ring. */
   readonly selectionRim: number;
@@ -171,8 +174,6 @@ export type Look = {
   readonly liftedCard: number;
   /** The shadow under a card lifted out of the hand's lane, its numbers in units of the card at its own size. */
   readonly liftedShadow: Shadow;
-  /** The strength a worn card is darkened by, every part of it alike. */
-  readonly wornCard: number;
   readonly aimSlab: number;
   readonly emptyEdge: number;
   /** The ink of what ending the turn would add to a reading of the resource bar, and of what it would take. */
@@ -228,7 +229,8 @@ export const LOOK: Look = {
   enemy: 0xb4453c,
   neutral: 0x2b4f7a,
   attack: 0xb4453c,
-  pileCount: 0xd9a441,
+  pileUnderPointer: { colour: 0xf2f6ff, strength: 0.1 },
+  emptyPileSign: 0.5,
   selected: 0xf2f6ff,
   selectionRim: 0.8,
   selectionLine: 0.9,
@@ -318,7 +320,6 @@ export const LOOK: Look = {
   unaffordableDisc: 0xff6b66,
   liftedCard: 1.1,
   liftedShadow: { colour: 0x000000, strength: 0.5, blur: 9, fall: 5 },
-  wornCard: 0.5,
   aimSlab: 0x232833,
   emptyEdge: 0x4a5058,
   gain: 0x5fd38a,
@@ -397,14 +398,9 @@ export function darkeningOf(strength: number): number {
 /** What a card's every colour goes through as it is drawn. */
 export type Tone = (colour: number) => number;
 
-/** A colour as a card lying anywhere but worn shows it. */
-export function unworn(colour: number): number {
+/** A colour as it is drawn, through no tone. */
+export function untoned(colour: number): number {
   return colour;
-}
-
-/** A colour worn as the discard pile's top card and a dry draw pile are: darkened by a worn card's strength. */
-export function worn(colour: number): number {
-  return multiplied(colour, darkeningOf(LOOK.wornCard));
 }
 
 /**

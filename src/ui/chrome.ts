@@ -5,6 +5,7 @@ import {
   type ButtonLook,
   type ButtonPiece,
   CHROME_SHEET_KEY,
+  COUNTER,
   type Fitted,
   PANEL,
   type Piece,
@@ -18,9 +19,9 @@ import { type Box, onHover, onLetGoOffCanvas, reactsToPress } from './design-spa
 
 /**
  * How many design units a pixel of the kit's files is drawn across on each kind of panel, which sets
- * how thin its rim stands: a strip along the screen's edge, a plate, and the exhaust pile's tab.
+ * how thin its rim stands: a strip along the screen's edge, and a plate.
  */
-export const PANEL_RIMS = { strip: 0.16, plate: 0.12, exhaustTab: 0.1 } as const;
+export const PANEL_RIMS = { strip: 0.16, plate: 0.12 } as const;
 
 /** How far the resource bar's panel and the band's run on past the screen's edges, their corners off it. */
 export const PAST_THE_EDGE = 30;
@@ -57,7 +58,7 @@ function fit(slice: Phaser.GameObjects.NineSlice, piece: Fitted, box: Box): void
 }
 
 /** The piece taking the pointer on its own box alone, never on the shadow round it. */
-function takesThePointer(slice: Phaser.GameObjects.NineSlice): Phaser.GameObjects.NineSlice {
+export function takesThePointer(slice: Phaser.GameObjects.NineSlice): Phaser.GameObjects.NineSlice {
   return slice.setInteractive({
     hitArea: {},
     hitAreaCallback: (_area: object, x: number, y: number) =>
@@ -129,6 +130,16 @@ export function placeChromeWell(
   box: Box,
 ): void {
   fit(well, WELLS[piece], box);
+}
+
+/** The kit's counter chip, drawn nowhere until `placeChromeCounter` lays it. */
+export function createChromeCounter(scene: Phaser.Scene): Phaser.GameObjects.NineSlice {
+  return sliceOf(scene, COUNTER);
+}
+
+/** The counter chip over the box, fitted to its height. */
+export function placeChromeCounter(chip: Phaser.GameObjects.NineSlice, box: Box): void {
+  fit(chip, COUNTER, box);
 }
 
 /** A button of the kit: its face, which a press lands on, and the look it wears. */

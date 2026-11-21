@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The cards zone, lowered** — on the chronicle screen the hand rests sunk under the screen's bottom edge, each card showing its picture and its name, and a lifted card stands whole over the edge; the band is a tray in the middle of the bottom edge, as wide as the hand's lane and the piles, the map drawn to the screen's bottom beside it; the three piles are round buttons in the tray, each its sign and its count, the draw pile left of the hand, the discard and the exhaust piles right of it, opening their browse on either click and naming themselves on the rest; `npm run check`, `npm test` and `npm run lint` pass and `e2e/piles.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/cards-zone-lowered.md](board/cards-zone-lowered.md)
 - **End turn, Menu and Icons** — the three buttons: what wears an icon, what keeps its word, and where they stand, End turn and Icons standing over the piles' small buttons with nothing under them on a wide window.
 - **The faction signs' button** — a button left of Icons on the chronicle screen switching the faction signs on and off, the Graphics window's row going in its favour.
 - **A hex grid on the map, as a test** — a toggle showing the hex grid over the map, built for the user to judge in play and kept or taken out on their word.

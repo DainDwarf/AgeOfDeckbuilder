@@ -4,7 +4,7 @@ import Phaser from 'phaser';
 export const TRAVEL = 250;
 export const STAGGER = 20;
 
-/** How long the shuffle takes: the discard pile's top carried to the draw pile. */
+/** How long the shuffle takes: one back carried from the discard pile to the draw pile. */
 export const SHUFFLE = 300;
 
 /** How long a card takes to turn over. */
@@ -65,11 +65,11 @@ export function dropWaitedMotion(scene: Phaser.Scene): void {
   for (const tween of scene.tweens.getTweens()) if (waitedOn.has(tween)) tween.destroy();
 }
 
-/** A card carried to a place at an angle, resolving where it settles. */
+/** A card carried to a place at an angle, and to a size where one is handed, resolving where it settles. */
 export function travel(
   scene: Phaser.Scene,
   card: Phaser.GameObjects.Container,
-  to: { x: number; y: number; rotation: number },
+  to: { x: number; y: number; rotation: number; scale?: number },
   delay = 0,
   duration = TRAVEL,
 ): Promise<void> {
@@ -79,6 +79,7 @@ export function travel(
       x: to.x,
       y: to.y,
       rotation: to.rotation,
+      ...(to.scale === undefined ? {} : { scale: to.scale }),
       delay,
       duration,
       ease: EASE,

@@ -3,9 +3,13 @@ import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
 import { offered } from '../src/rules/schedule';
 import {
+  backingLeaves,
+  backingOf,
   browse,
   cameraCuts,
   campaignShown,
+  canvasOf,
+  DESIGN_WINDOW,
   type Frame,
   firstDealt,
   mapFrame,
@@ -13,51 +17,17 @@ import {
   overflowingPiles,
   readings,
   readNames,
+  resizedTo,
   rested,
   restedOnDeal,
   settledOn,
+  WIDE,
   watch,
 } from './chronicle-screen';
 
-/** The canvas's backing store, and the room it takes on screen measured in the same device pixels. */
-type Backing = { width: number; height: number; onWidth: number; onHeight: number };
-
-function measure(page: Page): Promise<Backing> {
-  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    return {
-      width: canvas.width,
-      height: canvas.height,
-      onWidth: Math.round(rect.width * window.devicePixelRatio),
-      onHeight: Math.round(rect.height * window.devicePixelRatio),
-    };
-  });
-}
-
-/** Waits for the backing store to leave the size it was measured at. */
-async function backingLeaves(page: Page, was: Backing): Promise<void> {
-  await page.waitForFunction(
-    ({ width, height }) => {
-      const canvas = document.querySelector('canvas');
-      return canvas?.width !== width || canvas.height !== height;
-    },
-    { width: was.width, height: was.height },
-  );
-}
-
-/** The window set to that size, and the screen laid out for it and drawn. */
-async function resizedTo(page: Page, size: { width: number; height: number }): Promise<void> {
-  const was = await measure(page);
-  await page.setViewportSize(size);
-  await backingLeaves(page, was);
-  await rested(page);
-}
-
-const DESIGN_WINDOW = { width: 1280, height: 720 };
-
 /** The window moved to a monitor of that density: its CSS size stands and no resize fires. */
 async function hoppedTo(page: Page, ratio: number, colorScheme: 'dark' | 'light'): Promise<void> {
-  const was = await measure(page);
+  const was = await backingOf(page);
   const session = await page.context().newCDPSession(page);
   await session.send('Emulation.setDeviceMetricsOverride', {
     ...DESIGN_WINDOW,
@@ -70,7 +40,7 @@ async function hoppedTo(page: Page, ratio: number, colorScheme: 'dark' | 'light'
   await backingLeaves(page, was);
 }
 
-/** The pieces of the chronicle screen laid against its edges, where they stand on the page. */
+/** The pieces of the chronicle screen laid along its edges, where they stand on the page. */
 const EDGED = ['band', 'resource-bar', 'menu-button', 'draw-pile', 'end-turn', 'exhaust-pile'];
 
 /**
@@ -128,8 +98,6 @@ function expectCovering(frame: Frame, { width, height }: { width: number; height
   expect(frame.y + frame.height).toBeGreaterThanOrEqual(height);
 }
 
-const WIDE = { width: 1920, height: 1080 };
-
 test('the design space follows a window that grows after boot, drawing a window too small at the size that holds 1280 by 720', async ({
   page,
 }) => {
@@ -138,14 +106,14 @@ test('the design space follows a window that grows after boot, drawing a window 
   await page.setViewportSize({ width: 640, height: 360 });
   await openSaved(page, settledOn(1));
 
-  const booted = await measure(page);
+  const booted = await backingOf(page);
   expect(booted.width).toBe(booted.onWidth);
   expect(booted.height).toBe(booted.onHeight);
   const small = await laidOut(page);
 
   await resizedTo(page, DESIGN_WINDOW);
 
-  const grown = await measure(page);
+  const grown = await backingOf(page);
   expect(grown.width).toBeGreaterThan(booted.width);
   expect(grown.width).toBe(grown.onWidth);
   expect(grown.height).toBe(grown.onHeight);
@@ -173,19 +141,19 @@ test('the design space follows a window moved to a monitor of another pixel dens
   await openSaved(page, settledOn(1));
 
   await hoppedTo(page, 1.5, 'dark');
-  const first = await measure(page);
+  const first = await backingOf(page);
   expect(first.width).toBe(first.onWidth);
   expect(first.height).toBe(first.onHeight);
 
   await hoppedTo(page, 2, 'light');
-  const second = await measure(page);
+  const second = await backingOf(page);
   expect(second.width).toBe(second.onWidth);
   expect(second.height).toBe(second.onHeight);
 
   expect(problems).toEqual([]);
 });
 
-test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band and the map across it, each piece at its edge, a card at its size', async ({
+test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band a tray centred along its bottom with the end-turn button over it, the Menu button at its corner, the map across it, a card at its size', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -199,20 +167,23 @@ test('on a wider window the chronicle screen takes its shape: the bar centred al
   const { pieces } = wide;
 
   const { band } = pieces;
-  expect(band.x).toBeLessThanOrEqual(0);
-  expect(band.x + band.width).toBeGreaterThanOrEqual(WIDE.width);
+  expect(band.x).toBeGreaterThan(0);
+  expect(band.x + band.width).toBeLessThan(WIDE.width);
+  expect(band.x + band.width / 2).toBeCloseTo(WIDE.width / 2, 3);
   expect(band.y + band.height).toBeGreaterThanOrEqual(WIDE.height);
   const bar = pieces['resource-bar'];
   expect(bar.y).toBeCloseTo(0, 3);
   expect(bar.x + bar.width / 2).toBeCloseTo(WIDE.width / 2, 3);
   expect(bar.width).toBeCloseTo(today.pieces['resource-bar'].width, 3);
-  for (const name of ['menu-button', 'end-turn', 'exhaust-pile']) {
-    expect(fromTheRight(pieces[name], WIDE.width)).toBeCloseTo(
-      fromTheRight(today.pieces[name], DESIGN_WINDOW.width),
-      3,
-    );
-  }
-  expect(pieces['draw-pile'].x).toBeCloseTo(today.pieces['draw-pile'].x, 3);
+  expect(fromTheRight(pieces['menu-button'], WIDE.width)).toBeCloseTo(
+    fromTheRight(today.pieces['menu-button'], DESIGN_WINDOW.width),
+    3,
+  );
+  const endTurn = pieces['end-turn'];
+  expect(endTurn.x - WIDE.width / 2).toBeCloseTo(
+    today.pieces['end-turn'].x - DESIGN_WINDOW.width / 2,
+    3,
+  );
 
   expect(wide.unit).toBeCloseTo(1, 6);
   expect(wide.card.width).toBeCloseTo(today.card.width, 3);
@@ -236,10 +207,7 @@ test('on a taller window the map’s frame grows by what the window grows, and n
   await page.setViewportSize(tall);
   await openSaved(page, settledOn(1));
   const grown = await mapFrame(page);
-  const canvas = await page
-    .locator('canvas')
-    .evaluate((shown: HTMLCanvasElement) => shown.getBoundingClientRect().toJSON() as DOMRect);
-  expectCovering(canvas, tall);
+  expectCovering(await canvasOf(page), tall);
 
   await resizedTo(page, DESIGN_WINDOW);
   const today = await mapFrame(page);

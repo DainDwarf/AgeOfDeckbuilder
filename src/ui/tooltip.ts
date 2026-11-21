@@ -23,6 +23,8 @@ export type Tooltip = {
    * the message under `title` in bold where one is handed.
    */
   under(message: string, left: number, top: number, title?: string): void;
+  /** Stands over what was hovered as `under` hangs under it, its bottom edge at `bottom`. */
+  over(message: string, left: number, bottom: number): void;
   /**
    * Stands to the right of the point `at` answers as the bubble is painted and at every `follow`,
    * level with it, the message under `title` in bold where one is handed. The bubble goes wherever
@@ -133,14 +135,32 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
     place?.();
   });
 
+  /** The bubble held inside the frame by its left edge, its top where `topOf` puts it for its height. */
+  const hang = (
+    message: string,
+    left: number,
+    topOf: (height: number) => number,
+    title?: string,
+  ): void => {
+    raise(() => {
+      const { width, height } = measure(message, title);
+      const unit = on.unit();
+      const x = Math.min(left, screenSize().width - MARGIN - width);
+      place = undefined;
+      tooltip
+        .setScale(unit)
+        .setPosition(x, topOf(height * unit))
+        .setVisible(true);
+    });
+  };
+
   return {
     under(message: string, left: number, top: number, title?: string): void {
-      raise(() => {
-        const { width } = measure(message, title);
-        const x = Math.min(left, screenSize().width - MARGIN - width);
-        place = undefined;
-        tooltip.setScale(on.unit()).setPosition(x, top).setVisible(true);
-      });
+      hang(message, left, () => top, title);
+    },
+
+    over(message: string, left: number, bottom: number): void {
+      hang(message, left, (height) => bottom - height);
     },
 
     beside(message: string, at: () => { x: number; y: number }, title?: string): void {

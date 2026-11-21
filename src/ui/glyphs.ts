@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { type CastSymbol, glyphFileOf } from './cast';
 import { grownOf } from './fade';
-import { LOOK, type Tone, unworn } from './look';
+import { LOOK, type Tone, untoned } from './look';
 import { GLYPH_PIXELS, GLYPH_SHEET } from './marks';
 import { aroundPicture, paintMade, washed } from './sheet';
 
@@ -45,13 +45,23 @@ function colourOf(symbol: CastSymbol): number {
     case 'sight':
     case 'hostile':
       return LOOK.cardTextInk;
+    case 'draw-pile':
+    case 'discard-pile':
+    case 'exhaust-pile':
+      return LOOK.charcoalInk;
   }
 }
 
-/** Whether a symbol's glyph wears its outline where it is not told: the hostile glyph, read in a text's ink, wears none. */
+/**
+ * Whether a symbol's glyph wears its outline where it is not told: the hostile glyph, read in a text's
+ * ink, wears none, and neither does a pile's sign, on its rimmed round.
+ */
 function outlinedOf(symbol: CastSymbol): boolean {
   switch (symbol) {
     case 'hostile':
+    case 'draw-pile':
+    case 'discard-pile':
+    case 'exhaust-pile':
       return false;
     case 'food':
     case 'production':
@@ -148,7 +158,7 @@ export function asGlyph(
   mark: Phaser.GameObjects.Container,
   symbol: CastSymbol,
   square: number,
-  { tone = unworn, colour = colourOf(symbol), outlined = outlinedOf(symbol) }: GlyphPaint = {},
+  { tone = untoned, colour = colourOf(symbol), outlined = outlinedOf(symbol) }: GlyphPaint = {},
 ): Phaser.GameObjects.Container {
   const [outline, glyph] = mark.list as Phaser.GameObjects.Image[];
   const scale = square / GLYPH_PIXELS;

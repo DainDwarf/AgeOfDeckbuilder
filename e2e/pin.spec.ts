@@ -13,6 +13,7 @@ import {
   campaignShown,
   chronicleOf,
   click,
+  DESIGN_WINDOW,
   dragOut,
   HOLDING,
   HUNT,
@@ -32,6 +33,7 @@ import {
   settledOn,
   standing,
   textOf,
+  WIDE,
   watch,
   wonCampaign,
 } from './chronicle-screen';
@@ -191,15 +193,15 @@ test('the pinned achievements stand under the resource bar where it reaches over
     };
   };
 
-  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.setViewportSize(DESIGN_WINDOW);
   await openSaved(page, chronicle, campaign);
   const narrow = await laidOut();
   const foot = narrow.bar.y + narrow.bar.height;
   expect(narrow.plate.y).toBeGreaterThan(foot);
   expect(narrow.plate.y - foot).toBeCloseTo(narrow.plate.x - narrow.frame.x, 0);
 
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await expect.poll(async () => (await mapFrame(page)).width).toBeCloseTo(1920, 0);
+  await page.setViewportSize(WIDE);
+  await expect.poll(async () => (await mapFrame(page)).width).toBeCloseTo(WIDE.width, 0);
   await rested(page);
   const wide = await laidOut();
   expect(wide.plate.y).toBeLessThan(wide.bar.y + wide.bar.height);

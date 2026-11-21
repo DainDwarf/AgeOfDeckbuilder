@@ -1,13 +1,10 @@
 import { expect, type Page, test } from '@playwright/test';
 import type Phaser from 'phaser';
-import { CATALOGUE } from '../src/content/catalogue';
 import type { Chronicle } from '../src/rules/state';
 import { DEFAULTS } from '../src/ui/bindings';
 import { CARD_WIDTH, DISC } from '../src/ui/card-frames';
 import { onFace } from '../src/ui/card-shape';
-import { cardFace, kindTooltip } from '../src/ui/face';
-import type { PileKind } from '../src/ui/piles';
-import { cardRules, text } from '../src/ui/text';
+import { text } from '../src/ui/text';
 import {
   besideTheCards,
   browse,
@@ -15,17 +12,11 @@ import {
   chronicleOf,
   click,
   consoleKey,
-  cursorAt,
-  endedTurn,
   type Frame,
-  firstSeed,
   graphicsCommands,
   hazardsAdded,
   heldFor,
   inside,
-  kindLabelOnScreen,
-  namedIn,
-  nameOnScreen,
   offsetOf,
   onScreen,
   openSaved,
@@ -34,7 +25,6 @@ import {
   panKeys,
   pannedToEndsThenTapped,
   pileStacks,
-  pileTop,
   readings,
   readOrder,
   rested,
@@ -42,20 +32,13 @@ import {
   selected,
   settledOn,
   standing,
-  standsFor,
   tappedDown,
   titleOf,
-  tooltipText,
   tooltipUp,
   waitGameClock,
   watch,
   wheel,
 } from './chronicle-screen';
-
-/** The cursor over something that reacts to a left click or a rest. */
-const HAND = 'pointer';
-
-const PILES: readonly PileKind[] = ['draw-pile', 'discard-pile', 'exhaust-pile'];
 
 /** The face whose spot on the page stands nearest the height `y`, and that spot; a tie goes to the first. */
 function nearest<At extends { y: number }>(
@@ -277,7 +260,7 @@ test('a card shown large holds a browse still under the two keys that pan the ma
   expect(problems).toEqual([]);
 });
 
-test('a left click on a pile opens nothing; a right click opens its browse, a stack per card that reads the same with its copies on a badge under its front card’s bottom right corner, clear of the influence’s disc, in the order of the collection; a stack reacts to no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
+test('a right click on a pile opens its browse, a stack per card that reads the same with its copies on a badge under its front card’s bottom right corner, clear of the influence’s disc, in the order of the collection; a stack reacts to no left click, a right click shows it large over the browse, the inspection key does nothing, and the back key walks back the card, then the browse, onto the selection', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -287,13 +270,6 @@ test('a left click on a pile opens nothing; a right click opens its browse, a st
   await openSaved(page, before);
 
   const home = await onScreen(page, 'hand-0');
-  for (const pile of PILES) {
-    const at = await pileTop(page, pile);
-    await page.mouse.click(at.x, at.y);
-  }
-  await rested(page);
-  expect(await standing(page, 'browse')).toBe(false);
-
   await click(page, 'hand-0');
   await rested(page);
   expect(await selected(page, 0, home)).toBe(true);
@@ -432,45 +408,6 @@ test('a small card and a kind bubble raised off a browsed stack move with it as 
 
   await page.mouse.wheel(0, (2 * label.height) / frame.unit);
   await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(false);
-
-  expect(problems).toEqual([]);
-});
-
-test('on the discard pile’s top card a rest on a name raises the named thing small and a right click on it shows it large, no browse rising; the kind label raises what the kind is; the pointer is the hand there and the arrow elsewhere on the piles', async ({
-  page,
-}) => {
-  const problems = watch(page);
-
-  const opened = firstSeed('ends its first turn on a card naming a thing', (seed) => {
-    const ended = endedTurn(settledOn(seed));
-    const top = ended.discardPile.at(-1);
-    return top !== undefined && namedIn(cardRules(top)).length > 0 ? ended : undefined;
-  });
-  const top = opened.discardPile[opened.discardPile.length - 1];
-  const city = opened.citySection.building;
-  const [named] = namedIn(cardRules(top));
-  await openSaved(page, opened);
-
-  const face = 'discard-pile-top';
-  const name = await nameOnScreen(page, face);
-  expect(await cursorAt(page, name)).toBe(HAND);
-  await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(standsFor(named));
-
-  await page.mouse.click(name.x, name.y, { button: 'right' });
-  await expect.poll(() => cardOnFace(page, 'inspection')).toBe(standsFor(named));
-  await rested(page);
-  expect(await standing(page, 'browse')).toBe(false);
-  await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'inspection')).toBe(false);
-
-  const label = await kindLabelOnScreen(page, face);
-  expect(await cursorAt(page, label)).toBe(HAND);
-  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
-  expect(await tooltipText(page, 'tooltip-ui')).toBe(
-    kindTooltip(cardFace(CATALOGUE, top, city).kind),
-  );
-
-  for (const pile of PILES) expect(await cursorAt(page, await pileTop(page, pile))).toBe('');
 
   expect(problems).toEqual([]);
 });

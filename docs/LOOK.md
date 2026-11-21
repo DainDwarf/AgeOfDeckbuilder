@@ -7,7 +7,7 @@
 Everything drawn is one of two families, and each has one job.
 
 - **Pictures** are paintings of things: a terrain, a river, a building, a feature, a unit's kind, a card's subject. Every picture is **David Baumgart's hand**: his painted hex terrain, his painted locations, his painted objects, his painted resource icons, his painted arms and armour icons, his painted crafting and foraging icons. Code draws geometry, recolours and composes Baumgart's pieces; it paints no picture, and a picture a thing needs that his hand has not painted is composed from his pieces or waits. No picture from another hand stands beside one of his in the same frame.
-- **Symbols** are signs of quantities, states, factions and sites: a resource, population, influence, a unit's stat, a unit's state, a faction, a site. Every symbol is a **flat, filled, one-colour glyph** from one of two sources, **game-icons.net** where the sign is an object and **Material Design Icons** where it is a plain form, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol's shape alone tells it from every other symbol, so no symbol's meaning rests on its colour. A symbol stands without its word where it reads a number or a state. A symbol is never a picture of a thing on the map.
+- **Symbols** are signs of quantities, states, factions, sites and piles: a resource, population, influence, a unit's stat, a unit's state, a faction, a site, a pile. Every symbol is a **flat, filled, one-colour glyph** from one of two sources, **game-icons.net** where the sign is an object and **Material Design Icons** where it is a plain form, tinted by code in the colour its meaning is known by, so it stays small, sharp and recolourable on any theme. A symbol's shape alone tells it from every other symbol, so no symbol's meaning rests on its colour. A symbol stands without its word where it reads a number or a state. A symbol is never a picture of a thing on the map.
 
 **A card's frame** is neither: a painted piece of the interface from another hand, chicogames', taken because it sits quietly beside Baumgart's paintings, which stand in its window. The heart and the crossed swords a unit's card reads its health and its damage on are pieces of that frame.
 
@@ -47,6 +47,9 @@ A glyph stands in a square and is as large as that square's side. It is drawn in
 | The enemies | a battle axe | Material Design Icons, `axe-battle` |
 | A site | a star of four points | Material Design Icons, `star-four-points` |
 | A card nothing plays | a crossed circle | Material Design Icons, `block-helper` |
+| The draw pile | a stack of cards | game-icons.net, Delapouite's Stack |
+| The discard pile | a hand dropping a card | game-icons.net, Faithtoken's Card discard |
+| The exhaust pile | a box | Material Design Icons, `archive` |
 
 ## The map ✅
 
@@ -126,7 +129,7 @@ A card has one size wherever it stands, and a card shown large is the one other 
 
 **The back** is the pack's dark back with its two gold lines, and on it the player's crown, large, in the civilization's colour.
 
-**A card's states.** A card lifted out of the hand's lane, under the pointer, held by a small card raised from it, selected or dragged, stands upright, enlarged about the middle of its bottom edge and raised out of the lane, over a soft black shadow laid from its own outline, blurred and falling under it. That is all a selected card wears, and a card being aimed wears no more, the line over the hand saying the aim. A cost the player's city cannot pay stands on its disc turned red, the number and the glyph in their own colours, and the card is otherwise drawn as any other; a card the rules refuse for anything but its cost is drawn as any other. A worn card, the discard pile's top card and the back of a dry draw pile, is darkened, every part of it alike.
+**A card's states.** A card lifted out of the hand's lane, under the pointer, held by a small card raised from it, selected or dragged, stands upright, enlarged about the middle of its bottom edge and raised out of the lane, over a soft black shadow laid from its own outline, blurred and falling under it. That is all a selected card wears, and a card being aimed wears no more, the line over the hand saying the aim. A cost the player's city cannot pay stands on its disc turned red, the number and the glyph in their own colours, and the card is otherwise drawn as any other; a card the rules refuse for anything but its cost is drawn as any other.
 
 **A card nothing plays** wears, where a first cost would stand, the disc of a cost turned the red of an unaffordable one, and on it the sign of a card nothing plays, pale, with no number. It wears it on every face it is drawn as.
 
@@ -138,13 +141,15 @@ The glyphs on the discs and in a card's text are symbols. A card that places a b
 
 The chrome is DRStudios' metal kit, each piece drawn at any size from its corners, the corners as the kit paints them and its edges stretched between them, over the soft shadow the kit lays under it.
 
-**A panel** is the kit's panel: a thin polished silver rim round a charcoal body, its corners rounded. The resource bar, the band the hand and the piles stand in, a pinned achievement, an answer and the capstone's text, the exhaust pile's tab, a tooltip and a refusal's note each stand on one. The resource bar's panel hangs from the screen's top and runs on past it, so it shows its rim along its sides and its foot; the band's runs on past the screen's bottom and sides, and shows only the rim along its top.
+**A panel** is the kit's panel: a thin polished silver rim round a charcoal body, its corners rounded. The resource bar, the band the hand and the piles stand in, a pinned achievement, an answer and the capstone's text, a tooltip and a refusal's note each stand on one. The resource bar's panel hangs from the screen's top and runs on past it, so it shows its rim along its sides and its foot; the band's rises from the middle of the screen's bottom edge and runs on past it, so it shows its rim along its top and its sides, and along its top alone on a window no wider than it.
 
 **A window** of the menu is a panel with the gold band of the kit's window laid inside its top edge, as tall as the window's title stands, the title on the gold.
 
 **A button** is the kit's: its gold for End turn, a window's buttons and the ending screen's, and its darker silver for the Menu button and the Icons button. Under the pointer a live button wears the kit's hover look, and while a press that landed on it is held on it, its pressed look; a dead button keeps its own look and wears no hover. End turn wears its gold on the settle phase as on any turn.
 
 **A well** is the kit's inactive tab: a latched reading of the resource bar, a reached pinned achievement and the latched Icons button sit in one. A reading whose act is waiting in city mode stands on a button's gold instead.
+
+**A pile's button** is the kit's counter chip drawn as a round, the pile's sign on it in the pale ink and with no outline, and its count on the same chip, small, at the round's top corner, in the pale ink. Under the pointer the round is lighter, and it wears no pressed look. A pile holding no card wears its sign darkened.
 
 **A reading's bar and its end of turn.** Food's and culture's readings on the resource bar wear a city's bar under them, drawn and filled as the city's is, longer and thicker: from the glyph's left edge to the end of the room the end-of-turn number takes. That number reads in a green of its own where the turn adds and a red of its own where it takes, and a stock taken past nothing reads white on a pill of a darker red. On a button's gold the green and the red are darker ones, as the number's ink is dark there.
 
@@ -160,7 +165,7 @@ Every word the game shows is set in **Source Sans 3**, regular and bold: Adobe's
 
 - **David Baumgart's hex sets and icon sets**, bought one pack at a time as a region, an age or a screen needs it: the hex terrain, the hex rivers, coasts and seas, the hex locations, his painted objects, his resource icons, his arms and armour icons and his crafting and foraging icons, and the ancient objects he sent by mail. His terms: free and commercial games allowed, the files modified and recombined at will, never repackaged or given away on their own, and credit to "David Baumgart" asked, with a link to dgbaumgart.com. His files therefore never sit in the public repository: they live in a store of their own the build reads, and the credit stands on the credits screen.
 - **Nice Card Game Template 2**, chicogames', bought: the cards' fronts and back, the name's plate, the disc, and the heart and the crossed swords. Creative Commons Attribution-ShareAlike 3.0: chicogames is credited, and a file the game changes, a front turned to a kind's colour and its glass thinned among them, stays under the same terms. The files live in the store with the bought packs.
-- **DRStudios' UIForge kits**, a bundle of nine, bought: the metal kit draws the chrome, its panel, its window's gold band, its gold and darker silver buttons with their hover and pressed looks, and its inactive tab. Its terms: free and commercial games allowed, as many as are made, the raw files never handed out on their own. The files the game draws live in the store with the bought packs.
+- **DRStudios' UIForge kits**, a bundle of nine, bought: the metal kit draws the chrome, its panel, its window's gold band, its gold and darker silver buttons with their hover and pressed looks, its inactive tab and its counter chip. Its terms: free and commercial games allowed, as many as are made, the raw files never handed out on their own. The files the game draws live in the store with the bought packs.
 - **game-icons.net**, CC BY 3.0: each glyph's author credited on the credits screen and in the licence record.
 - **Material Design Icons**, the Pictogrammers' set, Apache 2.0 for every icon but those of its Brand / Logos category, which the game takes none of: each glyph's categories are read on its own page as it enters, its author is named in the licence record, a file the game changed says so, and the licence ships beside the files.
 - **Source Sans 3**, Adobe's, under the SIL Open Font License 1.1: the licence ships beside the files, and a modified version may not keep the name.

@@ -24,7 +24,6 @@ import {
   downOf,
   frontDrawsAt,
   heightOf,
-  inRoundedBox,
   type Laid,
   onFace,
   type Silhouettes,
@@ -37,14 +36,12 @@ import {
   type Box,
   cutTexts,
   inked,
-  MARGIN,
   onClick,
   onHover,
   ownBoxOf,
   reactsToPress,
   resolutionAt,
   type SizedStyle,
-  screenSize,
   TYPE_FLOOR,
   UI_FONT,
 } from './design-space';
@@ -65,7 +62,7 @@ import {
 } from './face';
 import { factionSigns } from './faction-signs';
 import { asGlyph, glyphMark } from './glyphs';
-import { css, LOOK, multiplied, type Tone, unworn } from './look';
+import { css, LOOK, multiplied, type Tone, untoned } from './look';
 import { asUnit, unitMarker, unitPaintDrop } from './map-marks';
 import {
   GOES_ON_GAP,
@@ -88,14 +85,6 @@ export const CARD_HEIGHT = heightOf(CARD_WIDTH);
 
 /** How far a card's corners are rounded wherever it stands but large. */
 export const CARD_RADIUS = BODY_RADIUS * unitOf(CARD_WIDTH);
-
-/** Where a card lying on the chronicle screen rests: its bottom edge, one margin off the bottom. */
-export function cardBaseline(): number {
-  return screenSize().height - MARGIN;
-}
-
-/** How far a card comes out of the lane it lies in: the lift a hover gives it, and the selection's. */
-export const CARD_LIFT = 32;
 
 /** How far a card's rim or a disc rises above its top edge, at the most: the room a line of cards keeps over it. */
 export const CARD_RISE = HIGHEST_RISE * downOf(CARD_WIDTH);
@@ -642,7 +631,7 @@ export function createCardFace(
   face: Face,
   refusal: Refusal,
   {
-    tone = unworn,
+    tone = untoned,
     width = CARD_WIDTH,
     names: presses,
   }: { tone?: Tone; width?: number; names?: NamePresses } = {},
@@ -837,7 +826,7 @@ export function createCardFace(
     }
   };
 
-  const read = (next: Face, refused: Refusal, toned: Tone = unworn): void => {
+  const read = (next: Face, refused: Refusal, toned: Tone = untoned): void => {
     reads = next;
     const shape = frontOf(next.front);
     const tint = toned(0xffffff);
@@ -1223,7 +1212,7 @@ export function createCardBack(scene: Phaser.Scene): CardBack {
     back.setTint(tone(0xffffff));
     asGlyph(crown, 'player', CROWN_SHARE * CARD_WIDTH, { tone, colour: LOOK.civilization });
   };
-  wear(unworn);
+  wear(untoned);
   const root = scene.add.container(0, 0, [back, crown]);
 
   return {
@@ -1249,44 +1238,6 @@ export function cardGrown(off: number): { readonly box: Box; readonly radius: nu
     },
     radius: CARD_RADIUS + off,
   };
-}
-
-/**
- * Where a pile's top card would be, about its own bottom centre: the card's own rounded outline,
- * dashed, and whether it lies under a point of the surface it is drawn on, inside the outline.
- */
-export function createEmptySlot(scene: Phaser.Scene): Pick<CardBack, 'root' | 'cardAt'> {
-  const outline = scene.add.graphics();
-  outline.lineStyle(2, LOOK.emptyEdge);
-  dashAlong(outline, cardOutline());
-  const root = scene.add.container(0, 0, [outline]);
-  const { box, radius } = cardGrown(0);
-  return {
-    root,
-    cardAt: (x, y) => inRoundedBox(root.getLocalPoint(x, y), box, radius),
-  };
-}
-
-/** The card's outline as a closed polyline, corner arcs sampled into short chords. */
-function cardOutline(): { x: number; y: number }[] {
-  const {
-    box: { x, y, width, height },
-    radius: r,
-  } = cardGrown(0);
-  const points: { x: number; y: number }[] = [];
-  const corner = (cx: number, cy: number, from: number): void => {
-    for (let i = 0; i <= 6; i++) {
-      const angle = from + (Math.PI / 2) * (i / 6);
-      points.push({ x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) });
-    }
-  };
-  points.push({ x: x + r, y });
-  corner(x + width - r, y + r, -Math.PI / 2);
-  corner(x + width - r, y + height - r, 0);
-  corner(x + r, y + height - r, Math.PI / 2);
-  corner(x + r, y + r, Math.PI);
-  points.push({ x: x + r, y });
-  return points;
 }
 
 /** Dashes of six on, five off, stretched so a whole number of them spans the outline. */

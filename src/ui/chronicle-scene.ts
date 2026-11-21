@@ -21,9 +21,9 @@ import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { chronicleScreenAtSpeed } from './animation-speed';
-import { createBand } from './band';
+import { createBand, trayNow } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
-import { CARD_HEIGHT, cardBaseline, createFootBubble } from './card-face';
+import { createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
 import { createChromeButton } from './chrome';
 import { createChronicleFaces } from './chronicle-faces';
@@ -33,7 +33,6 @@ import {
   awayUnder,
   COVERED,
   holdDesignSpace,
-  MARGIN,
   onClick,
   onHover,
   onLetGoOffCanvas,
@@ -57,7 +56,7 @@ import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
-import { createPiles, tabEdge } from './piles';
+import { createPiles } from './piles';
 import { createPinnedAchievements } from './pinned-achievement';
 import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
@@ -67,6 +66,7 @@ import { createSmallCards } from './small-card';
 import { createStanding } from './standing';
 import { text } from './text';
 import { createTooltip } from './tooltip';
+import { ROUND } from './tray-layout';
 
 type Part = {
   render(chronicle: Chronicle): void;
@@ -208,8 +208,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     const camera = this.cameras.main;
     const stratum = (): Stratum => stratumOf(this.add.layer(), camera);
     const ui = {
+      modeFrame: stratum(),
       band: stratum(),
-      standing: stratum(),
+      modeChip: stratum(),
       pinned: stratum(),
       /** The piles and the resting cards of the hand. */
       resting: stratum(),
@@ -228,15 +229,15 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       () => 'no button held',
       () => true,
     );
-    createBand(this, ui.band);
+    const band = createBand(this, ui.band);
 
     /** The one bubble each surface raises; the overlay builds its own. */
     const tooltip = {
       map: createTooltip(map, map.strata.tooltip),
       ui: createTooltip(this, ui.tooltip),
     };
-    // One of each for the surface's every face, the hand's and the piles': a second bubble would hide
-    // the first's as its own goes down, and a second chain would stand a small card beside the first's.
+    // One of each for the surface's every face: a second bubble would hide the first's as its own goes
+    // down, and a second chain would stand a small card beside the first's.
     const footBubble = createFootBubble(tooltip.ui);
     const faces = {
       footBubble,
@@ -408,6 +409,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       view.markSelected(undefined, false, undefined);
     };
 
+    /** Whatever is being aimed let go of, a card or a unit, as a left click on a thing lets it go. */
+    const unaimAll = (): void => {
+      hand.unaim();
+      if (view.unitBeingAimed()) unaimUnit();
+    };
+
     /**
      * One step of the inspection on a tile: the next of its cards in the infopanel, and after the
      * last of them the first again; on a tile it does not stand on yet, the tile's first card, or the
@@ -575,12 +582,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       inspectNamed: (name) => overlay.inspectNamed(name),
     });
 
-    const settleStanding = createStanding(this, ui.standing, {
+    const standingOn = { frame: ui.modeFrame, chip: ui.modeChip };
+    const settleStanding = createStanding(this, standingOn, {
       name: 'settle-phase',
       colour: LOOK.settlePhase,
       label: text('button.settle-phase'),
     });
-    const cityStanding = createStanding(this, ui.standing, {
+    const cityStanding = createStanding(this, standingOn, {
       name: 'city',
       colour: LOOK.cityMode,
       label: text('button.city-mode'),
@@ -680,7 +688,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
           onMap: true,
         };
       }
-      if (on === undefined || bar.isPaper(on)) return { place: { kind: 'beside' }, onMap: false };
+      if (on === undefined || bar.isPaper(on) || band.isPaper(on)) {
+        return { place: { kind: 'beside' }, onMap: false };
+      }
       return { place: { kind: 'thing', on }, onMap: false };
     };
 
@@ -689,8 +699,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       switch (place.kind) {
         case 'thing':
           if (hand.owns(place.on)) return;
-          hand.unaim();
-          if (view.unitBeingAimed()) unaimUnit();
+          unaimAll();
           return;
         case 'tile':
           view.click(place.tile);
@@ -840,10 +849,15 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       { render: faces.cards.fillIn },
       view,
       bar,
-      createPiles(this, ui, CATALOGUE, faces, {
-        browse: (pile) => overlay.browse(pile, this.current),
-        inspectNamed: (name) => overlay.inspectNamed(name),
-      }),
+      createPiles(
+        this,
+        ui,
+        { tooltip: tooltip.ui, cards: faces.cards },
+        {
+          browse: (pile) => overlay.browse(pile, this.current),
+          unaim: unaimAll,
+        },
+      ),
       hand,
       { render: faces.cards.lose },
       endTurn,
@@ -894,7 +908,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     }
     const width = widest + 56;
     const height = label.height + 24;
-    /** Where the button's middle stands: over the discard pile, clear of the exhaust pile's tab. */
+    /** Where the button's middle stands: over the discard and the exhaust piles, its right edge on the exhaust pile's. */
     let x = 0;
     let y = 0;
 
@@ -913,8 +927,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     const button = chrome.face;
     on.layer.add([button, label]);
     onResize(this, () => {
-      x = tabEdge() - MARGIN - width / 2;
-      y = cardBaseline() - CARD_HEIGHT - 14 - height / 2;
+      const { piles, restingTop } = trayNow();
+      x = piles['exhaust-pile'].x + ROUND / 2 - width / 2;
+      y = restingTop - 14 - height / 2;
       chrome.place({ x: x - width / 2, y: y - height / 2, width, height });
       label.setPosition(x, y);
     });

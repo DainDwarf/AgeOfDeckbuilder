@@ -7,7 +7,7 @@ import { inRoundedBox } from './card-shape';
 import { countsOf } from './collection-layout';
 import { addText, type Box, UI_FONT } from './design-space';
 import { cardFaceAtStart } from './face';
-import { css, dimmedTo, LOOK, unworn } from './look';
+import { css, dimmedTo, LOOK, untoned } from './look';
 import { type Laying, type Reactions, reactionsAround } from './stack';
 import { text } from './text';
 
@@ -65,7 +65,7 @@ export function createPile(
   name: string,
   browse: () => void,
 ): Pile {
-  const tone = selected ? unworn : dimmedTo(LOOK.unselected);
+  const tone = selected ? untoned : dimmedTo(LOOK.unselected);
   const x = left + CARD_WIDTH / 2;
   const foot = top + CARD_HEIGHT;
   const backs = Array.from({ length: PILE_BACKS }, (_, under) => {

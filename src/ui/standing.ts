@@ -1,6 +1,13 @@
 import type Phaser from 'phaser';
-import { mapFrame } from './band';
-import { addText, onClick, onResize, reactsToPress, type Stratum, UI_FONT } from './design-space';
+import {
+  addText,
+  onClick,
+  onResize,
+  reactsToPress,
+  type Stratum,
+  screenSize,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK } from './look';
 import { MENU_FOOT } from './menu';
 
@@ -10,7 +17,7 @@ const STROKE = 8;
 /** How far the chip stands clear of the stroke's inner edge, to its right. */
 const CLEAR = 16;
 
-/** How far the chip stands in from the map's right edge. */
+/** How far the chip stands in from the screen's right edge. */
 export const CHIP_INSET = STROKE + CLEAR;
 
 /** How far under the Menu button the chip stands. */
@@ -41,10 +48,14 @@ export type Stood = {
 };
 
 /**
- * What the chronicle screen shows it is standing in — city mode, the settle phase: the map's frame in
- * that colour and the chip naming it under the Menu button. What is on is the scene's.
+ * What the chronicle screen shows it is standing in — city mode, the settle phase: a frame round the
+ * screen in that colour and the chip naming it under the Menu button. What is on is the scene's.
  */
-export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): Standing {
+export function createStanding(
+  scene: Phaser.Scene,
+  on: { readonly frame: Stratum; readonly chip: Stratum },
+  stood: Stood,
+): Standing {
   const frame = scene.add
     .rectangle(0, 0, 1, 1)
     .setOrigin(0, 0)
@@ -61,17 +72,18 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
     .setOrigin(0.5, 0.5)
     .setName(`${stood.name}-chip-label`)
     .setVisible(false);
-  on.layer.add([frame, chip, label]);
+  on.frame.layer.add(frame);
+  on.chip.layer.add([chip, label]);
 
   const width = label.width + PADDING.x;
   const height = label.height + PADDING.y;
   chip.setSize(width, height);
   onResize(scene, () => {
-    const map = mapFrame();
+    const screen = screenSize();
     frame
-      .setPosition(map.x + STROKE / 2, map.y + STROKE / 2)
-      .setSize(map.width - STROKE, map.height - STROKE);
-    const x = map.x + map.width - CHIP_INSET - width;
+      .setPosition(STROKE / 2, STROKE / 2)
+      .setSize(screen.width - STROKE, screen.height - STROKE);
+    const x = screen.width - CHIP_INSET - width;
     const y = MENU_FOOT + UNDER_THE_MENU;
     chip.setPosition(x, y);
     label.setPosition(x + width / 2, y + height / 2);

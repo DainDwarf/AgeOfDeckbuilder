@@ -102,7 +102,9 @@ import {
 import { type Bindings, DEFAULTS, STORED, serialiseControls, UPRIGHT } from '../src/ui/bindings';
 import type { Point } from '../src/ui/border-loops';
 import type { Name } from '../src/ui/card-face';
-import { glyphFileOf } from '../src/ui/cast';
+import { CARD_WIDTH } from '../src/ui/card-frames';
+import { heightOf } from '../src/ui/card-shape';
+import { glyphFileOf, type PileKind } from '../src/ui/cast';
 import {
   BUTTONS,
   type ButtonLook,
@@ -117,11 +119,11 @@ import { type Face, namedFace, terrainFace, terrainOnTile } from '../src/ui/face
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import { unitPaintingOf } from '../src/ui/marks';
-import type { PileKind } from '../src/ui/piles';
 import { refused, type Said } from '../src/ui/refusal-lines';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
 import { layOutRun, type Reference, type Run } from '../src/ui/text-run';
+import { mapFrameOf } from '../src/ui/tray-layout';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 
 /** What the page answers of a reading: its value, or what a read of it throws. */
@@ -1594,16 +1596,21 @@ function takersAt(page: Page, at: { x: number; y: number }): Promise<string[]> {
 }
 
 /**
- * A point on the band, inside the canvas's left edge, which its panel runs on past, and short of the
- * draw pile, which stands a margin in; halfway down what of it the canvas shows.
+ * A point on the band, inside its left side or the canvas's left edge, whichever stands further in,
+ * and short of the draw pile, which stands a margin in; halfway down what of it the canvas shows.
  */
 export async function onTheBand(page: Page): Promise<{ x: number; y: number }> {
   const band = await pieceOnScreen(page, 'band');
-  const canvas = await page
-    .locator('canvas')
-    .evaluate((shown: HTMLCanvasElement) => shown.getBoundingClientRect().toJSON() as DOMRect);
+  const canvas = await canvasOf(page);
   const bottom = Math.min(band.y + band.height, canvas.bottom);
   return { x: Math.max(band.x, canvas.left) + 8 * band.unit, y: (band.y + bottom) / 2 };
+}
+
+/** The canvas's box on the page. */
+export function canvasOf(page: Page): Promise<DOMRect> {
+  return page
+    .locator('canvas')
+    .evaluate((shown: HTMLCanvasElement) => shown.getBoundingClientRect().toJSON() as DOMRect);
 }
 
 /** A rectangle on the page. */
@@ -1617,6 +1624,47 @@ export function inside(at: { x: number; y: number }, frame: Frame): boolean {
     at.y > frame.y &&
     at.y < frame.y + frame.height
   );
+}
+
+/** The smallest window the chronicle screen is laid out for at 100%, and a wider and taller one. */
+export const DESIGN_WINDOW = { width: 1280, height: 720 };
+export const WIDE = { width: 1920, height: 1080 };
+
+/** The canvas's backing store, and the room it takes on screen measured in the same device pixels. */
+export type Backing = { width: number; height: number; onWidth: number; onHeight: number };
+
+export function backingOf(page: Page): Promise<Backing> {
+  return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      onWidth: Math.round(rect.width * window.devicePixelRatio),
+      onHeight: Math.round(rect.height * window.devicePixelRatio),
+    };
+  });
+}
+
+/** Waits for the backing store to leave the size it was measured at. */
+export async function backingLeaves(page: Page, was: Backing): Promise<void> {
+  await page.waitForFunction(
+    ({ width, height }) => {
+      const canvas = document.querySelector('canvas');
+      return canvas?.width !== width || canvas.height !== height;
+    },
+    { width: was.width, height: was.height },
+  );
+}
+
+/** The window set to that size, and the screen laid out for it and drawn. */
+export async function resizedTo(
+  page: Page,
+  size: { width: number; height: number },
+): Promise<void> {
+  const was = await backingOf(page);
+  await page.setViewportSize(size);
+  await backingLeaves(page, was);
+  await rested(page);
 }
 
 /** Where each running scene's camera is cut on the page, by the scene's key. */
@@ -1642,11 +1690,33 @@ export function cameraCuts(page: Page): Promise<Record<string, Frame>> {
   });
 }
 
-/** Where the map's frame stands on the page: the rectangle its camera is cropped to. */
+/**
+ * Where the frame the map is centred in, bounded by and holds a stage clear of stands on the page: no
+ * camera is cut to it, so it is the game's own reckoning on the screen's size.
+ */
 export async function mapFrame(page: Page): Promise<Frame> {
-  const cut = (await cameraCuts(page)).map;
-  if (cut === undefined) throw new Error('the map camera is not running');
-  return cut;
+  const screen = await page.evaluate(() => {
+    const scene = window.game?.scene.getScene('ui');
+    if (scene === undefined || scene === null) throw new Error('the chronicle screen is not up');
+    const { canvas } = scene.game;
+    const rect = canvas.getBoundingClientRect();
+    const pixel = rect.width / canvas.width;
+    const camera = scene.cameras.main;
+    return {
+      left: rect.left + camera.x * pixel,
+      top: rect.top + camera.y * pixel,
+      unit: camera.zoom * pixel,
+      width: camera.width / camera.zoom,
+      height: camera.height / camera.zoom,
+    };
+  });
+  const frame = mapFrameOf(screen, heightOf(CARD_WIDTH));
+  return {
+    x: screen.left + frame.x * screen.unit,
+    y: screen.top + frame.y * screen.unit,
+    width: frame.width * screen.unit,
+    height: frame.height * screen.unit,
+  };
 }
 
 /** How far a press travels on the page before it is a drag and no longer a click. */
@@ -3880,23 +3950,14 @@ export async function inspected(page: Page, tile: TileCoords): Promise<void> {
   await expect.poll(() => shownCard(page)).toBe('unit');
 }
 
-/**
- * A point on the pile just under its top card's top edge, where neither a name nor the kind label
- * lies; on the exhaust pile's tab, as far under its top edge.
- */
-export async function pileTop(page: Page, pile: PileKind): Promise<{ x: number; y: number }> {
-  const zone = await onScreen(page, pile);
-  const height = await page.evaluate((target) => {
-    const zone = window.named?.(target)?.object as Phaser.GameObjects.Zone | undefined;
-    if (zone === undefined) throw new Error(`there is no ${target} on the chronicle screen`);
-    return zone.height;
-  }, pile);
-  return { x: zone.x, y: zone.y - (height / 2 - 12) * zone.unit };
+/** The middle of a pile's round on the page. */
+export function pileAt(page: Page, pile: PileKind): Promise<OnScreen> {
+  return onScreen(page, pile);
 }
 
-/** Opens a pile's browse by a right click on its top, and waits for its stacks to be laid out. */
+/** Opens a pile's browse by a right click on its round, and waits for its stacks to be laid out. */
 export async function browse(page: Page, pile: PileKind): Promise<void> {
-  const at = await pileTop(page, pile);
+  const at = await pileAt(page, pile);
   await page.mouse.click(at.x, at.y, { button: 'right' });
   await expect.poll(() => standing(page, 'browse')).toBe(true);
 }

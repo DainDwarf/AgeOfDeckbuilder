@@ -12,12 +12,11 @@ import {
   type Refusal,
 } from '../rules/state';
 import { createAimLine } from './aim-line';
+import { trayNow } from './band';
 import { pressOf } from './bindings';
 import {
   CARD_HEIGHT,
-  CARD_LIFT,
   type CardFace,
-  cardBaseline,
   createCardBack,
   type FootBubble,
   type FootLabel,
@@ -40,13 +39,11 @@ import {
 } from './design-space';
 import { cardFace } from './face';
 import { LOOK } from './look';
-import { pileOf, pilePlace } from './piles';
+import { atPile, pileOf } from './piles';
 import { asPainted, poolOf } from './pool';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 
-/** The clear water between a pile and the lane the hand fans out in. */
-const LANE_PAD = 28;
 const GAP = 12;
 const FAN = 0.5;
 
@@ -186,19 +183,23 @@ export function createHand(
   const raised = (record: CardRecord): boolean =>
     record.hovered || record.held || selected?.record === record;
 
-  const restingY = (record: CardRecord): number => record.home.y - (raised(record) ? CARD_LIFT : 0);
+  const restingY = (record: CardRecord): number =>
+    raised(record) ? trayNow().liftedBottom : record.home.y;
 
-  /** Where the card at that place of a hand holding that many rests, in the lane between the piles as they stand. */
+  /** How far a card lifted out of the lane has risen off where it rests: more at the fan's ends. */
+  const riseOf = (record: CardRecord): number => record.home.y - trayNow().liftedBottom;
+
+  /** Where the card at that place of a hand holding that many rests, in the lane between the piles. */
   const homeOf = (index: number, held: number): CardRecord['home'] => {
-    const laneLeft = pilePlace('draw-pile').x + CARD_WIDTH / 2 + LANE_PAD;
-    const laneWidth = pilePlace('discard-pile').x - CARD_WIDTH / 2 - LANE_PAD - laneLeft;
+    const { lane, baseline } = trayNow();
+    const laneWidth = lane.right - lane.left;
     const advance =
       held > 1 ? Math.min(CARD_WIDTH + GAP, (laneWidth - CARD_WIDTH) / (held - 1)) : 0;
-    const first = laneLeft + (laneWidth - (CARD_WIDTH + (held - 1) * advance)) / 2;
+    const first = lane.left + (laneWidth - (CARD_WIDTH + (held - 1) * advance)) / 2;
     const off = index - (held - 1) / 2;
     return {
       x: first + CARD_WIDTH / 2 + index * advance,
-      y: cardBaseline() + off * off * FAN * 1.6,
+      y: baseline + off * off * FAN * 1.6,
       rotation: Phaser.Math.DegToRad(off * FAN),
     };
   };
@@ -233,7 +234,7 @@ export function createHand(
     note.overCard(
       refused(costOf(catalogue, record.card.id), record.refusal),
       record.home.x,
-      record.home.y - CARD_LIFT - LOOK.liftedCard * CARD_HEIGHT,
+      trayNow().liftedBottom - LOOK.liftedCard * CARD_HEIGHT,
     );
   };
 
@@ -442,7 +443,7 @@ export function createHand(
     // bottom edge, is left and falls back onto it, frame after frame. The reach is in the card's own
     // space, so it grows with the lift.
     pressedOnFace(face, {
-      reach: () => (record.hovered ? CARD_LIFT / LOOK.liftedCard : 0),
+      reach: () => (record.hovered ? riseOf(record) / LOOK.liftedCard : 0),
       draggable: true,
     })
       .on('dragstart', (pointer: Phaser.Input.Pointer) => {
@@ -562,7 +563,8 @@ export function createHand(
           });
           if (renders !== leftOn) return;
         }
-        await travel(scene, face.root, { ...pilePlace(pile), rotation: 0 }, index * STAGGER);
+        await travel(scene, face.root, atPile(pile), index * STAGGER);
+        if (renders === leftOn) face.root.setVisible(false);
       }),
     );
     // A render while these were in the air took them down and painted the hand it stands on.
@@ -594,9 +596,12 @@ export function createHand(
 
         root.setVisible(false);
         const place = index - standing.length;
-        const { x, y } = pilePlace('draw-pile');
-        const back = fly(backs.take().setPosition(x, y).setRotation(0), place);
-        await travel(scene, back, home, place * STAGGER);
+        const from = atPile('draw-pile');
+        const back = fly(
+          backs.take().setPosition(from.x, from.y).setRotation(from.rotation).setScale(from.scale),
+          place,
+        );
+        await travel(scene, back, { ...home, scale: 1 }, place * STAGGER);
         if (renders !== leftOn) return;
         await turnOver(scene, back, () => {
           back.setVisible(false);

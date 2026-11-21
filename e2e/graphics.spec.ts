@@ -5,6 +5,7 @@ import {
   capstoneClosed,
   chronicleOf,
   click,
+  DESIGN_WINDOW,
   endedTurn,
   endTurn,
   intoGraphics,
@@ -18,6 +19,7 @@ import {
   settledOn,
   standing,
   textOf,
+  WIDE,
   watch,
 } from './chronicle-screen';
 
@@ -26,9 +28,6 @@ const OPENED = settledOn(1);
 const ROW = 'graphics-animation-speed';
 const FULLSCREEN = 'graphics-fullscreen';
 const SIZE = 'graphics-interface-size';
-
-const WIDE = { width: 1920, height: 1080 };
-const DESIGN_WINDOW = { width: 1280, height: 720 };
 
 /** What the Animation speed row's button reads at that speed. */
 function speedRead(speed: number): string {

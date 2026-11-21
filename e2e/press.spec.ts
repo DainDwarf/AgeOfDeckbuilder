@@ -42,7 +42,7 @@ import {
   openSaved,
   overflowingPiles,
   panelFace,
-  pileTop,
+  pileAt,
   pinnedAchievement,
   playedAtNothing,
   playedOn,
@@ -882,7 +882,7 @@ test('a click on a pinned achievement, a name in its goal included, lets the car
   expect(problems).toEqual([]);
 });
 
-test('a left click on any pile, the exhaust pile’s tab included, lets the card being aimed go and raises no browse', async ({
+test('a left click on any pile lets the card being aimed go and raises the pile’s browse', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -894,10 +894,12 @@ test('a left click on any pile, the exhaust pile’s tab included, lets the card
   for (const pile of ['draw-pile', 'discard-pile', 'exhaust-pile'] as const) {
     await page.mouse.click(home.x, home.y);
     await aimed(page);
-    const top = await pileTop(page, pile);
-    await page.mouse.click(top.x, top.y);
-    await expect.poll(() => standing(page, 'aim')).toBe(false);
-    expect(await standing(page, 'browse')).toBe(false);
+    const at = await pileAt(page, pile);
+    await page.mouse.click(at.x, at.y);
+    await expect.poll(() => standing(page, 'browse')).toBe(true);
+    expect(await standing(page, 'aim')).toBe(false);
+    await page.keyboard.press('Escape');
+    await expect.poll(() => standing(page, 'browse')).toBe(false);
     await expect.poll(() => selected(page, index, home)).toBe(false);
     expect(await chronicleOf(page)).toEqual(opened);
   }
@@ -948,7 +950,7 @@ test('a left click anywhere on the infopanel reaches no tile under it, and lets 
   expect(problems).toEqual([]);
 });
 
-test('a click on a yield reading, a pile or the infopanel lets a unit being aimed go with the inspection standing, and the reading latches its yield', async ({
+test('a click on a yield reading, a pile or the infopanel lets a unit being aimed go with the inspection standing, the reading latches its yield and the pile raises its browse', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -957,11 +959,19 @@ test('a click on a yield reading, a pile or the infopanel lets a unit being aime
 
   await openSaved(page, opened);
   const face = await onScreen(page, `tile-${city}`);
-  const pile = await pileTop(page, 'draw-pile');
+  const pile = await pileAt(page, 'draw-pile');
 
   const presses: [string, () => Promise<void>][] = [
     ['reading-food', () => click(page, 'reading-food')],
-    ['draw-pile', () => page.mouse.click(pile.x, pile.y)],
+    [
+      'draw-pile',
+      async () => {
+        await page.mouse.click(pile.x, pile.y);
+        await expect.poll(() => standing(page, 'browse')).toBe(true);
+        await page.keyboard.press('Escape');
+        await expect.poll(() => standing(page, 'browse')).toBe(false);
+      },
+    ],
     ['infopanel', () => click(page, 'infopanel')],
   ];
   for (const [on, press] of presses) {
@@ -984,7 +994,7 @@ test('a click on a yield reading, a pile or the infopanel lets a unit being aime
   expect(problems).toEqual([]);
 });
 
-test('a unit that lights and marks nothing stays selected through a click on a pile', async ({
+test('a unit that lights and marks nothing stays selected through a click on a pile and the browse it raises', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -1003,9 +1013,11 @@ test('a unit that lights and marks nothing stays selected through a click on a p
   await click(page, `tile-${key}`);
   await expect.poll(async () => (await ringedLitAndInspecting(page)).ringed).toBe(key);
 
-  const pile = await pileTop(page, 'draw-pile');
+  const pile = await pileAt(page, 'draw-pile');
   await page.mouse.click(pile.x, pile.y);
-  await rested(page);
+  await expect.poll(() => standing(page, 'browse')).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
   expect(await ringedLitAndInspecting(page)).toEqual({
     ringed: key,
     lit: 0,

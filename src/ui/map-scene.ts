@@ -23,7 +23,7 @@ export type MapStrata = {
 /**
  * The map's surface, on a scene of its own under the chronicle screen's UI: started ahead of the
  * `ui` scene wherever a chronicle opens and restarted ahead of it. Its one camera is the map view's
- * to cut to the frame, zoom and pan, and nothing here holds it.
+ * to cut to the screen, zoom and pan, and nothing here holds it.
  */
 export class MapScene extends Phaser.Scene {
   /** Where whatever the chronicle screen draws on the map is added. */

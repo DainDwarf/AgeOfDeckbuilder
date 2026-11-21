@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { CENTRE, type Tile, type TileCoords } from '../rules/map';
-import { mapFrame } from './band';
+import { trayNow } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended } from './card-motion';
 import {
@@ -11,6 +11,7 @@ import {
   resolutionAt,
   type Stratum,
   screenOnCanvas,
+  screenSize,
 } from './design-space';
 import { onHeldKeys, onKeyDown } from './keys';
 import { positionOf } from './map-marks';
@@ -84,11 +85,11 @@ export type MapCamera = {
    */
   hold(tiles: readonly TileCoords[]): Promise<void> | undefined;
   /**
-   * A zone over the whole frame, under everything the UI draws: it takes every press the UI does
-   * not. It is framed in map space, so it is re-cut to the frame on every pan and every zoom.
+   * A zone over the whole screen the camera draws, under everything the UI draws: it takes every
+   * press the UI does not. It is framed in map space, so it is re-cut on every pan and every zoom.
    */
   catcherZone(name: string): Phaser.GameObjects.Zone;
-  /** Whether this zone is a catcher standing on the frame. */
+  /** Whether this zone is a catcher standing on the screen. */
   catches(zone: Phaser.GameObjects.Zone): boolean;
   /**
    * The press is the catcher's and the release the scene's, so a press that travelled off the
@@ -114,7 +115,7 @@ export type MapCamera = {
   live(on: boolean): void;
 };
 
-/** The frame cut over the terrain stratum; `zoomed` follows a zoom. */
+/** The camera cut over the whole screen, holding the map in the frame; `zoomed` follows a zoom. */
 export function createMapCamera(
   scene: Phaser.Scene,
   map: Stratum,
@@ -138,26 +139,28 @@ export function createMapCamera(
     return Math.min(Math.max(at, near + keep - span / 2), far - keep + span / 2);
   };
 
+  // `centre` is what stands at the middle of the frame, and the camera centres on the middle of its
+  // viewport, the whole screen: the two middles are told apart here alone.
   const place = (): void => {
     const factor = renderFactor();
     const screen = screenOnCanvas(scene.game);
-    const frame = mapFrame();
+    const size = screenSize();
+    const { mapFrame: frame } = trayNow();
     // Phaser's camera manager resizes only the cameras that filled the old canvas: a cropped
     // camera is cut here or not at all.
-    camera.setViewport(
-      screen.x + frame.x * factor,
-      screen.y + frame.y * factor,
-      frame.width * factor,
-      frame.height * factor,
-    );
+    camera.setViewport(screen.x, screen.y, screen.width, screen.height);
     camera.setZoom(factor * zoom);
     const span = { x: frame.width / zoom, y: frame.height / zoom };
     centre.x = bounded(centre.x, box.left, box.right, span.x);
     centre.y = bounded(centre.y, box.top, box.bottom, span.y);
-    camera.centerOn(centre.x, centre.y);
-    for (const catcher of catchers) {
-      catcher.setPosition(centre.x - span.x / 2, centre.y - span.y / 2).setSize(span.x, span.y);
-    }
+    const topLeft = {
+      x: centre.x - (frame.x + frame.width / 2) / zoom,
+      y: centre.y - (frame.y + frame.height / 2) / zoom,
+    };
+    const seen = { x: size.width / zoom, y: size.height / zoom };
+    camera.centerOn(topLeft.x + seen.x / 2, topLeft.y + seen.y / 2);
+    for (const catcher of catchers)
+      catcher.setPosition(topLeft.x, topLeft.y).setSize(seen.x, seen.y);
   };
   onResize(scene, place);
 
@@ -217,7 +220,7 @@ export function createMapCamera(
       const at = tiles.map(positionOf);
       const xs = at.map((point) => point.x);
       const ys = at.map((point) => point.y);
-      const frame = mapFrame();
+      const { mapFrame: frame } = trayNow();
       const to = {
         x: holding(centre.x, Math.min(...xs), Math.max(...xs), frame.width / zoom),
         y: holding(centre.y, Math.min(...ys), Math.max(...ys), frame.height / zoom),

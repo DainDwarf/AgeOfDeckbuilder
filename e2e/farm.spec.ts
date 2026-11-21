@@ -59,18 +59,17 @@ function farmAdmitted(): { chronicle: Chronicle; tile: TileCoords; index: number
   });
 }
 
-test('the farm played at the tile inside the border its worker stands on builds a farm there, and is exhausted: the tab counts it and its browse shows it', async ({
+test('the farm played at the tile inside the border its worker stands on builds a farm there, and is exhausted: the exhaust pile counts it and its browse shows it', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, tile, index } = farmAdmitted();
   const built = playedOn(chronicle, index, tile);
-  const label = (cards: readonly unknown[]): string =>
-    text('tab.exhaust-pile', { count: cards.length });
+  const label = (cards: readonly unknown[]): string => String(cards.length);
 
   await openSaved(page, chronicle, CAMPAIGN);
   const before = await marksIn(page, 'buildings');
-  expect(await textOf(page, 'exhaust-pile-label')).toBe(label(chronicle.exhaustPile));
+  expect(await textOf(page, 'exhaust-pile-count')).toBe(label(chronicle.exhaustPile));
   await dragOut(page, index);
   await aimed(page);
   await click(page, `tile-${tileKey(tile)}`);
@@ -79,7 +78,7 @@ test('the farm played at the tile inside the border its worker stands on builds 
   await expect.poll(() => chronicleOf(page)).toEqual(built);
   expect(await marksIn(page, 'buildings')).toBe(before + 1);
   expect(idsOf(built.exhaustPile)).toEqual([FARM]);
-  expect(await textOf(page, 'exhaust-pile-label')).toBe(label(built.exhaustPile));
+  expect(await textOf(page, 'exhaust-pile-count')).toBe(label(built.exhaustPile));
 
   await browse(page, 'exhaust-pile');
   await rested(page);

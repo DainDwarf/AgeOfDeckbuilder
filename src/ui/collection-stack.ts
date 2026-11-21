@@ -12,7 +12,7 @@ import { CARD_WIDTH } from './card-frames';
 import type { CollectionStack } from './collection-layout';
 import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import { cardFaceAtStart, type Face } from './face';
-import { css, dimmedTo, LOOK, type Tone, unworn } from './look';
+import { css, dimmedTo, LOOK, type Tone, untoned } from './look';
 import type { Filled, Held } from './panel';
 import { chipAt, READING_GLYPH } from './resource-bar';
 import { type Laying, type Reactions, reactionsOf } from './stack';
@@ -136,7 +136,7 @@ export function stackedCardsOf(
     top,
     name,
     refusal = NO_REFUSAL,
-    tone = unworn,
+    tone = untoned,
   }: {
     readonly shown: Face;
     readonly copies: number;

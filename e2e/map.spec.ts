@@ -61,6 +61,7 @@ import {
   aimed,
   type BorderStroke,
   borderStrokes,
+  cameraCuts,
   campKind,
   campsOf,
   chronicleOf,
@@ -443,19 +444,23 @@ function shored(): { chronicle: Chronicle; beside: TileCoords; rim: TileCoords; 
   throw new Error('seed 1 makes no tile of its centre part water beside uncharted land');
 }
 
-test('the map is framed from the screen’s top to the band, the resource bar hung over it, on the city', async ({
+test('the map is drawn over the whole screen and framed from the screen’s top to just under the resting cards’ tops, over the band, the resource bar hung over it, on the city', async ({
   page,
 }) => {
   const problems = watch(page);
   await openSaved(page, OPENED);
 
+  const cut = await cameraCuts(page);
+  expect(cut.map).toEqual(cut.ui);
   const frame = await mapFrame(page);
-  const bar = (await readings(page, ['resource-bar']))('resource-bar').boundsOnScreen;
+  const middle = `hand-${Math.floor(OPENED.hand.length / 2)}`;
+  const seen = await readings(page, ['resource-bar', middle]);
+  const bar = seen('resource-bar').boundsOnScreen;
   const band = await pieceOnScreen(page, 'band');
   expect(Math.abs(frame.y - bar.y)).toBeLessThan(2);
   expect(bar.y + bar.height).toBeLessThan(frame.y + frame.height);
-  expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
-  expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
+  expect(seen(middle).boundsOnScreen.y).toBeLessThan(frame.y + frame.height);
+  expect(band.y).toBeGreaterThan(frame.y + frame.height);
 
   const at = await onScreen(page, `tile-${tileKey(playerCityTile(OPENED))}`);
   expect(Math.abs(at.x - (frame.x + frame.width / 2))).toBeLessThan(2);

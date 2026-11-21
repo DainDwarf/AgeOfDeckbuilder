@@ -20,6 +20,7 @@ import { badgedStackOf, standBrowser } from './browse';
 import { CARD_HEIGHT, createCardFace, type Name } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { EASE, ended } from './card-motion';
+import type { PileKind } from './cast';
 import { pileStacksOf } from './collection-layout';
 import {
   addText,
@@ -39,7 +40,7 @@ import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import type { Held, Panel } from './panel';
-import { type PileKind, pileOf } from './piles';
+import { pileOf } from './piles';
 import { refused } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { type Reactions, reactionsOf, reactionsOfNames } from './stack';

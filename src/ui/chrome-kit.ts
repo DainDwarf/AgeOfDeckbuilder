@@ -48,6 +48,13 @@ export const TAB: Fitted = {
   height: 92,
 };
 
+/** The kit's counter chip, its cuts meeting in its middle: a box as wide as tall draws it round. */
+export const COUNTER: Fitted = {
+  frame: `${KIT}/currency_normal.png`,
+  cuts: { left: 62, top: 62, right: 62, bottom: 62 },
+  height: 104,
+};
+
 export const BUTTONS: Readonly<Record<ButtonPiece, Button>> = {
   gold: {
     looks: {
@@ -115,6 +122,7 @@ export const CHROME_SHEET: Sheet = {
     MODAL,
     ...Object.values(BUTTONS).flatMap(({ looks }) => Object.values(looks)),
     TAB.frame,
+    COUNTER.frame,
   ],
   made: [
     {
@@ -145,4 +153,5 @@ export const CHROME_SHEET: Sheet = {
   ],
   side: 2048,
   rowGap: 16,
+  columnGap: 16,
 };

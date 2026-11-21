@@ -51,6 +51,11 @@ export type Sheet = {
    * level that coarse draws nothing of the frame above it.
    */
   readonly rowGap?: number;
+  /**
+   * How many columns of nothing stand between two frames side by side, for a sheet where a frame
+   * paints to its edge: one beside it read through a mipmap level that coarse draws none of it.
+   */
+  readonly columnGap?: number;
 };
 
 /**
@@ -190,14 +195,15 @@ export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files, rasterised
 
 /**
  * A frame that wide and tall added to a sheet where its frames leave room, row by row after the last
- * of them, `gap` rows of nothing under a full row; a sheet with no room left is refused.
+ * of them and the sheet's column gap, its row gap under a full row; a sheet with no room left is
+ * refused.
  */
 function roomIn(
   sheet: Phaser.Textures.CanvasTexture,
   name: string,
   width: number,
   height: number,
-  gap: number,
+  { rowGap = 0, columnGap = 0 }: Pick<Sheet, 'rowGap' | 'columnGap'>,
 ): { x: number; y: number } {
   const names = sheet.getFrameNames();
   let x = 0;
@@ -210,11 +216,11 @@ function roomIn(
       if (frame.cutY !== last.cutY) break;
       row = Math.max(row, frame.cutHeight);
     }
-    x = last.cutX + last.cutWidth;
+    x = last.cutX + last.cutWidth + columnGap;
     y = last.cutY;
     if (x + width > sheet.width) {
       x = 0;
-      y += row + gap;
+      y += row + rowGap;
     }
   }
   if (y + height > sheet.height)
@@ -238,7 +244,7 @@ export function paintingsIn(textures: Phaser.Textures.TextureManager): PaintingI
 
 /**
  * A frame made by code painted into a sheet, on the canvas it is drawn on, after the frames it holds,
- * the sheet's gap under a full row, uploaded only by the canvas's `refresh`.
+ * the sheet's gaps, uploaded only by the canvas's `refresh`.
  */
 export function paintMade(
   textures: Phaser.Textures.TextureManager,
@@ -246,7 +252,7 @@ export function paintMade(
   canvas: Phaser.Textures.CanvasTexture,
   { frame, width, height, paint }: Made,
 ): void {
-  const at = roomIn(canvas, frame, width, height, sheet.rowGap ?? 0);
+  const at = roomIn(canvas, frame, width, height, sheet);
   canvas.context.save();
   canvas.context.translate(at.x, at.y);
   paint(canvas.context, paintingsIn(textures));
@@ -259,7 +265,7 @@ export function paintMade(
  * sheet does not hold, are refused.
  */
 function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void {
-  const { key, files, rasterised, tinted = [], made = [], side, rowGap = 0 } = drawn;
+  const { key, files, rasterised, tinted = [], made = [], side } = drawn;
   const sheet = textures.createCanvas(key, side, side);
   if (sheet === null) throw new Error(`a texture stands under ${key} already`);
 
@@ -267,7 +273,7 @@ function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void
     // A texture the manager does not hold draws as Phaser's missing one and throws nothing (docs/PHASER.md).
     if (!textures.exists(file)) throw new Error(`the texture ${file} could not be loaded`);
     const { width, height } = textures.getFrame(file);
-    const at = roomIn(sheet, file, width, height, rowGap);
+    const at = roomIn(sheet, file, width, height, drawn);
     sheet.drawFrame(file, undefined, at.x, at.y, false);
   }
 
@@ -276,7 +282,7 @@ function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void
   for (const { sheet: from, painting, frame, wash, composite } of tinted) {
     const under = paintingIn(from, painting);
     paintUnder(context, under, wash, composite);
-    const at = roomIn(sheet, frame, under.width, under.height, rowGap);
+    const at = roomIn(sheet, frame, under.width, under.height, drawn);
     sheet.context.drawImage(context.canvas, at.x, at.y);
   }
 

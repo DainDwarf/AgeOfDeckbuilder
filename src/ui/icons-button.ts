@@ -1,20 +1,19 @@
 import type Phaser from 'phaser';
-import { mapFrame } from './band';
-import { CARD_HEIGHT, cardBaseline } from './card-face';
+import { trayNow } from './band';
 import { inked, onResize, type Stratum } from './design-space';
 import { LOOK } from './look';
 import { createSilverButton, silverButtonSize } from './menu';
 import { SUNK } from './resource-bar';
-import { CHIP_INSET } from './standing';
 import { text } from './text';
+import { ROUND } from './tray-layout';
 
-/** How far the button's bottom edge stands over the draw pile's top. */
-const OVER_THE_PILE = 8;
+/** How far the button's bottom edge stands over the resting cards' tops. */
+const OVER_THE_HAND = 8;
 
 /** The button sunk in its well, or standing on its face. */
 export type IconsButton = { sink(sunk: boolean): void };
 
-/** The Icons button in the map's bottom-left corner; a press on it is `pressed`. */
+/** The Icons button over the draw pile, its left edge on the pile's; a press on it is `pressed`. */
 export function createIconsButton(
   scene: Phaser.Scene,
   on: Stratum,
@@ -36,8 +35,9 @@ export function createIconsButton(
   let y = 0;
   let step = 0;
   onResize(scene, () => {
-    x = mapFrame().x + CHIP_INSET + width / 2;
-    y = cardBaseline() - CARD_HEIGHT - OVER_THE_PILE - height / 2;
+    const { piles, restingTop } = trayNow();
+    x = piles['draw-pile'].x - ROUND / 2 + width / 2;
+    y = restingTop - OVER_THE_HAND - height / 2;
     button.place({ x: x - width / 2, y: y - height / 2, width, height });
     label.setPosition(x + step, y + step);
   });
