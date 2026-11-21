@@ -18,7 +18,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The resource bar in glyphs** — each reading as its glyph and its number with no word, and a tooltip naming it.
+- **The resource bar in glyphs** — on the chronicle screen the seven readings stand on one plate hung from the middle of the screen's top, each its glyph and its number with no word, food and culture wearing a threshold's bar under them, idle read over the population, what the turn adds in green, what it takes in red and a stock taken past nothing on a red pill, a tooltip naming each reading over its sentence; the map runs to the top of the screen; `npm run check`, `npm test` and `npm run lint` pass and `e2e/end-of-turn-reading.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`, `docs/META-SCREENS.md`. [board/resource-bar-in-glyphs.md](board/resource-bar-in-glyphs.md)
 - **Piles and buttons as icons** — the draw, discard and exhaust piles, End turn, Menu and Icons: what wears an icon and what keeps its word.
 - **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.
 - **The menu's windows** — Menu, Settings, Controls, Graphics, Manage Save and the warnings laid out again on the new paper; deleted at its intake if the paper leaves nothing to lay out.
