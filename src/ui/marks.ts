@@ -455,7 +455,7 @@ function haloFrame(picture: UnitPicture): Made {
   );
 }
 
-/** How wide the dark edge round a bar's track and round a badge's disc is, in the map's units. */
+/** How wide the dark edge round a bar's track and round a badge's disc is, in the units it is drawn in. */
 export const MARK_EDGE = 0.5;
 
 /**

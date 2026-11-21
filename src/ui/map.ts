@@ -63,7 +63,7 @@ import {
 import { tileYield } from '../rules/yields';
 import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
-import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf, thresholdOf } from './city-bar';
+import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf } from './city-bar';
 import {
   cutTexts,
   filtersFollow,
@@ -749,8 +749,7 @@ export function createMapView(
     if (marking || current === undefined || tile === undefined || !live.has(tileKey(tile))) return;
     const turn = reckoning ? reckoned(catalogue, current)?.stocks : undefined;
     for (const stock of CITY_BAR_STOCKS) {
-      const bar = cityBarOf(current.resources[stock], thresholdOf(current, stock), turn?.[stock]);
-      showCityBar(cityBars[stock], tile, stock, bar);
+      showCityBar(cityBars[stock], tile, stock, cityBarOf(current, stock, turn?.[stock]));
     }
   };
 

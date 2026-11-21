@@ -202,11 +202,14 @@ type BarGlyph = { readonly symbol: CastSymbol; readonly square: number };
 const HEART: BarGlyph = { symbol: 'health', square: 6 };
 const SKULL: BarGlyph = { symbol: 'killed', square: 8 };
 
+/** A threshold's bar: how long and how thick it is drawn, lying flat. */
+export type ThresholdBarSize = { readonly length: number; readonly width: number };
+
 /**
- * A city's bars, centred across on its tile's middle: their shape, and how far below that middle
+ * A city's bars, centred across on its tile's middle: their size, and how far below that middle
  * each one's middle stands.
  */
-const CITY_BAR: BarShape = { lie: 'flat', length: 22, width: 3 };
+const CITY_BAR: ThresholdBarSize = { length: 22, width: 3 };
 const CITY_BAR_DROP: Record<CityBarStock, number> = { food: 11, culture: 15 };
 
 /** How far below its tile's middle a city's badge stands: level with the middle of the two bars. */
@@ -1228,30 +1231,48 @@ export function asSitePointer(
   return mark.setPosition(x, y - POINTER_RISE).setName(sitePointerAs(tileKey(coord)));
 }
 
-/** A city's bar with nothing drawn on it yet, hidden. */
-export function cityBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
-  return barMarker(scene, CITY_BAR).setVisible(false);
+/** A threshold's bar of that size with nothing drawn on it yet, about its middle. */
+export function thresholdBarMarker(
+  scene: Phaser.Scene,
+  { length, width }: ThresholdBarSize,
+): Phaser.GameObjects.Container {
+  return barMarker(scene, { lie: 'flat', length, width });
 }
 
 /**
- * The player's city's bar of a stock standing on its tile, below the middle and centred across it,
- * showing the bar it is handed in that resource's colour, what the turn would add paler.
+ * A `thresholdBarMarker` of that size showing the bar of a stock it is handed, in that resource's
+ * colour, what the turn would add paler.
  */
+export function asThresholdBar(
+  mark: Phaser.GameObjects.Container,
+  { length, width }: ThresholdBarSize,
+  stock: CityBarStock,
+  { held, added }: CityBar,
+): Phaser.GameObjects.Container {
+  const colour = LOOK.reading[stock];
+  return asBar(
+    mark,
+    { lie: 'flat', length, width },
+    { track: LOOK.mapOutline, ground: LOOK.thresholdNotMet },
+    { colour, strength: 1, share: held },
+    { colour, strength: LOOK.addedByTurn, share: added },
+  );
+}
+
+/** A city's bar with nothing drawn on it yet, hidden. */
+export function cityBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return thresholdBarMarker(scene, CITY_BAR).setVisible(false);
+}
+
+/** The player's city's bar of a stock standing on its tile, below the middle and centred across it. */
 export function showCityBar(
   mark: Phaser.GameObjects.Container,
   coord: TileCoords,
   stock: CityBarStock,
-  { held, added }: CityBar,
+  bar: CityBar,
 ): void {
-  const colour = LOOK.reading[stock];
   const { x, y } = positionOf(coord);
-  asBar(
-    mark,
-    CITY_BAR,
-    { track: LOOK.mapOutline, ground: LOOK.thresholdNotMet },
-    { colour, strength: 1, share: held },
-    { colour, strength: LOOK.addedByTurn, share: added },
-  )
+  asThresholdBar(mark, CITY_BAR, stock, bar)
     .setPosition(x, y + CITY_BAR_DROP[stock])
     .setName(`city-bar-${stock}-${tileKey(coord)}`)
     .setVisible(true);

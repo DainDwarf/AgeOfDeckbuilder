@@ -99,8 +99,6 @@ export type Look = {
   readonly faintInk: number;
   /** The ink words read in on the charcoal of the chrome's panels and in its wells. */
   readonly charcoalInk: number;
-  /** The ink a reading's word reads in on the resource bar's charcoal. */
-  readonly charcoalFaintInk: number;
   /** The ink words read in on the chrome's silver and gold: a button's, and a window's gold band. */
   readonly metalInk: number;
   readonly paleInk: number;
@@ -177,8 +175,15 @@ export type Look = {
   readonly wornCard: number;
   readonly aimSlab: number;
   readonly emptyEdge: number;
-  /** The ink of a stock ending the turn takes past nothing, and of the population it takes. */
+  /** The ink of what ending the turn would add to a reading of the resource bar, and of what it would take. */
+  readonly gain: number;
+  readonly loss: number;
+  /** The same two on a button's gold. */
+  readonly gainOnGold: number;
+  readonly lossOnGold: number;
+  /** The pill a stock ending the turn takes past nothing reads on, and the population it takes; and the ink on it. */
   readonly takenPastNothing: number;
+  readonly takenPastNothingInk: number;
   readonly affordableCard: Paper;
   /** The strength an answer the player's city cannot pay for, or one refused, is darkened by, its panel and its words alike. */
   readonly refusedAnswer: number;
@@ -257,7 +262,6 @@ export const LOOK: Look = {
   ink: 0x0d1014,
   faintInk: 0x4a5058,
   charcoalInk: 0xf2f6ff,
-  charcoalFaintInk: 0xaab0b8,
   metalInk: 0x0d1014,
   paleInk: 0xd4d7db,
   answerInk: 0x9aa1a9,
@@ -317,7 +321,12 @@ export const LOOK: Look = {
   wornCard: 0.5,
   aimSlab: 0x232833,
   emptyEdge: 0x4a5058,
+  gain: 0x5fd38a,
+  loss: 0xff6b5c,
+  gainOnGold: 0x14501f,
+  lossOnGold: 0x7d1309,
   takenPastNothing: 0xc0392b,
+  takenPastNothingInk: 0xffffff,
   affordableCard: { face: 0xd4d7db, ink: 0x0d1014 },
   refusedAnswer: 0.21,
   yieldPatch: { colour: 0x0d1014, strength: 0.7 },

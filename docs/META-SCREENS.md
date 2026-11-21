@@ -4,7 +4,7 @@
 
 ## The navbar and the bar ✅
 
-Every screen of the meta wears the same two things, and the chronicle screen wears neither. The **navbar** is a panel down the left edge, the whole height of the screen: the game's name at its head, on two lines, and under it one button per screen of the meta: **Campaign**, **Chronicle**, which opens the launch screen, and **Collection**. The button of the screen standing is sunk in a well, as a latched reading of the resource bar is, and reacts to no press; the others stand as buttons, and a press opens their screen. The **bar** runs along the top from the navbar to the Menu button, where the resource bar stands on the chronicle screen, and reads the influence at its left end as the resource bar reads a stock: influence's glyph, the word, the number. The pointer resting on the reading raises its tooltip under it, as a reading of the resource bar does; the reading reacts to no press.
+Every screen of the meta wears the same two things, and the chronicle screen wears neither. The **navbar** is a panel down the left edge, the whole height of the screen: the game's name at its head, on two lines, and under it one button per screen of the meta: **Campaign**, **Chronicle**, which opens the launch screen, and **Collection**. The button of the screen standing is sunk in a well, as a latched reading of the resource bar is, and reacts to no press; the others stand as buttons, and a press opens their screen. The **bar** runs along the top from the navbar to the Menu button and reads the influence at its left end: influence's glyph, the word, the number. The pointer resting on the reading raises its tooltip under it; the reading reacts to no press.
 
 ## The campaign screen ✅
 

@@ -138,13 +138,15 @@ The glyphs on the discs and in a card's text are symbols. A card that places a b
 
 The chrome is DRStudios' metal kit, each piece drawn at any size from its corners, the corners as the kit paints them and its edges stretched between them, over the soft shadow the kit lays under it.
 
-**A panel** is the kit's panel: a thin polished silver rim round a charcoal body, its corners rounded. The resource bar, the band the hand and the piles stand in, a pinned achievement, an answer and the capstone's text, the exhaust pile's tab, a tooltip and a refusal's note each stand on one. The bar's panel runs on past the screen's top and sides, and the band's past its bottom and sides, so each shows only the rim along its inner edge.
+**A panel** is the kit's panel: a thin polished silver rim round a charcoal body, its corners rounded. The resource bar, the band the hand and the piles stand in, a pinned achievement, an answer and the capstone's text, the exhaust pile's tab, a tooltip and a refusal's note each stand on one. The resource bar's panel hangs from the screen's top and runs on past it, so it shows its rim along its sides and its foot; the band's runs on past the screen's bottom and sides, and shows only the rim along its top.
 
 **A window** of the menu is a panel with the gold band of the kit's window laid inside its top edge, as tall as the window's title stands, the title on the gold.
 
 **A button** is the kit's: its gold for End turn, a window's buttons and the ending screen's, and its darker silver for the Menu button and the Icons button. Under the pointer a live button wears the kit's hover look, and while a press that landed on it is held on it, its pressed look; a dead button keeps its own look and wears no hover. End turn wears its gold on the settle phase as on any turn.
 
 **A well** is the kit's inactive tab: a latched reading of the resource bar, a reached pinned achievement and the latched Icons button sit in one. A reading whose act is waiting in city mode stands on a button's gold instead.
+
+**A reading's bar and its end of turn.** Food's and culture's readings on the resource bar wear a city's bar under them, drawn and filled as the city's is, longer and thicker: from the glyph's left edge to the end of the room the end-of-turn number takes. That number reads in a green of its own where the turn adds and a red of its own where it takes, and a stock taken past nothing reads white on a pill of a darker red. On a button's gold the green and the red are darker ones, as the number's ink is dark there.
 
 Words on the charcoal read in a pale ink, and words on the silver and the gold in a dark one. An answer the player's city cannot pay for, or one refused, stands on its panel darkened, its words darkened with it.
 

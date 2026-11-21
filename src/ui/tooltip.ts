@@ -18,8 +18,11 @@ export const JITTER = 3;
 const STYLE = { fontFamily: UI_FONT, fontSize: '14px', color: css(LOOK.charcoalInk) };
 
 export type Tooltip = {
-  /** Hangs under what was hovered, held inside the frame: `left` where the bubble wants its left edge. */
-  under(message: string, left: number, top: number): void;
+  /**
+   * Hangs under what was hovered, held inside the frame: `left` where the bubble wants its left edge,
+   * the message under `title` in bold where one is handed.
+   */
+  under(message: string, left: number, top: number, title?: string): void;
   /**
    * Stands to the right of the point `at` answers as the bubble is painted and at every `follow`,
    * level with it, the message under `title` in bold where one is handed. The bubble goes wherever
@@ -131,9 +134,9 @@ export function createTooltip(scene: Phaser.Scene, on: Stratum): Tooltip {
   });
 
   return {
-    under(message: string, left: number, top: number): void {
+    under(message: string, left: number, top: number, title?: string): void {
       raise(() => {
-        const { width } = measure(message);
+        const { width } = measure(message, title);
         const x = Math.min(left, screenSize().width - MARGIN - width);
         place = undefined;
         tooltip.setScale(on.unit()).setPosition(x, top).setVisible(true);

@@ -11,7 +11,7 @@ import {
   placeChromeWell,
   standChromePanel,
 } from './chrome';
-import { addText, type Stratum } from './design-space';
+import { addText, BAR_HEIGHT, onResize, type Stratum } from './design-space';
 import { css, LOOK } from './look';
 import {
   drawRun,
@@ -31,12 +31,21 @@ import { PLATE_WIDTH } from './tree-layout';
 /** How far apart two pinned achievements stand. */
 const GAP = 8;
 
+/** How far clear of their right edge the resource bar's left end stands for them to stand beside it. */
+const CLEAR_OF_THE_BAR = 16;
+
+/** Where the stack's left edge stands. */
+function stackLeft(): number {
+  return mapFrame().x + CHIP_INSET;
+}
+
 /** A pinned achievement drawn at the top handed as the chronicle stands; how tall it stands. */
 type Placed = (chronicle: Chronicle, top: number) => number;
 
 /**
  * The achievements earning the pinned technologies the chronicle reads, stacked in the map's top left
- * corner in its order. A name in a goal raises its small card on the chain handed.
+ * corner in its order, under the resource bar where its left end, `barLeft`, reaches over them. A name
+ * in a goal raises its small card on the chain handed.
  */
 export function createPinnedAchievements(
   scene: Phaser.Scene,
@@ -46,6 +55,7 @@ export function createPinnedAchievements(
   pins: readonly string[],
   small: SmallCards,
   inspect: (name: Name) => void,
+  barLeft: () => number,
 ): { render(chronicle: Chronicle): void } {
   const plates = chronicle.achievements.flatMap(({ id }) => {
     const { technology, need } = achievementOf(catalogue, chronicle.age, id);
@@ -54,10 +64,17 @@ export function createPinnedAchievements(
       createPinnedAchievement(scene, on, catalogue, { id, technology, need }, small, inspect),
     ];
   });
+  let standing = chronicle;
+  const stack = (): void => {
+    const beside = barLeft() - (stackLeft() + PLATE_WIDTH) > CLEAR_OF_THE_BAR;
+    let top = (beside ? 0 : BAR_HEIGHT) + CHIP_INSET;
+    for (const placed of plates) top += placed(standing, top) + GAP;
+  };
+  onResize(scene, stack);
   return {
-    render(standing: Chronicle): void {
-      let top = mapFrame().y + CHIP_INSET;
-      for (const placed of plates) top += placed(standing, top) + GAP;
+    render(next: Chronicle): void {
+      standing = next;
+      stack();
     },
   };
 }
@@ -78,7 +95,7 @@ function createPinnedAchievement(
   const inner = PLATE_WIDTH - 2 * PAD_X;
   const nameHeight = 2 * PAD_Y + NAME_LINE;
   const fullHeight = nameHeight + TEXT_LINE * linesOf(scene, goal, inner);
-  const root = scene.add.container(mapFrame().x + CHIP_INSET, 0).setName(plate);
+  const root = scene.add.container(stackLeft(), 0).setName(plate);
   // Interactive, so no press reaches the map under it, and never marked as reacting to one.
   const stop = scene.add
     .zone(0, 0, PLATE_WIDTH, fullHeight)

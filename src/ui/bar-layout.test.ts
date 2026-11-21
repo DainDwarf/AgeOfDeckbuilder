@@ -1,107 +1,61 @@
 import { describe, expect, it } from 'vitest';
-import { type Bar, BETWEEN, layOutBar, type Measured, WELL_MARGIN, type Zone } from './bar-layout';
+import { BETWEEN, layOutReadings, type ReadingRow, WELL_MARGIN, type Zone } from './bar-layout';
 
-/** A bar whose font leaves the row room to spare, as the design was measured in. */
-const ROOMY: Measured = {
-  readings: [92, 134, 112, 104, 116, 110, 132],
-  menu: 70,
-  width: 1280,
-  margin: 24,
-};
+/** Seven readings of widths of their own, as a bar's rooms are. */
+const READINGS = [78, 87, 87, 87, 87, 78, 102];
 
-/** The same bar under a font that measures wider, which is every browser the game did not open in. */
-function inAWiderFont(measured: Measured, by: number): Measured {
-  return {
-    ...measured,
-    readings: measured.readings.map((span) => span * by),
-    menu: measured.menu * by,
-  };
-}
-
-/** Every zone the bar presses, in the order they stand: the seven readings, then the Menu button. */
-function zones(bar: Bar): Zone[] {
-  return [...bar.readings.map((placed) => placed.zone), bar.menu];
-}
+const END = 16;
 
 /** What each zone leaves between itself and the next; a press lands on two of them where it is not positive. */
 function daylight(zones: readonly Zone[]): number[] {
   return zones.slice(1).map((next, index) => next.x - (zones[index].x + zones[index].width));
 }
 
-/** The gap before each thing after the first: the six between readings, then the one before Menu. */
-function gaps(measured: Measured): number[] {
-  const bar = layOutBar(measured);
-  const ends = bar.readings.map((placed, index) => placed.at + measured.readings[index]);
-  const starts = [...bar.readings.slice(1).map((placed) => placed.at), bar.menu.x];
-  return starts.map((start, index) => start - ends[index]);
+/** The gap before each reading after the first. */
+function gaps(row: ReadingRow, readings: readonly number[]): number[] {
+  return row.readings
+    .slice(1)
+    .map((placed, index) => placed.at - (row.readings[index].at + readings[index]));
 }
 
-describe('a bar with room to spare', () => {
-  it('stands the readings apart, and the Menu button one gap after the last of them', () => {
-    expect(layOutBar(ROOMY).readings[0].at).toBe(ROOMY.margin);
-    expect(gaps(ROOMY)).toEqual([
-      BETWEEN,
-      BETWEEN,
-      BETWEEN,
-      BETWEEN,
-      expect.any(Number),
-      BETWEEN,
-      BETWEEN,
-    ]);
+describe('a row of readings', () => {
+  const row = layOutReadings(READINGS, END);
+
+  it('stands the readings in the order handed, each two the same gap apart', () => {
+    expect(gaps(row, READINGS)).toEqual(READINGS.slice(1).map(() => BETWEEN));
   });
 
-  it('spends what is left over in the one gap between the left group and the right one', () => {
-    expect(gaps(ROOMY)[4]).toBeGreaterThan(BETWEEN);
+  it('stands its ends as far off the first reading and the last', () => {
+    const last = row.readings.length - 1;
+    expect(row.readings[0].at).toBe(END);
+    expect(row.width - (row.readings[last].at + READINGS[last])).toBe(END);
   });
 
-  it('lets no press land on two readings, nor on a reading and the Menu button', () => {
-    for (const light of daylight(zones(layOutBar(ROOMY)))) expect(light).toBeGreaterThan(0);
+  it('is as wide as its readings, their gaps and its two ends', () => {
+    const content = READINGS.reduce((total, span) => total + span, 0);
+    expect(row.width).toBe(content + (READINGS.length - 1) * BETWEEN + 2 * END);
   });
 
-  it('reaches a press as far past a reading as its well is drawn', () => {
-    const [food] = layOutBar(ROOMY).readings;
-    expect(food.at - food.zone.x).toBe(WELL_MARGIN);
-    expect(food.zone.width).toBe(ROOMY.readings[0] + 2 * WELL_MARGIN);
-  });
-});
-
-describe('a bar under a font that measures wider', () => {
-  const WIDER = inAWiderFont(ROOMY, 4 / 3);
-
-  it('closes every gap by the same amount, rather than running the groups into each other', () => {
-    const closed = gaps(WIDER);
-    expect(closed[0]).toBeGreaterThan(0);
-    expect(closed[0]).toBeLessThan(BETWEEN);
-    for (const gap of closed) expect(gap).toBeCloseTo(closed[0]);
-  });
-
-  it('lets no press land on two readings, nor on a reading and the Menu button', () => {
-    for (const light of daylight(zones(layOutBar(WIDER)))) expect(light).toBeGreaterThan(0);
-  });
-
-  it('keeps the first reading at the margin', () => {
-    expect(layOutBar(WIDER).readings[0].at).toBe(ROOMY.margin);
-  });
-});
-
-describe('a bar under a font too wide for the row', () => {
-  const CRUSHED = inAWiderFont(ROOMY, 2);
-
-  it('closes the gaps between the readings to nothing and shrinks no reading', () => {
-    const closed = gaps(CRUSHED);
-    expect(closed.slice(0, -1)).toEqual(new Array(CRUSHED.readings.length - 1).fill(0));
-    const laid = layOutBar(CRUSHED).readings;
-    for (const [index, placed] of laid.entries()) {
-      expect(placed.zone.width).toBeGreaterThanOrEqual(CRUSHED.readings[index]);
+  it('lets no press land on two readings', () => {
+    for (const light of daylight(row.readings.map((placed) => placed.zone))) {
+      expect(light).toBeGreaterThan(0);
     }
   });
 
-  it('runs the row under the Menu button rather than shrinking what will not fit', () => {
-    expect(gaps(CRUSHED).at(-1)).toBeLessThan(0);
+  it('reaches a press as far past its first and last reading as a well is drawn', () => {
+    const first = row.readings[0];
+    const last = row.readings[row.readings.length - 1];
+    expect(first.at - first.zone.x).toBe(WELL_MARGIN);
+    expect(last.zone.x + last.zone.width - (last.at + READINGS[READINGS.length - 1])).toBe(
+      WELL_MARGIN,
+    );
   });
+});
 
-  it('still lets no press land on two readings', () => {
-    const readings = layOutBar(CRUSHED).readings.map((placed) => placed.zone);
-    for (const light of daylight(readings)) expect(light).toBeGreaterThanOrEqual(0);
+describe('a row of one reading', () => {
+  it('reaches a press as far as a well on both sides of it', () => {
+    const [only] = layOutReadings([120], 24).readings;
+    expect(only.at).toBe(24);
+    expect(only.zone).toEqual({ x: 24 - WELL_MARGIN, width: 120 + 2 * WELL_MARGIN });
   });
 });

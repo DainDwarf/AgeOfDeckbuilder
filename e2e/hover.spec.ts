@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
+import { growthThreshold } from '../src/rules/city';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import { cardFace, cardFaceAtStart, kindTooltip } from '../src/ui/face';
 import { text } from '../src/ui/text';
@@ -25,6 +26,7 @@ import {
   settledOn,
   standing,
   stoppedTurn,
+  tooltipLines,
   tooltipText,
   tooltipUp,
   WARRIOR,
@@ -73,6 +75,41 @@ test('a tooltip standing over a resource goes down when the pointer leaves the c
 
   await page.mouse.move(bare.x, bare.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a reading’s tooltip names it over its sentence: food with its stock over the growth threshold, idle as the idle population', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const opened = settledOn(1);
+
+  await openSaved(page, opened);
+
+  const food = await onScreen(page, 'reading-food');
+  await page.mouse.move(food.x, food.y);
+  await expect
+    .poll(() => tooltipLines(page, 'tooltip-ui'))
+    .toEqual([
+      {
+        text: text('label.food', {
+          count: opened.resources.food,
+          over: growthThreshold(opened, 'player'),
+        }),
+        bold: true,
+      },
+      { text: text('tooltip.food'), bold: false },
+    ]);
+
+  const idle = await onScreen(page, 'reading-idle');
+  await page.mouse.move(idle.x, idle.y);
+  await expect
+    .poll(() => tooltipLines(page, 'tooltip-ui'))
+    .toEqual([
+      { text: text('label.idle'), bold: true },
+      { text: text('tooltip.idle'), bold: false },
+    ]);
 
   expect(problems).toEqual([]);
 });

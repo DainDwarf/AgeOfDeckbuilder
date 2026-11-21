@@ -2,15 +2,19 @@ import type Phaser from 'phaser';
 import { mapFrame } from './band';
 import { addText, onClick, onResize, reactsToPress, type Stratum, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
+import { MENU_FOOT } from './menu';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
 const STROKE = 8;
 
-/** How far the chip stands clear of the stroke's inner edge, above it and to its right. */
+/** How far the chip stands clear of the stroke's inner edge, to its right. */
 const CLEAR = 16;
 
-/** How far the chip stands in from the map's top edge and from its right one. */
+/** How far the chip stands in from the map's right edge. */
 export const CHIP_INSET = STROKE + CLEAR;
+
+/** How far under the Menu button the chip stands. */
+const UNDER_THE_MENU = 14;
 
 /** How far the chip's fill reaches past its label, sideways and down. */
 const PADDING = { x: 40, y: 10 };
@@ -37,9 +41,8 @@ export type Stood = {
 };
 
 /**
- * What the chronicle screen shows it is standing in — city mode, the settle phase: the map's frame
- * in that colour and the chip naming it in the frame's top-right corner, sized to its own word.
- * Both are laid out with the map's frame and shown or hidden; what is on is the scene's.
+ * What the chronicle screen shows it is standing in — city mode, the settle phase: the map's frame in
+ * that colour and the chip naming it under the Menu button. What is on is the scene's.
  */
 export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): Standing {
   const frame = scene.add
@@ -69,7 +72,7 @@ export function createStanding(scene: Phaser.Scene, on: Stratum, stood: Stood): 
       .setPosition(map.x + STROKE / 2, map.y + STROKE / 2)
       .setSize(map.width - STROKE, map.height - STROKE);
     const x = map.x + map.width - CHIP_INSET - width;
-    const y = map.y + CHIP_INSET;
+    const y = MENU_FOOT + UNDER_THE_MENU;
     chip.setPosition(x, y);
     label.setPosition(x + width / 2, y + height / 2);
   });

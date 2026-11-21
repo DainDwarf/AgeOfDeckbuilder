@@ -9,13 +9,13 @@ import type { Reference } from './text-run';
  * each. English is the only language.
  */
 const TEXT = {
-  'label.food': 'Food',
-  'label.production': 'Prod',
-  'label.military': 'Mil',
+  'label.food': 'Food {count}/{over}',
+  'label.production': 'Production',
+  'label.military': 'Military',
   'label.money': 'Money',
-  'label.science': 'Sci',
-  'label.culture': 'Culture',
-  'label.idle': 'Idle',
+  'label.science': 'Science',
+  'label.culture': 'Culture {count}/{over}',
+  'label.idle': 'Idle population',
   'label.health': 'Health',
   'label.damage': 'Damage',
   'label.range': 'Range',
@@ -32,7 +32,7 @@ const TEXT = {
   'tooltip.money': 'Trade it for other goods',
   'tooltip.science': 'Manipulate your cards',
   'tooltip.culture': 'Claims more tiles for your city',
-  'tooltip.idle': 'Idle population. Assign to tile or turn into units',
+  'tooltip.idle': 'Assign to tile or turn into units',
   'tooltip.health': 'Unit is killed when it reaches 0',
   'tooltip.damage': "The health this unit's attack removes",
   'tooltip.range': 'The distance this unit attacks over',

@@ -54,13 +54,7 @@ import {
   reckoned,
   refusalOf,
 } from '../src/rules/chronicle';
-import {
-  arrived,
-  claimable,
-  cultureThreshold,
-  growthThreshold,
-  warDeclared,
-} from '../src/rules/city';
+import { arrived, claimable, cultureThreshold, warDeclared } from '../src/rules/city';
 import { enemyEntering } from '../src/rules/enemies';
 import {
   CENTRE,
@@ -1558,8 +1552,8 @@ export function westOf({ q, r }: TileCoords): TileCoords {
 }
 
 /**
- * A point beside the tiles: up and left of the centre, inside the map's frame, which starts under
- * the resource bar, and far enough out for the nearest tile to be well outside the map's disc.
+ * A point beside the tiles: up and left of the centre, inside the map's frame, and far enough out
+ * for the nearest tile to be well outside the map's disc.
  */
 export async function besideTiles(page: Page): Promise<{ x: number; y: number }> {
   const city = await onScreen(page, `tile-${tileKey(CENTRE)}`);
@@ -1646,7 +1640,7 @@ export function offCanvas(page: Page): Promise<{ x: number; y: number }> {
   });
 }
 
-/** The corner of the canvas the resource bar stands in: on the scrim, beside a window's cards. */
+/** The canvas's top left corner: on the scrim, beside a window's cards. */
 export function besideTheCards(page: Page): Promise<{ x: number; y: number }> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
@@ -2073,23 +2067,15 @@ export async function unitMarksOn(
 }
 
 /**
- * What a reading of the resource bar reads on the chronicle, as `readingOf` in
+ * What a reading of the resource bar reads on the chronicle, as `readsAs` in
  * `src/ui/resource-bar.ts` paints it.
  */
 export function barReadingOn(chronicle: Chronicle, reading: BarReading): string {
   switch (reading) {
     case 'idle':
-      return String(idle(chronicle));
+      return text('reading.over', { count: idle(chronicle), over: chronicle.population });
     case 'food':
-      return text('reading.over', {
-        count: chronicle.resources.food,
-        over: growthThreshold(chronicle, 'player'),
-      });
     case 'culture':
-      return text('reading.over', {
-        count: chronicle.resources.culture,
-        over: cultureThreshold(chronicle, 'player'),
-      });
     case 'production':
     case 'military':
     case 'money':

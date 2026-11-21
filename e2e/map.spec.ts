@@ -443,14 +443,17 @@ function shored(): { chronicle: Chronicle; beside: TileCoords; rim: TileCoords; 
   throw new Error('seed 1 makes no tile of its centre part water beside uncharted land');
 }
 
-test('the map is framed between the resource bar and the band, on the city', async ({ page }) => {
+test('the map is framed from the screen’s top to the band, the resource bar hung over it, on the city', async ({
+  page,
+}) => {
   const problems = watch(page);
   await openSaved(page, OPENED);
 
   const frame = await mapFrame(page);
-  const bar = await pieceOnScreen(page, 'resource-bar-panel');
+  const bar = (await readings(page, ['resource-bar']))('resource-bar').boundsOnScreen;
   const band = await pieceOnScreen(page, 'band');
-  expect(Math.abs(frame.y - (bar.y + bar.height))).toBeLessThan(2);
+  expect(Math.abs(frame.y - bar.y)).toBeLessThan(2);
+  expect(bar.y + bar.height).toBeLessThan(frame.y + frame.height);
   expect(Math.abs(frame.y + frame.height - band.y)).toBeLessThan(2);
   expect((await onScreen(page, 'band')).y).toBeGreaterThan(frame.y + frame.height);
 

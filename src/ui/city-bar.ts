@@ -31,8 +31,17 @@ export type CityBar = {
  * turn is read: full from the threshold on, and the turn's part stopping at the bar's end; a turn
  * read as taking, or none read, adds nothing.
  */
-export function cityBarOf(stock: number, threshold: number, turn: number | undefined): CityBar {
+export function barShares(stock: number, threshold: number, turn: number | undefined): CityBar {
   if (stock >= threshold) return { held: 1, added: 0 };
   const reached = Math.min(stock + Math.max(turn ?? 0, 0), threshold);
   return { held: stock / threshold, added: (reached - stock) / threshold };
+}
+
+/** The bar of the player's city's stock on the chronicle, moved by what ending the turn would, where it is read. */
+export function cityBarOf(
+  chronicle: Chronicle,
+  stock: CityBarStock,
+  turn: number | undefined,
+): CityBar {
+  return barShares(chronicle.resources[stock], thresholdOf(chronicle, stock), turn);
 }

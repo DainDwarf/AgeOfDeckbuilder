@@ -6,6 +6,7 @@ import { arrived, assignWaiting, claimWaiting } from '../src/rules/city';
 import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import { CITY_BAR_STOCKS, cityBarOf } from '../src/ui/city-bar';
 import { type BarReading, css, LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
@@ -13,6 +14,7 @@ import {
   endedTurn,
   endTurn,
   firstSeed,
+  hazardsAdded,
   hungry,
   inHand,
   onDesignedSpeed,
@@ -29,50 +31,74 @@ import {
 /** The readings of the bar, in the order it reads them. */
 const READINGS: readonly BarReading[] = [...RESOURCES, 'idle'];
 
-/** What a reading's reckoning reads, and the ink it reads in. */
-type Painted = { text: string | undefined; colour: string | undefined };
-
-/** What each reading's reckoning reads on the screen, in one question to the page. */
-async function reckoningsShown(page: Page): Promise<Painted[]> {
-  const names = READINGS.map((key) => `reading-${key}-reckoning`);
-  const seen = await readings(page, names);
-  return names.map((name) => ({ text: seen(name).text, colour: seen(name).ink }));
-}
+/** What a reading's reckoning reads, the ink it reads in, and whether it stands on its pill. */
+type Painted = { text: string | undefined; colour: string | undefined; pill: boolean };
 
 /**
- * What each reading's reckoning reads by the rules: what ending the turn on the chronicle would do,
- * on the gold where the reading's act in city mode waits.
+ * What each reading's reckoning reads on the screen, and the share of food's bar and culture's that
+ * stands paler past the stock, in one question to the page.
  */
+async function reckoningsShown(page: Page): Promise<{ painted: Painted[]; paler: number[] }> {
+  const names = READINGS.flatMap((key) => [`reading-${key}-reckoning`, `reading-${key}-pill`]);
+  const bars = CITY_BAR_STOCKS.map((stock) => `reading-${stock}-bar`);
+  const seen = await readings(page, [...names, ...bars]);
+  return {
+    painted: READINGS.map((key) => {
+      const reckoning = seen(`reading-${key}-reckoning`);
+      return {
+        text: reckoning.text,
+        colour: reckoning.ink,
+        pill: seen(`reading-${key}-pill`).shows,
+      };
+    }),
+    paler: bars.map((bar) => seen(bar).bar.past.share),
+  };
+}
+
+/** Where the reading's act in city mode waits on the chronicle, so that it stands on the gold. */
+function onGold(chronicle: Chronicle, key: BarReading): boolean {
+  switch (key) {
+    case 'culture':
+      return claimWaiting(CATALOGUE, chronicle);
+    case 'idle':
+      return assignWaiting(chronicle);
+    case 'food':
+    case 'production':
+    case 'military':
+    case 'money':
+    case 'science':
+      return false;
+  }
+}
+
+/** What each reading's reckoning reads by the rules: what ending the turn on the chronicle would do. */
 function reckoningsOf(chronicle: Chronicle): Painted[] {
   const read = reckoned(CATALOGUE, chronicle);
-  const waiting = (key: BarReading): boolean => {
-    switch (key) {
-      case 'culture':
-        return claimWaiting(CATALOGUE, chronicle);
-      case 'idle':
-        return assignWaiting(chronicle);
-      case 'food':
-      case 'production':
-      case 'military':
-      case 'money':
-      case 'science':
-        return false;
-    }
-  };
-  return READINGS.map((key) => reckoningOf(read, key, waiting(key)));
+  return READINGS.map((key) => reckoningOf(read, key, onGold(chronicle, key)));
 }
 
 /**
- * What one reading's reckoning reads, signed, in its colour where it is a take and in the ink of
- * what it stands on otherwise; nothing where none runs.
+ * What one reading's reckoning reads, signed: on its pill where it is a take past nothing, in the
+ * colour of a gain or of a loss otherwise, those of the gold where it stands on it; nothing where
+ * none runs.
  */
-function reckoningOf(read: Reckoning | undefined, key: BarReading, onGold: boolean): Painted {
+function reckoningOf(read: Reckoning | undefined, key: BarReading, gold: boolean): Painted {
   const painted = (count: number, taken: boolean): Painted => {
-    const ink = onGold ? LOOK.metalInk : LOOK.charcoalInk;
-    const colour = css(taken ? LOOK.takenPastNothing : ink);
-    if (count > 0) return { text: text('reading.plus', { count }), colour };
-    if (count < 0) return { text: text('reading.minus', { count: -count }), colour };
-    return { text: '', colour };
+    const ink = gold
+      ? { value: LOOK.metalInk, gain: LOOK.gainOnGold, loss: LOOK.lossOnGold }
+      : { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss };
+    const colour = (shown: number): Painted['colour'] =>
+      css(taken ? LOOK.takenPastNothingInk : shown);
+    if (count > 0)
+      return { text: text('reading.plus', { count }), colour: colour(ink.gain), pill: taken };
+    if (count < 0) {
+      return {
+        text: text('reading.minus', { count: -count }),
+        colour: colour(ink.loss),
+        pill: taken,
+      };
+    }
+    return { text: '', colour: colour(ink.value), pill: taken };
   };
   if (read === undefined) return painted(0, false);
   switch (key) {
@@ -88,7 +114,18 @@ function reckoningOf(read: Reckoning | undefined, key: BarReading, onGold: boole
   }
 }
 
-test('on a quiet turn the bar reads after each stock what the income brings it, and nothing after idle', async ({
+/** The share of food's bar and culture's that stands paler past the stock: what the turn would add. */
+function palerOf(chronicle: Chronicle): number[] {
+  const turn = reckoned(CATALOGUE, chronicle);
+  return CITY_BAR_STOCKS.map((stock) => cityBarOf(chronicle, stock, turn?.stocks[stock]).added);
+}
+
+/** Each number of the list within a hair of the one at its place in the other. */
+function closeTo(numbers: readonly number[]): unknown[] {
+  return numbers.map((number) => expect.closeTo(number, 6));
+}
+
+test('on a quiet turn the bar reads after each stock what the income brings it in the colour of a gain, and nothing after idle', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -96,15 +133,52 @@ test('on a quiet turn the bar reads after each stock what the income brings it, 
     const settled = settledOn(seed);
     return strikesInHand(settled) ? undefined : settled;
   });
+  const expected = reckoningsOf(quiet);
+  expect(expected.some(({ text: shown }) => shown?.startsWith('+'))).toBe(true);
 
   await openSaved(page, quiet);
 
-  expect(await reckoningsShown(page)).toEqual(reckoningsOf(quiet));
+  const shown = await reckoningsShown(page);
+  expect(shown.painted).toEqual(expected);
+  expect(shown.paler).toEqual(closeTo(palerOf(quiet)));
 
   expect(problems).toEqual([]);
 });
 
-test('the bar reads what ending the turn would do, a stock the strikes take past nothing and the population taken in their colour; nothing while the end of turn plays out, and the next hand’s once it stands', async ({
+test('a strike the stock covers reads what it takes in the colour of a loss, on no pill', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const covered = firstSeed(
+    'draws a strike its food stock covers past what the turn earns',
+    (seed) => {
+      const settled = settledOn(seed);
+      for (let step = 0; step < 10; step++) {
+        const drawn = endedTurn(hazardsAdded(settled, [step]));
+        if (!strikesInHand(drawn)) continue;
+        const read = reckoned(CATALOGUE, drawn);
+        if (read !== undefined && read.stocks.food < 0 && !read.pastNothing.has('food')) {
+          return drawn;
+        }
+      }
+      return undefined;
+    },
+  );
+
+  await openSaved(page, covered);
+
+  const shown = await reckoningsShown(page);
+  expect(shown.painted).toEqual(reckoningsOf(covered));
+  expect(shown.painted[READINGS.indexOf('food')]).toEqual({
+    text: expect.stringMatching(/^−/),
+    colour: css(LOOK.loss),
+    pill: false,
+  });
+
+  expect(problems).toEqual([]);
+});
+
+test('the bar reads what ending the turn would do, a stock the strikes take past nothing and the population taken on a pill; nothing while the end of turn plays out, the threshold’s bars paler by nothing, and the next hand’s once it stands', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -113,29 +187,50 @@ test('the bar reads what ending the turn would do, a stock the strikes take past
 
   await openSaved(page, struck);
 
-  expect(await reckoningsShown(page)).toEqual(reckoningsOf(struck));
+  const opened = await reckoningsShown(page);
+  expect(opened.painted).toEqual(reckoningsOf(struck));
+  expect(opened.painted[READINGS.indexOf('food')].pill).toBe(true);
+  expect(opened.painted[READINGS.indexOf('idle')].pill).toBe(true);
 
   const midway = page.waitForFunction(
-    ({ keys, stood }) => {
+    ({ keys, bars, stood }) => {
       const scene = window.game?.scene.getScene<ChronicleScene>('ui');
       if (scene?.playing !== true || JSON.stringify(scene.chronicle.resources) === stood) {
         return undefined;
       }
-      return keys.map(
-        (key) =>
-          (
-            window.named?.(`reading-${key}-reckoning`)?.object as
-              | Phaser.GameObjects.Text
-              | undefined
-          )?.text,
-      );
+      const named = (name: string) => window.named?.(name)?.object;
+      return {
+        reckonings: keys.map(
+          (key) => (named(`reading-${key}-reckoning`) as Phaser.GameObjects.Text | undefined)?.text,
+        ),
+        pills: keys.map(
+          (key) =>
+            (named(`reading-${key}-pill`) as Phaser.GameObjects.Rectangle | undefined)?.visible,
+        ),
+        bars: bars.map((bar) => window.readName?.(bar)?.bar),
+      };
     },
-    { keys: READINGS, stood: JSON.stringify(struck.resources) },
+    {
+      keys: READINGS,
+      bars: CITY_BAR_STOCKS.map((stock) => `reading-${stock}-bar`),
+      stood: JSON.stringify(struck.resources),
+    },
   );
   await endTurn(page);
-  expect(await (await midway).jsonValue()).toEqual(READINGS.map(() => ''));
+  const seen = await (await midway).jsonValue();
+  if (seen === undefined) throw new Error('waitForFunction resolved on no answer');
+  expect(seen.reckonings).toEqual(READINGS.map(() => ''));
+  expect(seen.pills).toEqual(READINGS.map(() => false));
+  expect(seen.bars).toEqual(
+    CITY_BAR_STOCKS.map(() => ({
+      value: expect.objectContaining({ past: expect.objectContaining({ share: 0 }) }),
+    })),
+  );
 
-  expect(await reckoningsShown(page)).toEqual(reckoningsOf(await chronicleOf(page)));
+  const next = await chronicleOf(page);
+  const settled = await reckoningsShown(page);
+  expect(settled.painted).toEqual(reckoningsOf(next));
+  expect(settled.paler).toEqual(closeTo(palerOf(next)));
 
   expect(problems).toEqual([]);
 });
@@ -168,11 +263,11 @@ test('a card played leaves the bar reading what ending the turn would do through
       if (scene?.playing !== true || JSON.stringify(scene.chronicle.resources) === stood) {
         return undefined;
       }
+      const named = (name: string) => window.named?.(name)?.object;
       const shown = keys.map((key) => {
-        const reckoning = window.named?.(`reading-${key}-reckoning`)?.object as
-          | Phaser.GameObjects.Text
-          | undefined;
-        return { text: reckoning?.text, colour: reckoning?.style.color };
+        const reckoning = named(`reading-${key}-reckoning`) as Phaser.GameObjects.Text | undefined;
+        const pill = named(`reading-${key}-pill`) as Phaser.GameObjects.Rectangle | undefined;
+        return { text: reckoning?.text, colour: reckoning?.style.color, pill: pill?.visible };
       });
       return { chronicle: scene.chronicle, shown };
     },
@@ -184,7 +279,7 @@ test('a card played leaves the bar reading what ending the turn would do through
   expect(seen.shown).toEqual(reckoningsOf(seen.chronicle));
 
   await playedOut(page);
-  expect(await reckoningsShown(page)).toEqual(reckoningsOf(await chronicleOf(page)));
+  expect((await reckoningsShown(page)).painted).toEqual(reckoningsOf(await chronicleOf(page)));
 
   expect(problems).toEqual([]);
 });

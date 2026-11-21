@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { animationSpeed, pressAnimationSpeed } from './animation-speed';
-import { menuZone } from './bar-layout';
 import {
   type Bind,
   bindings,
@@ -804,15 +803,10 @@ export function createSilverButton(
   return { button, label };
 }
 
-/**
- * The room the Menu button takes at the right end of the strip along the top: the button stands on the
- * menu scene and the flow of whichever bar stands there ends before it, so both measure it here.
- */
-export function menuRoom(scene: Phaser.Scene): number {
-  return silverButtonSize(scene, text('menu.menu')).width;
-}
+/** How far down the screen the Menu button's foot stands. */
+export const MENU_FOOT = BAR_HEIGHT / 2 + SILVER_HEIGHT / 2;
 
-/** The Menu button where the bar leaves it room, at the top right of whatever screen stands under it. */
+/** The Menu button at the top right of whatever screen stands under it, a margin in from the edge. */
 export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void {
   const reads = text('menu.menu');
   const { width, height } = silverButtonSize(scene, reads);
@@ -824,8 +818,7 @@ export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void
     pressed,
   );
   onResize(scene, () => {
-    const zone = menuZone(width, screenSize().width, MARGIN);
-    const centre = { x: zone.x + zone.width / 2, y: BAR_HEIGHT / 2 };
+    const centre = { x: screenSize().width - MARGIN - width / 2, y: BAR_HEIGHT / 2 };
     button.place({ x: centre.x - width / 2, y: centre.y - height / 2, width, height });
     label.setPosition(centre.x, centre.y);
   });

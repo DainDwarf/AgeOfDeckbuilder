@@ -185,7 +185,7 @@ test('the design space follows a window moved to a monitor of another pixel dens
   expect(problems).toEqual([]);
 });
 
-test('on a wider window the chronicle screen takes its shape: the bar, the band and the map across it, each piece at its edge, a card at its size', async ({
+test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band and the map across it, each piece at its edge, a card at its size', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -202,8 +202,10 @@ test('on a wider window the chronicle screen takes its shape: the bar, the band 
   expect(band.x).toBeLessThanOrEqual(0);
   expect(band.x + band.width).toBeGreaterThanOrEqual(WIDE.width);
   expect(band.y + band.height).toBeGreaterThanOrEqual(WIDE.height);
-  expect(pieces['resource-bar'].x).toBeCloseTo(0, 3);
-  expect(pieces['resource-bar'].width).toBeCloseTo(WIDE.width, 3);
+  const bar = pieces['resource-bar'];
+  expect(bar.y).toBeCloseTo(0, 3);
+  expect(bar.x + bar.width / 2).toBeCloseTo(WIDE.width / 2, 3);
+  expect(bar.width).toBeCloseTo(today.pieces['resource-bar'].width, 3);
   for (const name of ['menu-button', 'end-turn', 'exhaust-pile']) {
     expect(fromTheRight(pieces[name], WIDE.width)).toBeCloseTo(
       fromTheRight(today.pieces[name], DESIGN_WINDOW.width),

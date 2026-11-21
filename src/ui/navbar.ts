@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { layOutBar } from './bar-layout';
+import { layOutReadings } from './bar-layout';
 import {
   addText,
   BAR_HEIGHT,
@@ -13,9 +13,8 @@ import {
   UI_FONT,
 } from './design-space';
 import { css, LOOK } from './look';
-import { menuRoom } from './menu';
 import { overlayAhead } from './overlay-scene';
-import { createReading, placeReading, readingWidth, SUNK } from './resource-bar';
+import { createReading, placeReading, READING_GLYPH, readingWidth, SUNK } from './resource-bar';
 import { campaignHeld } from './save-entry';
 import { type TextKey, text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
@@ -116,18 +115,17 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
   const influence = createReading(scene, tooltip, {
     name: 'influence',
     symbol: 'influence',
+    glyph: READING_GLYPH,
     word: text('label.influence'),
-    tip: text('tooltip.influence'),
+    tip: () => ({ message: text('tooltip.influence') }),
   });
 
   const readInfluence = (): void => {
     influence.value.setText(String(campaignHeld().influence));
-    const [{ at, zone }] = layOutBar({
-      readings: [readingWidth(influence, influence.value.width)],
-      menu: menuRoom(scene),
-      width: ROOM.width,
-      margin: MARGIN,
-    }).readings;
+    const [{ at, zone }] = layOutReadings(
+      [readingWidth(influence, influence.value.width)],
+      MARGIN,
+    ).readings;
     placeReading(influence, {
       at: ROOM.x + at,
       zone: { x: ROOM.x + zone.x, width: zone.width },

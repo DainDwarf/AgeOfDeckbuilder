@@ -1,68 +1,36 @@
-/**
- * Where the resource bar stands its readings. One flow from the bar's left margin to its right: the
- * seven readings, then the Menu button, with a gap before every one of them after the first. The
- * font the readings are measured in is the browser's, so the flow closes its gaps rather than
- * letting a wide font run one reading into the next.
- */
+/** Where a bar along the top stands its readings: one row, its ends standing off the first and the last. */
 
-/** How far apart two things in the bar stand while the row has room for it. */
-export const BETWEEN = 22;
+/** How far apart two readings in a row stand. */
+export const BETWEEN = 16;
 
-/** How far a reading's zone reaches past the reading, where the gap beside it has room for it. */
+/** How far a zone reaches past the row's first reading and its last. */
 export const WELL_MARGIN = 10;
 
-/** The daylight two neighbouring zones leave between them, so no press lands on both. */
-const DAYLIGHT = 2;
-
-/** How many readings hug the left margin; the rest hug the Menu button, and the slack sits between. */
-const LEFT_GROUP = 5;
+/** How far a zone reaches into a gap beside its reading: half of it, less 2 of daylight, so no press lands on both neighbours. */
+const INTO_THE_GAP = (BETWEEN - 2) / 2;
 
 export type Zone = { readonly x: number; readonly width: number };
 
-/** A reading in the bar: where its content starts, and the zone its press and its well cover. */
+/** A reading in the row: where its content starts, and the zone its press and its well cover. */
 export type Placed = { readonly at: number; readonly zone: Zone };
 
-export type Bar = { readonly readings: readonly Placed[]; readonly menu: Zone };
-
-export type Measured = {
-  /** The readings' content widths, in the order the bar reads them. */
-  readonly readings: readonly number[];
-  /** The Menu button, the last thing in the flow. */
-  readonly menu: number;
-  /** The bar itself, and how far the flow stands off each of its ends. */
-  readonly width: number;
-  readonly margin: number;
-};
-
-/** How far a zone reaches into the gap beside it: half of it, less the daylight, at most the well. */
-function reach(gap: number): number {
-  return Math.max(0, Math.min(WELL_MARGIN, (gap - DAYLIGHT) / 2));
-}
+/** A row laid out from its left end: how wide it stands, and each of its readings. */
+export type ReadingRow = { readonly width: number; readonly readings: readonly Placed[] };
 
 /**
- * Where the Menu button stands: the last thing in the flow, hard against the bar's right margin. The
- * button is drawn on the menu scene, which reads its place from here, as the flow reads what to end
- * before.
+ * Readings of those content widths in the order handed, `BETWEEN` apart, the row's ends `end` off the
+ * first and the last. A zone reaches into each gap beside its reading, and as far as a well past the
+ * row's first and last reading.
  */
-export function menuZone(menu: number, width: number, margin: number): Zone {
-  return { x: width - margin - menu, width: menu };
-}
-
-export function layOutBar({ readings, menu, width, margin }: Measured): Bar {
-  const room = width - 2 * margin - menu;
-  const content = readings.reduce((total, span) => total + span, 0);
-  // One gap before each reading but the first, and one before the Menu button: as many as readings.
-  const slack = room - content - readings.length * BETWEEN;
-  const even = slack >= 0 ? BETWEEN : Math.max(0, BETWEEN + slack / readings.length);
-  const before = (index: number): number => even + (slack > 0 && index === LEFT_GROUP ? slack : 0);
-
+export function layOutReadings(readings: readonly number[], end: number): ReadingRow {
   const placed: Placed[] = [];
-  let x = margin;
+  let x = end;
   for (const [index, span] of readings.entries()) {
-    if (index > 0) x += before(index);
-    const left = index === 0 ? WELL_MARGIN : reach(before(index));
-    placed.push({ at: x, zone: { x: x - left, width: span + left + reach(before(index + 1)) } });
+    if (index > 0) x += BETWEEN;
+    const left = index === 0 ? WELL_MARGIN : INTO_THE_GAP;
+    const right = index === readings.length - 1 ? WELL_MARGIN : INTO_THE_GAP;
+    placed.push({ at: x, zone: { x: x - left, width: span + left + right } });
     x += span;
   }
-  return { readings: placed, menu: menuZone(menu, width, margin) };
+  return { width: x + end, readings: placed };
 }

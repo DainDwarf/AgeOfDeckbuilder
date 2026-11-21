@@ -16,6 +16,7 @@ import {
   dragOut,
   HOLDING,
   HUNT,
+  mapFrame,
   openSaved,
   paidOnDeer,
   pinnedAchievement,
@@ -26,6 +27,7 @@ import {
   reachedByClaims,
   readings,
   readNames,
+  rested,
   rowOf,
   settledOn,
   standing,
@@ -165,6 +167,44 @@ test('a chronicle of the second age stacks the pinned achievements it reads in i
     if (rowOf(reached, technology).reached) expect(height).toBeCloseTo(boxes[at].height);
     else expect(height).toBeGreaterThan(boxes[at].height);
   }
+
+  expect(problems).toEqual([]);
+});
+
+test('the pinned achievements stand under the resource bar where it reaches over them, and beside it on a window wide enough, as far from the screen’s top as from the map’s left edge', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const campaign = wonCampaign();
+  const { chronicle } = paidOnDeer(HUNT, [], campaign);
+  const [first] = stackedIn(chronicle, campaign.pins);
+  expect(first).toBeDefined();
+  const stop = `${pinnedAchievement(first)}-stop`;
+
+  /** Where the first pinned achievement, the resource bar and the map's frame stand on the page. */
+  const laidOut = async () => {
+    const seen = await readings(page, [stop, 'resource-bar']);
+    return {
+      plate: seen(stop).boundsOnScreen,
+      bar: seen('resource-bar').boundsOnScreen,
+      frame: await mapFrame(page),
+    };
+  };
+
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openSaved(page, chronicle, campaign);
+  const narrow = await laidOut();
+  const foot = narrow.bar.y + narrow.bar.height;
+  expect(narrow.plate.y).toBeGreaterThan(foot);
+  expect(narrow.plate.y - foot).toBeCloseTo(narrow.plate.x - narrow.frame.x, 0);
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await expect.poll(async () => (await mapFrame(page)).width).toBeCloseTo(1920, 0);
+  await rested(page);
+  const wide = await laidOut();
+  expect(wide.plate.y).toBeLessThan(wide.bar.y + wide.bar.height);
+  expect(wide.plate.x + wide.plate.width).toBeLessThan(wide.bar.x);
+  expect(wide.plate.y - wide.frame.y).toBeCloseTo(wide.plate.x - wide.frame.x, 0);
 
   expect(problems).toEqual([]);
 });

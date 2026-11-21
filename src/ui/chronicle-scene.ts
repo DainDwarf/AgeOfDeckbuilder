@@ -858,6 +858,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
         (name) => {
           overlay.inspectNamed(name);
         },
+        bar.left,
       ),
       overlay,
     );
