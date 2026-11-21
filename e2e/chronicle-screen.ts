@@ -1552,12 +1552,45 @@ export function westOf({ q, r }: TileCoords): TileCoords {
 }
 
 /**
- * A point beside the tiles: up and left of the centre, inside the map's frame, and far enough out
- * for the nearest tile to be well outside the map's disc.
+ * A point beside the tiles: down and left of the centre, inside the map's frame, far enough out for
+ * the nearest tile to be well outside the map's disc, and under nothing of the chronicle screen that
+ * takes the pointer; one under such a thing throws, naming it.
  */
 export async function besideTiles(page: Page): Promise<{ x: number; y: number }> {
   const city = await onScreen(page, `tile-${tileKey(CENTRE)}`);
-  return { x: city.x - 440 * city.unit, y: city.y - 160 * city.unit };
+  const at = { x: city.x - 440 * city.unit, y: city.y + 160 * city.unit };
+  const over = await takersAt(page, at);
+  if (over.length > 0)
+    throw new Error(`the point beside the tiles stands under ${over.join(', ')}`);
+  return at;
+}
+
+/** What on the chronicle screen's own scene takes the pointer at that point of the page, by name. */
+function takersAt(page: Page, at: { x: number; y: number }): Promise<string[]> {
+  return page.evaluate(({ x, y }) => {
+    const scene = window.game?.scene.getScene('ui');
+    if (scene === undefined || scene === null) throw new Error('the chronicle screen is not up');
+    const rect = scene.game.canvas.getBoundingClientRect();
+    const unit = rect.width / scene.game.canvas.width;
+    const camera = scene.cameras.main;
+    const world = camera.getWorldPoint((x - rect.left) / unit, (y - rect.top) / unit);
+    type Taker = Phaser.GameObjects.GameObject &
+      Phaser.GameObjects.Components.GetBounds & {
+        visible?: boolean;
+        parentContainer?: Phaser.GameObjects.Container | null;
+      };
+    const shown = (object: { visible?: boolean; parentContainer?: unknown } | null): boolean =>
+      object === null ||
+      object === undefined ||
+      (object.visible !== false && shown((object.parentContainer ?? null) as Taker | null));
+    // Every object made interactive is in a list the input plugin keeps private
+    // (phaser/src/input/InputPlugin.js:304, :525).
+    const { _list: takers } = scene.input as unknown as { _list: Taker[] };
+    return takers
+      .filter((object) => object.input?.enabled === true && shown(object))
+      .filter((object) => object.getBounds().contains(world.x, world.y))
+      .map((object) => object.name || object.type);
+  }, at);
 }
 
 /**
