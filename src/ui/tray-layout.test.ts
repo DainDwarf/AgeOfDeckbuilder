@@ -57,6 +57,26 @@ describe('the tray along the bottom edge', () => {
   });
 });
 
+describe('the end-turn button', () => {
+  it('stands in the bottom right corner of a window wide enough, as far in from both edges and clear of the tray', () => {
+    for (const screen of [WIDER, { width: 2560, height: 1440 }]) {
+      const { endTurn, tray } = layOutTray(screen, SMALLEST.width, CARD);
+      const fromRight = screen.width - (endTurn.x + endTurn.width);
+      expect(fromRight).toBeGreaterThan(0);
+      expect(screen.height - (endTurn.y + endTurn.height)).toBe(fromRight);
+      expect(endTurn.x).toBeGreaterThan(tray.x + tray.width);
+    }
+  });
+
+  it('stands over the exhaust pile on a narrower window, its right edge on the pile’s and its foot over the resting cards’ tops', () => {
+    for (const screen of [SMALLEST, { width: 1440, height: 900 }]) {
+      const { endTurn, piles, restingTop } = layOutTray(screen, SMALLEST.width, CARD);
+      expect(endTurn.x + endTurn.width).toBe(piles['exhaust-pile'].x + ROUND / 2);
+      expect(endTurn.y + endTurn.height).toBeLessThan(restingTop);
+    }
+  });
+});
+
 describe('the frame the map is held in', () => {
   it('runs the screen’s width from its top to between the resting cards’ tops and the tray’s', () => {
     const { mapFrame, restingTop, tray } = layOutTray(WIDER, SMALLEST.width, CARD);

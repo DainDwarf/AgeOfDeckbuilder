@@ -37,7 +37,7 @@ import { type GlyphPaint, glyphOf } from './glyphs';
 import { type BarReading, css, LOOK } from './look';
 import { asThresholdBar, type ThresholdBarSize, thresholdBarMarker } from './map-marks';
 import { text } from './text';
-import type { Tooltip } from './tooltip';
+import { STANDOFF, type Tooltip } from './tooltip';
 
 const WORD_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.faintInk) };
 const VALUE_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: css(LOOK.ink) };
@@ -471,7 +471,7 @@ export function createReading(
     hover,
     () => {
       const { title, message } = shown.tip();
-      tooltip.under(message, hover.getBounds().x, BAR_HEIGHT + 8, title);
+      tooltip.under(message, hover.getBounds().x, BAR_HEIGHT + STANDOFF, title);
     },
     () => tooltip.hide(),
   );

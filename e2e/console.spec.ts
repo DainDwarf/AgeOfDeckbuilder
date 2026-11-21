@@ -121,7 +121,7 @@ function enteredOn(chronicle: Chronicle, entering: Entering): Chronicle {
 
 /**
  * The chronicle screen once a unit has entered, in one question to the page: the chronicle on it
- * and the one the save holds, the tile ringed, the console, the faces in fog and the end-turn label.
+ * and the one the save holds, the tile ringed, the console, the faces in fog and the end-turn chip.
  */
 async function enteredScreen(page: Page): Promise<{
   chronicle: Chronicle;
@@ -151,7 +151,7 @@ async function enteredScreen(page: Page): Promise<{
           .filter((part) => part.type === 'Text')
           .map((part) => (part as Phaser.GameObjects.Text).text),
         facesInFog: window.faceCounts?.(fog).inFog,
-        endTurn: (named('end-turn-label') as Phaser.GameObjects.Text).text,
+        endTurn: (named('end-turn-count') as Phaser.GameObjects.Text).text,
       };
     },
     { entry: SAVE_ENTRY, fog: LOOK.fog },
@@ -392,7 +392,7 @@ test('unit on the chronicle screen enters the unit on the tile selected as the r
       '> ',
     ],
     facesInFog: 0,
-    endTurn: text('button.turn', { turn: oracle.turn }),
+    endTurn: String(oracle.turn),
   });
 
   expect(problems).toEqual([]);
@@ -414,7 +414,7 @@ test('unit run while an end of turn plays out stands the screen on the chronicle
     consoleOpen: true,
     lines: ['', '', `> unit ${WARRIOR}`, text('console.entered', { kind: WARRIOR }), '> '],
     facesInFog: oracle.snapshots.filter((snapshot) => !seen.has(tileKey(snapshot))).length,
-    endTurn: text('button.turn', { turn: oracle.turn }),
+    endTurn: String(oracle.turn),
   };
   onDesignedSpeed(page);
 

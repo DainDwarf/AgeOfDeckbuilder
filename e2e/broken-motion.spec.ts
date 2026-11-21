@@ -3,14 +3,14 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { RESOURCES } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
-import { text } from '../src/ui/text';
 import {
   barReadingOn,
   chronicleOf,
   counted,
   endedTurn,
   endTurn,
-  endTurnLabel,
+  endTurnChip,
+  endTurnHovered,
   firstSeed,
   onScreen,
   openSaved,
@@ -110,10 +110,8 @@ test('a motion that throws still ends the turn and gives the chronicle screen ba
     [...RESOURCES, 'idle' as const].map((key) => [key, barReadingOn(committed, key)]),
   );
   expect(await paintedReadings(page, Object.keys(readings))).toEqual(readings);
-  expect(await endTurnLabel(page)).toBe(text('button.end-turn'));
-  const food = await onScreen(page, 'reading-food');
-  await page.mouse.move(food.x, food.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn: committed.turn }));
+  expect(await endTurnHovered(page)).toBe(true);
+  expect(await endTurnChip(page)).toBe(String(committed.turn));
   expect(await counted(page, 'end-turn-leaving')).toBe(0);
 
   await endTurn(page);

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Command } from '../rules/chronicle';
 import { saveFileName } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
-import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design-space';
+import { createScrim, holdDesignSpace, stopsThePointer, stratumOf, whileUp } from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
 import {
   behind,
@@ -22,6 +22,7 @@ import { META_SCREENS } from './navbar';
 import { type CoversOverlay, overlayAhead } from './overlay-scene';
 import { clearSave, keepSave, readSaveFileText, saveFileText } from './save-entry';
 import { onRefused } from './storage';
+import { createTooltip } from './tooltip';
 
 /** What the menu asks of the chronicle scene at the press, and all it ever holds of it. */
 export type LeavesChronicles = Phaser.Scene & { leave(): void };
@@ -67,10 +68,14 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
   }
 
   create(): void {
-    holdDesignSpace(this, this.cameras.main);
-    createMenuButton(this, () => this.raise());
+    const camera = this.cameras.main;
+    holdDesignSpace(this, camera);
+    const button = stratumOf(this.add.layer(), camera);
+    const tooltip = createTooltip(this, stratumOf(this.add.layer(), camera));
+    createMenuButton(this, button, tooltip, () => this.raise());
 
-    // Added after the button, which they therefore cover: a press there is a press on a scrim.
+    // Added after the button and its tooltip, which they therefore cover: a press there is a press on a
+    // scrim.
     const scrim = createScrim(this, () => back());
     // Its depth and its window's keep them over a window of the menu raised after them.
     const refusedSaveScrim = createScrim(this, () => takeDownRefusedSave()).setDepth(1);

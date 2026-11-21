@@ -8,6 +8,9 @@ import { aroundPicture, paintMade, washed } from './sheet';
 /** How wide the dark outline round a glyph is, in the units of the surface it is drawn on. */
 const OUTLINE = 0.5;
 
+/** How wide a pile's sign and a button's stand, as a share of the round or the square they stand on. */
+export const SIGN_SHARE = 0.6;
+
 /** The colour a symbol is known by. */
 function colourOf(symbol: CastSymbol): number {
   switch (symbol) {
@@ -49,12 +52,16 @@ function colourOf(symbol: CastSymbol): number {
     case 'discard-pile':
     case 'exhaust-pile':
       return LOOK.charcoalInk;
+    case 'end-turn-button':
+    case 'menu-button':
+    case 'icons-button':
+      return LOOK.metalInk;
   }
 }
 
 /**
  * Whether a symbol's glyph wears its outline where it is not told: the hostile glyph, read in a text's
- * ink, wears none, and neither does a pile's sign, on its rimmed round.
+ * ink, wears none, and neither does a pile's sign, on its rimmed round, nor a button's, on its metal.
  */
 function outlinedOf(symbol: CastSymbol): boolean {
   switch (symbol) {
@@ -62,6 +69,9 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'draw-pile':
     case 'discard-pile':
     case 'exhaust-pile':
+    case 'end-turn-button':
+    case 'menu-button':
+    case 'icons-button':
       return false;
     case 'food':
     case 'production':

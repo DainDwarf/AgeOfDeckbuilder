@@ -1,5 +1,6 @@
 import type Phaser from 'phaser';
 import { pressOf } from './bindings';
+import type { ButtonSign } from './cast';
 import {
   BUTTONS,
   type ButtonLook,
@@ -15,7 +16,14 @@ import {
   WINDOW_BAND,
   WINDOW_RIM,
 } from './chrome-kit';
-import { type Box, onHover, onLetGoOffCanvas, reactsToPress } from './design-space';
+import {
+  type Box,
+  hitPointInWorld,
+  onHover,
+  onLetGoOffCanvas,
+  reactsToPress,
+} from './design-space';
+import { asGlyph, glyphMark, SIGN_SHARE } from './glyphs';
 
 /**
  * How many design units a pixel of the kit's files is drawn across on each kind of panel, which sets
@@ -57,15 +65,29 @@ function fit(slice: Phaser.GameObjects.NineSlice, piece: Fitted, box: Box): void
   lay(slice, piece, box, box.height / piece.height);
 }
 
-/** The piece taking the pointer on its own box alone, never on the shadow round it. */
-export function takesThePointer(slice: Phaser.GameObjects.NineSlice): Phaser.GameObjects.NineSlice {
+/**
+ * The piece taking the pointer on its own box, never on the shadow round it, and wherever else on its
+ * surface `reaches` says it does.
+ */
+export function takesThePointer(
+  slice: Phaser.GameObjects.NineSlice,
+  reaches?: (x: number, y: number) => boolean,
+): Phaser.GameObjects.NineSlice {
   return slice.setInteractive({
     hitArea: {},
-    hitAreaCallback: (_area: object, x: number, y: number) =>
-      x >= SHADOW_MARGIN &&
-      y >= SHADOW_MARGIN &&
-      x <= slice.width - SHADOW_MARGIN &&
-      y <= slice.height - SHADOW_MARGIN,
+    hitAreaCallback: (_area: object, x: number, y: number) => {
+      if (
+        x >= SHADOW_MARGIN &&
+        y >= SHADOW_MARGIN &&
+        x <= slice.width - SHADOW_MARGIN &&
+        y <= slice.height - SHADOW_MARGIN
+      ) {
+        return true;
+      }
+      if (reaches === undefined) return false;
+      const at = hitPointInWorld(slice, x, y);
+      return reaches(at.x, at.y);
+    },
   });
 }
 
@@ -154,22 +176,31 @@ export type ChromeButton = {
 };
 
 /**
- * A button of the kit on the box, its face named `name`, fitted to the box's height, reacting to a
- * press where `live` holds. Live, it wears the hover look under the pointer, and the pressed look while
- * a left press that landed on it is held on it; dead, it wears neither.
+ * Whether a button is live, and where else on its surface its face takes the pointer than on its own
+ * box.
+ */
+export type ButtonReach = {
+  readonly live?: () => boolean;
+  readonly reaches?: (x: number, y: number) => boolean;
+};
+
+/**
+ * A button of the kit on the box, its face named `name`, fitted to the box's height, the pointer the
+ * hand on it. Live, it wears the hover look under the pointer, and the pressed look while a left press
+ * that landed on it is held on it; dead, it wears neither.
  */
 export function createChromeButton(
   scene: Phaser.Scene,
   piece: ButtonPiece,
   laidOn: Box,
   name: string,
-  live: () => boolean = () => true,
+  { live = () => true, reaches }: ButtonReach = {},
 ): ChromeButton {
   let box = laidOn;
   const { looks } = BUTTONS[piece];
   const standing = buttonIn(piece, 'normal');
-  const face = takesThePointer(sliceOf(scene, standing).setName(name));
-  reactsToPress(face, live);
+  const face = takesThePointer(sliceOf(scene, standing).setName(name), reaches);
+  reactsToPress(face);
   let latched = false;
   let held = false;
 
@@ -219,6 +250,51 @@ export function createChromeButton(
     place(next: Box): void {
       box = next;
       stand();
+    },
+  };
+}
+
+/** A button of the kit wearing a sign and no word, the sign on its middle. */
+export type SignButton = ChromeButton & {
+  readonly sign: Phaser.GameObjects.Container;
+  /** The sign drawn in that colour, its symbol's own where none is handed, `step` down and right of the middle. */
+  ink(colour?: number, step?: number): void;
+};
+
+/**
+ * A button of the kit on the box, its face named `name`, wearing the symbol's sign on its middle, in
+ * the symbol's colour and with no outline, as wide a share of the box as a pile's sign is of its round.
+ */
+export function createSignButton(
+  scene: Phaser.Scene,
+  piece: ButtonPiece,
+  symbol: ButtonSign,
+  laidOn: Box,
+  name: string,
+  reach?: ButtonReach,
+): SignButton {
+  const button = createChromeButton(scene, piece, laidOn, name, reach);
+  const sign = glyphMark(scene).setName(`${name}-sign`);
+  let box = laidOn;
+  let colour: number | undefined;
+  let step = 0;
+  const draw = (): void => {
+    asGlyph(sign, symbol, SIGN_SHARE * box.height, colour === undefined ? {} : { colour });
+    sign.setPosition(box.x + box.width / 2 + step, box.y + box.height / 2 + step);
+  };
+  draw();
+  return {
+    ...button,
+    sign,
+    place(next: Box): void {
+      box = next;
+      button.place(next);
+      draw();
+    },
+    ink(next?: number, by = 0): void {
+      colour = next;
+      step = by;
+      draw();
     },
   };
 }

@@ -26,7 +26,7 @@ export type Fitted = Piece & { readonly height: number };
 /** The looks a button of the kit wears. */
 export type ButtonLook = 'normal' | 'hover' | 'pressed';
 
-/** The kit's buttons the chrome draws: its gold, and its darker silver. */
+/** The kit's buttons the chrome draws: its gold, and its bright silver. */
 export type ButtonPiece = 'gold' | 'silver';
 
 /** A button of the kit: its file in each look, cut alike. */
@@ -67,9 +67,9 @@ export const BUTTONS: Readonly<Record<ButtonPiece, Button>> = {
   },
   silver: {
     looks: {
-      normal: `${KIT}/btn_secondary_normal.png`,
-      hover: `${KIT}/btn_secondary_hover.png`,
-      pressed: `${KIT}/btn_secondary_pressed.png`,
+      normal: `${KIT}/btn_primary_normal.png`,
+      hover: `${KIT}/btn_primary_hover.png`,
+      pressed: `${KIT}/btn_primary_pressed.png`,
     },
     cuts: { left: 46, top: 46, right: 46, bottom: 54 },
     height: 108,

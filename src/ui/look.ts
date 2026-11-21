@@ -100,9 +100,9 @@ export type Look = {
   readonly panelEdge: number;
   readonly ink: number;
   readonly faintInk: number;
-  /** The ink words read in on the charcoal of the chrome's panels and in its wells. */
+  /** The ink words and signs read in on the charcoal of the chrome's panels and in its wells. */
   readonly charcoalInk: number;
-  /** The ink words read in on the chrome's silver and gold: a button's, and a window's gold band. */
+  /** The ink words and signs read in on the chrome's silver and gold: a button's, and a window's gold band. */
   readonly metalInk: number;
   readonly paleInk: number;
   readonly answerInk: number;

@@ -10,10 +10,9 @@ import {
   besideTiles,
   campBeside,
   cardOnFace,
-  chronicleOf,
   cursorOverCanvas,
   endedTurn,
-  endTurnLabel,
+  endTurnHovered,
   firstDealt,
   influenceCardGaining,
   kindLabelOnScreen,
@@ -116,29 +115,28 @@ test('a reading’s tooltip names it over its sentence: food with its stock over
 
 // The single move is the whole point: the pointer never passes over the canvas outside the button,
 // so nothing but the leaving of the canvas itself can end the hover.
-test('the end-turn button reads the turn again when the pointer leaves the canvas over it', async ({
+test('the end-turn button lets its hover look go when the pointer leaves the canvas over it', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
 
-  const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
   const bare = await offCanvas(page);
 
   await page.mouse.move(button.x, button.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
 
   await page.mouse.move(bare.x, bare.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+  await expect.poll(() => endTurnHovered(page)).toBe(false);
 
   expect(problems).toEqual([]);
 });
 
 // The end of turn is pressed on the button and the pointer rests there through its play-out: the
 // first assertions have to come before any move.
-test('the end-turn button reads End turn under the pointer the last turn ended at', async ({
+test('the end-turn button wears its hover look under the pointer the last turn ended at', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -146,39 +144,37 @@ test('the end-turn button reads End turn under the pointer the last turn ended a
   await openSaved(page, settledOn(1));
   await stoppedTurn(page);
 
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
-  const { turn } = await chronicleOf(page);
   const beside = await besideTiles(page);
   await page.mouse.move(beside.x, beside.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+  await expect.poll(() => endTurnHovered(page)).toBe(false);
   expect(await cursorOverCanvas(page)).not.toBe(HAND);
 
   expect(problems).toEqual([]);
 });
 
-test('the end-turn button reads End turn when the pointer comes back straight onto it', async ({
+test('the end-turn button wears its hover look when the pointer comes back straight onto it', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
 
-  const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
   const bare = await offCanvas(page);
 
   await page.mouse.move(bare.x, bare.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+  await expect.poll(() => endTurnHovered(page)).toBe(false);
 
   await page.mouse.move(button.x, button.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   const beside = await besideTiles(page);
   await page.mouse.move(beside.x, beside.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+  await expect.poll(() => endTurnHovered(page)).toBe(false);
   expect(await cursorOverCanvas(page)).not.toBe(HAND);
 
   expect(problems).toEqual([]);
@@ -221,45 +217,43 @@ test('a tooltip standing over a reading goes down when the back key raises the m
 
 // The pointer never moves after it reaches the button: the menu rising and falling over it is all
 // that happens under it.
-test('the end-turn button reads End turn the moment the menu falls under a pointer resting on it', async ({
+test('the end-turn button wears its hover look the moment the menu falls under a pointer resting on it', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
 
-  const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
   await page.mouse.move(button.x - 20 * button.unit, button.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+  await expect.poll(() => endTurnHovered(page)).toBe(false);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
   expect(await cursorOverCanvas(page)).toBe(HAND);
 
   expect(problems).toEqual([]);
 });
 
-test('the end-turn button reads the turn again when the pointer moves straight onto the Menu button', async ({
+test('the end-turn button lets its hover look go when the pointer moves straight onto the Menu button', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, settledOn(1));
 
-  const { turn } = await chronicleOf(page);
   const button = await onScreen(page, 'end-turn');
   const menu = await onScreen(page, 'menu-button');
   await page.mouse.move(button.x - 20 * button.unit, button.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-turn'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
 
   await page.mouse.move(menu.x, menu.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.turn', { turn }));
+  await expect.poll(() => endTurnHovered(page)).toBe(false);
 
   expect(problems).toEqual([]);
 });

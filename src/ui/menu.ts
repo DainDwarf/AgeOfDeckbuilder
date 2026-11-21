@@ -13,7 +13,14 @@ import {
   WHEELED,
   type Wheeled,
 } from './bindings';
-import { type ChromeButton, createChromeButton, createChromeWindow } from './chrome';
+import type { ButtonSign } from './cast';
+import {
+  createChromeButton,
+  createChromeWindow,
+  createSignButton,
+  type SignButton,
+} from './chrome';
+import { type CornerLayout, layOutCorner } from './corner-layout';
 import {
   addText,
   BAR_HEIGHT,
@@ -22,9 +29,11 @@ import {
   MARGIN,
   offMiddle,
   onClick,
+  onHover,
   onResize,
   placedWhileUp,
   type SizedStyle,
+  type Stratum,
   screenSize,
   UI_FONT,
   whileUp,
@@ -33,6 +42,7 @@ import { factionSigns, pressFactionSigns } from './faction-signs';
 import { interfaceSize, pressInterfaceSize, sizeRead } from './interface-size';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
+import { STANDOFF, type Tooltip } from './tooltip';
 
 /** A warning: a window of its own, whose first button is the press it warns of, going through. */
 export type Warning =
@@ -762,64 +772,59 @@ function titledWindow(
   return createChromeWindow(scene, box, title.y + title.height + BAND_PAST_TITLE);
 }
 
-/** How tall a button of the darker silver stands, and how far it reaches around its word. */
-const SILVER_HEIGHT = 32;
-const SILVER_PADDING = 12;
-
-const SILVER_STYLE = { fontFamily: UI_FONT, fontSize: '18px', color: METAL_INK };
-
-function silverWord(scene: Phaser.Scene, reads: string): Phaser.GameObjects.Text {
-  return addText(scene, 0, 0, reads, SILVER_STYLE).setOrigin(0.5, 0.5);
-}
-
-/** How wide and how tall a button of the darker silver stands, reading that word. */
-export function silverButtonSize(
-  scene: Phaser.Scene,
-  reads: string,
-): { width: number; height: number } {
-  const word = silverWord(scene, reads);
-  const width = word.width + 2 * SILVER_PADDING;
-  word.destroy();
-  return { width, height: SILVER_HEIGHT };
+/** The buttons at the screen's top right corner, as the screen now stands. */
+export function cornerNow(): CornerLayout {
+  return layOutCorner(screenSize().width, MARGIN, BAR_HEIGHT);
 }
 
 /**
- * A button of the kit's darker silver reading `reads`, its face named `name`, sized to its word and
- * centred on the point, its label named `<name>-label`; a click on it does what `pressed` does.
+ * A square of the kit's bright silver on the stratum wearing the symbol's sign, its face named
+ * `name`, standing at its place at the screen's top right corner; the rest on it raises `reads` under
+ * it on the tooltip, and a click on it does what `pressed` does.
  */
-export function createSilverButton(
+export function createCornerButton(
   scene: Phaser.Scene,
-  name: string,
-  reads: string,
-  { x, y }: { x: number; y: number },
+  on: Stratum,
+  {
+    symbol,
+    name,
+    at,
+  }: { readonly symbol: ButtonSign; readonly name: string; readonly at: keyof CornerLayout },
+  { tooltip, reads }: { readonly tooltip: Tooltip; readonly reads: string },
   pressed: () => void,
-): { button: ChromeButton; label: Phaser.GameObjects.Text } {
-  const { width, height } = silverButtonSize(scene, reads);
-  const box = { x: x - width / 2, y: y - height / 2, width, height };
-  const button = createChromeButton(scene, 'silver', box, name);
+): SignButton {
+  let box = cornerNow()[at];
+  const button = createSignButton(scene, 'silver', symbol, box, name);
+  on.layer.add([button.face, button.sign]);
   onClick(button.face, pressed);
-  // Added after the face: the display list paints in add order, so a label added first would be hidden.
-  const label = silverWord(scene, reads).setPosition(x, y).setName(`${name}-label`);
-  return { button, label };
+  onResize(scene, () => {
+    box = cornerNow()[at];
+    button.place(box);
+  });
+  onHover(
+    button.face,
+    () => {
+      tooltip.under(reads, box.x, box.y + box.height + STANDOFF);
+    },
+    () => {
+      tooltip.hide();
+    },
+  );
+  return button;
 }
 
-/** How far down the screen the Menu button's foot stands. */
-export const MENU_FOOT = BAR_HEIGHT / 2 + SILVER_HEIGHT / 2;
-
-/** The Menu button at the top right of whatever screen stands under it, a margin in from the edge. */
-export function createMenuButton(scene: Phaser.Scene, pressed: () => void): void {
-  const reads = text('menu.menu');
-  const { width, height } = silverButtonSize(scene, reads);
-  const { button, label } = createSilverButton(
+/** The Menu button at the top right corner of whatever screen stands under it, naming itself on the tooltip. */
+export function createMenuButton(
+  scene: Phaser.Scene,
+  on: Stratum,
+  tooltip: Tooltip,
+  pressed: () => void,
+): void {
+  createCornerButton(
     scene,
-    'menu-button',
-    reads,
-    { x: 0, y: 0 },
+    on,
+    { symbol: 'menu-button', name: 'menu-button', at: 'menu' },
+    { tooltip, reads: text('menu.menu') },
     pressed,
   );
-  onResize(scene, () => {
-    const centre = { x: screenSize().width - MARGIN - width / 2, y: BAR_HEIGHT / 2 };
-    button.place({ x: centre.x - width / 2, y: centre.y - height / 2, width, height });
-    label.setPosition(centre.x, centre.y);
-  });
 }

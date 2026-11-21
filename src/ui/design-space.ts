@@ -559,6 +559,19 @@ export function reactsToPress<T extends Phaser.GameObjects.GameObject>(
   return object;
 }
 
+/** An object a hit test reads in its own space: placed in the world, about its display origin. */
+type HitTested = Phaser.GameObjects.Components.Transform & {
+  readonly displayOriginX: number;
+  readonly displayOriginY: number;
+};
+
+/** The point a hit test hands the object's hit area callback, at its place in the world. */
+export function hitPointInWorld(object: HitTested, x: number, y: number): { x: number; y: number } {
+  return object
+    .getWorldTransformMatrix()
+    .transformPoint(x - object.displayOriginX, y - object.displayOriginY);
+}
+
 /**
  * The zone made interactive where `liesUnder` says what it stands over lies under the pointer, asked
  * at the pointer's point of the world.
@@ -570,9 +583,7 @@ export function pressedWhere(
   return zone.setInteractive({
     hitArea: {},
     hitAreaCallback: (_area: object, x: number, y: number) => {
-      const at = zone
-        .getWorldTransformMatrix()
-        .transformPoint(x - zone.displayOriginX, y - zone.displayOriginY);
+      const at = hitPointInWorld(zone, x, y);
       return liesUnder(at.x, at.y);
     },
   });

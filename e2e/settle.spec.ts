@@ -5,7 +5,6 @@ import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileAt, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
-import { text } from '../src/ui/text';
 import {
   aimed,
   borderColours,
@@ -16,7 +15,8 @@ import {
   click,
   dragOut,
   drawnFaces,
-  endTurnLabel,
+  endTurnChip,
+  endTurnHovered,
   faceCounts,
   idsOf,
   launchedAs,
@@ -56,14 +56,14 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   }
   expect(await marksIn(page, 'border')).toBe(0);
 
-  expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
+  expect(await endTurnChip(page)).toBeUndefined();
   expect((await pieceWorn(page, 'end-turn')).piece).toBe('gold');
   expect(await shows(page, 'settle-phase-frame')).toBe(true);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   await click(page, 'end-turn');
   await rested(page);
   await rested(page);
-  expect(await endTurnLabel(page)).toBe(text('button.settle-phase'));
+  expect(await endTurnChip(page)).toBeUndefined();
   expect(await chronicleOf(page)).toEqual(opened);
 
   const settle = opened.hand[0].id;
@@ -96,7 +96,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   const button = await onScreen(page, 'end-turn');
   await page.mouse.move(button.x, button.y);
-  await expect.poll(() => endTurnLabel(page)).toBe(text('button.end-settle-phase'));
+  await expect.poll(() => endTurnHovered(page)).toBe(true);
 
   await stoppedTurn(page);
   const ticked = await chronicleOf(page);

@@ -25,12 +25,12 @@ import { createBand, trayNow } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { createChromeButton } from './chrome';
+import { createSignButton } from './chrome';
 import { createChronicleFaces } from './chronicle-faces';
 import { offerEntries, resetConsole } from './debug-console';
 import {
-  addText,
   awayUnder,
+  type Box,
   COVERED,
   holdDesignSpace,
   onClick,
@@ -43,20 +43,19 @@ import {
   stopsThePointer,
   stratumOf,
   thingUnder,
-  UI_FONT,
 } from './design-space';
 import type { DrawsSigns } from './faction-signs';
 import { createHand } from './hand';
 import { createIconsButton } from './icons-button';
 import { type Card, cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
-import { css, LOOK } from './look';
+import { LOOK } from './look';
 import { type AimShown, createMapView, type Drawn, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
-import { createPiles } from './piles';
+import { countText, createCount, createPiles, nameOver, onCount } from './piles';
 import { createPinnedAchievements } from './pinned-achievement';
 import { refused, refusedAim } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
@@ -65,8 +64,7 @@ import { campaignHeld, keepChronicle, type Opening } from './save-entry';
 import { createSmallCards } from './small-card';
 import { createStanding } from './standing';
 import { text } from './text';
-import { createTooltip } from './tooltip';
-import { ROUND } from './tray-layout';
+import { createTooltip, type Tooltip } from './tooltip';
 
 type Part = {
   render(chronicle: Chronicle): void;
@@ -117,13 +115,6 @@ function reckonsThrough(command: Command): boolean {
       return true;
   }
 }
-
-const LABEL_STYLE = {
-  fontFamily: UI_FONT,
-  fontSize: '18px',
-  fontStyle: 'bold',
-  color: css(LOOK.metalInk),
-};
 
 export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, DrawsSigns {
   /** The map and the infopanel drawn again with the faction signs as they now stand. */
@@ -524,7 +515,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       },
     });
 
-    const endTurn = this.addEndTurn(ui.endTurn, () => {
+    const endTurn = this.addEndTurn(ui.endTurn, tooltip.ui, () => {
       void playOut({ type: 'end-turn' });
     });
 
@@ -658,7 +649,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       showYields();
     };
 
-    const iconsButton = createIconsButton(this, ui.pinned, () => {
+    const iconsButton = createIconsButton(this, ui.pinned, tooltip.ui, () => {
       switchDiscs();
     });
 
@@ -889,104 +880,102 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     });
   }
 
-  private addEndTurn(on: Stratum, endTurn: () => void): Part & { live(on: boolean): void } {
-    const label = addText(this, 0, 0, '', LABEL_STYLE)
-      .setOrigin(0.5, 0.5)
-      .setName('end-turn-label');
-
-    // Measured at every label it ever takes, so neither the hover swap, the phase it stands on nor a
-    // fourth digit in the turn resizes it.
-    let widest = 0;
-    for (const reading of [
-      text('button.turn', { turn: 8888 }),
-      text('button.end-turn'),
-      text('button.settle-phase'),
-      text('button.end-settle-phase'),
-    ]) {
-      label.setText(reading);
-      widest = Math.max(widest, label.width);
-    }
-    const width = widest + 56;
-    const height = label.height + 24;
-    /** Where the button's middle stands: over the discard and the exhaust piles, its right edge on the exhaust pile's. */
-    let x = 0;
-    let y = 0;
+  private addEndTurn(
+    on: Stratum,
+    tooltip: Tooltip,
+    endTurn: () => void,
+  ): Part & { live(on: boolean): void } {
+    let box = trayNow().endTurn;
+    /** The turn's chip, and nothing on the settle phase, which wears none. */
+    let counted: Box | undefined;
 
     /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
     let wanted = true;
     let standing = false;
     const live = (): boolean => wanted && standing;
     // Interactive dead or live, so no press reaches the map under it.
-    const chrome = createChromeButton(
-      this,
-      'gold',
-      { x: 0, y: 0, width, height },
-      'end-turn',
+    const button = createSignButton(this, 'gold', 'end-turn-button', box, 'end-turn', {
       live,
-    );
-    const button = chrome.face;
-    on.layer.add([button, label]);
-    onResize(this, () => {
-      const { piles, restingTop } = trayNow();
-      x = piles['exhaust-pile'].x + ROUND / 2 - width / 2;
-      y = restingTop - 14 - height / 2;
-      chrome.place({ x: x - width / 2, y: y - height / 2, width, height });
-      label.setPosition(x, y);
+      reaches: (x, y) => counted !== undefined && onCount(counted, x, y),
     });
+    const count = createCount(this, 'end-turn-count');
+    const leaving = countText(this).setName('end-turn-leaving').setVisible(false);
+    on.layer.add([button.face, button.sign, count.chip, count.number, leaving]);
 
     let turn = 1;
     let settlePhase = false;
-    const paint = (): void => {
-      chrome.dress();
-      const hovered = hover.hovered && live();
-      if (settlePhase) {
-        label.setText(text(hovered ? 'button.end-settle-phase' : 'button.settle-phase'));
-        return;
-      }
-      label.setText(hovered ? text('button.end-turn') : text('button.turn', { turn }));
-    };
 
-    const hover = onHover(button, paint, paint);
-    onClick(button, () => {
+    /** The button and its chip laid where the screen puts them, the chip sized for the number it reads. */
+    const lay = (): void => {
+      box = trayNow().endTurn;
+      button.place(box);
+      count.number.setText(String(turn));
+      counted = settlePhase ? undefined : count.lay(box, 'right');
+      count.chip.setVisible(!settlePhase);
+      count.number.setVisible(!settlePhase);
+    };
+    onResize(this, lay);
+
+    const name = (): void => {
+      nameOver(
+        tooltip,
+        text(settlePhase ? 'button.end-settle-phase' : 'button.end-turn'),
+        box,
+        counted,
+      );
+    };
+    const hover = onHover(button.face, name, () => {
+      tooltip.hide();
+    });
+    onClick(button.face, () => {
       if (live()) endTurn();
     });
 
-    /** The label a roll is carrying off the button; a render owns it and takes it down. */
-    let leaving: Phaser.GameObjects.Text | undefined;
-
-    const render = (chronicle: Chronicle): void => {
-      stopMotion(this, label);
-      if (leaving !== undefined) {
-        stopMotion(this, leaving);
-        leaving.destroy();
-        leaving = undefined;
-      }
-      label.setPosition(x, y).setAlpha(1);
+    /** The button standing on the chronicle's phase and turn, a name standing under the pointer read again. */
+    const stand = (chronicle: Chronicle): void => {
+      const phaseWas = settlePhase;
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);
-      standing = chronicle.city !== undefined;
-      paint();
+      lay();
+      button.dress();
+      if (!hover.hovered || settlePhase === phaseWas) return;
+      tooltip.hide();
+      name();
     };
 
-    /** The turn rolling over: the label that stood rises out as the next turn's rises in. */
-    const roll = async (chronicle: Chronicle): Promise<void> => {
-      const carried = addText(this, x, y, label.text, LABEL_STYLE)
-        .setOrigin(0.5, 0.5)
-        .setName('end-turn-leaving');
-      on.layer.add(carried);
-      leaving = carried;
-      turn = chronicle.turn;
-      settlePhase = onSettlePhase(chronicle);
-      paint();
-      label.setPosition(x, y + 24).setAlpha(0);
+    /** The roll in the air; a render owns it and takes it down. */
+    let rolling: object | undefined;
 
-      const rolling = { duration: 400, ease: EASE };
+    const render = (chronicle: Chronicle): void => {
+      rolling = undefined;
+      stopMotion(this, [count.number, leaving]);
+      leaving.setVisible(false);
+      count.number.setAlpha(1);
+      standing = chronicle.city !== undefined;
+      stand(chronicle);
+    };
+
+    /** The turn rolling over: the number that stood rises out of the chip as the next rises in. */
+    const roll = async (chronicle: Chronicle): Promise<void> => {
+      const flight = {};
+      rolling = flight;
+      const stood = settlePhase ? undefined : count.number.text;
+      stand(chronicle);
+      const { x, y } = count.number;
+      leaving
+        .setText(stood ?? '')
+        .setPosition(x, y)
+        .setAlpha(1)
+        .setVisible(stood !== undefined);
+      count.number.setPosition(x, y + 12).setAlpha(0);
+
+      const motion = { duration: 400, ease: EASE };
       await Promise.all([
-        ended(this.tweens.add({ targets: carried, y: y - 24, alpha: 0, ...rolling })),
-        ended(this.tweens.add({ targets: label, y, alpha: 1, ...rolling })),
+        ended(this.tweens.add({ targets: leaving, y: y - 12, alpha: 0, ...motion })),
+        ended(this.tweens.add({ targets: count.number, y, alpha: 1, ...motion })),
       ]);
       // A render while the roll was in the air took it down and painted the turn it stands on.
-      if (leaving === carried) render(chronicle);
+      if (rolling === flight) render(chronicle);
     };
 
     const part = {
@@ -996,7 +985,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       },
       live(on: boolean): void {
         wanted = on;
-        paint();
+        button.dress();
       },
     };
     return part;

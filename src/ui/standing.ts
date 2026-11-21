@@ -9,7 +9,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { css, LOOK } from './look';
-import { MENU_FOOT } from './menu';
+import { cornerNow } from './menu';
 
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
 const STROKE = 8;
@@ -83,8 +83,9 @@ export function createStanding(
     frame
       .setPosition(STROKE / 2, STROKE / 2)
       .setSize(screen.width - STROKE, screen.height - STROKE);
+    const { menu } = cornerNow();
     const x = screen.width - CHIP_INSET - width;
-    const y = MENU_FOOT + UNDER_THE_MENU;
+    const y = menu.y + menu.height + UNDER_THE_MENU;
     chip.setPosition(x, y);
     label.setPosition(x + width / 2, y + height / 2);
   });

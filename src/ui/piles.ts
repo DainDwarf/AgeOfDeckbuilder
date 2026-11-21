@@ -20,11 +20,11 @@ import {
   type Stratum,
   UI_FONT,
 } from './design-space';
-import { asGlyph, glyphMark } from './glyphs';
+import { asGlyph, glyphMark, SIGN_SHARE } from './glyphs';
 import { css, darkeningOf, LOOK, multiplied, untoned } from './look';
 import { asPainted } from './pool';
 import { text } from './text';
-import type { Tooltip } from './tooltip';
+import { STANDOFF, type Tooltip } from './tooltip';
 import { ROUND } from './tray-layout';
 
 /** The cards a pile holds, in pile order. */
@@ -56,20 +56,69 @@ export function atPile(pile: PileKind): {
   return { x, y: y + (AT_PILE * CARD_HEIGHT) / 2, rotation: 0, scale: AT_PILE };
 }
 
-/** How wide a pile's sign stands, as a share of its round. */
-const SIGN_SHARE = 0.6;
-
 /**
  * How tall a pile's count stands, how much wider than its number and how narrow at the least, and how
- * far past the round's box it reaches, up and sideways.
+ * far past the box it counts on it reaches, up and sideways.
  */
 const COUNT_HEIGHT = 24;
 const COUNT_PAD = 16;
 const COUNT_LEAST = 30;
 const COUNT_OVERHANG = 9;
 
-/** How far over the count's top the pile's tooltip stands its bottom edge. */
-const TOOLTIP_STANDOFF = 8;
+const COUNT_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '15px',
+  fontStyle: 'bold',
+  color: css(LOOK.charcoalInk),
+};
+
+/** A number in a count's type, about its middle, reading nothing yet. */
+export function countText(scene: Phaser.Scene): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, '', COUNT_STYLE).setOrigin(0.5, 0.5);
+}
+
+/** A count as a pile reads it: its number, named `name`, on the kit's counter chip, `<name>-chip`. */
+export type Count = {
+  readonly chip: Phaser.GameObjects.NineSlice;
+  readonly number: Phaser.GameObjects.Text;
+  /**
+   * The count laid at the top corner of the box on that side, its chip reaching past the box and as
+   * wide as the number it now reads asks; answers the chip's box.
+   */
+  lay(on: Box, corner: 'left' | 'right'): Box;
+};
+
+/** A count drawing nothing yet: its chip and its number, named `name`, laid by `lay`. */
+export function createCount(scene: Phaser.Scene, name: string): Count {
+  const chip = createChromeCounter(scene).setName(`${name}-chip`);
+  const number = countText(scene).setName(name);
+  return {
+    chip,
+    number,
+    lay(on: Box, corner: 'left' | 'right'): Box {
+      const width = Math.max(COUNT_LEAST, ownBoxOf(number).width + COUNT_PAD);
+      const left =
+        corner === 'left' ? on.x - COUNT_OVERHANG : on.x + on.width + COUNT_OVERHANG - width;
+      const counted = { x: left, y: on.y - COUNT_OVERHANG, width, height: COUNT_HEIGHT };
+      placeChromeCounter(chip, counted);
+      number.setPosition(left + width / 2, counted.y + COUNT_HEIGHT / 2);
+      return counted;
+    },
+  };
+}
+
+/** Whether a point of the surface lies on a count's chip laid on that box. */
+export function onCount(counted: Box, x: number, y: number): boolean {
+  return inRoundedBox({ x, y }, counted, COUNT_HEIGHT / 2);
+}
+
+/**
+ * What a count stands on named over it on the surface's tooltip: its left edge on the thing's, its
+ * bottom edge over the count's top, or over the thing's own where it wears no count.
+ */
+export function nameOver(tooltip: Tooltip, name: string, on: Box, counted?: Box): void {
+  tooltip.over(name, on.x, (counted ?? on).y - STANDOFF);
+}
 
 export type Piles = {
   render(chronicle: Chronicle): void;
@@ -283,26 +332,16 @@ function createPile(
     .setVisible(false)
     .setName(`${pile}-veil`);
   const sign = glyphMark(scene).setName(`${pile}-sign`);
-  const chip = createChromeCounter(scene).setName(`${pile}-count-chip`);
-  const count = addText(scene, 0, 0, '', {
-    fontFamily: UI_FONT,
-    fontSize: '15px',
-    fontStyle: 'bold',
-    color: css(LOOK.charcoalInk),
-  })
-    .setOrigin(0.5, 0.5)
-    .setName(`${pile}-count`);
+  const count = createCount(scene, `${pile}-count`);
 
   /** Where the round's box and the count's chip stand. */
   let rounded: Box = { x: 0, y: 0, width: ROUND, height: ROUND };
   let counted: Box = { x: 0, y: 0, width: 0, height: 0 };
   const press = pressedWhere(
     scene.add.zone(0, 0, ROUND, ROUND).setName(pile),
-    (x, y) =>
-      inRoundedBox({ x, y }, rounded, ROUND / 2) ||
-      inRoundedBox({ x, y }, counted, COUNT_HEIGHT / 2),
+    (x, y) => inRoundedBox({ x, y }, rounded, ROUND / 2) || onCount(counted, x, y),
   );
-  on.layer.add([round, veil, sign, chip, count, press]);
+  on.layer.add([round, veil, sign, count.chip, count.number, press]);
 
   const place = (): void => {
     const { x, y } = trayNow().piles[pile];
@@ -311,14 +350,7 @@ function createPile(
     veil.setPosition(x, y);
     sign.setPosition(x, y);
     press.setPosition(x, y);
-    const width = Math.max(COUNT_LEAST, ownBoxOf(count).width + COUNT_PAD);
-    const left =
-      pile === 'draw-pile'
-        ? rounded.x - COUNT_OVERHANG
-        : rounded.x + ROUND + COUNT_OVERHANG - width;
-    counted = { x: left, y: rounded.y - COUNT_OVERHANG, width, height: COUNT_HEIGHT };
-    placeChromeCounter(chip, counted);
-    count.setPosition(left + width / 2, counted.y + COUNT_HEIGHT / 2);
+    counted = count.lay(rounded, pile === 'draw-pile' ? 'left' : 'right');
   };
   onResize(scene, place);
 
@@ -327,7 +359,7 @@ function createPile(
     press,
     () => {
       veil.setVisible(true);
-      tooltip.over(text(`tooltip.${pile}`), rounded.x, counted.y - TOOLTIP_STANDOFF);
+      nameOver(tooltip, text(`tooltip.${pile}`), rounded, counted);
     },
     () => {
       veil.setVisible(false);
@@ -348,7 +380,7 @@ function createPile(
 
   return {
     count(cards: number): void {
-      count.setText(String(cards));
+      count.number.setText(String(cards));
       asGlyph(sign, pile, SIGN_SHARE * ROUND, { tone: cards === 0 ? emptied : untoned });
       place();
     },

@@ -3485,11 +3485,16 @@ export function aimLine(page: Page): Promise<string | undefined> {
   });
 }
 
-/** What the end-turn button reads right now: the turn it stands on, or the hover's own word. */
-export async function endTurnLabel(page: Page): Promise<string> {
-  const label = await textOf(page, 'end-turn-label');
-  if (label === undefined) throw new Error('the end-turn button is not on the chronicle screen');
-  return label;
+/** Whether the end-turn button wears its hover look. */
+export async function endTurnHovered(page: Page): Promise<boolean> {
+  const worn = await pieceWorn(page, 'end-turn');
+  return worn.piece !== 'tab' && worn.look === 'hover';
+}
+
+/** What the end-turn button's chip reads, and nothing while it wears none, on the settle phase. */
+export async function endTurnChip(page: Page): Promise<string | undefined> {
+  const count = (await readings(page, ['end-turn-count']))('end-turn-count');
+  return count.standing ? count.text : undefined;
 }
 
 /** What the named rectangle is painted. */

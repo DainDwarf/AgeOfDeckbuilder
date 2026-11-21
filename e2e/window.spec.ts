@@ -41,7 +41,15 @@ async function hoppedTo(page: Page, ratio: number, colorScheme: 'dark' | 'light'
 }
 
 /** The pieces of the chronicle screen laid along its edges, where they stand on the page. */
-const EDGED = ['band', 'resource-bar', 'menu-button', 'draw-pile', 'end-turn', 'exhaust-pile'];
+const EDGED = [
+  'band',
+  'resource-bar',
+  'menu-button',
+  'icons-button',
+  'draw-pile',
+  'end-turn',
+  'exhaust-pile',
+];
 
 /**
  * Where the chronicle screen's pieces stand on the page, the first card of the hand among them, and
@@ -153,7 +161,7 @@ test('the design space follows a window moved to a monitor of another pixel dens
   expect(problems).toEqual([]);
 });
 
-test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band a tray centred along its bottom with the end-turn button over it, the Menu button at its corner, the map across it, a card at its size', async ({
+test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band a tray centred along its bottom, the Menu button and the Icons button at its corner, the map across it, a card at its size', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -175,15 +183,12 @@ test('on a wider window the chronicle screen takes its shape: the bar centred al
   expect(bar.y).toBeCloseTo(0, 3);
   expect(bar.x + bar.width / 2).toBeCloseTo(WIDE.width / 2, 3);
   expect(bar.width).toBeCloseTo(today.pieces['resource-bar'].width, 3);
-  expect(fromTheRight(pieces['menu-button'], WIDE.width)).toBeCloseTo(
-    fromTheRight(today.pieces['menu-button'], DESIGN_WINDOW.width),
-    3,
-  );
-  const endTurn = pieces['end-turn'];
-  expect(endTurn.x - WIDE.width / 2).toBeCloseTo(
-    today.pieces['end-turn'].x - DESIGN_WINDOW.width / 2,
-    3,
-  );
+  for (const button of ['menu-button', 'icons-button']) {
+    expect(fromTheRight(pieces[button], WIDE.width), button).toBeCloseTo(
+      fromTheRight(today.pieces[button], DESIGN_WINDOW.width),
+      3,
+    );
+  }
 
   expect(wide.unit).toBeCloseTo(1, 6);
   expect(wide.card.width).toBeCloseTo(today.card.width, 3);

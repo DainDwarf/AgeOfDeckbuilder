@@ -4,7 +4,7 @@ import { addText, afterResize, MARGIN, type Stratum, screenSize, UI_FONT } from 
 import { css, LOOK } from './look';
 
 /** The clear water between a tooltip and what it points at. */
-const STANDOFF = 8;
+export const STANDOFF = 8;
 
 /** How long the pointer rests still on a source before its tooltip appears. */
 export const REST_MS = 500;

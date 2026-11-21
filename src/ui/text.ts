@@ -80,7 +80,6 @@ const TEXT = {
   'building.foundations': 'Foundations',
   'building.great-stones': 'Great stones',
   'building.monument': 'Monument',
-  'button.turn': 'Turn {turn}',
   'button.end-turn': 'End turn',
   'button.settle-phase': 'Settle phase',
   'button.end-settle-phase': 'End settle phase',

@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **End turn, Menu and Icons** — on the chronicle screen End turn is a gold square wearing an hourglass and no word, the turn on a chip at its corner as a pile's count, in the screen's bottom right corner where it stands clear of the band and over the exhaust pile on a narrower window; the Menu button, on every screen, and the Icons button, left of it, are squares of the kit's bright silver wearing three bars and a map pointer and no word; each of the three names itself on the rest; `npm run check`, `npm test` and `npm run lint` pass and `e2e/buttons.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`. [board/end-turn-menu-and-icons.md](board/end-turn-menu-and-icons.md)
 - **The faction signs' button** — a button left of Icons on the chronicle screen switching the faction signs on and off, the Graphics window's row going in its favour.
 - **A hex grid on the map, as a test** — a toggle showing the hex grid over the map, built for the user to judge in play and kept or taken out on their word.
 - **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.

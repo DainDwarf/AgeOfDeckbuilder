@@ -21,6 +21,16 @@ const TRAY_MARGIN = 24;
 const TRAY_UNDER_TOPS = 48;
 const FRAME_UNDER_TOPS = 24;
 
+/**
+ * How wide and how tall the end-turn button stands; how far in from the screen's right and bottom
+ * edges it stands in the corner, and how far clear of the tray at the least; and how far over the
+ * resting cards' tops its foot stands where it stands over the exhaust pile instead.
+ */
+const END_TURN = 64;
+const CORNER_IN = 64;
+const CLEAR_OF_TRAY = 12;
+const OVER_THE_HAND = 14;
+
 /** What the tray holds left of the lane, and right of it. */
 const LEFT_OF_LANE = LANE_PAD + ROUND + TRAY_MARGIN;
 const RIGHT_OF_LANE = LANE_PAD + ROUND + PILE_GAP + ROUND + TRAY_MARGIN;
@@ -38,6 +48,11 @@ export type TrayLayout = {
   readonly tray: Box;
   /** The middle of each pile's round. */
   readonly piles: Readonly<Record<PileKind, { readonly x: number; readonly y: number }>>;
+  /**
+   * The end-turn button's box: in the screen's bottom right corner where it stands clear of the tray
+   * there, else over the exhaust pile, its right edge on the pile's.
+   */
+  readonly endTurn: Box;
   /** The frame the map is centred in, bounded by and holds a played stage clear of. */
   readonly mapFrame: Box;
 };
@@ -70,22 +85,29 @@ export function layOutTray(screen: Screen, smallest: number, cardHeight: number)
   const trayTop = restingTop + TRAY_UNDER_TOPS;
   const y = (trayTop + height) / 2;
   const discard = right + LANE_PAD + ROUND / 2;
+  const exhaust = discard + ROUND + PILE_GAP;
+  const trayRight = right + RIGHT_OF_LANE;
+  const cornerLeft = width - CORNER_IN - END_TURN;
   return {
     baseline,
     restingTop,
     liftedBottom: height - LIFTED_OVER,
     lane: { left, right },
-    tray: {
-      x: trayLeft,
-      y: trayTop,
-      width: right + RIGHT_OF_LANE - trayLeft,
-      height: height - trayTop,
-    },
+    tray: { x: trayLeft, y: trayTop, width: trayRight - trayLeft, height: height - trayTop },
     piles: {
       'draw-pile': { x: left - LANE_PAD - ROUND / 2, y },
       'discard-pile': { x: discard, y },
-      'exhaust-pile': { x: discard + ROUND + PILE_GAP, y },
+      'exhaust-pile': { x: exhaust, y },
     },
+    endTurn:
+      cornerLeft >= trayRight + CLEAR_OF_TRAY
+        ? { x: cornerLeft, y: height - CORNER_IN - END_TURN, width: END_TURN, height: END_TURN }
+        : {
+            x: exhaust + ROUND / 2 - END_TURN,
+            y: restingTop - OVER_THE_HAND - END_TURN,
+            width: END_TURN,
+            height: END_TURN,
+          },
     mapFrame: mapFrameOf(screen, cardHeight),
   };
 }

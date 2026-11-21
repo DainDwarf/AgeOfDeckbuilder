@@ -5,10 +5,13 @@ import type { Faction } from '../rules/units';
 /** The chronicle screen's three piles, each a symbol of the cast. */
 export type PileKind = 'draw-pile' | 'discard-pile' | 'exhaust-pile';
 
+/** The buttons that wear a sign and no word, each a symbol of the cast. */
+export type ButtonSign = 'end-turn-button' | 'menu-button' | 'icons-button';
+
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
  * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a unit of the
- * neutral's while it is hostile, a faction, a site, a card nothing plays, or a pile.
+ * neutral's while it is hostile, a faction, a site, a card nothing plays, a pile, or a button.
  */
 export type CastSymbol =
   | Resource
@@ -25,7 +28,8 @@ export type CastSymbol =
   | Faction
   | 'site'
   | 'played-by-nothing'
-  | PileKind;
+  | PileKind
+  | ButtonSign;
 
 /** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
 const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
@@ -54,6 +58,9 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'draw-pile': 'game-icons/stack.svg',
   'discard-pile': 'game-icons/card-discard.svg',
   'exhaust-pile': 'material-design-icons/archive.svg',
+  'end-turn-button': 'game-icons/hourglass.svg',
+  'menu-button': 'game-icons/hamburger-menu.svg',
+  'icons-button': 'material-design-icons/map-marker.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */
