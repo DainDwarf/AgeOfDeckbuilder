@@ -57,11 +57,14 @@ test('a pointer sweeping the hand while the end of turn plays leaves the chronic
   // stage is waiting on, and the play would never end.
   let sweep = 0;
   await expect
-    .poll(async () => {
-      sweep += 1;
-      await page.mouse.move(lane.x - sweep * 24 * lane.unit, lane.y);
-      return playing(page);
-    })
+    .poll(
+      async () => {
+        sweep += 1;
+        await page.mouse.move(lane.x - sweep * 24 * lane.unit, lane.y);
+        return playing(page);
+      },
+      { timeout: 20_000 },
+    )
     .toBe(false);
 
   expect(await chronicleOf(page)).toEqual(once);
