@@ -18,7 +18,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The kit's pieces squeezed as they are drawn** — every surface where a piece of the kit is drawn narrower or shorter than its file holds it, its rim smearing across its middle, looked at on all surfaces and put right; a one-line tooltip's panel and the gold well under a waiting reading in city mode are the two known.
+- **The kit's pieces squeezed as they are drawn, and the buttons' strip** — every piece of the chrome is drawn off the kit's own file, the sheet they stand in read through the card's anisotropic filter where the browser has one, no frame of the sheet squeezed once as it is made and none cut to a slab; every button of the kit stands in its three looks with the shaded strip across its foot lifted; the fold's width test and its reading are gone; `docs/LOOK.md`, `docs/PHASER.md` and `public/assets/LICENSES.md` say so. Doc-impact: `docs/LOOK.md`, `docs/PHASER.md`. [board/the-kits-pieces-squeezed.md](board/the-kits-pieces-squeezed.md)
 - **The faction signs' button** — a button left of Icons on the chronicle screen switching the faction signs on and off, the Graphics window's row going in its favour.
 - **A hex grid on the map, as a test** — a toggle showing the hex grid over the map, built for the user to judge in play and kept or taken out on their word.
 - **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.
