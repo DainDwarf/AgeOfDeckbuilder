@@ -157,7 +157,6 @@ type PageReading = {
   names: Answer<DrawnName[]>;
   onScreen: Answer<OnScreen>;
   frame: Answer<string>;
-  middles: Answer<Middles>;
   kindLabelOnScreen: Answer<Spot>;
   windowOnScreen: Answer<OnScreen>;
   art: Answer<string>;
@@ -932,22 +931,6 @@ export async function readNames(page: Page): Promise<void> {
           const drawn = (found().object as Partial<Phaser.GameObjects.Image>).frame;
           if (drawn === undefined) throw new Error(`${name} draws no frame`);
           return drawn.name;
-        }),
-        middles: answer(() => {
-          const slice = found().object as Partial<Phaser.GameObjects.NineSlice>;
-          const { width, leftWidth, rightWidth, frame } = slice;
-          if (
-            width === undefined ||
-            leftWidth === undefined ||
-            rightWidth === undefined ||
-            frame === undefined
-          ) {
-            throw new Error(`${name} is no nine-slice`);
-          }
-          return {
-            slice: width - leftWidth - rightWidth,
-            frame: frame.cutWidth - leftWidth - rightWidth,
-          };
         }),
         kindLabelOnScreen: answer(() => partOnScreen('kind-label', `${name} wears no kind label`)),
         // The marks of what a card goes on stand at the foot of its window: the upper quarter of its
@@ -1827,9 +1810,6 @@ export async function shows(page: Page, name: string): Promise<boolean> {
   return (await reading(page, name)).shows;
 }
 
-/** How wide a nine-slice draws its middle, and how wide its frame holds it, both in the frame's pixels. */
-export type Middles = { readonly slice: number; readonly frame: number };
-
 /** What a piece of the chrome wears: a button of the kit in one of its looks, or the kit's inactive tab. */
 export type PieceWorn =
   | { readonly piece: ButtonPiece; readonly look: ButtonLook }
@@ -1838,9 +1818,9 @@ export type PieceWorn =
 /** What a piece of the chrome wears, read off the frame of the kit its reading draws. */
 export function pieceWornOf({ frame }: Reading): PieceWorn {
   if (frame === TAB.frame) return { piece: 'tab' };
-  for (const [piece, { looks, squares }] of Object.entries(BUTTONS)) {
+  for (const [piece, { looks }] of Object.entries(BUTTONS)) {
     for (const look of Object.keys(looks) as ButtonLook[]) {
-      if (looks[look] === frame || squares[look] === frame) {
+      if (looks[look] === frame) {
         return { piece: piece as ButtonPiece, look };
       }
     }
@@ -1934,7 +1914,6 @@ export type Reading = {
   readonly onScreen: OnScreen;
   /** The frame of its texture the object draws, by name. */
   readonly frame: string;
-  readonly middles: Middles;
   readonly nameOnScreen: Spot;
   readonly kindLabelOnScreen: Spot;
   /** A point of a face's window, off every name and every hover of the face. */
@@ -2037,9 +2016,6 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get frame() {
       return owed(name, answered?.frame);
-    },
-    get middles() {
-      return owed(name, answered?.middles);
     },
     get nameOnScreen() {
       return nameAt(name, answered, 0);

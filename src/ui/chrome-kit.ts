@@ -1,4 +1,4 @@
-import { blankCanvas, type Made, type Sheet } from './sheet';
+import type { Retouched, Sheet } from './sheet';
 
 /** The folder DRStudios' metal kit stands in, under the assets folder, at the scale the game loads. */
 const KIT = 'store/uiforge-metal-ui-kit/png/2x';
@@ -23,93 +23,70 @@ export type Piece = { readonly frame: string; readonly cuts: Cuts };
 /** A piece drawn at the height something stands, fitted to it by its own height under its shadow. */
 export type Fitted = Piece & { readonly height: number };
 
-const BUTTON_LOOKS = ['normal', 'hover', 'pressed'] as const;
-
 /** The looks a button of the kit wears. */
-export type ButtonLook = (typeof BUTTON_LOOKS)[number];
+export type ButtonLook = 'normal' | 'hover' | 'pressed';
 
 /** The kit's buttons the chrome draws: its gold, and its bright silver. */
 export type ButtonPiece = 'gold' | 'silver';
 
 /**
- * A button of the kit: its file in each look, and the frame each look is drawn from on a box as wide
- * as tall, cut alike.
+ * The rows of a button's file the kit paints its shaded strip across, in its pixels: the face's last
+ * row above it, the row a line falls on between them where the kit draws one, and the strip's first
+ * and last rows.
  */
-type Button = {
-  readonly looks: Readonly<Record<ButtonLook, string>>;
-  readonly squares: Readonly<Record<ButtonLook, string>>;
-  readonly cuts: Cuts;
-  readonly height: number;
+type ButtonStrip = {
+  readonly face: number;
+  readonly line?: number;
+  readonly first: number;
+  readonly last: number;
 };
 
-/** How many columns a frame keeps of a middle every draw of it stretches. */
-const SLAB = 2;
+/** A button of the kit: its file in each look, where it is cut, and the rows of its strip. */
+type Button = {
+  readonly looks: Readonly<Record<ButtonLook, string>>;
+  readonly cuts: Cuts;
+  readonly height: number;
+  readonly strip: ButtonStrip;
+};
+
+/** How many pixels in from each end of a row's opaque span the lift leaves alone, and over how many more it fades in. */
+const LIFT_EDGE = { kept: 4, fading: 2 };
 
 /**
- * What a frame made off a file of the kit holds between its corners: a slab of the file's flat
- * middle, or the whole middle squeezed so the frame stands as wide as tall.
+ * A button's file with its strip lifted, in place, column by column and channel by channel, the lift
+ * fading in from the ends of each row's opaque span.
  */
-type Middle = 'slab' | 'square';
-
-/**
- * A frame of the sheet made off a file of the kit, as tall as the file: its corners copied as cut,
- * and its middle between them.
- */
-function madeOff(
-  file: string,
-  frame: string,
-  { cuts, height }: Pick<Fitted, 'cuts' | 'height'>,
-  middle: Middle,
-): Made {
-  const tall = height + 2 * SHADOW_MARGIN;
-  /** How many columns the middle stands across, and how many of the file's middle it is read off. */
-  const { across, read } = ((): { across: number; read: (between: number) => number } => {
-    switch (middle) {
-      case 'slab':
-        return { across: SLAB, read: () => SLAB };
-      case 'square':
-        return { across: tall - cuts.left - cuts.right, read: (between) => between };
+function liftStrip({ face, line, first, last }: ButtonStrip): (pixels: ImageData) => void {
+  return ({ data, width }) => {
+    const at = (x: number, y: number): number => 4 * (y * width + x);
+    /** For each column and colour channel, the face's last row over that row, held between 1 and 2. */
+    const ratiosOver = (row: number): Float64Array =>
+      Float64Array.from({ length: 3 * width }, (_, cell) => {
+        const x = Math.floor(cell / 3);
+        const channel = cell % 3;
+        const ratio = data[at(x, face) + channel] / data[at(x, row) + channel];
+        return Math.min(2, Math.max(1, ratio));
+      });
+    // Every ratio is read before any row is written: the strip's first row is lifted with the rest.
+    const strip = ratiosOver(first);
+    const lifts = [
+      ...(line === undefined ? [] : [{ row: line, ratios: ratiosOver(line) }]),
+      ...Array.from({ length: last - first + 1 }, (_, by) => ({ row: first + by, ratios: strip })),
+    ];
+    for (const { row, ratios } of lifts) {
+      const opaque = (x: number): boolean => data[at(x, row) + 3] === 0xff;
+      let from = 0;
+      while (!opaque(from)) from++;
+      let to = width - 1;
+      while (!opaque(to)) to--;
+      for (let x = from; x <= to; x++) {
+        const inside = Math.min(x - from, to - x) - LIFT_EDGE.kept + 1;
+        const weight = Math.min(1, Math.max(0, inside / LIFT_EDGE.fading));
+        for (let channel = 0; channel < 3; channel++) {
+          data[at(x, row) + channel] *= 1 + weight * (ratios[3 * x + channel] - 1);
+        }
+      }
     }
-  })();
-  const width = cuts.left + across + cuts.right;
-  return {
-    frame,
-    width,
-    height: tall,
-    paint: (context, paintingIn) => {
-      const from = paintingIn(CHROME_SHEET_KEY, file);
-      // A squeeze reads past its source's edges, so it is read off the file alone, not the sheet round it.
-      const own = blankCanvas(from.width, tall);
-      own.drawImage(from.canvas, from.x, from.y, from.width, tall, 0, 0, from.width, tall);
-      const right = from.width - cuts.right;
-      const on = blankCanvas(width, tall);
-      on.imageSmoothingQuality = 'high';
-      on.drawImage(own.canvas, 0, 0, cuts.left, tall, 0, 0, cuts.left, tall);
-      on.drawImage(
-        own.canvas,
-        cuts.left,
-        0,
-        read(right - cuts.left),
-        tall,
-        cuts.left,
-        0,
-        across,
-        tall,
-      );
-      on.drawImage(own.canvas, right, 0, cuts.right, tall, cuts.left + across, 0, cuts.right, tall);
-      context.drawImage(on.canvas, 0, 0);
-    },
-  };
-}
-
-/** A button of the kit in those files, its frame for a square named after each. */
-function buttonOf(looks: Readonly<Record<ButtonLook, string>>, cuts: Cuts, height: number): Button {
-  const square = (look: ButtonLook): string => `${looks[look]}#square`;
-  return {
-    looks,
-    squares: { normal: square('normal'), hover: square('hover'), pressed: square('pressed') },
-    cuts,
-    height,
   };
 }
 
@@ -118,46 +95,41 @@ export const PANEL: Piece = {
   cuts: { left: 68, top: 68, right: 68, bottom: 68 },
 };
 
-const TAB_FILE = `${KIT}/tab_inactive.png`;
-
-/** The kit's inactive tab, a well, drawn off a slab of its flat middle. */
+/** The kit's inactive tab, a well. */
 export const TAB: Fitted = {
-  frame: `${TAB_FILE}#slab`,
+  frame: `${KIT}/tab_inactive.png`,
   cuts: { left: 44, top: 44, right: 44, bottom: 52 },
   height: 92,
 };
 
-const COUNTER_FILE = `${KIT}/currency_normal.png`;
-
-/**
- * The kit's counter chip, drawn off a slab of its flat middle, its cuts meeting in its middle: a box
- * as wide as tall draws it round.
- */
+/** The kit's counter chip, its cuts meeting in its middle: a box as wide as tall draws it round. */
 export const COUNTER: Fitted = {
-  frame: `${COUNTER_FILE}#slab`,
+  frame: `${KIT}/currency_normal.png`,
   cuts: { left: 62, top: 62, right: 62, bottom: 62 },
   height: 104,
 };
 
 export const BUTTONS: Readonly<Record<ButtonPiece, Button>> = {
-  gold: buttonOf(
-    {
+  gold: {
+    looks: {
       normal: `${KIT}/btn_cta_normal.png`,
       hover: `${KIT}/btn_cta_hover.png`,
       pressed: `${KIT}/btn_cta_pressed.png`,
     },
-    { left: 54, top: 54, right: 54, bottom: 62 },
-    164,
-  ),
-  silver: buttonOf(
-    {
+    cuts: { left: 54, top: 54, right: 54, bottom: 62 },
+    height: 164,
+    strip: { face: 127, first: 128, last: 166 },
+  },
+  silver: {
+    looks: {
       normal: `${KIT}/btn_primary_normal.png`,
       hover: `${KIT}/btn_primary_hover.png`,
       pressed: `${KIT}/btn_primary_pressed.png`,
     },
-    { left: 46, top: 46, right: 46, bottom: 54 },
-    108,
-  ),
+    cuts: { left: 46, top: 46, right: 46, bottom: 54 },
+    height: 108,
+    strip: { face: 86, line: 87, first: 88, last: 110 },
+  },
 };
 
 /** The kit's window, whose gold band a window of the menu wears. */
@@ -195,27 +167,19 @@ const BAND_PIXELS = Math.round((PAINTED_FOOT - RIM.breadth * WINDOW_RIM) / WINDO
 export const WINDOW_BAND: Piece & { readonly width: number; readonly height: number } = {
   frame: 'window-band',
   cuts: { left: RIM.corner, top: RIM.corner, right: RIM.corner, bottom: LINE_PIXELS },
-  width: 2 * RIM.corner + SLAB,
+  width: 2 * RIM.corner + 2,
   height: BAND_PIXELS + LINE_PIXELS,
 };
 
+const BUTTON_FILES: readonly Retouched[] = Object.values(BUTTONS).flatMap(({ looks, strip }) =>
+  Object.values(looks).map((file) => ({ file, retouch: liftStrip(strip) })),
+);
+
 export const CHROME_SHEET: Sheet = {
   key: CHROME_SHEET_KEY,
-  files: [
-    PANEL.frame,
-    MODAL,
-    ...Object.values(BUTTONS).flatMap(({ looks }) => Object.values(looks)),
-    TAB_FILE,
-    COUNTER_FILE,
-  ],
+  files: [PANEL.frame, MODAL, ...BUTTON_FILES.map(({ file }) => file), TAB.frame, COUNTER.frame],
+  retouched: BUTTON_FILES,
   made: [
-    madeOff(TAB_FILE, TAB.frame, TAB, 'slab'),
-    madeOff(COUNTER_FILE, COUNTER.frame, COUNTER, 'slab'),
-    ...Object.values(BUTTONS).flatMap((button) =>
-      BUTTON_LOOKS.map((look) =>
-        madeOff(button.looks[look], button.squares[look], button, 'square'),
-      ),
-    ),
     {
       frame: WINDOW_BAND.frame,
       width: WINDOW_BAND.width,
@@ -245,4 +209,5 @@ export const CHROME_SHEET: Sheet = {
   side: 2048,
   rowGap: 16,
   columnGap: 16,
+  anisotropic: true,
 };

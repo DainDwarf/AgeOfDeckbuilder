@@ -85,6 +85,27 @@ function startFirst(screen: FirstScreen): void {
   throw new Error(`no first screen is ${JSON.stringify(unlisted)}`);
 }
 
+/**
+ * Each sheet that asks for it read through the card's anisotropic filter at the most the card gives;
+ * a browser without the extension draws it unfiltered.
+ */
+function filterAnisotropically(
+  renderer: Phaser.Renderer.WebGL.WebGLRenderer,
+  textures: Phaser.Textures.TextureManager,
+  sheets: readonly Sheet[],
+): void {
+  const { gl } = renderer;
+  const extension = gl.getExtension('EXT_texture_filter_anisotropic');
+  if (extension === null) return;
+  const most: number = gl.getParameter(extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+  for (const { key, anisotropic } of sheets) {
+    if (anisotropic !== true) continue;
+    // Bound through Phaser, whose record of what each unit holds a bare `bindTexture` would falsify.
+    renderer.glTextureUnits.bind(textures.get(key).source[0].glTexture, 0);
+    gl.texParameterf(gl.TEXTURE_2D, extension.TEXTURE_MAX_ANISOTROPY_EXT, most);
+  }
+}
+
 /** What the boot starts first: the textures loaded and drawn into their sheets, then the first screen. */
 class LoadScene extends Phaser.Scene {
   /** The sheets the boot draws its paintings into, in the order it draws them. */
@@ -110,6 +131,11 @@ class LoadScene extends Phaser.Scene {
 
   create(): void {
     drawSheets(this.textures, this.sheets);
+    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
+    const filter = (): void => filterAnisotropically(renderer, this.textures, this.sheets);
+    filter();
+    // A restored context makes every texture anew, without the filter (docs/PHASER.md).
+    renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, filter);
     // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
     // after it has no handle yet to be reached by, and the boot throws.
     game.scene.start('console');

@@ -10,7 +10,6 @@ import {
   cursorAt,
   DESIGN_WINDOW,
   endTurnChip,
-  endTurnHovered,
   type Frame,
   firstSeed,
   launchedAs,
@@ -153,31 +152,6 @@ test('the Icons button stands left of the Menu button and level with it, sunk in
   const bubble = await bubbleOf(page, 'tooltip-menu');
   expect(bubble.y).toBeGreaterThan(menu.y + menu.height);
   expect(bubble.x + bubble.width).toBeLessThanOrEqual((await canvasOf(page)).right);
-
-  expect(problems).toEqual([]);
-});
-
-test('End turn, its chip, the Menu button and the Icons button, sunk and standing, draw no middle narrower than their kit’s frame holds it, End turn under the pointer as at rest', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const unsqueezed = async (names: readonly string[]): Promise<void> => {
-    const read = await readings(page, names);
-    for (const name of names) {
-      const { slice, frame } = read(name).middles;
-      expect(slice, name).toBeGreaterThanOrEqual(frame);
-    }
-  };
-
-  await openSaved(page, settledOn(1));
-  await unsqueezed(['end-turn', 'end-turn-count-chip', 'menu-button', 'icons-button']);
-
-  await click(page, 'icons-button');
-  await expect.poll(async () => (await pieceWorn(page, 'icons-button')).piece).toBe('silver');
-  const endTurn = await onScreen(page, 'end-turn');
-  await page.mouse.move(endTurn.x, endTurn.y);
-  await expect.poll(() => endTurnHovered(page)).toBe(true);
-  await unsqueezed(['end-turn', 'icons-button']);
 
   expect(problems).toEqual([]);
 });

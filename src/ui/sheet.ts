@@ -34,6 +34,9 @@ export type Made = {
   paint(context: CanvasRenderingContext2D, paintingIn: PaintingIn): void;
 };
 
+/** A file of a sheet whose pixels are read and written where the sheet holds it, never scaled. */
+export type Retouched = { readonly file: string; retouch(pixels: ImageData): void };
+
 /** Files drawn in lines, each made a square of `side` pixels as it loads. */
 export type Rasterised = { readonly files: readonly string[]; readonly side: number };
 
@@ -42,6 +45,7 @@ export type Sheet = {
   readonly key: string;
   readonly files: readonly string[];
   readonly rasterised?: Rasterised;
+  readonly retouched?: readonly Retouched[];
   readonly tinted?: readonly Tinted[];
   readonly made?: readonly Made[];
   /** How wide and how tall it is: a power of two, or Phaser makes no mipmaps of it (docs/PHASER.md). */
@@ -56,6 +60,8 @@ export type Sheet = {
    * paints to its edge: one beside it read through a mipmap level that coarse draws none of it.
    */
   readonly columnGap?: number;
+  /** Whether the card reads it through its anisotropic filter, where the browser has one. */
+  readonly anisotropic?: boolean;
 };
 
 /**
@@ -260,12 +266,12 @@ export function paintMade(
 }
 
 /**
- * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, then
- * each tinted painting, then each frame made by code; a file that did not load, and a painting its
- * sheet does not hold, are refused.
+ * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, each
+ * retouched file retouched, then each tinted painting, then each frame made by code; a file that did
+ * not load, and a painting its sheet does not hold, are refused.
  */
 function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void {
-  const { key, files, rasterised, tinted = [], made = [], side } = drawn;
+  const { key, files, rasterised, retouched = [], tinted = [], made = [], side } = drawn;
   const sheet = textures.createCanvas(key, side, side);
   if (sheet === null) throw new Error(`a texture stands under ${key} already`);
 
@@ -275,6 +281,14 @@ function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void
     const { width, height } = textures.getFrame(file);
     const at = roomIn(sheet, file, width, height, drawn);
     sheet.drawFrame(file, undefined, at.x, at.y, false);
+  }
+
+  for (const { file, retouch } of retouched) {
+    if (!files.includes(file)) throw new Error(`the sheet ${key} draws no file ${file} to retouch`);
+    const { cutX, cutY, cutWidth, cutHeight } = sheet.get(file);
+    const pixels = sheet.context.getImageData(cutX, cutY, cutWidth, cutHeight);
+    retouch(pixels);
+    sheet.context.putImageData(pixels, cutX, cutY);
   }
 
   const paintingIn = paintingsIn(textures);

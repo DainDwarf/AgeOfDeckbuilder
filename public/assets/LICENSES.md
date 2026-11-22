@@ -52,7 +52,7 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 
 ## UIForge metal kit
 
-- **What:** DRStudios' metal UI kit, the pieces the chrome draws, in `store/uiforge-metal-ui-kit/`, the kit's `pack.json` beside them.
+- **What:** DRStudios' metal UI kit, the pieces the chrome draws, in `store/uiforge-metal-ui-kit/`, the kit's `pack.json` beside them. The game lifts the shaded strip across the foot of the kit's buttons as it draws them, the files unchanged.
 - **From:** DRStudios (Deer Rock Studios), <https://drrstudios.itch.io/metal>, bought on 2026-11-20 in the bundle "GAME UI ASSETS PACK OR ONE", <https://itch.io/s/198337/game-ui-assets-pack-or-one>, generated on 2026-08-13 as the kit's `pack.json` records, the files as released.
 - **Licence:** the pack page's own terms, the bundle carrying no licence file: "Royalty-free for commercial and personal projects. Unlimited shipped games. No redistribution of raw assets." The page states that no generative AI was used; the kit's `pack.json` names its maker as DRStudios' own generator, UIForge, its pieces vector shapes and gradients. The files sit in the store, never in this repository.
 
