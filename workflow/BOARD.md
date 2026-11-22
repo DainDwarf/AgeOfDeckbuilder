@@ -18,7 +18,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The faction signs' button** — a button left of Icons on the chronicle screen switching the faction signs on and off, the Graphics window's row going in its favour.
+- **The faction signs' button** — a button left of the Icons button on the chronicle screen shows and hides the faction signs, standing while they are hidden and sunk in its well while they are shown, every chronicle screen opening with them hidden; the Graphics window's row and the browser's entry are gone; `e2e/faction-signs.spec.ts` proves it, and `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md` and `public/assets/LICENSES.md` say so. Doc-impact: `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`. [board/the-faction-signs-button.md](board/the-faction-signs-button.md)
 - **A hex grid on the map, as a test** — a toggle showing the hex grid over the map, built for the user to judge in play and kept or taken out on their word.
 - **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.
 - **The menu's windows** — Menu, Settings, Controls, Graphics, Manage Save and the warnings laid out again on the new paper; deleted at its intake if the paper leaves nothing to lay out.
