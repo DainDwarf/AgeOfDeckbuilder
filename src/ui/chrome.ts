@@ -131,18 +131,28 @@ export function createChromeWindow(
 /** What a well is drawn as: the kit's inactive tab, or a button's gold. */
 export type WellPiece = 'tab' | 'gold';
 
-/** A button of the kit in one look, fitted as the button is. */
-function buttonIn(piece: ButtonPiece, look: ButtonLook): Fitted {
-  const { looks, cuts, height } = BUTTONS[piece];
-  return { frame: looks[look], cuts, height };
+/**
+ * A button of the kit in one look, fitted to the box as the button is: drawn off its square on a box
+ * as wide as tall, and off its file on any other.
+ */
+function buttonOn(piece: ButtonPiece, look: ButtonLook, box: Box): Fitted {
+  const { looks, squares, cuts, height } = BUTTONS[piece];
+  return { frame: (box.width === box.height ? squares : looks)[look], cuts, height };
 }
-
-/** The piece each well is drawn as. */
-const WELLS: Readonly<Record<WellPiece, Fitted>> = { tab: TAB, gold: buttonIn('gold', 'normal') };
 
 /** A well, named `name`, drawn nowhere until `placeChromeWell` lays it. */
 export function createChromeWell(scene: Phaser.Scene, name: string): Phaser.GameObjects.NineSlice {
   return sliceOf(scene, TAB).setName(name);
+}
+
+/** The piece a well is drawn as on the box. */
+function wellOn(piece: WellPiece, box: Box): Fitted {
+  switch (piece) {
+    case 'tab':
+      return TAB;
+    case 'gold':
+      return buttonOn('gold', 'normal', box);
+  }
 }
 
 /** The well drawn as the piece over the box, fitted to its height. */
@@ -151,7 +161,7 @@ export function placeChromeWell(
   piece: WellPiece,
   box: Box,
 ): void {
-  fit(well, WELLS[piece], box);
+  fit(well, wellOn(piece, box), box);
 }
 
 /** The kit's counter chip, drawn nowhere until `placeChromeCounter` lays it. */
@@ -197,17 +207,20 @@ export function createChromeButton(
   { live = () => true, reaches }: ButtonReach = {},
 ): ChromeButton {
   let box = laidOn;
-  const { looks } = BUTTONS[piece];
-  const standing = buttonIn(piece, 'normal');
-  const face = takesThePointer(sliceOf(scene, standing).setName(name), reaches);
+  const face = takesThePointer(
+    sliceOf(scene, buttonOn(piece, 'normal', box)).setName(name),
+    reaches,
+  );
   reactsToPress(face);
   let latched = false;
   let held = false;
 
+  const worn = (): ButtonLook =>
+    !live() || !hover.hovered ? 'normal' : held ? 'pressed' : 'hover';
   const dress = (): void => {
     if (latched) return;
-    const look: ButtonLook = !live() || !hover.hovered ? 'normal' : held ? 'pressed' : 'hover';
-    if (face.frame.name !== looks[look]) face.setFrame(looks[look]);
+    const { frame } = buttonOn(piece, worn(), box);
+    if (face.frame.name !== frame) face.setFrame(frame);
   };
   const hover = onHover(face, dress, dress);
 
@@ -234,8 +247,7 @@ export function createChromeButton(
   });
 
   const stand = (): void => {
-    fit(face, latched ? TAB : standing, box);
-    dress();
+    fit(face, latched ? TAB : buttonOn(piece, worn(), box), box);
   };
   stand();
 
