@@ -55,6 +55,7 @@ function colourOf(symbol: CastSymbol): number {
     case 'end-turn-button':
     case 'menu-button':
     case 'icons-button':
+    case 'faction-signs-button':
       return LOOK.metalInk;
   }
 }
@@ -72,6 +73,7 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'end-turn-button':
     case 'menu-button':
     case 'icons-button':
+    case 'faction-signs-button':
       return false;
     case 'food':
     case 'production':

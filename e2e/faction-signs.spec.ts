@@ -8,10 +8,10 @@ import { chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { type Faction, unitAt } from '../src/rules/units';
 import { glyphFileOf } from '../src/ui/cast';
-import { FACTION_SIGNS_ENTRY, serialiseFactionSigns } from '../src/ui/faction-signs';
 import { LOOK, multiplied } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
+  campaignThenChronicle,
   campBeside,
   capstoneClosed,
   click,
@@ -19,17 +19,21 @@ import {
   enemyBesideCity,
   freeGround,
   inspected,
-  intoGraphics,
   neutralAge,
   neutralCampaign,
+  onScreen,
   openSaved,
   panelFace,
-  plantEntry,
+  pieceOnScreen,
+  pieceWorn,
   playerCityTile,
-  reloadedOnCapstone,
+  pressContinue,
+  readings,
   type SignsShown,
   signsOn,
-  textOf,
+  standing,
+  tooltipLines,
+  tooltipUp,
   unitEntered,
   WARRIOR,
   watch,
@@ -37,7 +41,7 @@ import {
 
 const CAMPAIGN = neutralCampaign();
 
-const ROW = 'graphics-faction-signs';
+const BUTTON = 'faction-signs-button';
 
 /** The colour each faction is known by, and the ink its sign reads in on it. */
 const COLOURS: Record<Faction, { readonly disc: number; readonly ink: number }> = {
@@ -120,26 +124,30 @@ async function panelSign(page: Page): Promise<DiscShown | undefined> {
   return (await panelFace(page)).windowUnit?.sign;
 }
 
-/** What the tiles wear with the signs off: nothing. */
+/** What the tiles wear with the signs hidden: nothing. */
 function bare({ tiles }: Signed): SignsShown[] {
   return tiles.map(() => ({ tile: undefined, unit: undefined }));
 }
 
-/** The Faction signs row, pressed, waited for until it reads that. */
-async function pressedTo(page: Page, reads: 'graphics.on' | 'graphics.off'): Promise<void> {
-  await click(page, ROW);
-  await expect.poll(() => textOf(page, `${ROW}-label`)).toBe(text(reads));
+/** Whether the button stands sunk in its well. */
+async function sunk(page: Page): Promise<boolean> {
+  return (await pieceWorn(page, BUTTON)).piece === 'tab';
 }
 
-test('with Faction signs on, every unit, both cities and the camp wear their faction’s sign, the city in fog darkened, and so does the infopanel’s unit card', async ({
+/** The button pressed, waited for until the tiles wear that. */
+async function pressedTo(page: Page, tiles: TileCoords[], worn: SignsShown[]): Promise<void> {
+  await click(page, BUTTON);
+  await expect.poll(() => signsOn(page, tiles)).toEqual(worn);
+}
+
+test('with the signs shown by a press on the button, every unit, both cities and the camp wear their faction’s sign, the city in fog darkened, and so does the infopanel’s unit card', async ({
   page,
 }) => {
   const problems = watch(page);
   const { chronicle, warrior, signed } = signedOnes();
-  await plantEntry(page, FACTION_SIGNS_ENTRY, serialiseFactionSigns(true));
 
   await openSaved(page, chronicle, CAMPAIGN);
-  expect(await signsOn(page, signed.tiles)).toEqual(signed.worn);
+  await pressedTo(page, signed.tiles, signed.worn);
 
   await inspected(page, warrior);
   expect(await panelSign(page)).toEqual(signOf('player'));
@@ -147,7 +155,7 @@ test('with Faction signs on, every unit, both cities and the camp wear their fac
   expect(problems).toEqual([]);
 });
 
-test('opened with nothing kept, nothing wears a sign; a press on the row over the chronicle screen puts every sign on at once, the infopanel’s card among them, and a reload finds it kept', async ({
+test('a chronicle screen opens with nothing wearing a sign and the button standing left of the Icons button, naming itself on the rest under it; a press sinks it and puts every sign on at once, the infopanel’s card among them, a second takes them off and stands it again, and opened again by Continue with them shown, the chronicle screen shows none', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -155,25 +163,46 @@ test('opened with nothing kept, nothing wears a sign; a press on the row over th
 
   await openSaved(page, chronicle, CAMPAIGN);
   expect(await signsOn(page, signed.tiles)).toEqual(bare(signed));
+  expect(await sunk(page)).toBe(false);
+  const button = await pieceOnScreen(page, BUTTON);
+  const icons = await pieceOnScreen(page, 'icons-button');
+  expect(button.x + button.width).toBeLessThan(icons.x);
+  expect(button.y + button.height / 2).toBeCloseTo(icons.y + icons.height / 2, 1);
+
+  const at = await onScreen(page, BUTTON);
+  await page.mouse.move(at.x, at.y);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  expect(await tooltipLines(page, 'tooltip-ui')).toEqual([
+    { text: text('button.faction-signs'), bold: false },
+  ]);
+  const bubble = (await readings(page, ['tooltip-ui']))('tooltip-ui').boundsOnScreen;
+  expect(bubble.y).toBeGreaterThan(button.y + button.height);
+
   await inspected(page, warrior);
   expect(await panelSign(page)).toBeUndefined();
 
-  await intoGraphics(page);
-  expect(await textOf(page, `${ROW}-label`)).toBe(text('graphics.off'));
-  await pressedTo(page, 'graphics.on');
-  expect(await signsOn(page, signed.tiles)).toEqual(signed.worn);
+  await pressedTo(page, signed.tiles, signed.worn);
+  expect(await sunk(page)).toBe(true);
   expect(await panelSign(page)).toEqual(signOf('player'));
 
-  await reloadedOnCapstone(page);
+  await pressedTo(page, signed.tiles, bare(signed));
+  expect(await sunk(page)).toBe(false);
+  expect(await panelSign(page)).toBeUndefined();
+
+  await pressedTo(page, signed.tiles, signed.worn);
+  await click(page, 'menu-button');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+  await campaignThenChronicle(page);
+  await pressContinue(page);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await capstoneClosed(page);
-  expect(await signsOn(page, signed.tiles)).toEqual(signed.worn);
-  await intoGraphics(page);
-  expect(await textOf(page, `${ROW}-label`)).toBe(text('graphics.on'));
+  expect(await signsOn(page, signed.tiles)).toEqual(bare(signed));
+  expect(await sunk(page)).toBe(false);
 
   expect(problems).toEqual([]);
 });
 
-test('the neutral’s city taken by the enemies while its tile is in fog keeps the neutral’s sign as last seen', async ({
+test('the neutral’s city taken by the enemies while its tile is in fog keeps the neutral’s sign as last seen, the signs shown by a press on the button', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -183,10 +212,9 @@ test('the neutral’s city taken by the enemies while its tile is in fog keeps t
   expect(fallen.neutral).toBeUndefined();
   expect(tileAt(fallen.tiles, city)?.building).toBe(camp);
   expect(inSight(CATALOGUE, fallen).has(tileKey(city))).toBe(false);
-  await plantEntry(page, FACTION_SIGNS_ENTRY, serialiseFactionSigns(true));
 
   await openSaved(page, fallen, CAMPAIGN);
-  expect(await signsOn(page, [city])).toEqual([signed.worn[signed.tiles.indexOf(city)]]);
+  await pressedTo(page, [city], [signed.worn[signed.tiles.indexOf(city)]]);
 
   expect(problems).toEqual([]);
 });

@@ -6,7 +6,11 @@ import type { Faction } from '../rules/units';
 export type PileKind = 'draw-pile' | 'discard-pile' | 'exhaust-pile';
 
 /** The buttons that wear a sign and no word, each a symbol of the cast. */
-export type ButtonSign = 'end-turn-button' | 'menu-button' | 'icons-button';
+export type ButtonSign =
+  | 'end-turn-button'
+  | 'menu-button'
+  | 'icons-button'
+  | 'faction-signs-button';
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
@@ -61,6 +65,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'end-turn-button': 'game-icons/hourglass.svg',
   'menu-button': 'game-icons/hamburger-menu.svg',
   'icons-button': 'material-design-icons/map-marker.svg',
+  'faction-signs-button': 'material-design-icons/shield-crown.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */

@@ -109,7 +109,7 @@ test('the Graphics window lists Interface size third, and on a 1920 by 1080 wind
   page,
 }) => {
   const problems = watch(page);
-  const rows = [ROW, FULLSCREEN, SIZE, 'graphics-faction-signs'];
+  const rows = [ROW, FULLSCREEN, SIZE];
   const most = Math.min(WIDE.width / DESIGN_WINDOW.width, WIDE.height / DESIGN_WINDOW.height);
 
   await page.setViewportSize(WIDE);

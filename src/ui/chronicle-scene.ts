@@ -44,9 +44,8 @@ import {
   stratumOf,
   thingUnder,
 } from './design-space';
-import type { DrawsSigns } from './faction-signs';
+import { createDisplayButton } from './display-button';
 import { createHand } from './hand';
-import { createIconsButton } from './icons-button';
 import { type Card, cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheelNotches } from './keys';
 import { LOOK } from './look';
@@ -116,10 +115,7 @@ function reckonsThrough(command: Command): boolean {
   }
 }
 
-export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, DrawsSigns {
-  /** The map and the infopanel drawn again with the faction signs as they now stand. */
-  drawSigns!: () => void;
-
+export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private choices!: Choices;
   private current!: Chronicle;
   /** What the chronicle paid into the campaign as it ended, and nothing before it has. */
@@ -239,7 +235,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
     };
 
     const parts: Part[] = [];
-    const view = createMapView(map, map.strata, CATALOGUE, this.current);
+
+    /** Whether every unit, every city and every camp wears its faction's sign. */
+    let signsShown = false;
+
+    const view = createMapView(map, map.strata, CATALOGUE, this.current, signsShown);
     const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, {
       small: faces.small,
       on: ui.smallCard,
@@ -428,13 +428,21 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       inspection = { on, face, cards, card: stepped };
     };
 
-    /** The cards an inspection steps on a tile the map draws so, as the screen now shows the discs. */
+    /**
+     * The cards an inspection steps on a tile the map draws so, as the screen now shows the discs and
+     * the signs.
+     */
     const cardsOn = (face: Drawn): Card[] =>
-      cardsOf(CATALOGUE, face, this.current, (coord) => view.drawnAs(coord)?.tile, discsShown);
+      cardsOf(CATALOGUE, face, this.current, (coord) => view.drawnAs(coord)?.tile, {
+        discs: discsShown,
+        signs: signsShown,
+      });
 
-    this.drawSigns = () => {
-      view.showSigns();
-      if (inspection !== undefined) panel.reread(inspection.cards[inspection.card]);
+    /** The card the infopanel stands read again, as the screen now shows the discs and the signs. */
+    const reinspect = (): void => {
+      if (inspection === undefined) return;
+      inspection = { ...inspection, cards: cardsOn(inspection.face) };
+      panel.reread(inspection.cards[inspection.card]);
     };
 
     const act = async (found: PressedTile): Promise<void> => {
@@ -649,16 +657,20 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       showYields();
     };
 
-    const iconsButton = createIconsButton(this, ui.pinned, tooltip.ui, () => {
-      switchDiscs();
-    });
+    const iconsButton = createDisplayButton(
+      this,
+      ui.pinned,
+      tooltip.ui,
+      { symbol: 'icons-button', at: 'icons', reads: 'button.icons' },
+      () => {
+        switchDiscs();
+      },
+    );
 
     const showDiscs = (): void => {
       view.showDiscs(discsShown);
       iconsButton.sink(discsShown);
-      if (inspection === undefined) return;
-      inspection = { ...inspection, cards: cardsOn(inspection.face) };
-      panel.reread(inspection.cards[inspection.card]);
+      reinspect();
     };
 
     const switchDiscs = (): void => {
@@ -666,6 +678,24 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles, Dr
       showDiscs();
     };
     showDiscs();
+
+    const signsButton = createDisplayButton(
+      this,
+      ui.pinned,
+      tooltip.ui,
+      { symbol: 'faction-signs-button', at: 'signs', reads: 'button.faction-signs' },
+      () => {
+        signsShown = !signsShown;
+        showSigns();
+      },
+    );
+
+    const showSigns = (): void => {
+      view.showSigns(signsShown);
+      signsButton.sink(signsShown);
+      reinspect();
+    };
+    showSigns();
 
     // Read outside Phaser's dispatch: a hit test inside it refills the list being walked
     // (docs/PHASER.md).

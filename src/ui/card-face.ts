@@ -60,7 +60,6 @@ import {
   numbersRun,
   statTooltip,
 } from './face';
-import { factionSigns } from './faction-signs';
 import { asGlyph, glyphMark } from './glyphs';
 import { css, LOOK, multiplied, type Tone, untoned } from './look';
 import { asUnit, unitMarker, unitPaintDrop } from './map-marks';
@@ -861,7 +860,7 @@ export function createCardFace(
         'clear',
         held.prepares,
         undefined,
-        factionSigns(),
+        held.signed,
       )
         .setScale(scale * unit, scale * down)
         .setPosition(middle.x, middle.y - unitPaintDrop(canoed) * scale * down);

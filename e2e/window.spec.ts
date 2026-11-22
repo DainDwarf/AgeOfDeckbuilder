@@ -46,6 +46,7 @@ const EDGED = [
   'resource-bar',
   'menu-button',
   'icons-button',
+  'faction-signs-button',
   'draw-pile',
   'end-turn',
   'exhaust-pile',
@@ -161,7 +162,7 @@ test('the design space follows a window moved to a monitor of another pixel dens
   expect(problems).toEqual([]);
 });
 
-test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band a tray centred along its bottom, the Menu button and the Icons button at its corner, the map across it, a card at its size', async ({
+test('on a wider window the chronicle screen takes its shape: the bar centred along its top at its size, the band a tray centred along its bottom, the Menu button, the Icons button and the Faction signs button at its corner, the map across it, a card at its size', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -183,7 +184,7 @@ test('on a wider window the chronicle screen takes its shape: the bar centred al
   expect(bar.y).toBeCloseTo(0, 3);
   expect(bar.x + bar.width / 2).toBeCloseTo(WIDE.width / 2, 3);
   expect(bar.width).toBeCloseTo(today.pieces['resource-bar'].width, 3);
-  for (const button of ['menu-button', 'icons-button']) {
+  for (const button of ['menu-button', 'icons-button', 'faction-signs-button']) {
     expect(fromTheRight(pieces[button], WIDE.width), button).toBeCloseTo(
       fromTheRight(today.pieces[button], DESIGN_WINDOW.width),
       3,

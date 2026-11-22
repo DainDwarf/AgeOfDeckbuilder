@@ -39,8 +39,9 @@ export type Card =
   | { readonly kind: 'terrain'; readonly terrain: TerrainReading };
 
 /**
- * What the map draws of a tile, as the cards an inspection steps: the unit card, the building card,
- * and the terrain card, which always stands, its window's discs standing where `discs` says.
+ * What the map draws of a tile, as the cards an inspection steps: the unit card, its unit wearing its
+ * sign where `shown.signs` says, the building card, and the terrain card, which always stands, its
+ * window's discs standing where `shown.discs` says.
  */
 export function cardsOf(
   catalogue: Catalogue,
@@ -50,7 +51,7 @@ export function cardsOf(
     'city' | 'neutral' | 'relations' | 'turn' | 'timeline' | 'units' | 'rivers'
   >,
   beside: TilesBeside,
-  discs: boolean,
+  shown: { readonly discs: boolean; readonly signs: boolean },
 ): Card[] {
   const { tile } = face;
   const cards: Card[] = [];
@@ -60,14 +61,17 @@ export function cardsOf(
     const prepares = preparedAs(chronicle, unit);
     const hostile = unit.faction === 'neutral' && relationsOf(chronicle) === 'hostile';
     const damage = damageOf(catalogue, chronicle.units, unit);
-    cards.push({ kind: 'unit', unit: { ...unit, damage, prepares, hostile } });
+    cards.push({
+      kind: 'unit',
+      unit: { ...unit, damage, prepares, hostile, signed: shown.signs },
+    });
   }
 
   if (tile.building !== undefined) cards.push({ kind: 'building', building: tile.building });
 
   cards.push({
     kind: 'terrain',
-    terrain: terrainOnTile(catalogue, chronicle, tile, beside, discs),
+    terrain: terrainOnTile(catalogue, chronicle, tile, beside, shown.discs),
   });
 
   return cards;

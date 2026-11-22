@@ -72,7 +72,6 @@ import {
   thingUnder,
   whileUp,
 } from './design-space';
-import { factionSigns } from './faction-signs';
 import { glyphMark } from './glyphs';
 import { type HealthBar, healthBarOf } from './health-bar';
 import { LOOK } from './look';
@@ -289,8 +288,8 @@ export type MapView = {
   showCityMarks(on: boolean): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
   showVeils(veils: Veils): void;
-  /** Draws the map again with the faction signs as the Graphics window's row leaves them. */
-  showSigns(): void;
+  /** Shows or hides the faction sign every unit, every city and every camp wears. */
+  showSigns(shown: boolean): void;
   /** Shows or hides the discs of every tile's row, the features' and the improvements', with what they wear. */
   showDiscs(shown: boolean): void;
   /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
@@ -383,6 +382,7 @@ export function createMapView(
   strata: MapStrata,
   catalogue: Catalogue,
   chronicle: Chronicle,
+  signs: boolean,
 ): MapView {
   const map = strata.terrain;
 
@@ -583,6 +583,8 @@ export function createMapView(
   let { drawn, live, charted }: Drawing = { drawn: new Set(), live: new Set(), charted: new Map() };
   /** The veils the map draws under; both stand until the console takes one off. */
   let veils: Veils = VEILS_ON;
+  /** Whether every unit, every city and every camp wears its faction's sign. */
+  let signed = signs;
 
   /**
    * What the map draws of a chronicle: a tile in sight live, a tile charted as its snapshot has it,
@@ -705,7 +707,6 @@ export function createMapView(
     tileSignPool.hide();
     const current = shown;
     if (current === undefined) return;
-    const signed = factionSigns();
     const signOn = (tile: TileCoords, faction: Faction): void => {
       showTileSign(tileSignPool.take(), tile, faction, fogDark(!live.has(tileKey(tile))), signed);
     };
@@ -956,7 +957,7 @@ export function createMapView(
         'fog',
         prepares,
         bar,
-        factionSigns(),
+        signed,
       );
       painted.push(kept.setPosition(x, y));
     }
@@ -1353,7 +1354,7 @@ export function createMapView(
     const bar = barOf(unit, damageReadOn(unit));
     const shade = shadeOf(chronicle, unit);
     const canoed = inCanoe(catalogue, unit);
-    return asUnit(marker, stats.type, faction, canoed, shade, prepares, bar, factionSigns());
+    return asUnit(marker, stats.type, faction, canoed, shade, prepares, bar, signed);
   };
 
   /**
@@ -1569,7 +1570,8 @@ export function createMapView(
       if (shown !== undefined) render(shown);
     },
 
-    showSigns(): void {
+    showSigns(on: boolean): void {
+      signed = on;
       if (shown !== undefined) render(shown);
     },
 

@@ -38,7 +38,6 @@ import {
   UI_FONT,
   whileUp,
 } from './design-space';
-import { factionSigns, pressFactionSigns } from './faction-signs';
 import { interfaceSize, pressInterfaceSize, sizeRead } from './interface-size';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
@@ -520,20 +519,6 @@ function speedRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject
   );
 }
 
-/** The Faction signs row, reading whether they are on, a press turning them. */
-function signsRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject[] {
-  return keptRow(
-    scene,
-    y,
-    'graphics-faction-signs',
-    text('graphics.faction-signs'),
-    () => text(factionSigns() ? 'graphics.on' : 'graphics.off'),
-    () => {
-      pressFactionSigns(scene.game.scene);
-    },
-  );
-}
-
 /** The Interface size row, reading the size, a press moving it to the next. */
 function sizeRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameObject[] {
   return keptRow(
@@ -574,7 +559,7 @@ function fullscreenRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameO
 }
 
 /** The Graphics window's rows, top down. */
-const GRAPHICS_ROWS = [speedRow, fullscreenRow, sizeRow, signsRow];
+const GRAPHICS_ROWS = [speedRow, fullscreenRow, sizeRow];
 
 function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, top: number): void {
   GRAPHICS_ROWS.forEach((row, index) => {

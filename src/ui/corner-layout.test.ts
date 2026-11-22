@@ -31,4 +31,13 @@ describe('the buttons at the screen’s top right corner', () => {
       expect(gap).toBeLessThan(menu.width);
     }
   });
+
+  it('stands the Faction signs button left of the Icons button, level with it, of its size and as far from it as it stands from the Menu button', () => {
+    for (const { menu, icons, signs } of [smallest, wider]) {
+      expect(signs.y).toBe(icons.y);
+      expect(signs.width).toBe(icons.width);
+      expect(signs.height).toBe(icons.height);
+      expect(icons.x - (signs.x + signs.width)).toBe(menu.x - (icons.x + icons.width));
+    }
+  });
 });

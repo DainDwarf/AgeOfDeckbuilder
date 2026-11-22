@@ -254,13 +254,14 @@ function movementCostRead(cost: (embarked: boolean) => number | undefined): numb
 
 /**
  * A unit a face's window holds as the map paints it: its kind, whose it is, whether it stands in his
- * canoe, and what its prepare lands as where it has prepared.
+ * canoe, what its prepare lands as where it has prepared, and whether it wears its faction's sign.
  */
 export type PaintedUnit = {
   readonly type: string;
   readonly faction: Faction;
   readonly canoed: boolean;
   readonly prepares: PreparedAs | undefined;
+  readonly signed: boolean;
 };
 
 /** A mark of what a card's thing goes on: a terrain, a feature or a building, or the river. */
@@ -758,18 +759,19 @@ export function unitFacing(catalogue: Catalogue, kind: string): UnitFacing {
 
 /**
  * A unit as its face reads it: a unit on the map, one a snapshot kept as it stood, or one fresh of its
- * kind; the damage its attack removes, what its prepare lands as where it has prepared, and whether it
- * is the neutral's while it is hostile.
+ * kind; the damage its attack removes, what its prepare lands as where it has prepared, whether it
+ * is the neutral's while it is hostile, and whether it wears its faction's sign.
  */
 export type UnitReading = Pick<Unit, 'stats' | 'faction' | 'movePoints' | 'action' | 'embarked'> & {
   readonly damage: number;
   readonly prepares: PreparedAs | undefined;
   readonly hostile: boolean;
+  readonly signed: boolean;
 };
 
 /**
  * A unit fresh of its kind, of the faction named: its stats its kind's, its move points and its
- * action full, ashore, or embarked where its kind stands on the water alone.
+ * action full, ashore, or embarked where its kind stands on the water alone, wearing no sign.
  */
 export function freshUnit(catalogue: Catalogue, kind: string, faction: Faction): UnitReading {
   const stats = unitKind(catalogue, kind);
@@ -782,6 +784,7 @@ export function freshUnit(catalogue: Catalogue, kind: string, faction: Faction):
     damage: stats.damage,
     prepares: undefined,
     hostile: false,
+    signed: false,
   };
 }
 
@@ -809,6 +812,7 @@ export function unitFace(catalogue: Catalogue, unit: UnitReading): Face {
       faction: unit.faction,
       canoed: inCanoe(catalogue, unit),
       prepares: unit.prepares,
+      signed: unit.signed,
     },
   };
 }
