@@ -23,7 +23,7 @@ import {
   type Stratum,
   screenSize,
 } from './design-space';
-import { type Face, namedFace } from './face';
+import { type Face, namedFace, type SignsRead } from './face';
 import type { OverlayScene } from './overlay-scene';
 import { createSmallCards, raiserOf } from './small-card';
 import { createTooltip } from './tooltip';
@@ -47,11 +47,26 @@ type Stack = {
   down(): void;
 };
 
-/** The stack of cards shown large, on the overlay; the scrim it stands on is the caller's. */
-function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: FootBubble): Stack {
-  const small = createSmallCards(scene, scene.strata.smallCard, catalogue, footBubble, (name) => {
-    named(name);
-  });
+/**
+ * The stack of cards shown large, on the overlay, a unit named wearing its sign as `signs` answers;
+ * the scrim it stands on is the caller's.
+ */
+function createStack(
+  scene: OverlayScene,
+  catalogue: Catalogue,
+  signs: SignsRead,
+  footBubble: FootBubble,
+): Stack {
+  const small = createSmallCards(
+    scene,
+    scene.strata.smallCard,
+    catalogue,
+    signs,
+    footBubble,
+    (name) => {
+      named(name);
+    },
+  );
   let cards: readonly Face[] = [];
   let drawn: Phaser.GameObjects.Container[] = [];
   const height = heightOf(LARGE_WIDTH);
@@ -103,7 +118,7 @@ function createStack(scene: OverlayScene, catalogue: Catalogue, footBubble: Foot
   };
 
   const named = ({ reference, reading }: Name): void => {
-    if (cards.length < HOLDS) lay([...cards, namedFace(catalogue, reference, reading)]);
+    if (cards.length < HOLDS) lay([...cards, namedFace(catalogue, reference, reading, signs())]);
   };
 
   return {
@@ -159,6 +174,7 @@ export type Beneath = {
 export function standLarge(
   overlay: OverlayScene,
   catalogue: Catalogue,
+  signs: SignsRead,
   covering: (covered: boolean) => void,
   beneath: Beneath = {
     footBubble: createFootBubble(createTooltip(overlay, overlay.strata.tooltip)),
@@ -170,7 +186,7 @@ export function standLarge(
     // Over the window beneath, whose pieces join this stratum later (docs/PHASER.md).
     .setDepth(1);
   overlay.strata.scrim.layer.add(scrim);
-  const stack = createStack(overlay, catalogue, beneath.footBubble);
+  const stack = createStack(overlay, catalogue, signs, beneath.footBubble);
 
   const lower = (): void => {
     scrim.setVisible(false);
@@ -237,6 +253,7 @@ export type Laying = {
 export function layingOf(
   scene: Phaser.Scene,
   catalogue: Catalogue,
+  signs: SignsRead,
   {
     on,
     smallOn,
@@ -251,7 +268,7 @@ export function layingOf(
     readonly rising?: () => void;
   },
 ): Laying {
-  const small = createSmallCards(scene, smallOn, catalogue, footBubble, (name) => {
+  const small = createSmallCards(scene, smallOn, catalogue, signs, footBubble, (name) => {
     inspecting.large.named(name);
   });
   const inspecting: Inspecting = {

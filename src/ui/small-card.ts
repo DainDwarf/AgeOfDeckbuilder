@@ -22,7 +22,7 @@ import {
   type Stratum,
   screenSize,
 } from './design-space';
-import { type Face, namedFace } from './face';
+import { type Face, namedFace, type SignsRead } from './face';
 import { HANDOVER_MS, JITTER, REST_MS } from './tooltip';
 
 /** The clear water between a small card and the line of the name that raised it. */
@@ -46,11 +46,15 @@ export function raiserOf(face: Pick<CardFace, 'spotOf'>, name: Name): Raiser {
   return { name, where: () => face.spotOf(name) };
 }
 
-/** The chain of small cards the names of one surface raise, on a stratum of that surface's scene. */
+/**
+ * The chain of small cards the names of one surface raise, on a stratum of that surface's scene, a
+ * unit named wearing its sign as `signs` answers when its card is raised.
+ */
 export function createSmallCards(
   scene: Phaser.Scene,
   on: Stratum,
   catalogue: Catalogue,
+  signs: SignsRead,
   footBubble: FootBubble,
   inspect: (name: Name) => void,
 ): SmallCards {
@@ -108,7 +112,7 @@ export function createSmallCards(
   const raise = (raiser: Raiser, level: number): void => {
     cut(level);
     const { reference, reading } = raiser.name;
-    const face = faceOf(namedFace(catalogue, reference, reading), (under) => {
+    const face = faceOf(namedFace(catalogue, reference, reading, signs()), (under) => {
       link.under = under;
       settle();
     });

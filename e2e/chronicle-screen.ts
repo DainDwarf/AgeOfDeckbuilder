@@ -1799,7 +1799,7 @@ export async function cardOnFace(page: Page, name: string): Promise<string | und
 
 /** What the face a name of the thing raises stands, as `cardOnFace` reads it. */
 export function standsFor(reference: Reference): string {
-  return namedFace(CATALOGUE, reference, {}).id;
+  return namedFace(CATALOGUE, reference, {}, false).id;
 }
 
 /**

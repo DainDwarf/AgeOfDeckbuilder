@@ -30,6 +30,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { ledgerRowsOf } from './ending-screen';
+import { UNSIGNED } from './face';
 import { clustersOf, withAge } from './launch-layout';
 import { css, LOOK } from './look';
 import { groundColourOf, terrainColourOf } from './marks';
@@ -306,7 +307,7 @@ export class LaunchScreen extends Phaser.Scene {
       away('menu', under);
       if (under) overlay.input.emit(COVERED);
     });
-    const laying = layingOf(this, CATALOGUE, {
+    const laying = layingOf(this, CATALOGUE, UNSIGNED, {
       on: bubbles,
       smallOn: bubbles,
       footBubble: createFootBubble(tooltip),

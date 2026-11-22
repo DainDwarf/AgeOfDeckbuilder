@@ -226,19 +226,20 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // One of each for the surface's every face: a second bubble would hide the first's as its own goes
     // down, and a second chain would stand a small card beside the first's.
     const footBubble = createFootBubble(tooltip.ui);
+
+    /** Whether every unit, every city and every camp wears its faction's sign. */
+    let signsShown = false;
+    const signs = (): boolean => signsShown;
+
     const faces = {
       footBubble,
-      small: createSmallCards(this, ui.smallCard, CATALOGUE, footBubble, (name) => {
+      small: createSmallCards(this, ui.smallCard, CATALOGUE, signs, footBubble, (name) => {
         overlay.inspectNamed(name);
       }),
       cards: createChronicleFaces(this, ui.resting, CATALOGUE, this.current),
     };
 
     const parts: Part[] = [];
-
-    /** Whether every unit, every city and every camp wears its faction's sign. */
-    let signsShown = false;
-
     const view = createMapView(map, map.strata, CATALOGUE, this.current, signsShown);
     const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, {
       small: faces.small,
@@ -511,6 +512,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const overlay = createOverlay({
       scene: overlayOf(this),
       catalogue: CATALOGUE,
+      signs,
       covering: (over) => {
         under('overlay', over);
       },

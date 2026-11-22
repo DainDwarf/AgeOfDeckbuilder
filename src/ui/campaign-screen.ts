@@ -3,6 +3,7 @@ import { CATALOGUE } from '../content/catalogue';
 import { pinned, unpinned } from '../rules/campaign';
 import { offerEntries } from './debug-console';
 import { awayUnder, COVERED, holdDesignSpace } from './design-space';
+import { UNSIGNED } from './face';
 import { backRaisesMenu, resetMenu } from './menu-scene';
 import { wearNavbar } from './navbar';
 import { overlayOf } from './overlay-scene';
@@ -22,7 +23,7 @@ export class CampaignScreen extends Phaser.Scene {
     backRaisesMenu(this);
     const away = awayUnder(this);
     const overlay = overlayOf(this);
-    const large = standLarge(overlay, CATALOGUE, (up) => {
+    const large = standLarge(overlay, CATALOGUE, UNSIGNED, (up) => {
       tree.cover(away('overlay', up));
     });
     const tree = createTree(

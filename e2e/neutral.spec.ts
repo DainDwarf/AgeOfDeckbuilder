@@ -189,7 +189,7 @@ test('a unit of the neutral’s entered on its city stands on the map in the neu
   await expect.poll(() => shownCard(page)).toBe('unit');
   const face = await panelFace(page);
   expect([face.card, face.windowUnit?.halo]).toEqual([
-    freshUnitFace(CATALOGUE, kind, 'neutral').id,
+    freshUnitFace(CATALOGUE, kind, 'neutral', false).id,
     LOOK.neutral,
   ]);
 

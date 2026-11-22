@@ -12,6 +12,7 @@ import {
   reactsToPress,
   UI_FONT,
 } from './design-space';
+import { UNSIGNED } from './face';
 import { glyphOf } from './glyphs';
 import { onHeldKeys } from './keys';
 import { css, LOOK } from './look';
@@ -217,7 +218,14 @@ export function createTree(
   }
   root.add(links);
 
-  const small = createSmallCards(scene, bubbles, catalogue, createFootBubble(tooltip), inspect);
+  const small = createSmallCards(
+    scene,
+    bubbles,
+    catalogue,
+    UNSIGNED,
+    createFootBubble(tooltip),
+    inspect,
+  );
   /** The name the pointer is on, and whether the tree is being carried, which holds every rest off. */
   let hovered: Raiser | undefined;
   let carrying = false;

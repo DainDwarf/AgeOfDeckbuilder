@@ -1,15 +1,18 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
+import { type Campaign, openingChoices } from '../src/rules/campaign';
 import { built } from '../src/rules/cards';
-import { ageOf, neutralOf, neutralScriptOf, unitKind } from '../src/rules/catalogue';
+import { ageOf, neutralOf, neutralScriptOf, technologyOf, unitKind } from '../src/rules/catalogue';
 import { anythingByHand } from '../src/rules/chronicle';
 import { type TileCoords, tileAt, tileKey } from '../src/rules/map';
 import { chartedAt, inSight } from '../src/rules/sight';
 import type { Chronicle } from '../src/rules/state';
 import { type Faction, unitAt } from '../src/rules/units';
 import { glyphFileOf } from '../src/ui/cast';
+import { withAge } from '../src/ui/launch-layout';
 import { LOOK, multiplied } from '../src/ui/look';
-import { text } from '../src/ui/text';
+import { achievementGoal, text } from '../src/ui/text';
+import { learnedWithNeeds } from '../tools/learned-with-needs';
 import {
   campaignThenChronicle,
   campBeside,
@@ -19,6 +22,8 @@ import {
   enemyBesideCity,
   freeGround,
   inspected,
+  namedIn,
+  nameOnScreen,
   neutralAge,
   neutralCampaign,
   onScreen,
@@ -26,10 +31,12 @@ import {
   panelFace,
   pieceOnScreen,
   pieceWorn,
+  pinnedAchievement,
   playerCityTile,
   pressContinue,
   readings,
   type SignsShown,
+  settledOn,
   signsOn,
   standing,
   tooltipLines,
@@ -129,6 +136,49 @@ function bare({ tiles }: Signed): SignsShown[] {
   return tiles.map(() => ({ tile: undefined, unit: undefined }));
 }
 
+/**
+ * Seed 1's turn 1 in the neutral's age, on the campaign pinning the first technology whose goal there
+ * names a unit kind, its needs learned: the chronicle, the campaign, the plate's face, the name's place
+ * among the goal's names, and whose unit it names.
+ */
+function pinnedNamingUnit(): {
+  chronicle: Chronicle;
+  campaign: Campaign;
+  face: string;
+  naming: number;
+  faction: Faction;
+} {
+  const age = neutralAge();
+  for (const [id, { technology, need }] of Object.entries(ageOf(CATALOGUE, age).achievements)) {
+    const names = namedIn(achievementGoal(id, need));
+    const naming = names.findIndex(({ kind }) => kind === 'player' || kind === 'enemy');
+    const named = names[naming];
+    if (named === undefined || (named.kind !== 'player' && named.kind !== 'enemy')) continue;
+    const campaign = learnedWithNeeds(
+      CATALOGUE,
+      CAMPAIGN,
+      technologyOf(CATALOGUE, technology).needs,
+    );
+    if (!campaign.pins.includes(technology))
+      throw new Error(`learning its needs pins no ${technology}`);
+    const choices = withAge(CATALOGUE, campaign, openingChoices(CATALOGUE, campaign), age);
+    return {
+      chronicle: settledOn(1, [], campaign, choices),
+      campaign,
+      face: `${pinnedAchievement(technology)}-face`,
+      naming,
+      faction: named.kind,
+    };
+  }
+  throw new Error(`the ${age} age reads no achievement whose goal names a unit kind`);
+}
+
+/** The faction sign the unit in the window of the first small card wears, once it stands. */
+async function smallCardSign(page: Page): Promise<DiscShown | undefined> {
+  await expect.poll(() => standing(page, 'small-card-0')).toBe(true);
+  return (await readings(page, ['small-card-0']))('small-card-0').windowUnit?.sign;
+}
+
 /** Whether the button stands sunk in its well. */
 async function sunk(page: Page): Promise<boolean> {
   return (await pieceWorn(page, BUTTON)).piece === 'tab';
@@ -198,6 +248,26 @@ test('a chronicle screen opens with nothing wearing a sign and the button standi
   await capstoneClosed(page);
   expect(await signsOn(page, signed.tiles)).toEqual(bare(signed));
   expect(await sunk(page)).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('a unit kind named in a pinned achievement’s goal raises its small card wearing its faction’s sign while the signs are shown, and none while they are hidden', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, campaign, face, naming, faction } = pinnedNamingUnit();
+
+  await openSaved(page, chronicle, campaign);
+  const name = await nameOnScreen(page, face, naming);
+  await page.mouse.move(name.x, name.y);
+  expect(await smallCardSign(page)).toBeUndefined();
+
+  await click(page, BUTTON);
+  await expect.poll(() => sunk(page)).toBe(true);
+  await expect.poll(() => standing(page, 'small-card-0')).toBe(false);
+  await page.mouse.move(name.x, name.y);
+  expect(await smallCardSign(page)).toEqual(signOf(faction));
 
   expect(problems).toEqual([]);
 });

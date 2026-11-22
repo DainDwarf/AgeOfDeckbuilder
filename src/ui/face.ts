@@ -817,9 +817,14 @@ export function unitFace(catalogue: Catalogue, unit: UnitReading): Face {
   };
 }
 
-/** The face a unit fresh of the kind wears, of the faction named. */
-export function freshUnitFace(catalogue: Catalogue, kind: string, faction: Faction): Face {
-  return unitFace(catalogue, freshUnit(catalogue, kind, faction));
+/** The face a unit fresh of the kind wears, of the faction named, wearing its sign where `signed`. */
+export function freshUnitFace(
+  catalogue: Catalogue,
+  kind: string,
+  faction: Faction,
+  signed: boolean,
+): Face {
+  return unitFace(catalogue, { ...freshUnit(catalogue, kind, faction), signed });
 }
 
 /** The face a unit kind wears before it reads a unit: its unit card's, or its own. */
@@ -895,15 +900,22 @@ export function namedCardFace(catalogue: Catalogue, id: CardId, reading: AnswerR
   return cardFace(catalogue, namedCardMade(catalogue, id, reading), undefined);
 }
 
+/** Whether a unit a name shows wears its faction's sign, asked as its face is made. */
+export type SignsRead = () => boolean;
+
+/** Off the chronicle screen, no unit a name shows wears a sign. */
+export const UNSIGNED: SignsRead = () => false;
+
 /**
  * The face a name shows of the thing it names, in a text read as `reading`: a card's as that text
- * makes it, a unit kind's of a unit fresh of it of the faction the name names, and the face any other
- * thing wears.
+ * makes it, a unit kind's of a unit fresh of it of the faction the name names, wearing its sign
+ * where `signed`, and the face any other thing wears.
  */
 export function namedFace(
   catalogue: Catalogue,
   reference: Reference,
   reading: AnswerReading,
+  signed: boolean,
 ): Face {
   switch (reference.kind) {
     case 'card':
@@ -912,7 +924,7 @@ export function namedFace(
       return buildingFace(catalogue, reference.id);
     case 'player':
     case 'enemy':
-      return freshUnitFace(catalogue, reference.id, reference.kind);
+      return freshUnitFace(catalogue, reference.id, reference.kind, signed);
     case 'terrain':
       return terrainFace(bareTerrain(catalogue, reference.id));
     case 'feature':

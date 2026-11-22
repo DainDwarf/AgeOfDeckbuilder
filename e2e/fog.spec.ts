@@ -418,7 +418,7 @@ test('the overlay, the inspection and a press read what the map draws, and widen
   await expect.poll(() => shownCard(page)).toBe('unit');
   const face = await panelFace(page);
   expect([face.card, face.rules]).toEqual([
-    freshUnitFace(CATALOGUE, kept.stats.type, kept.faction).id,
+    freshUnitFace(CATALOGUE, kept.stats.type, kept.faction, false).id,
     text('face.hostile'),
   ]);
   expect(face.stats.find(({ stat }) => stat === 'health')?.number).toBe(

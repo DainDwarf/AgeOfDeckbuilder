@@ -35,7 +35,7 @@ import {
 } from './design-space';
 import { type EndingOf, standEnding } from './ending-screen';
 import { type AnswerShown, answerShown, capstoneShown, eventName } from './event-text';
-import { cardFace, cardFaceAtStart, type Face } from './face';
+import { cardFace, cardFaceAtStart, type Face, type SignsRead } from './face';
 import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
@@ -148,6 +148,7 @@ type Carried = Browsing | Dealing | Capstone | { readonly stands: 'ending' };
 type OverlayOf = EndingOf & {
   readonly scene: OverlayScene;
   readonly catalogue: Catalogue;
+  readonly signs: SignsRead;
   readonly covering: (covered: boolean) => void;
   readonly take: (at: number) => void;
 };
@@ -160,6 +161,7 @@ type OverlayOf = EndingOf & {
 export function createOverlay({
   scene,
   catalogue,
+  signs,
   covering,
   take,
   paid,
@@ -173,7 +175,7 @@ export function createOverlay({
   /** Whether the first render has opened the screen on the capstone's window. */
   let opened = false;
 
-  const browser = standBrowser(scene, catalogue, {
+  const browser = standBrowser(scene, catalogue, signs, {
     covering,
     takes: (press) => takes(press),
     back: () => {

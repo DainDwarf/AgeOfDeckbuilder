@@ -103,7 +103,7 @@ async function raisedFreshUnit(
   faction: Faction,
   halo: number,
 ): Promise<void> {
-  const face = freshUnitFace(CATALOGUE, kind, faction);
+  const face = freshUnitFace(CATALOGUE, kind, faction, false);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(face.id);
   const raised = (await readings(page, ['small-card-0']))('small-card-0');
   expect(faceSeen(raised)).toEqual(faceRead(face));

@@ -47,7 +47,7 @@ import {
   stratumOf,
   UI_FONT,
 } from './design-space';
-import { cardFaceAtStart } from './face';
+import { cardFaceAtStart, UNSIGNED } from './face';
 import { onScrollKeys, onWheel } from './keys';
 import { css, LOOK } from './look';
 import { backRaisesMenu, resetMenu } from './menu-scene';
@@ -579,7 +579,7 @@ export class CollectionScreen extends Phaser.Scene {
     });
     offerEntries(this, { seed: undefined, veiled: undefined, unit: undefined });
     let laid: Laid | undefined;
-    const laying = layingOf(this, CATALOGUE, {
+    const laying = layingOf(this, CATALOGUE, UNSIGNED, {
       on: bubbles,
       smallOn: bubbles,
       footBubble: createFootBubble(tooltip),

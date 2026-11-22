@@ -22,7 +22,7 @@ import {
   screenSize,
   UI_FONT,
 } from './design-space';
-import { cardFaceAtStart, type Face } from './face';
+import { cardFaceAtStart, type Face, type SignsRead, UNSIGNED } from './face';
 import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createPanel, type Panel, type PanelOf, type Surface } from './panel';
@@ -222,10 +222,11 @@ export type Browser = Surface & {
   close(): void;
 };
 
-/** The browser of a screen, on the overlay. */
+/** The browser of a screen, on the overlay, a unit named wearing its sign as `signs` answers. */
 export function standBrowser(
   overlay: OverlayScene,
   catalogue: Catalogue,
+  signs: SignsRead,
   screen: OnScrim,
 ): Browser {
   const on = overlay.strata.scrim;
@@ -257,14 +258,14 @@ export function standBrowser(
   });
 
   // The overlay holds one taker and this is it: whatever stands hears a key only through `takes`.
-  const large = standLarge(overlay, catalogue, screen.covering, {
+  const large = standLarge(overlay, catalogue, signs, screen.covering, {
     footBubble,
     get standing() {
       return up;
     },
     takes: (press) => screen.takes(press),
   });
-  const { inspecting } = layingOf(overlay, catalogue, {
+  const { inspecting } = layingOf(overlay, catalogue, signs, {
     on,
     smallOn: overlay.strata.smallCard,
     footBubble,
@@ -374,7 +375,7 @@ export function standBrowse(
   catalogue: Catalogue,
   covering: (covered: boolean) => void,
 ): Browsing {
-  const browser = standBrowser(overlay, catalogue, {
+  const browser = standBrowser(overlay, catalogue, UNSIGNED, {
     covering,
     takes(press) {
       if (boundTo(press, 'back')) browser.close();
