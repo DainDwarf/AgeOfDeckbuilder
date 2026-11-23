@@ -104,6 +104,90 @@ export function edgeLoops(
   return loops;
 }
 
+/**
+ * One edge's share of a line along every edge of some tiles: the tiles it lies between, one alone on
+ * their rim, and the convex polygon it covers, from one of the edge's corners round to the other and
+ * back.
+ */
+export type EdgePiece = {
+  readonly tiles: readonly TileCoords[];
+  readonly points: readonly Point[];
+};
+
+/**
+ * A line that wide along every edge of these tiles, straight on the edge itself, cut into one piece
+ * to each edge: the lines meeting at a corner are joined there by mitres, and the pieces share their
+ * sides, so none lies over another and none leaves a gap.
+ */
+export function edgePieces(
+  tiles: readonly TileCoords[],
+  place: (corner: Corner) => Point,
+  width: number,
+): EdgePiece[] {
+  const half = width / 2;
+  /** An edge: its two corners' points, its tiles, and the two points flanking it at each corner, its first corner's first. */
+  type Edge = {
+    readonly from: Point;
+    readonly to: Point;
+    readonly tiles: TileCoords[];
+    readonly flanks: { readonly before: Point; readonly after: Point }[];
+  };
+  /** A corner's point, and each edge leaving it with the place in that edge's flanks this corner fills. */
+  type Meeting = { at: Point; ways: { edge: Edge; toward: Point; side: number }[] };
+  const edges = new Map<string, Edge>();
+  const corners = new Map<string, Meeting>();
+  const cornerOf = (corner: Corner): Meeting => {
+    const key = cornerKey(corner);
+    const kept = corners.get(key) ?? { at: place(corner), ways: [] };
+    corners.set(key, kept);
+    return kept;
+  };
+  for (const tile of tiles) {
+    const around = cornersOf(tile);
+    around.forEach((start, at) => {
+      const end = around[(at + 1) % around.length];
+      const key = [cornerKey(start), cornerKey(end)].sort().join('|');
+      const kept = edges.get(key);
+      if (kept !== undefined) {
+        kept.tiles.push(tile);
+        return;
+      }
+      const from = cornerOf(start);
+      const to = cornerOf(end);
+      const edge: Edge = { from: from.at, to: to.at, tiles: [tile], flanks: [] };
+      edges.set(key, edge);
+      from.ways.push({ edge, toward: to.at, side: 0 });
+      to.ways.push({ edge, toward: from.at, side: 1 });
+    });
+  }
+
+  for (const { at, ways } of corners.values()) {
+    const turning = ways
+      .map((way) => ({ ...way, angle: Math.atan2(way.toward.y - at.y, way.toward.x - at.x) }))
+      .sort((one, other) => one.angle - other.angle);
+    const mitres = turning.map(({ angle }, index) => {
+      const next = turning[(index + 1) % turning.length].angle;
+      const gap = (next - angle + 2 * Math.PI) % (2 * Math.PI);
+      const reach = half / Math.sin(gap / 2);
+      return {
+        x: at.x + reach * Math.cos(angle + gap / 2),
+        y: at.y + reach * Math.sin(angle + gap / 2),
+      };
+    });
+    turning.forEach(({ edge, side }, index) => {
+      edge.flanks[side] = {
+        before: mitres[(index + turning.length - 1) % turning.length],
+        after: mitres[index],
+      };
+    });
+  }
+
+  return [...edges.values()].map(({ from, to, tiles: between, flanks: [leaving, arriving] }) => ({
+    tiles: between,
+    points: [from, leaving.after, arriving.before, to, arriving.after, leaving.before],
+  }));
+}
+
 /** A city's border round the tiles it holds: their loops of edges, curved, corner by corner. */
 export function borderLoops(
   held: readonly TileCoords[],

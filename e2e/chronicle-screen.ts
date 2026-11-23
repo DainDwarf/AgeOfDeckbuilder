@@ -2289,7 +2289,8 @@ type GraphicsCommandName =
   | 'LINE_STYLE'
   | 'FILL_STYLE'
   | 'FILL_PATH'
-  | 'STROKE_PATH';
+  | 'STROKE_PATH'
+  | 'FILL_TRIANGLE';
 
 // A Graphics keeps its commands flat in one buffer, each a number followed by its arguments: the
 // numbers are `phaser/src/gameobjects/graphics/Commands.js`'s, the counts what `Graphics.js` pushes.
@@ -2304,6 +2305,7 @@ const GRAPHICS_COMMANDS: Readonly<
   7: { name: 'FILL_STYLE', takes: 2 },
   8: { name: 'FILL_PATH', takes: 0 },
   9: { name: 'STROKE_PATH', takes: 0 },
+  10: { name: 'FILL_TRIANGLE', takes: 6 },
 };
 
 /** A command a Graphics was told: its name and the arguments that follow it. */
@@ -2360,11 +2362,61 @@ async function borderDrawn(
         case 'ARC':
         case 'FILL_STYLE':
         case 'FILL_PATH':
+        case 'FILL_TRIANGLE':
           throw new Error(`a border's line holds the command ${name}`);
       }
     }
   }
   return { styles, strokes };
+}
+
+/** One fill style the hex grid was told: its colour, its strength, and every corner of the triangles filled in it. */
+export type HexGridFill = {
+  readonly colour: number;
+  readonly strength: number;
+  readonly points: readonly Point[];
+};
+
+/**
+ * What the hex grid shows, each of its Graphics in the order drawn as the fill styles that filled
+ * anything there; none while it is hidden.
+ */
+export async function hexGridFills(page: Page): Promise<HexGridFill[][]> {
+  const buffers = await page.evaluate(() => {
+    const grid = window.shownIn?.('hex-grid');
+    if (grid === undefined) throw new Error('there is no hex grid on the map');
+    return grid
+      .filter((object) => object.type === 'Graphics')
+      .map((object) => (object as Phaser.GameObjects.Graphics).commandBuffer as number[]);
+  });
+  return buffers.map((buffer) => {
+    const fills: { colour: number; strength: number; points: Point[] }[] = [];
+    for (const { name, args } of graphicsCommands(buffer)) {
+      switch (name) {
+        case 'FILL_STYLE':
+          fills.push({ colour: args[0], strength: args[1], points: [] });
+          break;
+        case 'FILL_TRIANGLE': {
+          const fill = fills.at(-1);
+          if (fill === undefined) throw new Error('the hex grid fills before any fill style');
+          for (let at = 0; at < args.length; at += 2)
+            fill.points.push({ x: args[at], y: args[at + 1] });
+          break;
+        }
+        // The style a Graphics is made with (docs/PHASER.md).
+        case 'LINE_STYLE':
+          break;
+        case 'ARC':
+        case 'BEGIN_PATH':
+        case 'LINE_TO':
+        case 'MOVE_TO':
+        case 'FILL_PATH':
+        case 'STROKE_PATH':
+          throw new Error(`the hex grid holds the command ${name}`);
+      }
+    }
+    return fills.filter(({ points }) => points.length > 0);
+  });
 }
 
 /** How many stretches of the map's borders are drawn in each colour, by the colour's value. */

@@ -4,7 +4,9 @@ import type { Faction } from '../rules/units';
 import {
   borderLoops,
   type Curved,
+  type EdgePiece,
   edgeLoops,
+  edgePieces,
   lineAlong,
   type Point,
   type Stretch,
@@ -21,6 +23,10 @@ const BAND_DEPTH = 7;
 /** How wide the reach's line is, and how deep its band fades inside it. */
 const REACH_LINE = 1;
 const REACH_DEPTH = 5;
+
+/** How wide the hex grid's line is, and the dark edge under it. */
+const HEX_GRID_LINE = 1.5;
+const HEX_GRID_EDGE = 3;
 
 /** How many segments each curved stretch of a line is drawn as. */
 const STRETCH_SEGMENTS = 8;
@@ -60,6 +66,14 @@ export type Claiming = {
 export type ClaimMarksView = {
   /** The claim marks, carrying the claimable tiles' keys; hidden where none may be claimed. */
   paint(claiming: Claiming | undefined): void;
+};
+
+export type HexGridView = {
+  /**
+   * The hex grid's line on every edge, darkened by the fog where no tile along the edge is among
+   * these, by key; drawn again only where that changed.
+   */
+  paint(inSight: ReadonlySet<string>): void;
 };
 
 function traced(context: CanvasRenderingContext2D, stretch: Stretch): void {
@@ -148,6 +162,53 @@ function paintLine(
     stroked(line, stretch, width);
   }
   line.setVisible(stretches.length > 0);
+}
+
+// A Graphics strokes 2 units wide or less with neither joins nor caps (docs/PHASER.md), and below
+// full strength two strokes over one point stand stronger than one: each edge's piece is filled.
+/** An edge's piece filled, in triangles fanned from its first point. */
+function filledPiece(graphics: Phaser.GameObjects.Graphics, { points }: EdgePiece): void {
+  const [from, ...rest] = points;
+  for (let at = 1; at < rest.length; at++) {
+    const [one, other] = [rest[at - 1], rest[at]];
+    graphics.fillTriangle(from.x, from.y, one.x, one.y, other.x, other.y);
+  }
+}
+
+/**
+ * The hex grid on the map's own surface, on this layer, along every edge of these tiles: the dark
+ * edge, the same on every edge, and over it the line.
+ */
+export function createHexGrid(
+  scene: Phaser.Scene,
+  on: Phaser.GameObjects.Layer,
+  tiles: readonly TileCoords[],
+): HexGridView {
+  const edge = scene.add.graphics().fillStyle(LOOK.mapOutline, LOOK.hexGridEdge);
+  for (const piece of edgePieces(tiles, cornerAt, HEX_GRID_EDGE)) filledPiece(edge, piece);
+  const line = scene.add.graphics();
+  on.add([edge, line]);
+  const pieces = edgePieces(tiles, cornerAt, HEX_GRID_LINE).map((piece) => ({
+    piece,
+    keys: piece.tiles.map(tileKey),
+  }));
+
+  /** What the line was last drawn from: whether each piece's edge has a tile in sight along it. */
+  let drawnFrom: string | undefined;
+
+  return {
+    paint(inSight): void {
+      const lit = pieces.map(({ keys }) => keys.some((key) => inSight.has(key)));
+      const from = lit.map((one) => (one ? '1' : '0')).join('');
+      if (from === drawnFrom) return;
+      drawnFrom = from;
+      line.clear();
+      pieces.forEach(({ piece }, at) => {
+        line.fillStyle(darkened(LOOK.selected, fogDark(!lit[at])), LOOK.hexGridLine);
+        filledPiece(line, piece);
+      });
+    },
+  };
 }
 
 /**

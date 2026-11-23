@@ -10,7 +10,8 @@ export type ButtonSign =
   | 'end-turn-button'
   | 'menu-button'
   | 'icons-button'
-  | 'faction-signs-button';
+  | 'faction-signs-button'
+  | 'hex-grid-button';
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
@@ -66,6 +67,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'menu-button': 'game-icons/hamburger-menu.svg',
   'icons-button': 'material-design-icons/map-marker.svg',
   'faction-signs-button': 'material-design-icons/shield-crown.svg',
+  'hex-grid-button': 'material-design-icons/hexagon-multiple-outline.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */

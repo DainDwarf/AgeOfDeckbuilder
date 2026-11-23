@@ -55,6 +55,9 @@ export type Look = {
   /** The strength a unit's path's chevrons rest at, and the dark edge under them. */
   readonly pathChevron: number;
   readonly pathEdge: number;
+  /** The strength the hex grid's line rests at, and the dark edge under it. */
+  readonly hexGridLine: number;
+  readonly hexGridEdge: number;
   readonly pin: number;
   /** The dark line on each side of a pinned plate's edge. */
   readonly pinEdge: number;
@@ -239,6 +242,8 @@ export const LOOK: Look = {
   reachLine: 0.9,
   pathChevron: 0.9,
   pathEdge: 0.63,
+  hexGridLine: 0.7,
+  hexGridEdge: 0.7,
   pin: 0xf2f6ff,
   pinEdge: 0x0d1014,
   pinMark: 0xb4453c,

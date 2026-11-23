@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A hex grid on the map, as a test** — the Hex grid button stands left of the Faction signs button and shows or hides a line along every edge of every tile of the map, under the rivers and the borders, every chronicle screen opening with it hidden; `e2e/hex-grid.spec.ts` proves it, and keeping it or taking it out is the user's word after play. Doc-impact: docs/MAP-SCREEN.md, docs/LOOK.md, docs/INTERFACE.md. [board/hex-grid.md](board/hex-grid.md)
 - **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.
 - **The menu's windows** — Menu, Settings, Controls, Graphics, Manage Save and the warnings laid out again on the new paper; deleted at its intake if the paper leaves nothing to lay out.
 - **The windows on the scrim** — the deal window, the capstone's, a browse and the ending screen on the new paper, and the answers' two looks left unanswered.

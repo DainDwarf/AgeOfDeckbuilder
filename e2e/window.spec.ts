@@ -47,6 +47,7 @@ const EDGED = [
   'menu-button',
   'icons-button',
   'faction-signs-button',
+  'hex-grid-button',
   'draw-pile',
   'end-turn',
   'exhaust-pile',
@@ -184,7 +185,7 @@ test('on a wider window the chronicle screen takes its shape: the bar centred al
   expect(bar.y).toBeCloseTo(0, 3);
   expect(bar.x + bar.width / 2).toBeCloseTo(WIDE.width / 2, 3);
   expect(bar.width).toBeCloseTo(today.pieces['resource-bar'].width, 3);
-  for (const button of ['menu-button', 'icons-button', 'faction-signs-button']) {
+  for (const button of ['menu-button', 'icons-button', 'faction-signs-button', 'hex-grid-button']) {
     expect(fromTheRight(pieces[button], WIDE.width), button).toBeCloseTo(
       fromTheRight(today.pieces[button], DESIGN_WINDOW.width),
       3,

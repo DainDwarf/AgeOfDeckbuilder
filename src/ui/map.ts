@@ -78,6 +78,7 @@ import { LOOK } from './look';
 import {
   createBorder,
   createClaimMarks,
+  createHexGrid,
   createReach,
   type Reach,
   type WornAsDrawn,
@@ -292,12 +293,21 @@ export type MapView = {
   showSigns(shown: boolean): void;
   /** Shows or hides the discs of every tile's row, the features' and the improvements', with what they wear. */
   showDiscs(shown: boolean): void;
+  /** Shows or hides the hex grid, a line along every edge of every tile. */
+  showHexGrid(shown: boolean): void;
   /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
   live(on: boolean): void;
   /** Whether the city's bars read what ending the turn would add, or show the stocks alone. */
   reckons(on: boolean): void;
   /** Notches of zoom, in above zero, about the pointer. */
   zoom(notches: number): void;
+};
+
+/** Whether the map shows the discs of every tile's row, the faction signs and the hex grid. */
+export type MapDisplays = {
+  readonly discs: boolean;
+  readonly signs: boolean;
+  readonly hexGrid: boolean;
 };
 
 /** Where a tile's face stands, at the size every tile is drawn at. */
@@ -382,7 +392,7 @@ export function createMapView(
   strata: MapStrata,
   catalogue: Catalogue,
   chronicle: Chronicle,
-  signs: boolean,
+  displays: MapDisplays,
 ): MapView {
   const map = strata.terrain;
 
@@ -393,6 +403,8 @@ export function createMapView(
   };
 
   const ground = group(strata.terrain, 'terrain');
+  const hexGridGroup = group(strata.terrain, 'hex-grid').setVisible(displays.hexGrid);
+  const hexGrid = createHexGrid(scene, hexGridGroup, chronicle.tiles);
   const rivers = group(strata.terrain, 'rivers');
   const ditches = group(strata.terrain, 'ditches');
   const lying = group(strata.terrain, 'lying');
@@ -402,6 +414,11 @@ export function createMapView(
   const features = group(strata.buildings, 'features');
   const improvements = group(strata.buildings, 'improvements');
   const sitePointers = group(strata.buildings, 'site-pointers');
+  // On the three layers and never on their marks: every render and every motion writes the marks' own.
+  const showDiscs = (on: boolean): void => {
+    for (const layer of [features, improvements, sitePointers]) layer.setVisible(on);
+  };
+  showDiscs(displays.discs);
   const reach = createReach(scene, group(strata.selection, 'lit'), chronicle.tiles);
   const rings = group(strata.selection, 'rings');
   const selected = group(strata.selection, 'selected');
@@ -584,7 +601,7 @@ export function createMapView(
   /** The veils the map draws under; both stand until the console takes one off. */
   let veils: Veils = VEILS_ON;
   /** Whether every unit, every city and every camp wears its faction's sign. */
-  let signed = signs;
+  let signed = displays.signs;
 
   /**
    * What the map draws of a chronicle: a tile in sight live, a tile charted as its snapshot has it,
@@ -1384,6 +1401,7 @@ export function createMapView(
     if (selection !== undefined) selection = selectionOn(selection.tile, selection.unit);
 
     paintTiles();
+    hexGrid.paint(live);
     paintRivers();
     paintBorder();
     paintUnits(current);
@@ -1575,11 +1593,10 @@ export function createMapView(
       if (shown !== undefined) render(shown);
     },
 
-    // On the two layers and never on their marks: every render and every motion writes the marks' own.
-    showDiscs(on: boolean): void {
-      features.setVisible(on);
-      improvements.setVisible(on);
-      sitePointers.setVisible(on);
+    showDiscs,
+
+    showHexGrid(on: boolean): void {
+      hexGridGroup.setVisible(on);
     },
 
     aimTile(

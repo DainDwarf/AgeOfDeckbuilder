@@ -227,9 +227,41 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // down, and a second chain would stand a small card beside the first's.
     const footBubble = createFootBubble(tooltip.ui);
 
+    const iconsButton = createDisplayButton(
+      this,
+      ui.pinned,
+      tooltip.ui,
+      { symbol: 'icons-button', at: 'icons', reads: 'button.icons' },
+      true,
+      (shown) => {
+        view.showDiscs(shown);
+        reinspect();
+      },
+    );
+    const signsButton = createDisplayButton(
+      this,
+      ui.pinned,
+      tooltip.ui,
+      { symbol: 'faction-signs-button', at: 'signs', reads: 'button.faction-signs' },
+      false,
+      (shown) => {
+        view.showSigns(shown);
+        reinspect();
+      },
+    );
+    const hexGridButton = createDisplayButton(
+      this,
+      ui.pinned,
+      tooltip.ui,
+      { symbol: 'hex-grid-button', at: 'hexGrid', reads: 'button.hex-grid' },
+      false,
+      (shown) => {
+        view.showHexGrid(shown);
+      },
+    );
+
     /** Whether every unit, every city and every camp wears its faction's sign. */
-    let signsShown = false;
-    const signs = (): boolean => signsShown;
+    const signs = (): boolean => signsButton.shown();
 
     const faces = {
       footBubble,
@@ -240,7 +272,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     const parts: Part[] = [];
-    const view = createMapView(map, map.strata, CATALOGUE, this.current, signsShown);
+    const view = createMapView(map, map.strata, CATALOGUE, this.current, {
+      discs: iconsButton.shown(),
+      signs: signs(),
+      hexGrid: hexGridButton.shown(),
+    });
     const panel = createInfoPanel(map, map.strata.infopanel, CATALOGUE, tooltip.map, {
       small: faces.small,
       on: ui.smallCard,
@@ -263,9 +299,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     /** The tile the infopanel is inspecting, as the map draws it, its cards, and which of them it shows. */
     let inspection: { on: PressedTile; face: Drawn; cards: Card[]; card: number } | undefined;
-
-    /** Whether the discs of every tile's row stand on the map. */
-    let discsShown = true;
 
     /** The inspection let go of on its own: the infopanel down, whatever is selected still ringed. */
     const uninspect = (): void => {
@@ -435,8 +468,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
      */
     const cardsOn = (face: Drawn): Card[] =>
       cardsOf(CATALOGUE, face, this.current, (coord) => view.drawnAs(coord)?.tile, {
-        discs: discsShown,
-        signs: signsShown,
+        discs: iconsButton.shown(),
+        signs: signs(),
       });
 
     /** The card the infopanel stands read again, as the screen now shows the discs and the signs. */
@@ -659,46 +692,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       showYields();
     };
 
-    const iconsButton = createDisplayButton(
-      this,
-      ui.pinned,
-      tooltip.ui,
-      { symbol: 'icons-button', at: 'icons', reads: 'button.icons' },
-      () => {
-        switchDiscs();
-      },
-    );
-
-    const showDiscs = (): void => {
-      view.showDiscs(discsShown);
-      iconsButton.sink(discsShown);
-      reinspect();
-    };
-
-    const switchDiscs = (): void => {
-      discsShown = !discsShown;
-      showDiscs();
-    };
-    showDiscs();
-
-    const signsButton = createDisplayButton(
-      this,
-      ui.pinned,
-      tooltip.ui,
-      { symbol: 'faction-signs-button', at: 'signs', reads: 'button.faction-signs' },
-      () => {
-        signsShown = !signsShown;
-        showSigns();
-      },
-    );
-
-    const showSigns = (): void => {
-      view.showSigns(signsShown);
-      signsButton.sink(signsShown);
-      reinspect();
-    };
-    showSigns();
-
     // Read outside Phaser's dispatch: a hit test inside it refills the list being walked
     // (docs/PHASER.md).
     const placeUnder = (): { readonly place: Place; readonly onMap: boolean } => {
@@ -808,7 +801,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         return;
       }
       if (boundTo(press, 'icons')) {
-        switchDiscs();
+        iconsButton.switch();
         return;
       }
       if (boundTo(press, 'inspect')) {

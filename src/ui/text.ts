@@ -86,6 +86,7 @@ const TEXT = {
   'button.city-mode': 'City mode',
   'button.icons': 'Icons',
   'button.faction-signs': 'Faction signs',
+  'button.hex-grid': 'Hex grid',
   'kind.settle': 'Settle',
   'kind.unit': 'Unit',
   'kind.building': 'Building',

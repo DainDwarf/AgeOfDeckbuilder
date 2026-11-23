@@ -40,4 +40,13 @@ describe('the buttons at the screen’s top right corner', () => {
       expect(icons.x - (signs.x + signs.width)).toBe(menu.x - (icons.x + icons.width));
     }
   });
+
+  it('stands the Hex grid button left of the Faction signs button, level with it, of its size and as far from it as it stands from the Icons button', () => {
+    for (const { icons, signs, hexGrid } of [smallest, wider]) {
+      expect(hexGrid.y).toBe(signs.y);
+      expect(hexGrid.width).toBe(signs.width);
+      expect(hexGrid.height).toBe(signs.height);
+      expect(signs.x - (hexGrid.x + hexGrid.width)).toBe(icons.x - (signs.x + signs.width));
+    }
+  });
 });

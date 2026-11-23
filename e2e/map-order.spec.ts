@@ -25,6 +25,7 @@ const CAMPAIGN = campaignWith([HEAL]);
 /** What the map draws, from the ground up; an aim's rims stand only while a card is aimed. */
 const ORDER = [
   'terrain',
+  'hex-grid',
   'rivers',
   'ditches',
   'lying',

@@ -7,12 +7,17 @@ const SQUARE = 40;
 const APART = 8;
 
 /** Where the buttons at the screen's top right corner stand. */
-export type CornerLayout = { readonly menu: Box; readonly icons: Box; readonly signs: Box };
+export type CornerLayout = {
+  readonly menu: Box;
+  readonly icons: Box;
+  readonly signs: Box;
+  readonly hexGrid: Box;
+};
 
 /**
  * The Menu button at the top right corner of a screen that wide, `margin` in from its right edge and
- * level with the middle of a strip that tall along its top, and the Icons button and the Faction
- * signs button left of it in a row, each level with it and just apart from the one right of it.
+ * level with the middle of a strip that tall along its top, and the other buttons left of it in a
+ * row, each level with it and just apart from the one right of it.
  */
 export function layOutCorner(width: number, margin: number, strip: number): CornerLayout {
   const menu = {
@@ -23,5 +28,6 @@ export function layOutCorner(width: number, margin: number, strip: number): Corn
   };
   const leftOf = (box: Box): Box => ({ ...box, x: box.x - APART - SQUARE });
   const icons = leftOf(menu);
-  return { menu, icons, signs: leftOf(icons) };
+  const signs = leftOf(icons);
+  return { menu, icons, signs, hexGrid: leftOf(signs) };
 }
