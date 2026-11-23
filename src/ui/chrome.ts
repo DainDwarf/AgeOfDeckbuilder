@@ -8,11 +8,11 @@ import {
   CHROME_SHEET_KEY,
   COUNTER,
   type Fitted,
+  INACTIVE_TAB,
   PANEL,
   type Piece,
   RIM,
   SHADOW_MARGIN,
-  TAB,
   WINDOW_BAND,
   WINDOW_RIM,
 } from './chrome-kit';
@@ -60,9 +60,9 @@ function lay(
   return slice.setScale(scale).setPosition(box.x + box.width / 2, box.y + box.height / 2);
 }
 
-/** A piece fitted to the box's height. */
+/** A piece fitted to the box's narrower measure. */
 function fit(slice: Phaser.GameObjects.NineSlice, piece: Fitted, box: Box): void {
-  lay(slice, piece, box, box.height / piece.height);
+  lay(slice, piece, box, Math.min(box.width, box.height) / piece.height);
 }
 
 /**
@@ -129,7 +129,7 @@ export function createChromeWindow(
 }
 
 /** What a well is drawn as: the kit's inactive tab, or a button's gold. */
-export type WellPiece = 'tab' | 'gold';
+export type WellPiece = 'inactive-tab' | 'gold';
 
 /** A button of the kit in one look, fitted to a box as the button is. */
 function buttonIn(piece: ButtonPiece, look: ButtonLook): Fitted {
@@ -139,20 +139,20 @@ function buttonIn(piece: ButtonPiece, look: ButtonLook): Fitted {
 
 /** A well, named `name`, drawn nowhere until `placeChromeWell` lays it. */
 export function createChromeWell(scene: Phaser.Scene, name: string): Phaser.GameObjects.NineSlice {
-  return sliceOf(scene, TAB).setName(name);
+  return sliceOf(scene, INACTIVE_TAB).setName(name);
 }
 
 /** The piece a well is drawn as. */
 function wellOf(piece: WellPiece): Fitted {
   switch (piece) {
-    case 'tab':
-      return TAB;
+    case 'inactive-tab':
+      return INACTIVE_TAB;
     case 'gold':
       return buttonIn('gold', 'normal');
   }
 }
 
-/** The well drawn as the piece over the box, fitted to its height. */
+/** The well drawn as the piece over the box, fitted to it. */
 export function placeChromeWell(
   well: Phaser.GameObjects.NineSlice,
   piece: WellPiece,
@@ -166,7 +166,7 @@ export function createChromeCounter(scene: Phaser.Scene): Phaser.GameObjects.Nin
   return sliceOf(scene, COUNTER);
 }
 
-/** The counter chip over the box, fitted to its height. */
+/** The counter chip over the box, fitted to it. */
 export function placeChromeCounter(chip: Phaser.GameObjects.NineSlice, box: Box): void {
   fit(chip, COUNTER, box);
 }
@@ -192,7 +192,7 @@ export type ButtonReach = {
 };
 
 /**
- * A button of the kit on the box, its face named `name`, fitted to the box's height, the pointer the
+ * A button of the kit on the box, its face named `name`, fitted to the box, the pointer the
  * hand on it. Live, it wears the hover look under the pointer, and the pressed look while a left press
  * that landed on it is held on it; dead, it wears neither.
  */
@@ -241,7 +241,7 @@ export function createChromeButton(
   });
 
   const stand = (): void => {
-    fit(face, latched ? TAB : buttonIn(piece, worn()), box);
+    fit(face, latched ? INACTIVE_TAB : buttonIn(piece, worn()), box);
   };
   stand();
 

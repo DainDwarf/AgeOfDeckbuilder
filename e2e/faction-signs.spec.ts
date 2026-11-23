@@ -181,7 +181,7 @@ async function smallCardSign(page: Page): Promise<DiscShown | undefined> {
 
 /** Whether the button stands sunk in its well. */
 async function sunk(page: Page): Promise<boolean> {
-  return (await pieceWorn(page, BUTTON)).piece === 'tab';
+  return (await pieceWorn(page, BUTTON)).piece === 'inactive-tab';
 }
 
 /** The button pressed, waited for until the tiles wear that. */

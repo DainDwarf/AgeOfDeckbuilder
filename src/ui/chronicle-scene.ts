@@ -878,18 +878,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       { render: faces.cards.lose },
       endTurn,
       { render: showSettleStanding },
-      createPinnedAchievements(
-        this,
-        ui.pinned,
-        CATALOGUE,
-        this.current,
-        campaignHeld().pins,
-        faces.small,
-        (name) => {
+      createPinnedAchievements(this, ui.pinned, CATALOGUE, this.current, campaignHeld().pins, {
+        small: faces.small,
+        inspect: (name) => {
           overlay.inspectNamed(name);
         },
-        bar.left,
-      ),
+        tooltip: tooltip.ui,
+        unaim: unaimAll,
+      }),
       overlay,
     );
     paint();

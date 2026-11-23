@@ -108,6 +108,10 @@ export type Look = {
   /** The ink words and signs read in on the chrome's silver and gold: a button's, and a window's gold band. */
   readonly metalInk: number;
   readonly paleInk: number;
+  /** The ink a reached row of the pinned achievements' ledger reads in. */
+  readonly reachedAchievementInk: number;
+  /** The strength the rule between two rows of the pinned achievements' ledger rests at, in the pale ink. */
+  readonly ledgerRule: number;
   readonly answerInk: number;
   readonly page: number;
   readonly mapOutline: number;
@@ -271,6 +275,8 @@ export const LOOK: Look = {
   charcoalInk: 0xf2f6ff,
   metalInk: 0x0d1014,
   paleInk: 0xd4d7db,
+  reachedAchievementInk: 0x9aa1a9,
+  ledgerRule: 0.18,
   answerInk: 0x9aa1a9,
   // `index.html`'s style reset holds this value too, for the page before the canvas covers it.
   page: 0x0d1117,

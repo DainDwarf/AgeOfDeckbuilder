@@ -74,7 +74,7 @@ async function shown(page: Page): Promise<{ discs: boolean[]; ground: boolean[];
   return {
     discs: DISCS.map((name) => seen(name).standing),
     ground: GROUND.map((name) => seen(name).standing),
-    sunk: pieceWornOf(seen(BUTTON)).piece === 'tab',
+    sunk: pieceWornOf(seen(BUTTON)).piece === 'inactive-tab',
   };
 }
 

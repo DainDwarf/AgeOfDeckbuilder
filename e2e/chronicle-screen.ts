@@ -109,8 +109,8 @@ import {
   BUTTONS,
   type ButtonLook,
   type ButtonPiece,
+  INACTIVE_TAB,
   SHADOW_MARGIN,
-  TAB,
 } from '../src/ui/chrome-kit';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
@@ -1813,11 +1813,11 @@ export async function shows(page: Page, name: string): Promise<boolean> {
 /** What a piece of the chrome wears: a button of the kit in one of its looks, or the kit's inactive tab. */
 export type PieceWorn =
   | { readonly piece: ButtonPiece; readonly look: ButtonLook }
-  | { readonly piece: 'tab' };
+  | { readonly piece: 'inactive-tab' };
 
 /** What a piece of the chrome wears, read off the frame of the kit its reading draws. */
 export function pieceWornOf({ frame }: Reading): PieceWorn {
-  if (frame === TAB.frame) return { piece: 'tab' };
+  if (frame === INACTIVE_TAB.frame) return { piece: 'inactive-tab' };
   for (const [piece, { looks }] of Object.entries(BUTTONS)) {
     for (const look of Object.keys(looks) as ButtonLook[]) {
       if (looks[look] === frame) {
@@ -1839,9 +1839,13 @@ export async function wellWorn(page: Page, key: string): Promise<PieceWorn | und
   return well.shows ? pieceWornOf(well) : undefined;
 }
 
-/** Where a piece of the chrome's own box stands on the page, the shadow round it left out. */
+/** Where the named piece of the chrome's own box stands on the page, in one question to the page. */
 export async function pieceOnScreen(page: Page, name: string): Promise<Frame & { unit: number }> {
-  const piece = await reading(page, name);
+  return pieceOnScreenOf(await reading(page, name));
+}
+
+/** Where a piece of the chrome's own box stands on the page, the shadow round it left out. */
+export function pieceOnScreenOf(piece: Reading): Frame & { unit: number } {
   const { x, y, width, height } = piece.boundsOnScreen;
   const { unit } = piece.onScreen;
   const room = SHADOW_MARGIN * piece.scale * unit;
@@ -3542,7 +3546,7 @@ export function aimLine(page: Page): Promise<string | undefined> {
 /** Whether the end-turn button wears its hover look. */
 export async function endTurnHovered(page: Page): Promise<boolean> {
   const worn = await pieceWorn(page, 'end-turn');
-  return worn.piece !== 'tab' && worn.look === 'hover';
+  return worn.piece !== 'inactive-tab' && worn.look === 'hover';
 }
 
 /** What the end-turn button's chip reads, and nothing while it wears none, on the settle phase. */

@@ -96,7 +96,7 @@ export const PANEL: Piece = {
 };
 
 /** The kit's inactive tab, a well. */
-export const TAB: Fitted = {
+export const INACTIVE_TAB: Fitted = {
   frame: `${KIT}/tab_inactive.png`,
   cuts: { left: 44, top: 44, right: 44, bottom: 52 },
   height: 92,
@@ -177,7 +177,13 @@ const BUTTON_FILES: readonly Retouched[] = Object.values(BUTTONS).flatMap(({ loo
 
 export const CHROME_SHEET: Sheet = {
   key: CHROME_SHEET_KEY,
-  files: [PANEL.frame, MODAL, ...BUTTON_FILES.map(({ file }) => file), TAB.frame, COUNTER.frame],
+  files: [
+    PANEL.frame,
+    MODAL,
+    ...BUTTON_FILES.map(({ file }) => file),
+    INACTIVE_TAB.frame,
+    COUNTER.frame,
+  ],
   retouched: BUTTON_FILES,
   made: [
     {

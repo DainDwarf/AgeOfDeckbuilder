@@ -18,7 +18,7 @@ const STROKE = 8;
 const CLEAR = 16;
 
 /** How far the chip stands in from the screen's right edge. */
-export const CHIP_INSET = STROKE + CLEAR;
+const CHIP_INSET = STROKE + CLEAR;
 
 /** How far under the Menu button the chip stands. */
 const UNDER_THE_MENU = 14;

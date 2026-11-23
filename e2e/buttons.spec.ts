@@ -129,7 +129,7 @@ test('the Icons button stands left of the Menu button and level with it, sunk in
   const icons = await pieceOnScreen(page, 'icons-button');
   expect(icons.x + icons.width).toBeLessThan(menu.x);
   expect(icons.y + icons.height / 2).toBeCloseTo(menu.y + menu.height / 2, 1);
-  expect((await pieceWorn(page, 'icons-button')).piece).toBe('tab');
+  expect((await pieceWorn(page, 'icons-button')).piece).toBe('inactive-tab');
 
   const iconsAt = await onScreen(page, 'icons-button');
   await page.mouse.move(iconsAt.x, iconsAt.y);

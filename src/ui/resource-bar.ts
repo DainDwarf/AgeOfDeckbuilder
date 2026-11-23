@@ -131,7 +131,7 @@ type StandsOn = 'bar' | WellPiece;
 /** The inks a reading's value and its reckoning read in on what it stands on, a reckoning on its pill aside. */
 const INKS: Readonly<Record<StandsOn, { value: number; gain: number; loss: number }>> = {
   bar: { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss },
-  tab: { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss },
+  'inactive-tab': { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss },
   gold: { value: LOOK.metalInk, gain: LOOK.gainOnGold, loss: LOOK.lossOnGold },
 };
 
@@ -149,8 +149,6 @@ export type ResourceBar = {
   latch(shown: ReadonlySet<Resource>): void;
   /** Whether the object is the bar's paper between its readings, which is beside the things. */
   isPaper(object: Phaser.GameObjects.GameObject): boolean;
-  /** Where the plate's left end stands on the screen as it is laid out now. */
-  left(): number;
 };
 
 export function createResourceBar(
@@ -201,9 +199,8 @@ export function createResourceBar(
     .setInteractive();
   bar.addAt([panel, paper], 0);
 
-  const left = (): number => (screenSize().width - row.width) / 2;
   onResize(scene, () => {
-    bar.setX(left());
+    bar.setX((screenSize().width - row.width) / 2);
   });
 
   for (const entry of entries) {
@@ -224,7 +221,7 @@ export function createResourceBar(
   /** What a reading stands on as the bar stands. */
   const standsOn = ({ key }: Entry): StandsOn => {
     if (waiting.has(key)) return 'gold';
-    return key !== 'idle' && latched.has(key) ? 'tab' : 'bar';
+    return key !== 'idle' && latched.has(key) ? 'inactive-tab' : 'bar';
   };
 
   /** A reading's value and reckoning inked for what it stands on. */
@@ -366,7 +363,6 @@ export function createResourceBar(
     isPaper(object: Phaser.GameObjects.GameObject): boolean {
       return object === paper;
     },
-    left,
   };
 }
 

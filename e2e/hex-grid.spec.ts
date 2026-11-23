@@ -60,7 +60,7 @@ function twoEdges(): { chronicle: Chronicle; index: number; seen: Edge; unseen: 
 
 /** Whether the button stands sunk in its well. */
 async function sunk(page: Page): Promise<boolean> {
-  return (await pieceWorn(page, BUTTON)).piece === 'tab';
+  return (await pieceWorn(page, BUTTON)).piece === 'inactive-tab';
 }
 
 const middleOf = (points: readonly Point[]): Point => ({
