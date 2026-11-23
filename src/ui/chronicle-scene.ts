@@ -885,6 +885,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         },
         tooltip: tooltip.ui,
         unaim: unaimAll,
+        capstone: () => {
+          overlay.raiseCapstone(this.current);
+        },
       }),
       overlay,
     );

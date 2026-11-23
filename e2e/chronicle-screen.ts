@@ -123,7 +123,7 @@ import { unitPaintingOf } from '../src/ui/marks';
 import { refused, type Said } from '../src/ui/refusal-lines';
 import { SAVE_ENTRY } from '../src/ui/save-entry';
 import { ageName, cardName, referenceName, regionName, text } from '../src/ui/text';
-import { layOutRun, type Reference, type Run } from '../src/ui/text-run';
+import { layOutRun, namedOnce, type Reference, type Run } from '../src/ui/text-run';
 import { mapFrameOf } from '../src/ui/tray-layout';
 import { learnedWithNeeds } from '../tools/learned-with-needs';
 
@@ -1443,6 +1443,11 @@ function charRun(entry: string): Run {
 /** What an entry names, in its order, laid out as a run on a measure of one to the character. */
 export function namedIn(entry: string): Reference[] {
   return charRun(entry).names.map((name) => name.reference);
+}
+
+/** What an entry names, each thing once, at its first name, in its order. */
+export function namedOnceIn(entry: string): Reference[] {
+  return namedOnce(charRun(entry).names).map((name) => name.reference);
 }
 
 /** What an entry draws, in reading order, as `rulesRead` and `answerRead` read it off the page. */

@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The capstone's window from the ledger** — a click on the capstone's row at the ledger's top, left or right, raises the capstone's window at any moment of the chronicle, the capstone standing on one panel with everything its text names beside it as cards, and `e2e/capstone.spec.ts` proves it on the game's content. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/capstone-window-from-ledger.md](board/capstone-window-from-ledger.md)
 - **A minimize button on the scrim's windows, as a test** — a button setting the deal window, a browse or the capstone's window aside so the map is read and moved under it, built for the user to judge in play and kept or taken out on their word; with a window set aside the menu answers, so the menu's button staying lit over those scrims can go.
 - **A short info window on selection** — a small window in a corner reading the most useful facts of the selected unit or building.
 - **The combat log** — a readable record of what the end of turn did, for a player who missed the motion or wants it in words.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layOutRun, type Metrics, type Reference, type Run } from './text-run';
+import { layOutRun, type Metrics, namedOnce, type Reference, type Run } from './text-run';
 
 /** A font of five to the character, spaces included, so a width reads as a count of characters. */
 const measure = (content: string): number => 5 * content.length;
@@ -132,6 +132,26 @@ describe('a run with names in it', () => {
         to: expect.any(Number),
         line: 1,
       },
+    ]);
+  });
+
+  it('reads the number written before a name, and none before a name the run writes none before', () => {
+    const run = laid('a 3 [card:short] b [building:short]');
+    expect(run.names.map((name) => name.number)).toEqual(['3', undefined]);
+  });
+
+  it('reads the number written before a name the run breaks onto the next line', () => {
+    const run = laid('aaaaaa 3 [card:short]');
+    expect(linesOf(run)).toEqual(['aaaaaa 3', '[Aaa]']);
+    expect(run.names.map((name) => name.number)).toEqual(['3']);
+  });
+
+  it('answers each thing the names name once, at its first name, in their order', () => {
+    const run = laid('[card:short] [building:short] [card:long] [card:short]');
+    expect(namedOnce(run.names).map((name) => name.reference)).toEqual([
+      { kind: 'card', id: 'short' },
+      { kind: 'building', id: 'short' },
+      { kind: 'card', id: 'long' },
     ]);
   });
 

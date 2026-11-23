@@ -15,6 +15,7 @@ import { addText, type Box, ownBoxOf, UI_FONT } from './design-space';
 import type { AnswerShown } from './event-text';
 import { glyphOf } from './glyphs';
 import { css, darkeningOf, LOOK, tintedBy } from './look';
+import type { Named } from './text-run';
 
 export const ANSWER_WIDTH = 220;
 
@@ -22,38 +23,36 @@ export const ANSWER_WIDTH = 220;
 const PAD_Y = 12;
 const TEXT_SIZE = 16;
 
+/** What any refusal at all darkens an answer by, and nothing where none refuses it. */
+function darkeningFor(refusal: Refusal): number {
+  return playable(refusal) ? 0xffffff : darkeningOf(LOOK.refusedAnswer);
+}
+
 /**
- * An answer drawn, its top left at its root's origin: how tall it stands alone, and its names, about
- * that origin.
+ * An answer's name over its text, drawn `ANSWER_WIDTH` wide, its top left at its root's origin: how
+ * tall it stands, its names about that origin, and every name its text reads, in its order.
  */
-export type AnswerPlate = {
+export type AnswerColumn = {
   readonly root: Phaser.GameObjects.Container;
   readonly height: number;
-  /** Its panel stood this tall, its name and its text where they stand from its top. */
-  standTall(height: number): void;
-  /** The name lying under a point of the surface the answer is drawn on, and nothing where none does. */
+  readonly named: readonly Named[];
+  /** The name lying under a point of the surface the column is drawn on, and nothing where none does. */
   nameAt(x: number, y: number): Name | undefined;
-  /** Where one of its names stands on the surface the answer is drawn on. */
+  /** Where one of its names stands on the surface the column is drawn on. */
   spotOf(name: Name): Spot;
-  /** The pointer on it or off it: an answer nothing refuses is lighter under it. */
-  pointed(on: boolean): void;
-  /** Where its panel stands on the surface the answer is drawn on. */
-  boxOnSurface(): Box;
 };
 
 /**
- * An answer as its name over its text on a panel, both centred, the text's names made at the
- * answer's numbers; any refusal at all darkens its panel, its words and its glyphs, and the number of
- * a cost the city cannot pay reads in the unaffordable red.
+ * An answer's name over its text, both centred, the text's names made at the answer's numbers; any
+ * refusal at all darkens its words and its glyphs, and the number of a cost the city cannot pay
+ * reads in the unaffordable red.
  */
-export function createAnswerPlate(
+export function createAnswerColumn(
   scene: Phaser.Scene,
   shown: AnswerShown,
   refusal: Refusal,
-): AnswerPlate {
-  const takes = playable(refusal);
-  const darkening = takes ? 0xffffff : darkeningOf(LOOK.refusedAnswer);
-  const tone = tintedBy(darkening);
+): AnswerColumn {
+  const tone = tintedBy(darkeningFor(refusal));
   const style = { fontFamily: UI_FONT, color: css(tone(LOOK.charcoalInk)) };
   const middle = ANSWER_WIDTH / 2;
   const inner = ANSWER_WIDTH - 2 * 16;
@@ -75,7 +74,6 @@ export function createAnswerPlate(
   const text = texted.label.setOrigin(0.5, 0).setPosition(middle, 0).setName('text');
   text.setY(named.y + named.height + 4 + text.y - ownBoxOf(text).y);
   const own = ownBoxOf(text);
-  const height = own.y + own.height + PAD_Y;
 
   const marks = centredMarks(texted, shown.reading);
   const glyphs = marks.glyphs.map(({ symbol, x, y }) =>
@@ -94,32 +92,84 @@ export function createAnswerPlate(
       .setName('unaffordable');
     return [red.setX(number.left + red.x - ownBoxOf(red).x)];
   });
-  const panel = createChromePanel(scene, PANEL_RIMS.plate).setTint(darkening);
-  const veil = createVeil(scene, 'veil');
-  let tall = height;
-  const standTall = (next: number): void => {
-    tall = next;
-    const box = { x: 0, y: 0, width: ANSWER_WIDTH, height: next };
-    standChromePanel(panel, box);
-    veilOver(veil, box, PANEL.corner * PANEL_RIMS.plate);
-  };
-  standTall(height);
   const root = scene.add
-    .container(0, 0, [panel, veil, name, text, ...unpaid, ...glyphs])
+    .container(0, 0, [name, text, ...unpaid, ...glyphs])
     .setData({ card: shown.id, names: marks.names });
 
   return {
     root,
-    height,
-    standTall,
+    height: own.y + own.height + PAD_Y,
+    named: texted.run.names,
     nameAt(x: number, y: number): Name | undefined {
       return namedAt(root, marks.names, x, y);
     },
     spotOf(each: Name): Spot {
       return spotOn(root, each);
     },
+  };
+}
+
+/** A panel at an answer's rim, and the veil it wears under the pointer, made standing nowhere. */
+export type LitPanel = {
+  readonly panel: Phaser.GameObjects.NineSlice;
+  readonly veil: Phaser.GameObjects.Rectangle;
+  /** The panel and its veil stood on the box. */
+  stand(box: Box): void;
+};
+
+/** A panel at an answer's rim, darkened by that much, and its veil. */
+export function createLitPanel(scene: Phaser.Scene, darkening: number): LitPanel {
+  const panel = createChromePanel(scene, PANEL_RIMS.plate).setTint(darkening);
+  const veil = createVeil(scene, 'veil');
+  return {
+    panel,
+    veil,
+    stand(box) {
+      standChromePanel(panel, box);
+      veilOver(veil, box, PANEL.corner * PANEL_RIMS.plate);
+    },
+  };
+}
+
+/**
+ * An answer drawn, its top left at its root's origin: how tall it stands alone, and its names, about
+ * that origin.
+ */
+export type AnswerPlate = Pick<AnswerColumn, 'root' | 'height' | 'nameAt' | 'spotOf'> & {
+  /** Its panel stood this tall, its name and its text where they stand from its top. */
+  standTall(height: number): void;
+  /** The pointer on it or off it: an answer nothing refuses is lighter under it. */
+  pointed(on: boolean): void;
+  /** Where its panel stands on the surface the answer is drawn on. */
+  boxOnSurface(): Box;
+};
+
+/** An answer as its column on a panel of its own, the panel darkened by any refusal at all. */
+export function createAnswerPlate(
+  scene: Phaser.Scene,
+  shown: AnswerShown,
+  refusal: Refusal,
+): AnswerPlate {
+  const column = createAnswerColumn(scene, shown, refusal);
+  const { root, height } = column;
+  const lit = createLitPanel(scene, darkeningFor(refusal));
+  root.addAt([lit.panel, lit.veil], 0);
+  let tall = height;
+  const standTall = (next: number): void => {
+    tall = next;
+    lit.stand({ x: 0, y: 0, width: ANSWER_WIDTH, height: next });
+  };
+  standTall(height);
+  const takes = playable(refusal);
+
+  return {
+    root,
+    height,
+    standTall,
+    nameAt: column.nameAt,
+    spotOf: column.spotOf,
     pointed(on: boolean): void {
-      veil.setVisible(on && takes);
+      lit.veil.setVisible(on && takes);
     },
     boxOnSurface(): Box {
       const { tx, ty } = root.getWorldTransformMatrix();

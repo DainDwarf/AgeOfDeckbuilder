@@ -6,6 +6,7 @@ import {
   type Chronicle,
   type ChronicleCard,
   type Cost,
+  capstoneLanded,
   type Deal,
   dealingCard,
   dealtCards,
@@ -14,7 +15,13 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import { ANSWER_WIDTH, type AnswerPlate, createAnswerPlate } from './answer-plate';
+import {
+  ANSWER_WIDTH,
+  type AnswerPlate,
+  createAnswerColumn,
+  createAnswerPlate,
+  createLitPanel,
+} from './answer-plate';
 import { balancedWrap } from './balanced-wrap';
 import { type Bind, boundTo } from './bindings';
 import { countedStackOf, standBrowser, WINDOW_RIBBON } from './browse';
@@ -35,19 +42,23 @@ import {
 } from './design-space';
 import { type EndingOf, standEnding } from './ending-screen';
 import { type AnswerShown, answerShown, capstoneShown, eventName } from './event-text';
-import { cardFace, cardFaceAtStart, type Face, type SignsRead } from './face';
+import { cardFace, cardFaceAtStart, type Face, namedFace, type SignsRead } from './face';
 import { css, LOOK } from './look';
-import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
+import { capstoneLore, captureLore, eventLore } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
-import type { Held, Panel } from './panel';
+import type { Filled, Held, Panel } from './panel';
 import { nameOver, pileOf } from './piles';
 import { refused, type Said } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { type Reactions, reactionsOf, reactionsOfNames } from './stack';
 import { buildingName, cardName, text } from './text';
+import { namedOnce, type Reference } from './text-run';
 
 const GRID_GAP = 26;
+
+/** How far the capstone's panel reaches over the cards its text names, under them and past them. */
+const AROUND_CARDS = 16;
 
 /** How far under the screen's top the ribbon a deal's title and the capstone's stand on stands. */
 const DEAL_RIBBON_TOP = 113;
@@ -65,6 +76,8 @@ export type Overlay = {
   inspect(chronicle: Chronicle, card: ChronicleCard): void;
   /** What a name names shown large, as a right click on a name shows it wherever the name stands. */
   inspectNamed(name: Name): void;
+  /** The capstone's window raised over the chronicle as it stands, closing onto the screen as it stood. */
+  raiseCapstone(chronicle: Chronicle): void;
   /**
    * Raises the capstone's window on the first render; after it, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
@@ -120,15 +133,11 @@ type Unlaid = {
   lay(left: number, top: number, height: number): Omit<Placed, keyof Offered>;
 };
 
-/** A window's entries laid on its panel. */
-type Laid = { readonly panel: Panel; readonly placed: readonly Placed[] };
+/** What a window on the scrim reads over what it holds: its title and its lore. */
+type Titled = { readonly heading: string; readonly lore: string };
 
-/** What a window on the scrim reads: its title, its lore, and its entries in their order. */
-type Dealt = {
-  readonly heading: string;
-  readonly lore: string;
-  readonly entries: readonly Offered[];
-};
+/** What the deal window reads: its title, its lore, and its entries in their order. */
+type Dealt = Titled & { readonly entries: readonly Offered[] };
 
 /** A pile's browse on the scrim, which selects nothing. */
 type Browsing = { readonly stands: 'browse' };
@@ -145,16 +154,22 @@ type Dealing = {
 };
 
 /**
- * The capstone's window on the scrim: the chronicle it was raised over, whose timeline names the
- * capstone, and whether the opening raised it or the landing did, which picks its lore and is told
- * when it closes. It offers the capstone to be read and nothing to be taken, so it holds no selection.
+ * The capstone's window on the scrim: the chronicle it was raised over, whose turn picks its lore,
+ * and what raised it, which says where it closes onto. It holds no selection.
  */
 type Capstone = { readonly stands: 'capstone'; readonly on: Chronicle } & {
   [R in Raising]: { readonly raised: R } & RaisedWith[R];
 }[Raising];
 
 /** What the capstone's window carries beside each raising: the landing's is told when it closes. */
-type RaisedWith = { readonly opening: object; readonly landing: { readonly closed: () => void } };
+type RaisedWith = {
+  readonly opening: object;
+  readonly landing: { readonly closed: () => void };
+  readonly asked: object;
+};
+
+/** What raises the capstone's window: the screen opening, the capstone landing, or the player asking. */
+type Raising = keyof RaisedWith;
 
 /** What the scrim carries: a pile's browse, the deal window, the capstone's window, or the ending screen. */
 type Carried = Browsing | Dealing | Capstone | { readonly stands: 'ending' };
@@ -222,17 +237,33 @@ export function createOverlay({
     inspecting.large.named(name);
   };
 
-  /**
-   * An answer's reactions: its names', lighter under the pointer, and, refused, what the note says
-   * of it in the tooltip over it after a rest off its names.
-   */
-  const answerReactions = (plate: AnswerPlate, said: Said): Reactions => {
+  /** What its names react with, and lighter under the pointer, as an answer is. */
+  const litReactions = (plate: Pick<AnswerPlate, 'nameAt' | 'spotOf' | 'pointed'>): Reactions => {
     const names = reactionsOfNames(plate, inspecting);
-    let saying = false;
     return {
       point(at) {
         names.point(at);
         plate.pointed(at !== undefined);
+      },
+      rests(at) {
+        return names.rests(at);
+      },
+      inspect(at) {
+        names.inspect(at);
+      },
+    };
+  };
+
+  /**
+   * An answer's reactions: lit as `litReactions` has it, and, refused, what the note says of it in
+   * the tooltip over it after a rest off its names.
+   */
+  const answerReactions = (plate: AnswerPlate, said: Said): Reactions => {
+    const names = litReactions(plate);
+    let saying = false;
+    return {
+      point(at) {
+        names.point(at);
         const says = said.length > 0 && at !== undefined && !names.rests(at);
         if (says === saying) return;
         saying = says;
@@ -315,17 +346,26 @@ export function createOverlay({
     }
   };
 
+  /** An entry laid, a left click on it running `press` where it answers one. */
+  const heldOf = (entry: Placed, press: () => (() => void) | undefined): Held => ({
+    box: entry.box,
+    liesUnder: entry.liesUnder,
+    reactions: entry.reactions,
+    get press() {
+      return press();
+    },
+  });
+
   /**
-   * A window laid from its title down: its title on the kit's ribbon, its lore, then its entries in
-   * centred rows, each as tall as its tallest, a left click on one running `pressed` while `live`
-   * holds; the lore stands over what scrolls under it.
+   * A window laid from its title down: its title on the kit's ribbon, its lore, then what `body`
+   * lays from the top it is handed, the deal row's under the lore; the lore stands over what scrolls
+   * under it.
    */
   const layWindow = (
     name: string,
-    { heading, lore, entries }: Dealt,
-    pressed: (entry: Placed) => void,
-    live: () => boolean = () => true,
-  ): Laid => {
+    { heading, lore }: Titled,
+    body: (top: number) => Filled,
+  ): Panel => {
     const ribbonFoot = browser
       .raiseTitle(name, heading)
       .standAt(DEAL_RIBBON_TOP + WINDOW_RIBBON / 2);
@@ -340,13 +380,37 @@ export function createOverlay({
       .setOrigin(0.5, 0);
     told.setY(ribbonFoot + LORE_UNDER_RIBBON + told.y - ownBoxOf(told).y);
 
+    const panel = browser.lay({
+      name,
+      top: ribbonFoot + MARGIN,
+      ...body(told.y + told.height + ROW_UNDER_LORE),
+    });
+    carries(
+      placedWhileUp(told, () => {
+        told.setX(screenSize().width / 2);
+      }),
+    );
+    return panel;
+  };
+
+  /**
+   * The window's entries in centred rows from `top`, each as tall as its tallest, a left click on
+   * one running `pressed` while `live` holds.
+   */
+  const rowsOf = (
+    name: string,
+    entries: readonly Offered[],
+    top: number,
+    pressed: (entry: Placed) => void,
+    live: () => boolean,
+  ): Filled => {
     const room = DESIGN_WIDTH - 2 * MARGIN;
     const unlaid = entries.map((offered, index) => unlaidOf(offered, name, index));
     const width = Math.max(...unlaid.map((each) => each.width));
     const columns = Math.max(1, Math.floor((room + GRID_GAP) / (width + GRID_GAP)));
 
     const placed: Placed[] = [];
-    let rowTop = told.y + told.height + ROW_UNDER_LORE;
+    let rowTop = top;
     for (let first = 0; first < entries.length; first += columns) {
       const row = unlaid.slice(first, first + columns);
       const height = Math.max(...row.map((each) => each.height));
@@ -357,33 +421,77 @@ export function createOverlay({
       }
       rowTop += height + GRID_GAP;
     }
-
-    const panel = browser.lay({
-      name,
-      top: ribbonFoot + MARGIN,
+    return {
       parts: placed.map(({ part }) => part),
-      held: placed.map(
-        (entry): Held => ({
-          box: entry.box,
-          liesUnder: entry.liesUnder,
-          reactions: entry.reactions,
-          get press() {
-            return live()
-              ? () => {
-                  pressed(entry);
-                }
-              : undefined;
-          },
-        }),
+      held: placed.map((entry) =>
+        heldOf(entry, () =>
+          live()
+            ? () => {
+                pressed(entry);
+              }
+            : undefined,
+        ),
       ),
       foot: rowTop - GRID_GAP,
+    };
+  };
+
+  /**
+   * The capstone on one panel from `top`, its column beside a card to each thing its text names, a
+   * left click anywhere on the panel running `closing`.
+   */
+  const capstoneOnPanel = (shown: AnswerShown, top: number, closing: () => void): Filled => {
+    const column = createAnswerColumn(scene, shown, NO_REFUSAL);
+    column.root.setName('capstone-card-0');
+    const placed = namedOnce(column.named).map(({ reference, number }, at): Placed => {
+      const face = namedFace(catalogue, reference, shown.reading, signs());
+      const offered = offeredCard(face, at, copiesOf(reference, number));
+      const left = ANSWER_WIDTH + GRID_GAP + at * (CARD_WIDTH + GRID_GAP);
+      return {
+        ...offered,
+        ...unlaidOf(offered, 'capstone-named', at).lay(left, AROUND_CARDS, CARD_HEIGHT),
+      };
     });
-    carries(
-      placedWhileUp(told, () => {
-        told.setX(screenSize().width / 2);
-      }),
+    const width =
+      placed.length === 0
+        ? ANSWER_WIDTH
+        : Math.max(...placed.map(({ box }) => box.x + box.width)) + AROUND_CARDS;
+    const height = Math.max(
+      column.height,
+      placed.length === 0 ? 0 : CARD_HEIGHT + 2 * AROUND_CARDS,
     );
-    return { panel, placed };
+    column.root.setY((height - column.height) / 2);
+    const lit = createLitPanel(scene, 0xffffff);
+    lit.panel.setName('capstone-plate');
+    lit.stand({ x: 0, y: 0, width, height });
+
+    const left = (DESIGN_WIDTH - width) / 2;
+    const holder = scene.add.container(left, top, [
+      lit.panel,
+      lit.veil,
+      column.root,
+      ...placed.map(({ part }) => part),
+    ]);
+    const onPanel = (box: Box): Box => ({ ...box, x: left + box.x, y: top + box.y });
+    const whole: Held = {
+      box: onPanel({ x: 0, y: 0, width, height }),
+      reactions: litReactions({
+        nameAt: column.nameAt,
+        spotOf: column.spotOf,
+        pointed(on) {
+          lit.veil.setVisible(on);
+        },
+      }),
+      press: closing,
+    };
+    return {
+      parts: [holder],
+      held: [
+        ...placed.map((entry) => heldOf({ ...entry, box: onPanel(entry.box) }, () => closing)),
+        whole,
+      ],
+      foot: top + height,
+    };
   };
 
   /** A pile's browse raised, laid out as the civilization's browse lays out a civilization. */
@@ -429,30 +537,34 @@ export function createOverlay({
     raiseOnScrim(dealing);
     standingDeal = dealing;
 
-    const laid = layWindow(
-      'deal',
-      dealt(catalogue, dealing.on, dealing.deal),
-      ({ costs, refusal, own, at }) => {
-        if (!playable(refusal)) {
-          const { x, y, width } = own;
-          const { across, offset } = laid.panel;
-          browser.tooltip.hide();
-          note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
-          return;
-        }
-        standingDeal = undefined;
-        close();
-        take(at);
-      },
-      () => dealing.whole,
+    const { entries, ...titled } = dealt(catalogue, dealing.on, dealing.deal);
+    const panel = layWindow('deal', titled, (top) =>
+      rowsOf(
+        'deal',
+        entries,
+        top,
+        ({ costs, refusal, own, at }) => {
+          if (!playable(refusal)) {
+            const { x, y, width } = own;
+            const { across, offset } = panel;
+            browser.tooltip.hide();
+            note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
+            return;
+          }
+          standingDeal = undefined;
+          close();
+          take(at);
+        },
+        () => dealing.whole,
+      ),
     );
     riseWhole(dealing);
   };
 
   /**
-   * The capstone's window closed: it is read once, and nothing brings it back on this screen but the
-   * landing. The opening's closes onto the screen as the chronicle stands; the landing's is told it
-   * closed once the scrim is down.
+   * The capstone's window closed: the opening's closes onto the screen as the chronicle stands, the
+   * landing's is told it closed once the scrim is down, and the one the player asked for closes onto
+   * the screen as it stood.
    */
   const closeCapstone = (closing: Capstone): void => {
     close();
@@ -463,26 +575,31 @@ export function createOverlay({
       case 'landing':
         closing.closed();
         return;
+      case 'asked':
+        return;
     }
+    const unlisted: never = closing;
+    throw new Error(`no raising is ${JSON.stringify(unlisted)}`);
   };
 
   /**
-   * The capstone's window raised, the capstone drawn as an answer is. A left press on it closes the
-   * window for good, as a press beside it does.
+   * The capstone's window raised, reading the lore of the moment. A left press on its panel closes
+   * the window, as a press beside it does.
    */
   const showCapstone = (announcement: Capstone): void => {
     raiseOnScrim(announcement);
 
-    const answer = capstoneShown(catalogue, announcement.on);
-    const entry: Offered = { shows: 'answer', answer, costs: [], refusal: NO_REFUSAL, at: 0 };
-    const capstone: Dealt = {
-      heading: text('capstone.title'),
-      lore: capstoneLore(answer.id, announcement.raised),
-      entries: [entry],
+    const { on } = announcement;
+    const shown = capstoneShown(catalogue, on);
+    const titled: Titled = {
+      heading: text('capstone.word'),
+      lore: capstoneLore(shown.id, capstoneLanded(on) ? 'landing' : 'opening'),
     };
-    layWindow('capstone', capstone, () => {
-      closeCapstone(announcement);
-    });
+    layWindow('capstone', titled, (top) =>
+      capstoneOnPanel(shown, top, () => {
+        closeCapstone(announcement);
+      }),
+    );
   };
 
   /** The ending screen raised as the chronicle ends: it stands on the scrim for good. */
@@ -559,6 +676,9 @@ export function createOverlay({
       inspecting.large.show(cardFace(catalogue, card, chronicle.citySection.building));
     },
     inspectNamed,
+    raiseCapstone(chronicle: Chronicle): void {
+      showCapstone({ stands: 'capstone', on: chronicle, raised: 'asked' });
+    },
     render(chronicle: Chronicle): void {
       if (opened) {
         standAs(chronicle);
@@ -583,6 +703,11 @@ export function createOverlay({
       return deals.length > 0 ? Promise.resolve() : undefined;
     },
   };
+}
+
+/** The copies a name stands for: a card's the number written before it, one where none is; anything else's one. */
+function copiesOf(reference: Reference, number: string | undefined): number {
+  return reference.kind === 'card' && number !== undefined ? Number(number) : 1;
 }
 
 /**

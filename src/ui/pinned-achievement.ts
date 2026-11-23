@@ -6,10 +6,13 @@ import type { Name, SmallCards } from './card-face';
 import {
   createChromeButton,
   createChromePanel,
+  createVeil,
   PANEL_RIMS,
   PAST_THE_EDGE,
   standChromePanel,
+  veilOver,
 } from './chrome';
+import { PANEL } from './chrome-kit';
 import {
   addText,
   type Box,
@@ -18,9 +21,11 @@ import {
   onClick,
   onHover,
   ownBoxOf,
+  reactsToPress,
   type Stratum,
   UI_FONT,
 } from './design-space';
+import { capstoneName } from './event-text';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import { LEDGER } from './pinned-layout';
@@ -70,6 +75,9 @@ type Row = {
   reach(foot: number): void;
 };
 
+/** How tall a row reading its name line alone stands. */
+const NAME_ROW = 2 * PAD_Y + NAME_LINE;
+
 /** The chronicle's row of the achievement; one it does not hold throws. */
 function rowIn(standing: Chronicle, id: string): ChronicleAchievement {
   const row = standing.achievements.find((achievement) => achievement.id === id);
@@ -78,8 +86,8 @@ function rowIn(standing: Chronicle, id: string): ChronicleAchievement {
 }
 
 /**
- * The achievements earning the pinned technologies the chronicle reads, a row to each in one ledger
- * against the screen's left edge, and the tab folding it; nothing where it reads none.
+ * The ledger against the screen's left edge, a row to the capstone at its top, then a row to each
+ * achievement earning a pinned technology the chronicle reads, and the tab folding it.
  */
 export function createPinnedAchievements(
   scene: Phaser.Scene,
@@ -92,22 +100,25 @@ export function createPinnedAchievements(
     inspect,
     tooltip,
     unaim,
+    capstone,
   }: {
     small: SmallCards;
     inspect: (name: Name) => void;
     tooltip: Tooltip;
     /**
      * Whatever is being aimed let go, as a left click on a thing lets it go: the tab a left click
-     * moves is gone from under the pointer before the screen reads what the click was let go on.
+     * moves, and the capstone's row a window covers, are gone from under the pointer before the
+     * screen reads what the click was let go on.
      */
     unaim: () => void;
+    /** The capstone's window raised. */
+    capstone: () => void;
   },
 ): { render(chronicle: Chronicle): void } {
   const read = chronicle.achievements.flatMap(({ id }): Pinned[] => {
     const { technology, need } = achievementOf(catalogue, chronicle.age, id);
     return pins.includes(technology) ? [{ id, technology, need }] : [];
   });
-  if (read.length === 0) return { render: () => undefined };
 
   // Made before the panel, which is drawn over the tab's inner end.
   const tab = createChromeButton(
@@ -124,9 +135,10 @@ export function createPinnedAchievements(
     .setName('pinned-achievements-tally');
   const panel = createChromePanel(scene, PANEL_RIMS.strip).setName('pinned-achievements');
   on.layer.add([tab.face, sign, tally, panel]);
-  const rows = read.map((each, at) =>
-    createRow(scene, on, catalogue, each, at > 0, small, inspect),
-  );
+  const rows = [
+    createCapstoneRow(scene, on, chronicle.timeline.capstone.id, { unaim, capstone }),
+    ...read.map((each) => createRow(scene, on, catalogue, each, small, inspect)),
+  ];
 
   let standing = chronicle;
   let folded = false;
@@ -152,15 +164,20 @@ export function createPinnedAchievements(
       height: foot - LEDGER.top,
     }).setVisible(!folded);
 
+    const tallied = read.length > 0;
     const reached = read.filter(({ id }) => rowIn(standing, id).reached).length;
-    tally.setText(text('achievement.tally', { reached, pinned: read.length })).setVisible(folded);
+    tally
+      .setText(text('achievement.tally', { reached, pinned: read.length }))
+      .setVisible(folded && tallied);
     const tabTop = LEDGER.top + LEDGER_TAB.drop;
     const { folded: closed } = LEDGER_TAB;
     showing = folded
       ? {
           x: 0,
           y: tabTop,
-          width: Math.max(closed.least, ownBoxOf(tally).width + closed.past),
+          width: tallied
+            ? Math.max(closed.least, ownBoxOf(tally).width + closed.past)
+            : closed.least,
           height: closed.height,
         }
       : { x: LEDGER.width, y: tabTop, ...LEDGER_TAB.shows };
@@ -174,7 +191,7 @@ export function createPinnedAchievements(
     const middle = showing.y + showing.height / 2;
     if (folded) {
       tally.setPosition(across, middle - closed.apart);
-      sign.setPosition(across, middle + closed.apart).setAngle(180);
+      sign.setPosition(across, tallied ? middle + closed.apart : middle).setAngle(180);
     } else {
       sign.setPosition(across - LEDGER_TAB.toward, middle).setAngle(0);
     }
@@ -209,38 +226,34 @@ export function createPinnedAchievements(
 }
 
 /**
- * One row of the ledger: its name, its count and its goal while the achievement is not reached, its
- * name line alone in the reached ink once it is, and the rule along its top where `ruled`.
+ * A row's form, named `plate`: its stop, the rule along its top where `ruled`, and its face holding
+ * its name at the left end of its name line and `end` at the right end, `<plate>-<end>`.
  */
-function createRow(
+type RowForm = Pick<Row, 'root' | 'reach'> & {
+  readonly face: Phaser.GameObjects.Container;
+  readonly named: Phaser.GameObjects.Text;
+  readonly end: Phaser.GameObjects.Text;
+  /** The row laid at `top`, its stop this tall. */
+  standAt(top: number, height: number): void;
+};
+
+function rowFormOf(
   scene: Phaser.Scene,
   on: Stratum,
-  catalogue: Catalogue,
-  { id, technology, need }: Pinned,
-  ruled: boolean,
-  small: SmallCards,
-  inspect: (name: Name) => void,
-): Row {
-  const plate = `pinned-achievement-${technology}`;
-  const name = technologyName(technology);
-  const goal = achievementGoal(id, need);
-
-  const inner = LEDGER.width - 2 * PAD_X;
-  const nameHeight = 2 * PAD_Y + NAME_LINE;
-  const fullHeight = nameHeight + TEXT_LINE * linesOf(scene, goal, inner);
+  { plate, name, end, ruled }: { plate: string; name: string; end: string; ruled: boolean },
+): RowForm {
   const root = scene.add.container(0, 0).setName(plate);
   // Interactive, so no press reaches the map under it, and never marked as reacting to one.
   const stop = scene.add
-    .zone(0, 0, LEDGER.width, fullHeight)
+    .zone(0, 0, LEDGER.width, NAME_ROW)
     .setOrigin(0, 0)
     .setInteractive()
     .setName(`${plate}-stop`);
   const rule = faintRule(scene, 0, 0, LEDGER.width - LEDGER.ruleShort)
     .setVisible(ruled)
     .setName(`${plate}-rule`);
-  const content = scene.add.container(0, 0).setName(`${plate}-face`);
-  const goalRun = scene.add.container(0, 0).setName(`${plate}-goal-run`);
-  root.add([stop, rule, content]);
+  const face = scene.add.container(0, 0).setName(`${plate}-face`);
+  root.add([stop, rule, face]);
   on.layer.add(root);
 
   const ink = css(LOOK.charcoalInk);
@@ -248,10 +261,116 @@ function createRow(
   const named = addText(scene, PAD_X, nameLine, name, { ...NAME_STYLE, color: ink })
     .setOrigin(0, 0.5)
     .setName(`${plate}-name`);
-  const count = addText(scene, LEDGER.width - PAD_X, nameLine, '', { ...TEXT_STYLE, color: ink })
+  const ended = addText(scene, LEDGER.width - PAD_X, nameLine, '', { ...TEXT_STYLE, color: ink })
     .setOrigin(1, 0.5)
-    .setName(`${plate}-count`);
-  content.add([named, count, goalRun]);
+    .setName(`${plate}-${end}`);
+  face.add([named, ended]);
+  return {
+    root,
+    face,
+    named,
+    end: ended,
+    standAt(top, height) {
+      root.setY(top);
+      stop.setSize(LEDGER.width, height);
+    },
+    reach(foot) {
+      stop.setSize(LEDGER.width, foot - root.y);
+    },
+  };
+}
+
+/**
+ * The capstone's row: its name, and the word naming it the capstone at its line's right end; lighter
+ * under the pointer, and either click on it raises the capstone's window, a left click letting go of
+ * whatever is being aimed first.
+ */
+function createCapstoneRow(
+  scene: Phaser.Scene,
+  on: Stratum,
+  id: string,
+  presses: { readonly unaim: () => void; readonly capstone: () => void },
+): Row {
+  const plate = 'pinned-capstone';
+  const { root, face, end, standAt, reach } = rowFormOf(scene, on, {
+    plate,
+    name: capstoneName(id),
+    end: 'word',
+    ruled: false,
+  });
+  end.setText(text('capstone.word'));
+  const veil = veilOver(
+    createVeil(scene, `${plate}-veil`),
+    { x: -PAST_THE_EDGE, y: 0, width: LEDGER.width + PAST_THE_EDGE, height: NAME_ROW },
+    PANEL.corner * PANEL_RIMS.strip,
+  );
+  const press = reactsToPress(
+    scene.add
+      .zone(0, 0, LEDGER.width, NAME_ROW)
+      .setOrigin(0, 0)
+      .setInteractive()
+      .setName(`${plate}-press`),
+  );
+  root.addAt(veil, root.list.indexOf(face));
+  root.add(press);
+  onHover(
+    press,
+    () => {
+      veil.setVisible(true);
+    },
+    () => {
+      veil.setVisible(false);
+    },
+  );
+  onClick(press, () => {
+    presses.unaim();
+    presses.capstone();
+  });
+  onClick(press, presses.capstone, 'right');
+
+  return {
+    root,
+    lay(_standing, top) {
+      standAt(top, NAME_ROW);
+      return NAME_ROW;
+    },
+    reach,
+  };
+}
+
+/**
+ * One achievement's row: its name, its count and its goal while the achievement is not reached, its
+ * name line alone in the reached ink once it is, and the rule along its top.
+ */
+function createRow(
+  scene: Phaser.Scene,
+  on: Stratum,
+  catalogue: Catalogue,
+  { id, technology, need }: Pinned,
+  small: SmallCards,
+  inspect: (name: Name) => void,
+): Row {
+  const plate = `pinned-achievement-${technology}`;
+  const name = technologyName(technology);
+  const goal = achievementGoal(id, need);
+  const {
+    root,
+    face,
+    named,
+    end: count,
+    standAt,
+    reach,
+  } = rowFormOf(scene, on, {
+    plate,
+    name,
+    end: 'count',
+    ruled: true,
+  });
+
+  const inner = LEDGER.width - 2 * PAD_X;
+  const fullHeight = NAME_ROW + TEXT_LINE * linesOf(scene, goal, inner);
+  const goalRun = scene.add.container(0, 0).setName(`${plate}-goal-run`);
+  face.add(goalRun);
   const run = drawRun(
     scene,
     goalRun,
@@ -268,11 +387,10 @@ function createRow(
     lay(standing, top) {
       const row = rowIn(standing, id);
       const { reached } = row;
-      const height = reached ? nameHeight : fullHeight;
-      root.setY(top);
-      stop.setSize(LEDGER.width, height);
+      const height = reached ? NAME_ROW : fullHeight;
+      standAt(top, height);
       goalRun.setVisible(!reached);
-      content.setData('names', reached ? [] : run.names);
+      face.setData('names', reached ? [] : run.names);
       inked(named, reached ? LOOK.reachedAchievementInk : LOOK.charcoalInk);
       named.setText(reached ? text('achievement.reached', { achievement: name }) : name);
       count
@@ -280,8 +398,6 @@ function createRow(
         .setVisible(!reached && need > 1);
       return height;
     },
-    reach(foot) {
-      stop.setSize(LEDGER.width, foot - root.y);
-    },
+    reach,
   };
 }

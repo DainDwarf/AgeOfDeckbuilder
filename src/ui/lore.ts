@@ -62,8 +62,8 @@ const LORE = {
     'The band has come, a leader at its head, and those beside the leader strike the harder for it. Kill the leader, and the Stone Age is won.',
 } as const;
 
-/** The capstone window's two raisings, each reading a lore of its own. */
-export type Raising = 'opening' | 'landing';
+/** The capstone's two lores: the promise read until it has landed, and the landing's read from then on. */
+export type CapstoneLore = 'opening' | 'landing';
 
 /** The lore the deal window reads over an event's answers; an event no entry holds is refused. */
 export function eventLore(event: string): string {
@@ -75,9 +75,9 @@ export function captureLore(building: string): string {
   return lore('capture', building, 'the building');
 }
 
-/** The lore the capstone's window reads at that raising; a capstone no entry holds is refused. */
-export function capstoneLore(capstone: string, raised: Raising): string {
-  return lore(`capstone-${raised}`, capstone, 'the capstone');
+/** The capstone's lore of that moment; a capstone no entry holds is refused. */
+export function capstoneLore(capstone: string, moment: CapstoneLore): string {
+  return lore(`capstone-${moment}`, capstone, 'the capstone');
 }
 
 function lore(prefix: string, id: string, noun: string): string {

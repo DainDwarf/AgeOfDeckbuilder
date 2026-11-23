@@ -115,7 +115,7 @@ test('Launch opens the chronicle on the firsts under its capstone’s window, an
 
   const capstone = launched.timeline.capstone.id;
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
-  expect(await titleOf(page, 'capstone')).toBe(text('capstone.title'));
+  expect(await titleOf(page, 'capstone')).toBe(text('capstone.word'));
   expect(await loreOf(page, 'capstone')).toBe(capstoneLore(capstone, 'opening'));
   expect(await cardOnFace(page, 'capstone-card-0')).toBe(capstone);
 

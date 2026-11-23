@@ -49,6 +49,8 @@ export type Named = {
   readonly to: number;
   /** The line it stands on, counted from the top of the run. */
   readonly line: number;
+  /** The digits written before it, where its line of the entry writes them just before it. */
+  readonly number?: string;
 };
 
 export type Run = {
@@ -85,6 +87,7 @@ type Marked = {
     readonly reference: Reference;
     readonly at: number;
     readonly length: number;
+    readonly number?: string;
   }[];
 };
 
@@ -98,6 +101,26 @@ const NUMBER_BEFORE = /(\d+) ?$/;
 /** A name as an entry writes it, for a run to read back. */
 export function nameWritten({ kind, id }: Reference): string {
   return `[${kind}:${id}]`;
+}
+
+/** Of the names, each thing they name once, at its first name, in their order. */
+export function namedOnce<T extends { readonly reference: Reference }>(named: readonly T[]): T[] {
+  const written = named.map(({ reference }) => nameWritten(reference));
+  return named.filter((_, at) => written.indexOf(written[at]) === at);
+}
+
+/**
+ * The word, each of its names carrying the digits written just before it on the entry's line, of
+ * which `lead` is what stands before the word: a break of the run between them drops nothing.
+ */
+function numbered(word: Marked, lead: string): Marked {
+  return {
+    ...word,
+    names: word.names.map((name) => {
+      const before = NUMBER_BEFORE.exec(lead + word.drawn.slice(0, name.at));
+      return before === null ? name : { ...name, number: before[1] };
+    }),
+  };
 }
 
 function symbolOf(key: string): CastSymbol {
@@ -167,9 +190,13 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics, nam
   const lines: Marked[] = [];
   for (const hard of entry.split('\n')) {
     let line = NOTHING;
+    /** What the entry's line has drawn so far, wherever the run broke it. */
+    let drawn = '';
     for (const word of hard.split(' ')) {
       if (word.length === 0) continue;
-      const marked = markedOf(word, spaces, nameOf);
+      const lead = drawn.length === 0 ? '' : `${drawn} `;
+      const marked = numbered(markedOf(word, spaces, nameOf), lead);
+      drawn = lead + marked.drawn;
       const grown = joined(line, marked);
       if (line.drawn.length > 0 && measure(grown.drawn) > metrics.width) {
         lines.push(closed(line, spaces, metrics));
@@ -207,8 +234,9 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics, nam
             },
       );
     }
-    for (const { reference, at, length } of line.names) {
-      names.push({ reference, ...stretch(at, at + length), line: index });
+    for (const { reference, at, length, number } of line.names) {
+      const named = { reference, ...stretch(at, at + length), line: index };
+      names.push(number === undefined ? named : { ...named, number });
     }
   }
   return {
