@@ -153,6 +153,7 @@ function drawEnding(
   const buttonY = ledger.bottom + gap + BUTTON_HEIGHT / 2;
   const button = createButton(
     scene,
+    'gold',
     DESIGN_WIDTH / 2,
     buttonY,
     'end-chronicle',

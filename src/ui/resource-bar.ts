@@ -126,7 +126,7 @@ type Entry = Reading & {
 };
 
 /** What a reading stands on: the bar's charcoal, the well it is latched down in, or the gold of an act waiting. */
-type StandsOn = 'bar' | WellPiece;
+type StandsOn = 'bar' | Exclude<WellPiece, 'field'>;
 
 /** The inks a reading's value and its reckoning read in on what it stands on, a reckoning on its pill aside. */
 const INKS: Readonly<Record<StandsOn, { value: number; gain: number; loss: number }>> = {

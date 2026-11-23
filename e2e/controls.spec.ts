@@ -13,6 +13,10 @@ import {
   onScreen,
   openSaved,
   overflowingPiles,
+  pieceOnScreenOf,
+  pieceWorn,
+  pieceWornOf,
+  readings,
   reloadedOnCapstone,
   rested,
   ringedTile,
@@ -36,13 +40,13 @@ const AS_FOUND = [
   ['A', '←'],
   ['S', '↓'],
   ['D', '→'],
-  ['=', '—'],
-  ['-', '—'],
-  ['C', '—'],
-  ['Tab', '—'],
-  ['F', '—'],
-  ['I', '—'],
-  ['Escape', '—'],
+  ['=', ''],
+  ['-', ''],
+  ['C', ''],
+  ['Tab', ''],
+  ['F', ''],
+  ['I', ''],
+  ['Escape', ''],
 ];
 
 const LISTED = [
@@ -243,6 +247,47 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   expect(problems).toEqual([]);
 });
 
+test("each slot sits in a well, the one waiting for its key in the kit's field, an empty one reading nothing; the wheel's two rows stand under the back key's row past the rule; Default wears the bright silver beside Back's gold", async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, OPENED);
+  await intoControls(page);
+  const seen = await readings(page, [
+    'controls-pan-up-1',
+    'controls-city-1',
+    'controls-city-1-label',
+    'controls-back-0',
+    'controls-rule',
+    'controls-wheel-zoom',
+    'controls-wheel-scroll',
+    'controls-default',
+    'controls-back',
+  ]);
+  expect(pieceWornOf(seen('controls-pan-up-1'))).toEqual({ piece: 'inactive-tab' });
+  expect(pieceWornOf(seen('controls-city-1'))).toEqual({ piece: 'inactive-tab' });
+  expect(seen('controls-city-1-label').text).toBe('');
+  const backRow = pieceOnScreenOf(seen('controls-back-0'));
+  const rule = seen('controls-rule').boundsOnScreen;
+  const zoom = pieceOnScreenOf(seen('controls-wheel-zoom'));
+  const scroll = pieceOnScreenOf(seen('controls-wheel-scroll'));
+  expect(rule.y).toBeGreaterThan(backRow.y + backRow.height);
+  expect(zoom.y).toBeGreaterThan(rule.y + rule.height);
+  expect(scroll.y).toBeGreaterThan(zoom.y + zoom.height);
+  expect(pieceWornOf(seen('controls-wheel-zoom'))).toEqual({ piece: 'inactive-tab' });
+  expect(pieceWornOf(seen('controls-wheel-scroll'))).toEqual({ piece: 'inactive-tab' });
+  expect(pieceWornOf(seen('controls-default'))).toEqual({ piece: 'silver', look: 'normal' });
+  expect(pieceWornOf(seen('controls-back'))).toEqual({ piece: 'gold', look: 'normal' });
+
+  await click(page, 'controls-pan-up-1');
+  await expect.poll(() => pieceWorn(page, 'controls-pan-up-1')).toEqual({ piece: 'field' });
+  await page.keyboard.press('k');
+  await expect.poll(() => pieceWorn(page, 'controls-pan-up-1')).toEqual({ piece: 'inactive-tab' });
+
+  expect(problems).toEqual([]);
+});
+
 test("a control fires on its key's place, and a key that prints nothing binds there", async ({
   page,
 }) => {
@@ -272,7 +317,7 @@ test('a key bound to a second slot leaves the slot that had it', async ({ page }
   await click(page, 'controls-pan-left-0');
   await page.keyboard.press('w');
   await expect.poll(() => slotReads(page, 'pan-left', 0)).toBe('W');
-  expect(await slotReads(page, 'pan-up', 0)).toBe('—');
+  expect(await slotReads(page, 'pan-up', 0)).toBe('');
   expect(await slotReads(page, 'pan-up', 1)).toBe('↑');
 
   expect(problems).toEqual([]);
@@ -289,8 +334,8 @@ test('the back key binds like any other, and the Back button closes without it',
   await click(page, 'controls-pan-down-1');
   await page.keyboard.press('Escape');
   await expect.poll(() => slotReads(page, 'pan-down', 1)).toBe('Escape');
-  expect(await slotReads(page, 'back', 0)).toBe('—');
-  expect(await slotReads(page, 'back', 1)).toBe('—');
+  expect(await slotReads(page, 'back', 0)).toBe('');
+  expect(await slotReads(page, 'back', 1)).toBe('');
 
   // Escape backs nothing out any more, so the key that used to leaves the window standing.
   await page.keyboard.press('Escape');
@@ -324,7 +369,7 @@ test('a slot takes the Tab key, which the game holds on to', async ({ page }) =>
   await click(page, 'controls-pan-up-1');
   await page.keyboard.press('Tab');
   await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('Tab');
-  expect(await slotReads(page, 'yields', 0)).toBe('—');
+  expect(await slotReads(page, 'yields', 0)).toBe('');
 
   await outOfControls(page);
 

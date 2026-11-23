@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The menu's windows** — Controls' key slots and every row a press turns sit in wells, a slot waiting for its key in the kit's gold-rimmed field, the wheel's two rows last under a rule; a window's buttons are bright silver beside a gold Back, a warning's two side by side; a window's title stands centred on a shorter gold band and its lines break evenly; Graphics lists Fullscreen, Interface size, Animation speed; and `e2e/controls.spec.ts` reads those pieces off the screen. Doc-impact: `docs/LOOK.md`, `docs/INTERFACE.md`. [board/the-menus-windows.md](board/the-menus-windows.md)
 - **The windows on the scrim** — the deal window, the capstone's, a browse and the ending screen on the new paper, and the answers' two looks left unanswered.
 - **A minimize button on the scrim's windows, as a test** — a button setting the deal window, a browse or the capstone's window aside so the map is read and moved under it, built for the user to judge in play and kept or taken out on their word.
 - **A short info window on selection** — a small window in a corner reading the most useful facts of the selected unit or building.

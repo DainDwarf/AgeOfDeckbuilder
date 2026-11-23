@@ -95,12 +95,34 @@ export const PANEL: Piece = {
   cuts: { left: 68, top: 68, right: 68, bottom: 68 },
 };
 
-/** The kit's inactive tab, a well. */
-export const INACTIVE_TAB: Fitted = {
+/** The kit's inactive tab, a well, and the radius of its corners in its file's pixels. */
+export const INACTIVE_TAB: Fitted & { readonly corner: number } = {
   frame: `${KIT}/tab_inactive.png`,
   cuts: { left: 44, top: 44, right: 44, bottom: 52 },
   height: 92,
+  corner: 12,
 };
+
+/** The kit's focused input field. */
+export const FIELD: Fitted = {
+  frame: `${KIT}/input_focus.png`,
+  cuts: { left: 46, top: 46, right: 46, bottom: 54 },
+  height: 108,
+};
+
+/** The placeholder bar the kit paints in its field: the first and last columns and rows it covers, in its file's pixels. */
+const FIELD_BAR = { left: 42, right: 315, top: 55, bottom: 68 };
+
+/** The field's file with its placeholder bar painted out, each row of it in the field's colour right of the bar. */
+function paintOutBar({ data, width }: ImageData): void {
+  const { left, right, top, bottom } = FIELD_BAR;
+  for (let row = top; row <= bottom; row++) {
+    const field = 4 * (row * width + right + 1);
+    for (let x = left; x <= right; x++) {
+      data.copyWithin(4 * (row * width + x), field, field + 4);
+    }
+  }
+}
 
 /** The kit's counter chip, its cuts meeting in its middle: a box as wide as tall draws it round. */
 export const COUNTER: Fitted = {
@@ -144,11 +166,8 @@ const MODAL_BAND = { column: 420, across: 4, top: 21, rows: 118, line: 8 };
 /** How many design units a pixel of the kit's files is drawn across on a window of the menu. */
 export const WINDOW_RIM = 0.24;
 
-/**
- * How far under a window's top the gold band is painted to reach, the dark line left out; a window
- * whose title takes the band further or less stretches its middle to that.
- */
-const PAINTED_FOOT = 66;
+/** How far under a window's top the gold band reaches, the dark line left out. */
+export const WINDOW_BAND_FOOT = 54;
 
 /** How far inside a piece's edge its rim reaches, and the radius of the rim's inner corners, in its file's pixels. */
 export const RIM = { breadth: 11.5, corner: 23 };
@@ -158,7 +177,7 @@ const LINE_UNDER = 4;
 const LINE_PIXELS = Math.round(LINE_UNDER / WINDOW_RIM);
 
 /** How tall the gold band is painted inside the rim, at a window's rim, in the kit's pixels. */
-const BAND_PIXELS = Math.round((PAINTED_FOOT - RIM.breadth * WINDOW_RIM) / WINDOW_RIM);
+const BAND_PIXELS = Math.round((WINDOW_BAND_FOOT - RIM.breadth * WINDOW_RIM) / WINDOW_RIM);
 
 /**
  * The gold band laid inside a window's top edge, the dark line under it: the kit window's band read
@@ -183,8 +202,9 @@ export const CHROME_SHEET: Sheet = {
     ...BUTTON_FILES.map(({ file }) => file),
     INACTIVE_TAB.frame,
     COUNTER.frame,
+    FIELD.frame,
   ],
-  retouched: BUTTON_FILES,
+  retouched: [...BUTTON_FILES, { file: FIELD.frame, retouch: paintOutBar }],
   made: [
     {
       frame: WINDOW_BAND.frame,

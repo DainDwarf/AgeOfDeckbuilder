@@ -109,6 +109,7 @@ import {
   BUTTONS,
   type ButtonLook,
   type ButtonPiece,
+  FIELD,
   INACTIVE_TAB,
   SHADOW_MARGIN,
 } from '../src/ui/chrome-kit';
@@ -1810,14 +1811,18 @@ export async function shows(page: Page, name: string): Promise<boolean> {
   return (await reading(page, name)).shows;
 }
 
-/** What a piece of the chrome wears: a button of the kit in one of its looks, or the kit's inactive tab. */
+/**
+ * What a piece of the chrome wears: a button of the kit in one of its looks, the kit's inactive tab,
+ * or its field.
+ */
 export type PieceWorn =
   | { readonly piece: ButtonPiece; readonly look: ButtonLook }
-  | { readonly piece: 'inactive-tab' };
+  | { readonly piece: 'inactive-tab' | 'field' };
 
 /** What a piece of the chrome wears, read off the frame of the kit its reading draws. */
 export function pieceWornOf({ frame }: Reading): PieceWorn {
   if (frame === INACTIVE_TAB.frame) return { piece: 'inactive-tab' };
+  if (frame === FIELD.frame) return { piece: 'field' };
   for (const [piece, { looks }] of Object.entries(BUTTONS)) {
     for (const look of Object.keys(looks) as ButtonLook[]) {
       if (looks[look] === frame) {
@@ -3546,7 +3551,7 @@ export function aimLine(page: Page): Promise<string | undefined> {
 /** Whether the end-turn button wears its hover look. */
 export async function endTurnHovered(page: Page): Promise<boolean> {
   const worn = await pieceWorn(page, 'end-turn');
-  return worn.piece !== 'inactive-tab' && worn.look === 'hover';
+  return 'look' in worn && worn.look === 'hover';
 }
 
 /** What the end-turn button's chip reads, and nothing while it wears none, on the settle phase. */

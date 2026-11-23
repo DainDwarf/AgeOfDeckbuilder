@@ -7,6 +7,7 @@ import {
   type ButtonPiece,
   CHROME_SHEET_KEY,
   COUNTER,
+  FIELD,
   type Fitted,
   INACTIVE_TAB,
   PANEL,
@@ -14,6 +15,7 @@ import {
   RIM,
   SHADOW_MARGIN,
   WINDOW_BAND,
+  WINDOW_BAND_FOOT,
   WINDOW_RIM,
 } from './chrome-kit';
 import {
@@ -24,6 +26,7 @@ import {
   reactsToPress,
 } from './design-space';
 import { asGlyph, glyphMark, SIGN_SHARE } from './glyphs';
+import { LOOK } from './look';
 
 /**
  * How many design units a pixel of the kit's files is drawn across on each kind of panel, which sets
@@ -60,9 +63,14 @@ function lay(
   return slice.setScale(scale).setPosition(box.x + box.width / 2, box.y + box.height / 2);
 }
 
+/** How many units a pixel of the piece's file is drawn across, fitted to the box's narrower measure. */
+function fittedScale(piece: Fitted, box: Box): number {
+  return Math.min(box.width, box.height) / piece.height;
+}
+
 /** A piece fitted to the box's narrower measure. */
 function fit(slice: Phaser.GameObjects.NineSlice, piece: Fitted, box: Box): void {
-  lay(slice, piece, box, Math.min(box.width, box.height) / piece.height);
+  lay(slice, piece, box, fittedScale(piece, box));
 }
 
 /**
@@ -104,22 +112,21 @@ export function standChromePanel(
   return lay(panel, PANEL, box, panel.scaleX);
 }
 
+/** How far under a window's top the middle of its gold band stands, between the rim's inner edge and the band's foot. */
+export const WINDOW_GOLD_MIDDLE = (RIM.breadth * WINDOW_RIM + WINDOW_BAND_FOOT) / 2;
+
 /**
  * A window of the menu on the box: a panel at the window's rim, taking the pointer so that a press on
- * it is no press on what stands under it, and the gold band laid inside its top edge down to `foot`,
- * the dark line under it.
+ * it is no press on what stands under it, and the gold band laid inside its top edge, the dark line
+ * under it.
  */
-export function createChromeWindow(
-  scene: Phaser.Scene,
-  box: Box,
-  foot: number,
-): Phaser.GameObjects.NineSlice[] {
+export function createChromeWindow(scene: Phaser.Scene, box: Box): Phaser.GameObjects.NineSlice[] {
   const panel = takesThePointer(standChromePanel(createChromePanel(scene, WINDOW_RIM), box));
   const inset = RIM.breadth * WINDOW_RIM;
   const { frame, cuts } = WINDOW_BAND;
   const { left, top, right, bottom } = cuts;
   const across = (box.width - 2 * inset) / WINDOW_RIM;
-  const down = (foot - box.y - inset) / WINDOW_RIM + bottom;
+  const down = (WINDOW_BAND_FOOT - inset) / WINDOW_RIM + bottom;
   const band = scene.add
     .nineslice(0, 0, CHROME_SHEET_KEY, frame, across, down, left, right, top, bottom)
     .setOrigin(0, 0)
@@ -128,8 +135,8 @@ export function createChromeWindow(
   return [panel, band];
 }
 
-/** What a well is drawn as: the kit's inactive tab, or a button's gold. */
-export type WellPiece = 'inactive-tab' | 'gold';
+/** What a well is drawn as: the kit's inactive tab, a button's gold, or the kit's field. */
+export type WellPiece = 'inactive-tab' | 'gold' | 'field';
 
 /** A button of the kit in one look, fitted to a box as the button is. */
 function buttonIn(piece: ButtonPiece, look: ButtonLook): Fitted {
@@ -149,6 +156,8 @@ function wellOf(piece: WellPiece): Fitted {
       return INACTIVE_TAB;
     case 'gold':
       return buttonIn('gold', 'normal');
+    case 'field':
+      return FIELD;
   }
 }
 
@@ -159,6 +168,52 @@ export function placeChromeWell(
   box: Box,
 ): void {
   fit(well, wellOf(piece), box);
+}
+
+/** A well a press lands on: its face, and the veil it wears under the pointer. */
+export type PressableWell = {
+  readonly face: Phaser.GameObjects.NineSlice;
+  readonly veil: Phaser.GameObjects.Rectangle;
+  /** The well standing as the kit's field in its place, wearing nothing under the pointer; or as a well again. */
+  field(on: boolean): void;
+};
+
+/**
+ * A well on the box, its face named `name`, the pointer the hand on it, lighter under it through a veil
+ * fitted to its rounded box; it wears no pressed look.
+ */
+export function createPressableWell(scene: Phaser.Scene, box: Box, name: string): PressableWell {
+  const face = reactsToPress(takesThePointer(createChromeWell(scene, name)));
+  placeChromeWell(face, 'inactive-tab', box);
+  const corner = INACTIVE_TAB.corner * fittedScale(INACTIVE_TAB, box);
+  const { colour, strength } = LOOK.underPointer;
+  const veil = scene.add
+    .rectangle(
+      box.x + box.width / 2,
+      box.y + box.height / 2,
+      box.width,
+      box.height,
+      colour,
+      strength,
+    )
+    .setRounded(corner)
+    .setVisible(false)
+    .setName(`${name}-veil`);
+  let fielded = false;
+  const dress = (): void => {
+    veil.setVisible(hover.hovered && !fielded);
+  };
+  const hover = onHover(face, dress, dress);
+  return {
+    face,
+    veil,
+    field(on: boolean): void {
+      if (on === fielded) return;
+      fielded = on;
+      placeChromeWell(face, on ? 'field' : 'inactive-tab', box);
+      dress();
+    },
+  };
 }
 
 /** The kit's counter chip, drawn nowhere until `placeChromeCounter` lays it. */

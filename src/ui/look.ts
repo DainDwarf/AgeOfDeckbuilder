@@ -38,8 +38,8 @@ export type Look = {
    * to it, and the health the attack would remove on its health bar.
    */
   readonly attack: number;
-  /** The veil a pile's round wears under the pointer, under its sign and its count. */
-  readonly pileUnderPointer: Wash;
+  /** The veil a pile's round and a well a press lands on wear under the pointer, under their words and signs. */
+  readonly underPointer: Wash;
   /** The strength the sign of a pile holding no card is darkened by. */
   readonly emptyPileSign: number;
   readonly selected: number;
@@ -110,8 +110,8 @@ export type Look = {
   readonly paleInk: number;
   /** The ink a reached row of the pinned achievements' ledger reads in. */
   readonly reachedAchievementInk: number;
-  /** The strength the rule between two rows of the pinned achievements' ledger rests at, in the pale ink. */
-  readonly ledgerRule: number;
+  /** The strength a rule between two rows of a panel rests at, in the pale ink. */
+  readonly rowRule: number;
   readonly answerInk: number;
   readonly page: number;
   readonly mapOutline: number;
@@ -236,7 +236,7 @@ export const LOOK: Look = {
   enemy: 0xb4453c,
   neutral: 0x2b4f7a,
   attack: 0xb4453c,
-  pileUnderPointer: { colour: 0xf2f6ff, strength: 0.1 },
+  underPointer: { colour: 0xf2f6ff, strength: 0.1 },
   emptyPileSign: 0.5,
   selected: 0xf2f6ff,
   selectionRim: 0.8,
@@ -276,7 +276,7 @@ export const LOOK: Look = {
   metalInk: 0x0d1014,
   paleInk: 0xd4d7db,
   reachedAchievementInk: 0x9aa1a9,
-  ledgerRule: 0.18,
+  rowRule: 0.18,
   answerInk: 0x9aa1a9,
   // `index.html`'s style reset holds this value too, for the page before the canvas covers it.
   page: 0x0d1117,

@@ -105,11 +105,11 @@ async function drawnAt(
   };
 }
 
-test('the Graphics window lists Interface size third, and on a 1920 by 1080 window a press on it draws the chronicle screen under the menu at the next size at once, 200% and Largest at the size that holds 1280 by 720, kept across a reload', async ({
+test('the Graphics window lists Fullscreen, Interface size and Animation speed, and on a 1920 by 1080 window a press on Interface size draws the chronicle screen under the menu at the next size at once, 200% and Largest at the size that holds 1280 by 720, kept across a reload', async ({
   page,
 }) => {
   const problems = watch(page);
-  const rows = [ROW, FULLSCREEN, SIZE];
+  const rows = [FULLSCREEN, SIZE, ROW];
   const most = Math.min(WIDE.width / DESIGN_WINDOW.width, WIDE.height / DESIGN_WINDOW.height);
 
   await page.setViewportSize(WIDE);

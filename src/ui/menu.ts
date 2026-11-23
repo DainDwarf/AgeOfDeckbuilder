@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { animationSpeed, pressAnimationSpeed } from './animation-speed';
+import { balancedLines } from './balanced-wrap';
 import {
   type Bind,
   bindings,
@@ -17,13 +18,18 @@ import type { ButtonSign } from './cast';
 import {
   createChromeButton,
   createChromeWindow,
+  createPressableWell,
   createSignButton,
+  type PressableWell,
   type SignButton,
+  WINDOW_GOLD_MIDDLE,
 } from './chrome';
+import { type ButtonPiece, WINDOW_BAND_FOOT } from './chrome-kit';
 import { type CornerLayout, layOutCorner } from './corner-layout';
 import {
   addText,
   BAR_HEIGHT,
+  type Box,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   MARGIN,
@@ -95,22 +101,22 @@ const THROUGH: Record<Warning, TextKey> = {
 };
 
 /**
- * The windows: the title each one reads, the lines under it, what it lists, in the order it lists
- * them, and the one it closes back to; one that names none closes onto the screen standing. Controls
- * lists the bindings instead of buttons, and Graphics its rows over them.
+ * The windows: the title each one reads, the lines under it, the buttons it lists in order, and the
+ * one it closes back to, none closing onto the screen standing. Controls and a warning lay a pair of
+ * their own instead of buttons, and Graphics its rows over them.
  */
 const WINDOWS: Record<
   MenuWindow,
   {
     readonly title: TextKey;
     readonly lines?: readonly TextKey[];
-    readonly buttons: readonly MenuPress[];
+    readonly buttons?: readonly MenuPress[];
     readonly from?: Opens;
   }
 > = {
   menu: { title: 'menu.menu', buttons: ['manage-save', 'settings', 'campaign'] },
   settings: { title: 'menu.settings', buttons: ['controls', 'graphics'], from: 'menu' },
-  controls: { title: 'menu.controls', buttons: [], from: 'settings' },
+  controls: { title: 'menu.controls', from: 'settings' },
   graphics: { title: 'menu.graphics', buttons: ['back'], from: 'settings' },
   'manage-save': {
     title: 'menu.manage-save',
@@ -121,26 +127,16 @@ const WINDOWS: Record<
   'import-warning': {
     title: 'menu.manage-save',
     lines: ['manage-save.line', 'manage-save.import-warning'],
-    buttons: ['back'],
     from: 'manage-save',
   },
   'clear-warning': {
     title: 'menu.manage-save',
     lines: ['manage-save.line', 'manage-save.clear-warning'],
-    buttons: ['back'],
     from: 'manage-save',
   },
-  'launch-warning': { title: 'navbar.chronicle', lines: ['launch.warning'], buttons: ['back'] },
-  'move-warning': {
-    title: 'declare-war.title',
-    lines: ['declare-war.warning'],
-    buttons: ['back'],
-  },
-  'attack-warning': {
-    title: 'declare-war.title',
-    lines: ['declare-war.warning'],
-    buttons: ['back'],
-  },
+  'launch-warning': { title: 'navbar.chronicle', lines: ['launch.warning'] },
+  'move-warning': { title: 'declare-war.title', lines: ['declare-war.warning'] },
+  'attack-warning': { title: 'declare-war.title', lines: ['declare-war.warning'] },
 };
 
 /** A line read, and the copies of a card it names, read after it where they are several. */
@@ -196,36 +192,50 @@ export function behind(which: MenuWindow): Opens | undefined {
 
 /** What a window lists on the screen standing: Campaign stands over a chronicle and its ending screen alone. */
 function listed(scene: Phaser.Scene, which: MenuWindow): readonly MenuPress[] {
-  return WINDOWS[which].buttons.filter(
+  return (WINDOWS[which].buttons ?? []).filter(
     (press) => press !== 'campaign' || scene.scene.isActive('ui'),
   );
 }
 
 const WIDTH = 480;
 const PADDING = 30;
+
+/** How wide what a window reads stands, its padding on either side. */
+const ROOM = WIDTH - 2 * PADDING;
+
+/** How far under a window's top what it reads under its title starts: a little over the band's foot. */
+const READ_FROM = WINDOW_BAND_FOOT - 4;
+
+/** A button standing alone across a window, its height, and how far two buttons stand apart. */
 const BUTTON_WIDTH = 320;
-export const BUTTON_HEIGHT = 44;
-const BUTTON_GAP = 12;
+export const BUTTON_HEIGHT = 40;
+const BUTTON_GAP = 14;
 
-/** One control's row: its two slots, and how far the next row stands below it. */
-const SLOT_WIDTH = 120;
-const SLOT_HEIGHT = 34;
-const SLOT_GAP = 10;
-
-/** Where a row's buttons end, on the right of the window. */
-const ROW_RIGHT = DESIGN_WIDTH / 2 + WIDTH / 2 - PADDING;
+/** A row of Controls and of Graphics: its height, and how far the next row stands below it. */
+const ROW_HEIGHT = 32;
 const ROW_GAP = 5;
 
-/** A row of the Controls window: a control's two slots, or one of the wheel's two buttons. */
+/** A key's slot: how wide it stands, and how far apart a key's two stand. */
+const SLOT_WIDTH = 120;
+const SLOT_GAP = 10;
+
+/** How far apart the last key's row and the first wheel's stand, the rule in the middle of that. */
+const RULE_ROOM = 13;
+
+/** Where a row's wells start and end, across the window. */
+const ROW_LEFT = DESIGN_WIDTH / 2 - WIDTH / 2 + PADDING;
+const ROW_RIGHT = DESIGN_WIDTH / 2 + WIDTH / 2 - PADDING;
+
+/** A row of the Controls window: a control's two slots, or one of the wheel's two rows. */
 type Row =
   | { readonly kind: 'control'; readonly control: Control }
   | { readonly kind: 'wheel'; readonly wheeled: Wheeled };
 
-/** The Controls window's rows, top down: the wheel's two stand under the zoom-out row. */
-const ROWS: readonly Row[] = CONTROLS.flatMap((control): Row[] => [
-  { kind: 'control', control },
-  ...(control === 'zoom-out' ? WHEELED.map((wheeled): Row => ({ kind: 'wheel', wheeled })) : []),
-]);
+/** The Controls window's rows, top down: the keys', then the wheel's two under the rule. */
+const ROWS: readonly Row[] = [
+  ...CONTROLS.map((control): Row => ({ kind: 'control', control })),
+  ...WHEELED.map((wheeled): Row => ({ kind: 'wheel', wheeled })),
+];
 
 /** What a wheel's row reads, and what its button reads with the wheel turning each way. */
 const WHEEL_READS: Record<
@@ -242,31 +252,39 @@ const WHEEL_READS: Record<
 
 /** How far that many rows reach, stacked top down. */
 function rowsHeight(rows: number): number {
-  return rows * SLOT_HEIGHT + (rows - 1) * ROW_GAP;
+  return rows * ROW_HEIGHT + (rows - 1) * ROW_GAP;
 }
 
-/** Where the row at that place stands, in rows stacked top down from `top`. */
-function rowAt(top: number, index: number): number {
-  return top + index * (SLOT_HEIGHT + ROW_GAP) + SLOT_HEIGHT / 2;
+/**
+ * Where the middle of the row at that place stands, in rows stacked top down from `top`, the rule's
+ * room standing over the row at `ruled` where one is named.
+ */
+function rowAt(top: number, index: number, ruled?: number): number {
+  const past = ruled !== undefined && index >= ruled ? RULE_ROOM - ROW_GAP : 0;
+  return top + index * (ROW_HEIGHT + ROW_GAP) + past + ROW_HEIGHT / 2;
 }
 
-/** How far the rows reach below the top of the Controls window's body. */
-const ROWS_HEIGHT = rowsHeight(ROWS.length);
+/** How far the Controls window's rows reach below the top of its body, the rule's room among them. */
+const ROWS_HEIGHT = rowsHeight(ROWS.length) + RULE_ROOM - ROW_GAP;
 
-/** A window's words on its charcoal, and on its gold band and its buttons. */
+/** A window's words on its charcoal and in its wells, and on its gold band and its buttons. */
 const INK = css(LOOK.charcoalInk);
 const METAL_INK = css(LOOK.metalInk);
 
 const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: METAL_INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const BUTTON_STYLE = { ...LABEL_STYLE, color: METAL_INK };
-const SLOT_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: METAL_INK };
-const LINE_STYLE = {
+const WELL_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
+const LINE_STYLE: SizedStyle = {
   fontFamily: UI_FONT,
   fontSize: '18px',
   color: INK,
   align: 'center',
-  wordWrap: { width: WIDTH - 2 * PADDING },
+  wordWrap: {
+    // Phaser runs the callback on the Text's own context, its font synced first (docs/PHASER.md).
+    callback: (content: string, label: Phaser.GameObjects.Text) =>
+      balancedLines(content, (line) => label.context.measureText(line).width, ROOM),
+  },
 };
 
 /** A window standing on the scrim, and the keyboard's one way into it. */
@@ -282,39 +300,97 @@ export type Presses = {
   back(): void;
 };
 
-/** A face carrying a label, centred on `x` and `y`: the one shape every button of a window is drawn as. */
-function pressable(
+/** A button of a window: its name, what it reads, the kit's button it is drawn as, and what pressing it does. */
+type Button = {
+  readonly name: string;
+  readonly reads: string;
+  readonly piece: ButtonPiece;
+  readonly pressed: () => void;
+};
+
+/** The kit's button a window draws for a press: Back's gold, every other's bright silver. */
+function pieceOf(press: MenuPress): ButtonPiece {
+  return press === 'back' ? 'gold' : 'silver';
+}
+
+/** A button of a window on the box, its label on its middle. */
+function buttonOn(
   scene: Phaser.Scene,
-  at: { x: number; y: number; width: number; height: number },
-  name: string,
-  style: SizedStyle,
-  pressed: () => void,
+  { name, reads, piece, pressed }: Button,
+  box: Box,
 ): { face: Phaser.GameObjects.NineSlice; label: Phaser.GameObjects.Text } {
-  const { x, y, width, height } = at;
-  const box = { x: x - width / 2, y: y - height / 2, width, height };
-  const { face } = createChromeButton(scene, 'gold', box, name);
+  const { face } = createChromeButton(scene, piece, box, name);
   onClick(face, pressed);
-  const label = addText(scene, x, y, '', style).setOrigin(0.5).setName(`${name}-label`);
+  const label = addText(scene, box.x + box.width / 2, box.y + box.height / 2, reads, BUTTON_STYLE)
+    .setOrigin(0.5)
+    .setName(`${name}-label`);
   return { face, label };
 }
 
-/** A button as the menu draws one, centred on `x` and `y`, reading `reads`. */
+/** A button standing alone across a window, in the kit's gold or its bright silver, centred on `x` and `y`. */
 export function createButton(
   scene: Phaser.Scene,
+  piece: ButtonPiece,
   x: number,
   y: number,
   name: string,
   reads: string,
   pressed: () => void,
 ): { face: Phaser.GameObjects.NineSlice; label: Phaser.GameObjects.Text } {
-  const { face, label } = pressable(
-    scene,
-    { x, y, width: BUTTON_WIDTH, height: BUTTON_HEIGHT },
-    name,
-    BUTTON_STYLE,
-    pressed,
-  );
-  return { face, label: label.setText(reads) };
+  const box = {
+    x: x - BUTTON_WIDTH / 2,
+    y: y - BUTTON_HEIGHT / 2,
+    width: BUTTON_WIDTH,
+    height: BUTTON_HEIGHT,
+  };
+  return buttonOn(scene, { name, reads, piece, pressed }, box);
+}
+
+/** Two buttons side by side across a window's room, their middles on `y`. */
+function pairOn(
+  scene: Phaser.Scene,
+  y: number,
+  pair: readonly [Button, Button],
+): Phaser.GameObjects.GameObject[] {
+  const width = (ROOM - BUTTON_GAP) / 2;
+  return pair.flatMap((button, index) => {
+    const box = {
+      x: ROW_LEFT + index * (width + BUTTON_GAP),
+      y: y - BUTTON_HEIGHT / 2,
+      width,
+      height: BUTTON_HEIGHT,
+    };
+    const { face, label } = buttonOn(scene, button, box);
+    return [face, label];
+  });
+}
+
+/** How a window's buttons stand: one under the other, or a pair side by side. */
+type Laid =
+  | { readonly kind: 'column'; readonly buttons: readonly Button[] }
+  | { readonly kind: 'pair'; readonly pair: readonly [Button, Button] };
+
+/** A window's buttons laid in its body, from `body` down. */
+function buttonsLaid(
+  scene: Phaser.Scene,
+  which: MenuWindow,
+  laid: Laid,
+  body: number,
+): Phaser.GameObjects.GameObject[] {
+  switch (laid.kind) {
+    case 'column':
+      return laid.buttons.flatMap((button, index) => {
+        const { face, label } = buttonOn(scene, button, {
+          x: (DESIGN_WIDTH - BUTTON_WIDTH) / 2,
+          y: body + rowsAbove(which) + index * (BUTTON_HEIGHT + BUTTON_GAP),
+          width: BUTTON_WIDTH,
+          height: BUTTON_HEIGHT,
+        });
+        return [face, label];
+      });
+    case 'pair':
+      return pairOn(scene, body + BUTTON_HEIGHT / 2, laid.pair);
+  }
 }
 
 /** How far down a window's body its buttons stand: Graphics holds its rows over them. */
@@ -323,21 +399,40 @@ function rowsAbove(which: MenuWindow): number {
 }
 
 /** How far below the title a window's own content reaches, the padding above it included. */
-function bodyHeight(which: MenuWindow, buttons: number): number {
+function bodyHeight(which: MenuWindow, laid: Laid): number {
   if (which === 'controls') return PADDING + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT;
-  if (buttons === 0) return 0;
-  return PADDING + rowsAbove(which) + buttons * BUTTON_HEIGHT + (buttons - 1) * BUTTON_GAP;
+  switch (laid.kind) {
+    case 'pair':
+      return PADDING + BUTTON_HEIGHT;
+    case 'column': {
+      const count = laid.buttons.length;
+      if (count === 0) return 0;
+      return PADDING + rowsAbove(which) + count * BUTTON_HEIGHT + (count - 1) * BUTTON_GAP;
+    }
+  }
 }
 
 /** A row's label, on the left of the window. */
 function rowLabel(scene: Phaser.Scene, reads: string, y: number): Phaser.GameObjects.Text {
-  return addText(scene, DESIGN_WIDTH / 2 - WIDTH / 2 + PADDING, y, reads, LABEL_STYLE).setOrigin(
-    0,
-    0.5,
-  );
+  return addText(scene, ROW_LEFT, y, reads, LABEL_STYLE).setOrigin(0, 0.5);
 }
 
-/** A row a press turns: its label, and its one button right of it, as wide as a control's two slots. */
+/** A well a press turns on the box, named `name`, its words on its middle. */
+function wellOn(
+  scene: Phaser.Scene,
+  box: Box,
+  name: string,
+  pressed: () => void,
+): { well: PressableWell; label: Phaser.GameObjects.Text; parts: Phaser.GameObjects.GameObject[] } {
+  const well = createPressableWell(scene, box, name);
+  onClick(well.face, pressed);
+  const label = addText(scene, box.x + box.width / 2, box.y + box.height / 2, '', WELL_STYLE)
+    .setOrigin(0.5)
+    .setName(`${name}-label`);
+  return { well, label, parts: [well.face, well.veil, label] };
+}
+
+/** A row a press turns: its label, and its one well right of it, as wide as a control's two slots. */
 function turningRow(
   scene: Phaser.Scene,
   y: number,
@@ -346,19 +441,15 @@ function turningRow(
   pressed: () => void,
 ): { parts: Phaser.GameObjects.GameObject[]; label: Phaser.GameObjects.Text } {
   const width = 2 * SLOT_WIDTH + SLOT_GAP;
-  const { face, label } = pressable(
-    scene,
-    { x: ROW_RIGHT - width / 2, y, width, height: SLOT_HEIGHT },
-    name,
-    SLOT_STYLE,
-    pressed,
-  );
-  return { parts: [rowLabel(scene, reads, y), face, label], label };
+  const box = { x: ROW_RIGHT - width, y: y - ROW_HEIGHT / 2, width, height: ROW_HEIGHT };
+  const { parts, label } = wellOn(scene, box, name, pressed);
+  return { parts: [rowLabel(scene, reads, y), ...parts], label };
 }
 
 /**
- * The Controls window's body: its rows, each its label on the left, and the two buttons under them. A
- * slot pressed listens for the key that binds it, and the next press of anything else lets go of it.
+ * The Controls window's body: its rows, each its label on the left, the rule over the wheel's two, and
+ * the two buttons under them. A slot pressed listens for the key that binds it, standing as the kit's
+ * field while it does, and the next press of anything else lets go of it.
  */
 function layControls(
   scene: Phaser.Scene,
@@ -366,10 +457,14 @@ function layControls(
   top: number,
   back: () => void,
 ): (press: Bind) => boolean {
-  const middle = DESIGN_WIDTH / 2;
   /** The slot waiting for a key, and nothing while none waits. */
   let listening: { control: Control; slot: number } | undefined;
-  const slots: { control: Control; slot: number; label: Phaser.GameObjects.Text }[] = [];
+  const slots: {
+    control: Control;
+    slot: number;
+    well: PressableWell;
+    label: Phaser.GameObjects.Text;
+  }[] = [];
   const wheels: { wheeled: Wheeled; label: Phaser.GameObjects.Text }[] = [];
 
   const paint = (): void => {
@@ -377,12 +472,9 @@ function layControls(
     for (const each of slots) {
       const bind = held[each.control][each.slot];
       const waiting = listening?.control === each.control && listening.slot === each.slot;
+      each.well.field(waiting);
       each.label.setText(
-        waiting
-          ? text('controls.press')
-          : bind === undefined
-            ? text('controls.empty')
-            : keyLabel(bind),
+        waiting ? text('controls.press') : bind === undefined ? '' : keyLabel(bind),
       );
     }
     for (const { wheeled, label } of wheels) {
@@ -398,23 +490,18 @@ function layControls(
         return [
           rowLabel(scene, text(`control.${control}`), y),
           ...[0, 1].flatMap((slot) => {
-            const { face, label } = pressable(
-              scene,
-              {
-                x: ROW_RIGHT - (1 - slot) * (SLOT_WIDTH + SLOT_GAP) - SLOT_WIDTH / 2,
-                y,
-                width: SLOT_WIDTH,
-                height: SLOT_HEIGHT,
-              },
-              `controls-${control}-${slot}`,
-              SLOT_STYLE,
-              () => {
-                listening = { control, slot };
-                paint();
-              },
-            );
-            slots.push({ control, slot, label });
-            return [face, label];
+            const box = {
+              x: ROW_RIGHT - (2 - slot) * SLOT_WIDTH - (1 - slot) * SLOT_GAP,
+              y: y - ROW_HEIGHT / 2,
+              width: SLOT_WIDTH,
+              height: ROW_HEIGHT,
+            };
+            const { well, label, parts } = wellOn(scene, box, `controls-${control}-${slot}`, () => {
+              listening = { control, slot };
+              paint();
+            });
+            slots.push({ control, slot, well, label });
+            return parts;
           }),
         ];
       }
@@ -438,45 +525,39 @@ function layControls(
   };
 
   ROWS.forEach((row, index) => {
-    root.add(rowOf(row, rowAt(top, index)));
+    root.add(rowOf(row, rowAt(top, index, CONTROLS.length)));
   });
+  const ruleY = rowAt(top, CONTROLS.length - 1) + ROW_HEIGHT / 2 + RULE_ROOM / 2;
+  root.add(
+    scene.add
+      .rectangle(ROW_LEFT, ruleY, ROOM, 1, LOOK.paleInk, LOOK.rowRule)
+      .setOrigin(0, 0.5)
+      .setName('controls-rule'),
+  );
 
-  const width = (WIDTH - 2 * PADDING - BUTTON_GAP) / 2;
-  const y = top + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT / 2;
-  const buttons: [string, string, () => void][] = [
-    [
-      'controls-default',
-      text('controls.default'),
-      () => {
-        listening = undefined;
-        restoreDefaults();
-        paint();
-      },
-    ],
-    [
-      'controls-back',
-      text('control.back'),
-      () => {
-        listening = undefined;
-        back();
-      },
-    ],
-  ];
-  buttons.forEach(([name, reads, pressed], index) => {
-    const { face, label } = pressable(
-      scene,
+  root.add(
+    pairOn(scene, top + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT / 2, [
       {
-        x: middle + ((index === 0 ? -1 : 1) * (BUTTON_GAP + width)) / 2,
-        y,
-        width,
-        height: BUTTON_HEIGHT,
+        name: 'controls-default',
+        reads: text('controls.default'),
+        piece: 'silver',
+        pressed: () => {
+          listening = undefined;
+          restoreDefaults();
+          paint();
+        },
       },
-      name,
-      BUTTON_STYLE,
-      pressed,
-    );
-    root.add([face, label.setText(reads)]);
-  });
+      {
+        name: 'controls-back',
+        reads: text('control.back'),
+        piece: pieceOf('back'),
+        pressed: () => {
+          listening = undefined;
+          back();
+        },
+      },
+    ]),
+  );
 
   paint();
   return (press: Bind): boolean => {
@@ -559,7 +640,7 @@ function fullscreenRow(scene: Phaser.Scene, y: number): Phaser.GameObjects.GameO
 }
 
 /** The Graphics window's rows, top down. */
-const GRAPHICS_ROWS = [speedRow, fullscreenRow, sizeRow];
+const GRAPHICS_ROWS = [fullscreenRow, sizeRow, speedRow];
 
 function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, top: number): void {
   GRAPHICS_ROWS.forEach((row, index) => {
@@ -567,9 +648,14 @@ function layGraphics(scene: Phaser.Scene, root: Phaser.GameObjects.Container, to
   });
 }
 
-/** A line a window reads, wrapped to the window and named after its entry. */
-function lineOf(scene: Phaser.Scene, key: TextKey): Phaser.GameObjects.Text {
-  return addText(scene, 0, 0, text(key), LINE_STYLE).setOrigin(0.5, 0).setName(key);
+/** A line a window reads, its lines balanced across the window, named `name`. */
+function lineOf(scene: Phaser.Scene, reads: string, name: string): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, reads, LINE_STYLE).setOrigin(0.5, 0).setName(name);
+}
+
+/** A line a window reads of an entry, named after the entry. */
+function entryLine(scene: Phaser.Scene, key: TextKey): Phaser.GameObjects.Text {
+  return lineOf(scene, text(key), key);
 }
 
 /** How far a run of lines reaches, the padding above each included. */
@@ -577,16 +663,19 @@ function linesHeight(lines: readonly Phaser.GameObjects.Text[]): number {
   return lines.reduce((sum, line) => sum + PADDING + line.height, 0);
 }
 
-/** A button of a window: its name, what it reads, and what pressing it does. */
-type Button = { readonly name: string; readonly reads: string; readonly pressed: () => void };
-
-/** The buttons a window lists on the screen standing, each reacting with the window's presses. */
-function buttonsOf(scene: Phaser.Scene, which: MenuWindow, on: Presses): Button[] {
-  return listed(scene, which).map((press) => ({
+/** The window's button for a press, reacting with the window's presses. */
+function buttonOf(which: MenuWindow, press: MenuPress, on: Presses): Button {
+  return {
     name: `${which}-${press}`,
     reads: text(LABELS[press]),
+    piece: pieceOf(press),
     pressed: () => on.press(press),
-  }));
+  };
+}
+
+/** The buttons a window lists on the screen standing. */
+function buttonsOf(scene: Phaser.Scene, which: MenuWindow, on: Presses): Button[] {
+  return listed(scene, which).map((press) => buttonOf(which, press, on));
 }
 
 /** A window of the menu other than a warning, centred on the design space. */
@@ -596,10 +685,16 @@ export function createWindow(
   on: Presses,
   said: Said = {},
 ): Opened {
-  return layWindow(scene, which, buttonsOf(scene, which, on), on, said);
+  return layWindow(
+    scene,
+    which,
+    { kind: 'column', buttons: buttonsOf(scene, which, on) },
+    on,
+    said,
+  );
 }
 
-/** A warning, centred on the design space, its first button the press it warns of, `through`. */
+/** A warning, centred on the design space, the press it warns of, `through`, beside its Back. */
 export function createWarning(
   scene: Phaser.Scene,
   which: Warning,
@@ -607,8 +702,14 @@ export function createWarning(
   through: () => void,
   said: Said = {},
 ): Opened {
-  const going = { name: `${which}-through`, reads: text(THROUGH[which]), pressed: through };
-  return layWindow(scene, which, [going, ...buttonsOf(scene, which, on)], on, said);
+  const going: Button = {
+    name: `${which}-through`,
+    reads: text(THROUGH[which]),
+    piece: 'silver',
+    pressed: through,
+  };
+  const pair = [going, buttonOf(which, 'back', on)] as const;
+  return layWindow(scene, which, { kind: 'pair', pair }, on, said);
 }
 
 /**
@@ -618,18 +719,18 @@ export function createWarning(
 function layWindow(
   scene: Phaser.Scene,
   which: MenuWindow,
-  buttons: readonly Button[],
+  laid: Laid,
   on: Presses,
   said: Said,
 ): Opened {
   const shape = WINDOWS[which];
   const title = addText(scene, 0, 0, text(shape.title), TITLE_STYLE)
-    .setOrigin(0.5, 0)
+    .setOrigin(0.5)
     .setName(`${which}-title`);
   const over = [...(shape.lines ?? []), ...(said.over === undefined ? [] : [said.over])].map(
-    (key) => lineOf(scene, key),
+    (key) => entryLine(scene, key),
   );
-  const heading = said.listed === undefined ? undefined : lineOf(scene, said.listed.heading);
+  const heading = said.listed === undefined ? undefined : entryLine(scene, said.listed.heading);
   const list = (said.listed?.lines ?? []).map((line, index) =>
     laidLine(scene, line, LINE_STYLE, `${which}-listed-${index}`),
   );
@@ -637,20 +738,20 @@ function layWindow(
     heading === undefined
       ? 0
       : PADDING + heading.height + list.reduce((sum, line) => sum + line.height, 0);
-  const under = said.under === undefined ? [] : [lineOf(scene, said.under)];
+  const under = said.under === undefined ? [] : [entryLine(scene, said.under)];
 
   const height =
-    2 * PADDING +
-    title.height +
+    READ_FROM +
     linesHeight(over) +
     listHeight +
-    bodyHeight(which, buttons.length) +
-    linesHeight(under);
+    bodyHeight(which, laid) +
+    linesHeight(under) +
+    PADDING;
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
 
   const chrome = titledWindow(scene, title, top, height);
-  let y = top + PADDING + title.height;
+  let y = top + READ_FROM;
   for (const line of over) {
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
@@ -664,7 +765,7 @@ function layWindow(
     y += line.height;
   }
   const body = y + PADDING;
-  y += bodyHeight(which, buttons.length);
+  y += bodyHeight(which, laid);
   for (const line of under) {
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
@@ -680,17 +781,7 @@ function layWindow(
       ...under,
     ])
     .setName(which);
-  buttons.forEach(({ name, reads, pressed }, index) => {
-    const { face, label } = createButton(
-      scene,
-      middle,
-      body + rowsAbove(which) + index * (BUTTON_HEIGHT + BUTTON_GAP) + BUTTON_HEIGHT / 2,
-      name,
-      reads,
-      pressed,
-    );
-    root.add([face, label]);
-  });
+  root.add(buttonsLaid(scene, which, laid, body));
 
   if (which === 'graphics') layGraphics(scene, root, body);
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;
@@ -714,20 +805,19 @@ export function createRefusedSaveWindow(
   back: () => void,
 ): Phaser.GameObjects.Container {
   const title = addText(scene, 0, 0, text('refused-save.title'), TITLE_STYLE)
-    .setOrigin(0.5, 0)
+    .setOrigin(0.5)
     .setName('refused-save-title');
-  const line = addText(scene, 0, 0, text('refused-save.line'), LINE_STYLE)
-    .setOrigin(0.5, 0)
-    .setName('refused-save-line');
+  const line = lineOf(scene, text('refused-save.line'), 'refused-save-line');
 
-  const height = PADDING + title.height + PADDING + line.height + PADDING + BUTTON_HEIGHT + PADDING;
+  const height = READ_FROM + PADDING + line.height + PADDING + BUTTON_HEIGHT + PADDING;
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
   const chrome = titledWindow(scene, title, top, height);
-  line.setPosition(middle, top + PADDING + title.height + PADDING);
+  line.setPosition(middle, top + READ_FROM + PADDING);
 
   const { face, label } = createButton(
     scene,
+    pieceOf('back'),
     middle,
     top + height - PADDING - BUTTON_HEIGHT / 2,
     'refused-save-back',
@@ -739,12 +829,9 @@ export function createRefusedSaveWindow(
   );
 }
 
-/** How far a window's gold band reaches past its title's foot. */
-const BAND_PAST_TITLE = 4;
-
 /**
- * A window as wide as every window, centred across the design space, that tall from `top` down: its
- * title standing a padding under its top, and its gold band reaching past the title's foot.
+ * A window as wide as every window, centred across the design space, that tall from `top` down, its
+ * title's middle on the middle of its gold band.
  */
 function titledWindow(
   scene: Phaser.Scene,
@@ -752,9 +839,8 @@ function titledWindow(
   top: number,
   height: number,
 ): Phaser.GameObjects.NineSlice[] {
-  title.setPosition(DESIGN_WIDTH / 2, top + PADDING);
-  const box = { x: (DESIGN_WIDTH - WIDTH) / 2, y: top, width: WIDTH, height };
-  return createChromeWindow(scene, box, title.y + title.height + BAND_PAST_TITLE);
+  title.setPosition(DESIGN_WIDTH / 2, top + WINDOW_GOLD_MIDDLE);
+  return createChromeWindow(scene, { x: (DESIGN_WIDTH - WIDTH) / 2, y: top, width: WIDTH, height });
 }
 
 /** The buttons at the screen's top right corner, as the screen now stands. */

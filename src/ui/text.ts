@@ -311,7 +311,6 @@ const TEXT = {
   'control.inspect': 'Inspect',
   'control.back': 'Back',
   'controls.press': 'Press a key',
-  'controls.empty': '—',
   'controls.default': 'Default',
   'wheel.zoom': 'Wheel zoom',
   'wheel.scroll': 'Wheel scroll',

@@ -235,7 +235,7 @@ function createRow(
     .setInteractive()
     .setName(`${plate}-stop`);
   const rule = scene.add
-    .rectangle(0, 0, LEDGER.width - LEDGER.ruleShort, 1, LOOK.paleInk, LOOK.ledgerRule)
+    .rectangle(0, 0, LEDGER.width - LEDGER.ruleShort, 1, LOOK.paleInk, LOOK.rowRule)
     .setOrigin(0, 0)
     .setVisible(ruled)
     .setName(`${plate}-rule`);

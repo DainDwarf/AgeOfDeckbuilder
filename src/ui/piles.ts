@@ -328,7 +328,7 @@ function createPile(
 ): Pile {
   const round = createChromeCounter(scene).setName(`${pile}-round`);
   const veil = scene.add
-    .circle(0, 0, ROUND / 2, LOOK.pileUnderPointer.colour, LOOK.pileUnderPointer.strength)
+    .circle(0, 0, ROUND / 2, LOOK.underPointer.colour, LOOK.underPointer.strength)
     .setVisible(false)
     .setName(`${pile}-veil`);
   const sign = glyphMark(scene).setName(`${pile}-sign`);
