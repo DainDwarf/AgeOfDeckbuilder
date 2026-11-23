@@ -18,7 +18,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The pinned achievements** — their look on the chronicle screen, changed further than the new paper changes it.
+- **The pinned achievements** — the pinned achievements stand as one ledger against the chronicle screen's left edge, a row to each, folded into the edge and brought back by a tab that reads the tally while folded, and `e2e/pin.spec.ts` proves the rows, the fold and the screen opening unfolded. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`, `docs/INTERFACE.md`. [board/the-pinned-achievements.md](board/the-pinned-achievements.md)
 - **The menu's windows** — Menu, Settings, Controls, Graphics, Manage Save and the warnings laid out again on the new paper; deleted at its intake if the paper leaves nothing to lay out.
 - **The windows on the scrim** — the deal window, the capstone's, a browse and the ending screen on the new paper, and the answers' two looks left unanswered.
 - **A minimize button on the scrim's windows, as a test** — a button setting the deal window, a browse or the capstone's window aside so the map is read and moved under it, built for the user to judge in play and kept or taken out on their word.
