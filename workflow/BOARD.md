@@ -19,7 +19,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 ## Lines
 
 - **The windows on the scrim** — the deal window, the capstone's, a browse and the ending screen on the new paper, and the answers' two looks left unanswered.
-- **A minimize button on the scrim's windows, as a test** — a button setting the deal window, a browse or the capstone's window aside so the map is read and moved under it, built for the user to judge in play and kept or taken out on their word.
+- **The capstone's window from the ledger** — the pinned ledger's capstone row clickable, opening the capstone's window so the player can refer to it mid-chronicle, the window showing the cards the capstone names and not their names alone.
+- **A minimize button on the scrim's windows, as a test** — a button setting the deal window, a browse or the capstone's window aside so the map is read and moved under it, built for the user to judge in play and kept or taken out on their word; with a window set aside the menu answers, so the menu's button staying lit over those scrims can go.
 - **A short info window on selection** — a small window in a corner reading the most useful facts of the selected unit or building.
 - **The combat log** — a readable record of what the end of turn did, for a player who missed the motion or wants it in words.
 - **Credits and licences in the game** — a screen off the menu reading the packs' licence record and the build's dependency notices.
