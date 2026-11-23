@@ -90,9 +90,14 @@ function liftStrip({ face, line, first, last }: ButtonStrip): (pixels: ImageData
   };
 }
 
-export const PANEL: Piece = {
+/** How far inside a piece's edge its rim reaches, and the radius of the rim's inner corners, in its file's pixels. */
+export const RIM = { breadth: 11.5, corner: 23 };
+
+/** The kit's panel, and the radius of its outer corners in its file's pixels. */
+export const PANEL: Piece & { readonly corner: number } = {
   frame: `${KIT}/panel_normal.png`,
   cuts: { left: 68, top: 68, right: 68, bottom: 68 },
+  corner: RIM.breadth + RIM.corner,
 };
 
 /** The kit's inactive tab, a well, and the radius of its corners in its file's pixels. */
@@ -128,6 +133,13 @@ function paintOutBar({ data, width }: ImageData): void {
 export const COUNTER: Fitted = {
   frame: `${KIT}/currency_normal.png`,
   cuts: { left: 62, top: 62, right: 62, bottom: 62 },
+  height: 104,
+};
+
+/** The kit's ribbon, a notched tail inside each of its side cuts. */
+export const RIBBON: Fitted = {
+  frame: `${KIT}/ribbon_normal.png`,
+  cuts: { left: 56, top: 46, right: 56, bottom: 54 },
   height: 104,
 };
 
@@ -169,9 +181,6 @@ export const WINDOW_RIM = 0.24;
 /** How far under a window's top the gold band reaches, the dark line left out. */
 export const WINDOW_BAND_FOOT = 54;
 
-/** How far inside a piece's edge its rim reaches, and the radius of the rim's inner corners, in its file's pixels. */
-export const RIM = { breadth: 11.5, corner: 23 };
-
 /** How tall the kit's dark line under the band is drawn, in units, and in the band's pixels. */
 const LINE_UNDER = 4;
 const LINE_PIXELS = Math.round(LINE_UNDER / WINDOW_RIM);
@@ -202,6 +211,7 @@ export const CHROME_SHEET: Sheet = {
     ...BUTTON_FILES.map(({ file }) => file),
     INACTIVE_TAB.frame,
     COUNTER.frame,
+    RIBBON.frame,
     FIELD.frame,
   ],
   retouched: [...BUTTON_FILES, { file: FIELD.frame, retouch: paintOutBar }],

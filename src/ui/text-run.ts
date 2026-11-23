@@ -27,6 +27,9 @@ export type Reference = {
   [Kind in ReferenceKind]: { readonly kind: Kind; readonly id: string };
 }[ReferenceKind];
 
+/** A number a run reads: its digits, and the stretch they are drawn across, from the middle of their line. */
+export type Numeral = { readonly reads: string; readonly from: number; readonly to: number };
+
 /** One glyph of a run: what it marks, and where it stands. */
 export type Glyph = {
   readonly symbol: CastSymbol;
@@ -34,6 +37,8 @@ export type Glyph = {
   readonly x: number;
   /** The line it stands on, counted from the top of the run. */
   readonly line: number;
+  /** The number written against it, where the run reads one just before it. */
+  readonly number?: Numeral;
 };
 
 /** One name of a run: what it names, and the stretch it is drawn across, brackets included. */
@@ -86,6 +91,9 @@ type Marked = {
 const NOTHING: Marked = { drawn: '', glyphs: [], names: [] };
 
 const MARK = /\[(?:(\w+):([\w-]+)|(\w+))\]/;
+
+/** The digits a stretch of a line ends on, a space after them or none. */
+const NUMBER_BEFORE = /(\d+) ?$/;
 
 /** A name as an entry writes it, for a run to read back. */
 export function nameWritten({ kind, id }: Reference): string {
@@ -179,17 +187,28 @@ export function layOutRun(entry: string, measure: Measure, metrics: Metrics, nam
   const widths = lines.map((line) => Math.ceil(measure(line.drawn)));
   for (const [index, line] of lines.entries()) {
     const width = widths[index];
+    const stretch = (from: number, to: number): { from: number; to: number } => ({
+      from: measure(line.drawn.slice(0, from)) - width / 2,
+      to: measure(line.drawn.slice(0, to)) - width / 2,
+    });
     for (const { symbol, at } of line.glyphs) {
       const middle = measure(line.drawn.slice(0, at)) + (spaces * metrics.space) / 2;
-      glyphs.push({ symbol, x: middle - width / 2, line: index });
+      const glyph = { symbol, x: middle - width / 2, line: index };
+      const before = NUMBER_BEFORE.exec(line.drawn.slice(0, at));
+      glyphs.push(
+        before === null
+          ? glyph
+          : {
+              ...glyph,
+              number: {
+                reads: before[1],
+                ...stretch(before.index, before.index + before[1].length),
+              },
+            },
+      );
     }
     for (const { reference, at, length } of line.names) {
-      names.push({
-        reference,
-        from: measure(line.drawn.slice(0, at)) - width / 2,
-        to: measure(line.drawn.slice(0, at + length)) - width / 2,
-        line: index,
-      });
+      names.push({ reference, ...stretch(at, at + length), line: index });
     }
   }
   return {

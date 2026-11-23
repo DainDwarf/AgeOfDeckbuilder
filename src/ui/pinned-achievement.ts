@@ -13,6 +13,7 @@ import {
 import {
   addText,
   type Box,
+  faintRule,
   inked,
   onClick,
   onHover,
@@ -234,9 +235,7 @@ function createRow(
     .setOrigin(0, 0)
     .setInteractive()
     .setName(`${plate}-stop`);
-  const rule = scene.add
-    .rectangle(0, 0, LEDGER.width - LEDGER.ruleShort, 1, LOOK.paleInk, LOOK.rowRule)
-    .setOrigin(0, 0)
+  const rule = faintRule(scene, 0, 0, LEDGER.width - LEDGER.ruleShort)
     .setVisible(ruled)
     .setName(`${plate}-rule`);
   const content = scene.add.container(0, 0).setName(`${plate}-face`);

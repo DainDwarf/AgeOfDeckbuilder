@@ -14,9 +14,10 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
-import { ANSWER_WIDTH, createAnswerPlate } from './answer-plate';
+import { ANSWER_WIDTH, type AnswerPlate, createAnswerPlate } from './answer-plate';
+import { balancedWrap } from './balanced-wrap';
 import { type Bind, boundTo } from './bindings';
-import { badgedStackOf, standBrowser } from './browse';
+import { countedStackOf, standBrowser, WINDOW_RIBBON } from './browse';
 import { CARD_HEIGHT, createCardFace, type Name } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { EASE, ended } from './card-motion';
@@ -26,31 +27,38 @@ import {
   addText,
   type Box,
   DESIGN_WIDTH,
-  headingOf,
   MARGIN,
+  ownBoxOf,
   placedWhileUp,
   screenSize,
-  TITLE_INK,
   UI_FONT,
 } from './design-space';
 import { type EndingOf, standEnding } from './ending-screen';
 import { type AnswerShown, answerShown, capstoneShown, eventName } from './event-text';
 import { cardFace, cardFaceAtStart, type Face, type SignsRead } from './face';
+import { css, LOOK } from './look';
 import { capstoneLore, captureLore, eventLore, type Raising } from './lore';
 import { raiseMenu } from './menu-scene';
 import type { OverlayScene } from './overlay-scene';
 import type { Held, Panel } from './panel';
-import { pileOf } from './piles';
-import { refused } from './refusal-lines';
+import { nameOver, pileOf } from './piles';
+import { refused, type Said } from './refusal-lines';
 import { createRefusalNote } from './refusal-note';
 import { type Reactions, reactionsOf, reactionsOfNames } from './stack';
 import { buildingName, cardName, text } from './text';
 
 const GRID_GAP = 26;
 
-/** Where a window's lore ends and its row starts, from the screen's top, whatever it deals. */
-const LORE_FOOT = 262;
-const ROW_TOP = 278;
+/** How far under the screen's top the ribbon a deal's title and the capstone's stand on stands. */
+const DEAL_RIBBON_TOP = 113;
+
+/**
+ * How far under the ribbon's foot a window's lore starts, how wide it is broken, and how far under
+ * its foot the row starts.
+ */
+const LORE_UNDER_RIBBON = 24;
+const LORE_WIDTH = 600;
+const ROW_UNDER_LORE = 32;
 
 export type Overlay = {
   browse(pile: PileKind, chronicle: Chronicle): void;
@@ -114,6 +122,13 @@ type Unlaid = {
 
 /** A window's entries laid on its panel. */
 type Laid = { readonly panel: Panel; readonly placed: readonly Placed[] };
+
+/** What a window on the scrim reads: its title, its lore, and its entries in their order. */
+type Dealt = {
+  readonly heading: string;
+  readonly lore: string;
+  readonly entries: readonly Offered[];
+};
 
 /** A pile's browse on the scrim, which selects nothing. */
 type Browsing = { readonly stands: 'browse' };
@@ -207,25 +222,30 @@ export function createOverlay({
     inspecting.large.named(name);
   };
 
-  const raiseTitle = (name: string, heading: string): Phaser.GameObjects.Text =>
-    carries(headingOf(scene, name, heading));
-
-  /** A window's lore, named after the window it stands in, ending where its row starts. */
-  const raiseLore = (name: string, lore: string): void => {
-    const line = addText(scene, 0, LORE_FOOT, lore, {
-      fontFamily: UI_FONT,
-      fontSize: '20px',
-      color: TITLE_INK,
-      align: 'center',
-      wordWrap: { width: 600 },
-    })
-      .setName(`${name}-lore`)
-      .setOrigin(0.5, 1);
-    carries(
-      placedWhileUp(line, () => {
-        line.setX(screenSize().width / 2);
-      }),
-    );
+  /**
+   * An answer's reactions: its names', lighter under the pointer, and, refused, what the note says
+   * of it in the tooltip over it after a rest off its names.
+   */
+  const answerReactions = (plate: AnswerPlate, said: Said): Reactions => {
+    const names = reactionsOfNames(plate, inspecting);
+    let saying = false;
+    return {
+      point(at) {
+        names.point(at);
+        plate.pointed(at !== undefined);
+        const says = said.length > 0 && at !== undefined && !names.rests(at);
+        if (says === saying) return;
+        saying = says;
+        if (says) nameOver(browser.tooltip, said.join('\n'), plate.boxOnSurface());
+        else browser.tooltip.hide();
+      },
+      rests(at) {
+        return said.length > 0 || names.rests(at);
+      },
+      inspect(at) {
+        names.inspect(at);
+      },
+    };
   };
 
   /**
@@ -250,7 +270,7 @@ export function createOverlay({
               part: plate.root,
               box,
               own: box,
-              reactions: reactionsOfNames(plate, inspecting),
+              reactions: answerReactions(plate, refused(offered.costs, offered.refusal)),
             };
           },
         };
@@ -261,7 +281,7 @@ export function createOverlay({
           height: CARD_HEIGHT,
           lay(left, top) {
             if (offered.copies > 1) {
-              const { stacked, parts, box, liesUnder, reactions } = badgedStackOf(
+              const { stacked, root, box, liesUnder, reactions } = countedStackOf(
                 { scene, inspecting },
                 {
                   shown: offered.face,
@@ -269,17 +289,12 @@ export function createOverlay({
                   left,
                   top,
                   name: named,
+                  holder: `${name}-stack-${index}`,
                   refusal: offered.refusal,
                 },
               );
               stacked.card.root.setData('at', offered.at);
-              return {
-                part: scene.add.container(0, 0, [...parts]).setName(`${name}-stack-${index}`),
-                box,
-                liesUnder,
-                own: stacked.face,
-                reactions,
-              };
+              return { part: root, box, liesUnder, own: stacked.face, reactions };
             }
             const drawn = createCardFace(scene, offered.face, offered.refusal);
             drawn.root
@@ -300,24 +315,37 @@ export function createOverlay({
   };
 
   /**
-   * A window's entries on its panel in rows from `ROW_TOP`, as many to a row as 1280 units hold, each
-   * row centred, every entry of a row as tall as its tallest, a left click on one running `pressed`
-   * while `live` holds; the first is drawn first.
+   * A window laid from its title down: its title on the kit's ribbon, its lore, then its entries in
+   * centred rows, each as tall as its tallest, a left click on one running `pressed` while `live`
+   * holds; the lore stands over what scrolls under it.
    */
   const layWindow = (
     name: string,
-    entries: readonly Offered[],
-    top: number,
+    { heading, lore, entries }: Dealt,
     pressed: (entry: Placed) => void,
     live: () => boolean = () => true,
   ): Laid => {
+    const ribbonFoot = browser
+      .raiseTitle(name, heading)
+      .standAt(DEAL_RIBBON_TOP + WINDOW_RIBBON / 2);
+    const told = addText(scene, 0, 0, lore, {
+      fontFamily: UI_FONT,
+      fontSize: '20px',
+      color: css(LOOK.paleInk),
+      align: 'center',
+      wordWrap: balancedWrap(LORE_WIDTH),
+    })
+      .setName(`${name}-lore`)
+      .setOrigin(0.5, 0);
+    told.setY(ribbonFoot + LORE_UNDER_RIBBON + told.y - ownBoxOf(told).y);
+
     const room = DESIGN_WIDTH - 2 * MARGIN;
     const unlaid = entries.map((offered, index) => unlaidOf(offered, name, index));
     const width = Math.max(...unlaid.map((each) => each.width));
     const columns = Math.max(1, Math.floor((room + GRID_GAP) / (width + GRID_GAP)));
 
     const placed: Placed[] = [];
-    let rowTop = ROW_TOP;
+    let rowTop = told.y + told.height + ROW_UNDER_LORE;
     for (let first = 0; first < entries.length; first += columns) {
       const row = unlaid.slice(first, first + columns);
       const height = Math.max(...row.map((each) => each.height));
@@ -331,7 +359,7 @@ export function createOverlay({
 
     const panel = browser.lay({
       name,
-      top,
+      top: ribbonFoot + MARGIN,
       parts: placed.map(({ part }) => part),
       held: placed.map(
         (entry): Held => ({
@@ -349,6 +377,11 @@ export function createOverlay({
       ),
       foot: rowTop - GRID_GAP,
     });
+    carries(
+      placedWhileUp(told, () => {
+        told.setX(screenSize().width / 2);
+      }),
+    );
     return { panel, placed };
   };
 
@@ -395,12 +428,9 @@ export function createOverlay({
     raiseOnScrim(dealing);
     standingDeal = dealing;
 
-    const { heading, lore, entries } = dealt(catalogue, dealing.on, dealing.deal);
-    const title = raiseTitle('deal', heading);
     const laid = layWindow(
       'deal',
-      entries,
-      title.y + title.height + MARGIN,
+      dealt(catalogue, dealing.on, dealing.deal),
       ({ costs, refusal, own, at }) => {
         if (!playable(refusal)) {
           const { x, y, width } = own;
@@ -414,7 +444,6 @@ export function createOverlay({
       },
       () => dealing.whole,
     );
-    raiseLore('deal', lore);
     riseWhole(dealing);
   };
 
@@ -443,12 +472,15 @@ export function createOverlay({
     raiseOnScrim(announcement);
 
     const answer = capstoneShown(catalogue, announcement.on);
-    const title = raiseTitle('capstone', text('capstone.title'));
     const entry: Offered = { shows: 'answer', answer, costs: [], refusal: NO_REFUSAL, at: 0 };
-    layWindow('capstone', [entry], title.y + title.height + MARGIN, () => {
+    const capstone: Dealt = {
+      heading: text('capstone.title'),
+      lore: capstoneLore(answer.id, announcement.raised),
+      entries: [entry],
+    };
+    layWindow('capstone', capstone, () => {
       closeCapstone(announcement);
     });
-    raiseLore('capstone', capstoneLore(answer.id, announcement.raised));
   };
 
   /** The ending screen raised as the chronicle ends: it stands on the scrim for good. */
@@ -556,11 +588,7 @@ export function createOverlay({
  * in the order dealt — an answer as it reads on the chronicle, with what refuses it there, a reward as
  * the card of the deck it is, in its copies, a card dealt as the card of the pile it is.
  */
-function dealt(
-  catalogue: Catalogue,
-  chronicle: Chronicle,
-  deal: Deal,
-): { heading: string; lore: string; entries: readonly Offered[] } {
+function dealt(catalogue: Catalogue, chronicle: Chronicle, deal: Deal): Dealt {
   const { building } = chronicle.citySection;
   switch (deal.of) {
     case 'event':

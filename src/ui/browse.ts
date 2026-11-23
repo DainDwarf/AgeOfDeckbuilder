@@ -5,27 +5,25 @@ import type { Refusal } from '../rules/state';
 import { type Bind, boundTo } from './bindings';
 import { createFootBubble } from './card-face';
 import { ended, stopMotion } from './card-motion';
-import { inRoundedBox } from './card-shape';
+import { createRibbon, WINDOW_TITLE } from './chrome';
 import { browseOf } from './collection-layout';
 import { type Cell, linesOf, type StackedCards, spanOf, stackedCardsOf } from './collection-stack';
 import { cityEdgeOf } from './deck-panel';
 import {
-  addText,
+  BAR_HEIGHT,
   type Box,
   createScrim,
   DESIGN_WIDTH,
-  headingOf,
   MARGIN,
   offMiddle,
   onResize,
-  ownBoxOf,
+  placedWhileUp,
   screenSize,
-  UI_FONT,
 } from './design-space';
 import { cardFaceAtStart, type Face, type SignsRead, UNSIGNED } from './face';
-import { css, LOOK } from './look';
 import type { OverlayScene } from './overlay-scene';
 import { createPanel, type Panel, type PanelOf, type Surface } from './panel';
+import { createCount, onCount } from './piles';
 import {
   type Inspecting,
   layingOf,
@@ -35,29 +33,24 @@ import {
   standLarge,
 } from './stack';
 import { cardName, civilizationName, text } from './text';
-import { createTooltip } from './tooltip';
+import { createTooltip, type Tooltip } from './tooltip';
 
 const CIVILIZATION_BROWSE = 'civilization-browse';
 
 const ACROSS = 8;
 
-const BADGE_HEIGHT = 22;
-const BADGE_LEAST = 30;
-const BADGE_PAD = 6;
-/** How far a badge's right edge stands past its face's right edge. */
-const BADGE_PAST = 10;
-/** How far a badge's middle stands under its face's bottom edge. */
-const BADGE_UNDER = 4;
-
-const BADGE_STYLE = {
-  fontFamily: UI_FONT,
-  fontSize: '14px',
-  fontStyle: 'bold',
-  color: css(LOOK.paleInk),
-};
+/** How tall the ribbon a window on the scrim is titled on stands. */
+export const WINDOW_RIBBON = 46;
 
 /**
- * One stack of a browse: the face its front card shows, the copies its badge reads, and whether a
+ * How far a stack's count's right edge stands past its front card's right edge, and its middle under
+ * the card's bottom edge.
+ */
+const COPIES_PAST = 10;
+const COPIES_UNDER = 4;
+
+/**
+ * One stack of a browse: the face its front card shows, the copies its count reads, and whether a
  * pale edge stands around it.
  */
 export type BrowseStack = {
@@ -67,54 +60,23 @@ export type BrowseStack = {
 };
 
 /**
- * The badge reading the copies, named `name`, its right edge and its middle's height at the point
- * handed, as wide as its count needs and never narrower than its least: it widens leftwards. It says
- * whether it lies under a point of the surface it is drawn on.
+ * A stack laid with its count: its cards, the container holding them and the count, the box they
+ * cover, whether they lie under a point of the surface, and what it reacts to the pointer with.
  */
-function badgeOf(
-  scene: Phaser.Scene,
-  { right, middle }: { readonly right: number; readonly middle: number },
-  copies: number,
-  name: string,
-): { parts: Phaser.GameObjects.GameObject[]; box: Box; liesUnder(x: number, y: number): boolean } {
-  const count = addText(scene, 0, 0, text('collection.row-copies', { copies }), BADGE_STYLE)
-    .setOrigin(0.5)
-    .setName(name);
-  const width = Math.max(BADGE_LEAST, ownBoxOf(count).width + 2 * BADGE_PAD);
-  const box = { x: right - width, y: middle - BADGE_HEIGHT / 2, width, height: BADGE_HEIGHT };
-  const radius = BADGE_HEIGHT / 2;
-  const ground = scene.add
-    .graphics()
-    .fillStyle(LOOK.copiesBadge)
-    .fillRoundedRect(box.x, box.y, width, BADGE_HEIGHT, radius)
-    .lineStyle(1, LOOK.cardEdge)
-    .strokeRoundedRect(box.x + 0.5, box.y + 0.5, width - 1, BADGE_HEIGHT - 1, radius - 0.5);
-  count.setPosition(box.x + width / 2, box.y + BADGE_HEIGHT / 2);
-  return {
-    parts: [ground, count],
-    box,
-    liesUnder: (x, y) => inRoundedBox(ground.getLocalPoint(x, y), box, radius),
-  };
-}
-
-/**
- * A stack laid with its badge: its cards, everything it draws, the box it and its badge cover,
- * whether it or its badge lies under a point of the surface, and what it reacts to the pointer with.
- */
-export type BadgedStack = {
+export type CountedStack = {
   readonly stacked: StackedCards;
-  readonly parts: readonly Phaser.GameObjects.GameObject[];
+  readonly root: Phaser.GameObjects.Container;
   readonly box: Box;
   liesUnder(x: number, y: number): boolean;
   readonly reactions: Reactions;
 };
 
 /**
- * A stack of the face's copies from the left and the top handed, drawn refused as named and named
- * `name`, and the badge reading its copies named `<name>-copies`: the right click anywhere on it off
- * a name shows its card large.
+ * A stack of the face's copies from the left and the top, in a container named `holder`, drawn refused
+ * as named, its front card named `name` and its count `<name>-copies` under that card's bottom right
+ * corner: the right click anywhere on it off a name shows its card large.
  */
-export function badgedStackOf(
+export function countedStackOf(
   { scene, inspecting }: { readonly scene: Phaser.Scene; readonly inspecting: Inspecting },
   of: {
     readonly shown: Face;
@@ -122,30 +84,37 @@ export function badgedStackOf(
     readonly left: number;
     readonly top: number;
     readonly name: string;
+    readonly holder: string;
     readonly refusal?: Refusal;
   },
-): BadgedStack {
+): CountedStack {
   const stacked = stackedCardsOf(scene, of);
   const { face, box } = stacked;
-  const badge = badgeOf(
-    scene,
-    { right: face.x + face.width + BADGE_PAST, middle: face.y + face.height + BADGE_UNDER },
-    of.copies,
-    `${of.name}-copies`,
+  const count = createCount(scene, `${of.name}-copies`);
+  count.number.setText(text('collection.row-copies', { copies: of.copies }));
+  const counted = count.layAt(
+    face.x + face.width + COPIES_PAST,
+    face.y + face.height + COPIES_UNDER,
   );
+  const root = scene.add
+    .container(0, 0, [...stacked.unders, stacked.card.root, count.chip, count.number])
+    .setName(of.holder);
   return {
     stacked,
-    parts: [...stacked.unders, stacked.card.root, ...badge.parts],
+    root,
     box: Phaser.Geom.Rectangle.Union(
       new Phaser.Geom.Rectangle(box.x, box.y, box.width, box.height),
-      new Phaser.Geom.Rectangle(badge.box.x, badge.box.y, badge.box.width, badge.box.height),
+      new Phaser.Geom.Rectangle(counted.x, counted.y, counted.width, counted.height),
     ),
-    liesUnder: (x, y) => stacked.liesUnder(x, y) || badge.liesUnder(x, y),
+    liesUnder: (x, y) => {
+      const local = root.getLocalPoint(x, y);
+      return stacked.liesUnder(x, y) || onCount(counted, local.x, local.y);
+    },
     reactions: reactionsOf(stacked.card, stacked.shown, inspecting),
   };
 }
 
-/** The stack in the `name` browse's `at`th place, its copies on its badge. */
+/** The stack in the `name` browse's `at`th place, its copies on its count. */
 function stackCellOf(
   browser: Browser,
   name: string,
@@ -153,15 +122,15 @@ function stackCellOf(
 ): Cell {
   const { scene } = browser;
   return ({ left, top }) => {
-    const { stacked, parts, box, liesUnder, reactions } = badgedStackOf(browser, {
+    const { stacked, root, box, liesUnder, reactions } = countedStackOf(browser, {
       shown: stack.shown,
       copies: stack.copies,
       left,
       top,
       name: `${name}-card-${at}`,
+      holder: `${name}-stack-${at}`,
     });
-    const edge = stack.edged ? [cityEdgeOf(scene, stacked.face)] : [];
-    const root = scene.add.container(0, 0, [...edge, ...parts]).setName(`${name}-stack-${at}`);
+    if (stack.edged) root.addAt(cityEdgeOf(scene, stacked.face), 0);
     return {
       parts: [root],
       held: [{ box, liesUnder, reactions }],
@@ -201,6 +170,8 @@ type Fade = { readonly duration: number; readonly ease: string };
 export type Browser = Surface & {
   readonly inspecting: Inspecting;
   readonly large: ShownLarge;
+  /** The one bubble every hover on the scrim raises. */
+  readonly tooltip: Tooltip;
   /**
    * What stands taken down, and the scrim up for what is raised next: whole, or fading in from
    * nothing over `fade`, settling once it is whole however the fade ended.
@@ -210,6 +181,15 @@ export type Browser = Surface & {
   standWhole(): void;
   /** One thing raised on the scrim, which goes with what stands. */
   carries<T extends Phaser.GameObjects.GameObject>(object: T): T;
+  /**
+   * A window's title on the kit's ribbon raised on the scrim, named after the window: its words, and
+   * the ribbon stood centred across the screen, its middle that far under the screen's top, answering
+   * its foot.
+   */
+  raiseTitle(
+    name: string,
+    heading: string,
+  ): { readonly title: Phaser.GameObjects.Text; standAt(middle: number): number };
   /**
    * The panel laid on the scrim from `top` to the screen's foot, which goes with what stands: what it
    * holds is laid about the middle of 1280 units, the wheel and the two pan keys scroll it, a card
@@ -306,6 +286,7 @@ export function standBrowser(
     follow,
     inspecting,
     large,
+    tooltip,
     raise(fade) {
       // Ahead of the wipe: a card shown large over nothing then comes down without uncovering the screen.
       up = true;
@@ -325,6 +306,20 @@ export function standBrowser(
       shown.push(object);
       return object;
     },
+    raiseTitle(name, heading) {
+      const titling = createRibbon(overlay, heading, WINDOW_TITLE, WINDOW_RIBBON, name);
+      browser.carries(titling.ribbon);
+      browser.carries(titling.title);
+      return {
+        title: titling.title,
+        standAt(middle) {
+          placedWhileUp(titling.title, () => {
+            titling.place(screenSize().width / 2, middle);
+          });
+          return middle + WINDOW_RIBBON / 2;
+        },
+      };
+    },
     lay({ top, ...of }) {
       panelTop = top;
       const laid = createPanel(browser, {
@@ -340,8 +335,10 @@ export function standBrowser(
     },
     browse({ name, heading, stacks }) {
       void browser.raise();
-      const title = browser.carries(headingOf(overlay, name, heading));
-      const top = title.y + title.height + MARGIN;
+      const { title, standAt } = browser.raiseTitle(name, heading);
+      const titleTop = BAR_HEIGHT + MARGIN;
+      standAt(titleTop + title.height / 2);
+      const top = titleTop + title.height + MARGIN;
       const cells = stacks.map((stack, at) => stackCellOf(browser, name, { stack, at }));
       browser.lay({
         name,

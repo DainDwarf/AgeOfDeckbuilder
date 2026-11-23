@@ -4,15 +4,16 @@ import { achievementOf, type Catalogue } from '../rules/catalogue';
 import type { Chronicle, DefeatCause, Ending } from '../rules/state';
 import type { Browser } from './browse';
 import { EASE, ended, stopMotion } from './card-motion';
+import { createRibbon, WINDOW_TITLE } from './chrome';
 import { inCollectionOrder } from './collection-layout';
 import {
   addText,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  faintRule,
   offMiddle,
   placedWhileUp,
   type SizedStyle,
-  TITLE_INK,
   UI_FONT,
 } from './design-space';
 import { css, LOOK } from './look';
@@ -125,12 +126,16 @@ const style = (bold: boolean): SizedStyle => ({
   fontFamily: UI_FONT,
   fontSize: '22px',
   fontStyle: bold ? 'bold' : 'normal',
-  color: TITLE_INK,
+  color: css(LOOK.paleInk),
 });
 
+/** How tall the room the outcome stands in is, its ribbon centred in it, and how tall the ribbon stands. */
+const OUTCOME_ROOM = 82;
+const OUTCOME_RIBBON = 76;
+
 /**
- * The chronicle ended, on the screen that says so: the outcome, under it the ledger of what it paid
- * and under that its button, one block centred on the screen. The button is drawn dead.
+ * The chronicle ended, on the screen that says so: the outcome on its ribbon, under it the ledger of
+ * what it paid and under that its button, one block centred on the screen. The button is drawn dead.
  */
 function drawEnding(
   scene: Phaser.Scene,
@@ -140,13 +145,15 @@ function drawEnding(
 ): Drawn {
   const said = says(on);
   const gap = 44;
-  const title = addText(scene, DESIGN_WIDTH / 2, 0, said.title, {
-    fontFamily: UI_FONT,
-    fontSize: '72px',
-    fontStyle: 'bold',
-    color: TITLE_INK,
-  }).setOrigin(0.5, 0);
-  const line = addText(scene, DESIGN_WIDTH / 2, title.height + 24, said.line, style(false));
+  const outcome = createRibbon(
+    scene,
+    said.title,
+    { ...WINDOW_TITLE, fontSize: '44px' },
+    OUTCOME_RIBBON,
+    'ending',
+  );
+  outcome.place(DESIGN_WIDTH / 2, OUTCOME_ROOM / 2);
+  const line = addText(scene, DESIGN_WIDTH / 2, OUTCOME_ROOM + 24, said.line, style(false));
   line.setOrigin(0.5, 0).setName('ending-line');
   const ledger = ledgerOf(scene, catalogue, on, line.y + line.height + gap);
 
@@ -161,7 +168,14 @@ function drawEnding(
     leave,
   );
   button.face.disableInteractive();
-  const parts: Part[] = [title, line, ...ledger.parts, button.face, button.label];
+  const parts: Part[] = [
+    outcome.ribbon,
+    outcome.title,
+    line,
+    ...ledger.parts,
+    button.face,
+    button.label,
+  ];
 
   const lowered = (DESIGN_HEIGHT - (buttonY + BUTTON_HEIGHT / 2)) / 2;
   for (const part of parts) part.y += lowered;
@@ -259,9 +273,7 @@ function ledgerOf(
     y += pitch;
   });
   if (rows.length > 0) {
-    parts.push(
-      scene.add.rectangle(left, y - pitch / 2 + 4, width, 1, LOOK.panelEdge).setOrigin(0, 0),
-    );
+    parts.push(faintRule(scene, left, y - pitch / 2 + 4, width));
     y += 0.4 * pitch;
   }
   const total = addText(scene, left + 22, y, text('label.influence'), style(true))
@@ -277,7 +289,7 @@ function ledgerOf(
   return { parts, bottom: y + total.height / 2 };
 }
 
-/** What the ending screen reads: its title, and the one line under it. */
+/** What the ending screen reads: its outcome, and the one line under it. */
 function says({ ending, timeline }: Ended): { title: string; line: string } {
   switch (ending.outcome) {
     case 'victory':

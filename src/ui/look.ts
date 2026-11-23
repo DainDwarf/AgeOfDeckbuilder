@@ -155,8 +155,6 @@ export type Look = {
   /** The edge of a button that changes the collection screen's mode. */
   readonly modeButtonEdge: number;
   readonly cardEdge: number;
-  /** The ground of the badge reading a browse's stack's copies. */
-  readonly copiesBadge: number;
   /** Each front's colour: a card kind's on the frame of every card of that kind, and a terrain's face's. */
   readonly cardFront: Readonly<Record<FrontColour, KindColour>>;
   /** The ink a card's name reads in on its plate. */
@@ -175,8 +173,11 @@ export type Look = {
   readonly cardGlass: number;
   /** The tint the ground in a card's art box is multiplied by. */
   readonly cardArtGround: number;
-  /** The tint a cost's disc is multiplied by where the player's city cannot pay it, and the disc of a card nothing plays. */
-  readonly unaffordableDisc: number;
+  /**
+   * The red of a cost the player's city cannot pay: the tint its disc is multiplied by, and the ink of
+   * its number in an answer's text; and the tint of the disc of a card nothing plays.
+   */
+  readonly unaffordable: number;
   /** How much larger than its own size a card lifted out of the hand's lane is drawn. */
   readonly liftedCard: number;
   /** The shadow under a card lifted out of the hand's lane, its numbers in units of the card at its own size. */
@@ -193,7 +194,7 @@ export type Look = {
   readonly takenPastNothing: number;
   readonly takenPastNothingInk: number;
   readonly affordableCard: Paper;
-  /** The strength an answer the player's city cannot pay for, or one refused, is darkened by, its panel and its words alike. */
+  /** The strength an answer the player's city cannot pay for, or one refused, is darkened by, its panel, its words and its glyphs alike. */
   readonly refusedAnswer: number;
   /** The dark under a tile's yield glyphs, at its strength over its middle. */
   readonly yieldPatch: Wash;
@@ -307,7 +308,6 @@ export const LOOK: Look = {
   cityRowEdge: 0xd4d7db,
   modeButtonEdge: 0x5c6068,
   cardEdge: 0x6f757d,
-  copiesBadge: 0x232833,
   cardFront: {
     settle: { hue: 210, saturation: 0.06, darkness: 0.72 },
     unit: { hue: 46, saturation: 0.85, darkness: 0.84 },
@@ -328,7 +328,7 @@ export const LOOK: Look = {
   cardTerrainOutline: 0.85,
   cardGlass: 0.8,
   cardArtGround: 0x666666,
-  unaffordableDisc: 0xff6b66,
+  unaffordable: 0xff6b66,
   liftedCard: 1.1,
   liftedShadow: { colour: 0x000000, strength: 0.5, blur: 9, fall: 5 },
   aimSlab: 0x232833,
@@ -412,6 +412,11 @@ export type Tone = (colour: number) => number;
 /** A colour as it is drawn, through no tone. */
 export function untoned(colour: number): number {
   return colour;
+}
+
+/** The tone multiplying every colour by a tint. */
+export function tintedBy(tint: number): Tone {
+  return (colour) => multiplied(colour, tint);
 }
 
 /**

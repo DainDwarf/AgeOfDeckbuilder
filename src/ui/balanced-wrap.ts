@@ -1,3 +1,14 @@
+import type Phaser from 'phaser';
+
+/** A Text's word wrap breaking it as `balancedLines` does, across a room that wide. */
+export function balancedWrap(room: number): Phaser.Types.GameObjects.Text.TextWordWrap {
+  return {
+    // Phaser runs the callback on the Text's own context, its font synced first (docs/PHASER.md).
+    callback: (content: string, label: Phaser.GameObjects.Text) =>
+      balancedLines(content, (line) => label.context.measureText(line).width, room),
+  };
+}
+
 /**
  * A text broken at its spaces into the fewest lines a room that wide allows, and of those breaks the
  * one whose longest line is shortest, then whose shortest line is longest, each line as `measure`

@@ -277,13 +277,19 @@ export function addRun(
 
 /**
  * Where a run's glyphs and names stand about its label's own space, the label centred on its lines:
- * each glyph's symbol and middle, and each name's box, the reading handed carried by every name.
+ * each glyph's symbol and middle and the left edge of the number written against it, and each name's
+ * box, the reading handed carried by every name.
  */
 export function centredMarks(
   { label, run }: Pick<RunLabel, 'label' | 'run'>,
   reading: AnswerReading,
 ): {
-  glyphs: { readonly symbol: CastSymbol; readonly x: number; readonly y: number }[];
+  glyphs: {
+    readonly symbol: CastSymbol;
+    readonly x: number;
+    readonly y: number;
+    readonly number?: { readonly reads: string; readonly left: number };
+  }[];
   names: Name[];
 } {
   const own = ownBoxOf(label);
@@ -291,10 +297,12 @@ export function centredMarks(
   const centre = own.x + own.width / 2;
   const middleOf = (line: number): number => own.y + line * pitch + (pitch - label.lineSpacing) / 2;
   return {
-    glyphs: run.glyphs.map(({ symbol, x, line }) => ({
+    glyphs: run.glyphs.map(({ symbol, x, line, number }) => ({
       symbol,
       x: centre + x,
       y: middleOf(line),
+      number:
+        number === undefined ? undefined : { reads: number.reads, left: centre + number.from },
     })),
     names: run.names.map(({ reference, from, to, line }) => ({
       reference,
@@ -951,7 +959,7 @@ export function createCardFace(
         symbol: resource,
         reading: String(amount),
         ink: LOOK.cardDiscInk,
-        tint: refused.unaffordable.includes(resource) ? toned(LOOK.unaffordableDisc) : tint,
+        tint: refused.unaffordable.includes(resource) ? toned(LOOK.unaffordable) : tint,
         tone: toned,
         at: onFace(width, middle),
       });
@@ -959,7 +967,7 @@ export function createCardFace(
 
     sign.setVisible(next.playedByNothing);
     if (next.playedByNothing) {
-      signDisc.setTint(toned(LOOK.unaffordableDisc));
+      signDisc.setTint(toned(LOOK.unaffordable));
       asGlyph(signGlyph, 'played-by-nothing', size(SIGN_SIZE), { tone: toned, outlined: false });
       const middle = costAt(next.front, 0);
       discs.push(middle);

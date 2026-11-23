@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { animationSpeed, pressAnimationSpeed } from './animation-speed';
-import { balancedLines } from './balanced-wrap';
+import { balancedWrap } from './balanced-wrap';
 import {
   type Bind,
   bindings,
@@ -23,6 +23,7 @@ import {
   type PressableWell,
   type SignButton,
   WINDOW_GOLD_MIDDLE,
+  WINDOW_TITLE,
 } from './chrome';
 import { type ButtonPiece, WINDOW_BAND_FOOT } from './chrome-kit';
 import { type CornerLayout, layOutCorner } from './corner-layout';
@@ -32,6 +33,7 @@ import {
   type Box,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
+  faintRule,
   MARGIN,
   offMiddle,
   onClick,
@@ -271,7 +273,6 @@ const ROWS_HEIGHT = rowsHeight(ROWS.length) + RULE_ROOM - ROW_GAP;
 const INK = css(LOOK.charcoalInk);
 const METAL_INK = css(LOOK.metalInk);
 
-const TITLE_STYLE = { fontFamily: UI_FONT, fontSize: '26px', fontStyle: 'bold', color: METAL_INK };
 const LABEL_STYLE = { fontFamily: UI_FONT, fontSize: '18px', fontStyle: 'bold', color: INK };
 const BUTTON_STYLE = { ...LABEL_STYLE, color: METAL_INK };
 const WELL_STYLE = { fontFamily: UI_FONT, fontSize: '16px', fontStyle: 'bold', color: INK };
@@ -280,11 +281,7 @@ const LINE_STYLE: SizedStyle = {
   fontSize: '18px',
   color: INK,
   align: 'center',
-  wordWrap: {
-    // Phaser runs the callback on the Text's own context, its font synced first (docs/PHASER.md).
-    callback: (content: string, label: Phaser.GameObjects.Text) =>
-      balancedLines(content, (line) => label.context.measureText(line).width, ROOM),
-  },
+  wordWrap: balancedWrap(ROOM),
 };
 
 /** A window standing on the scrim, and the keyboard's one way into it. */
@@ -527,13 +524,8 @@ function layControls(
   ROWS.forEach((row, index) => {
     root.add(rowOf(row, rowAt(top, index, CONTROLS.length)));
   });
-  const ruleY = rowAt(top, CONTROLS.length - 1) + ROW_HEIGHT / 2 + RULE_ROOM / 2;
-  root.add(
-    scene.add
-      .rectangle(ROW_LEFT, ruleY, ROOM, 1, LOOK.paleInk, LOOK.rowRule)
-      .setOrigin(0, 0.5)
-      .setName('controls-rule'),
-  );
+  const ruleTop = rowAt(top, CONTROLS.length - 1) + ROW_HEIGHT / 2 + (RULE_ROOM - 1) / 2;
+  root.add(faintRule(scene, ROW_LEFT, ruleTop, ROOM).setName('controls-rule'));
 
   root.add(
     pairOn(scene, top + ROWS_HEIGHT + PADDING + BUTTON_HEIGHT / 2, [
@@ -724,7 +716,7 @@ function layWindow(
   said: Said,
 ): Opened {
   const shape = WINDOWS[which];
-  const title = addText(scene, 0, 0, text(shape.title), TITLE_STYLE)
+  const title = addText(scene, 0, 0, text(shape.title), WINDOW_TITLE)
     .setOrigin(0.5)
     .setName(`${which}-title`);
   const over = [...(shape.lines ?? []), ...(said.over === undefined ? [] : [said.over])].map(
@@ -804,7 +796,7 @@ export function createRefusedSaveWindow(
   scene: Phaser.Scene,
   back: () => void,
 ): Phaser.GameObjects.Container {
-  const title = addText(scene, 0, 0, text('refused-save.title'), TITLE_STYLE)
+  const title = addText(scene, 0, 0, text('refused-save.title'), WINDOW_TITLE)
     .setOrigin(0.5)
     .setName('refused-save-title');
   const line = lineOf(scene, text('refused-save.line'), 'refused-save-line');

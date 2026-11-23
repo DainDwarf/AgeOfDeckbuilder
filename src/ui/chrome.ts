@@ -12,6 +12,7 @@ import {
   INACTIVE_TAB,
   PANEL,
   type Piece,
+  RIBBON,
   RIM,
   SHADOW_MARGIN,
   WINDOW_BAND,
@@ -19,14 +20,18 @@ import {
   WINDOW_RIM,
 } from './chrome-kit';
 import {
+  addText,
   type Box,
   hitPointInWorld,
   onHover,
   onLetGoOffCanvas,
+  ownBoxOf,
   reactsToPress,
+  type SizedStyle,
+  UI_FONT,
 } from './design-space';
 import { asGlyph, glyphMark, SIGN_SHARE } from './glyphs';
-import { LOOK } from './look';
+import { css, LOOK } from './look';
 
 /**
  * How many design units a pixel of the kit's files is drawn across on each kind of panel, which sets
@@ -115,6 +120,52 @@ export function standChromePanel(
 /** How far under a window's top the middle of its gold band stands, between the rim's inner edge and the band's foot. */
 export const WINDOW_GOLD_MIDDLE = (RIM.breadth * WINDOW_RIM + WINDOW_BAND_FOOT) / 2;
 
+/** The type and the ink a window's title reads in, on its gold band or on a ribbon. */
+export const WINDOW_TITLE: SizedStyle = {
+  fontFamily: UI_FONT,
+  fontSize: '26px',
+  fontStyle: 'bold',
+  color: css(LOOK.metalInk),
+};
+
+/** How far a ribbon reaches past its words on each side, as a share of its height. */
+const RIBBON_PAST = 0.9;
+
+/** How far over a ribbon's middle its words' middle stands, as a share of its height. */
+const RIBBON_LIFT = 0.04;
+
+/** Words on the kit's ribbon: the ribbon, the words, and their laying. */
+export type Ribbon = {
+  readonly ribbon: Phaser.GameObjects.NineSlice;
+  readonly title: Phaser.GameObjects.Text;
+  /** The ribbon laid with its middle on the point, its words on it. */
+  place(x: number, y: number): void;
+};
+
+/**
+ * The words in that style on the kit's ribbon that tall, as long as the words ask, the words named
+ * `<name>-title` and the ribbon `<name>-ribbon`; drawn nowhere until `place` lays them.
+ */
+export function createRibbon(
+  scene: Phaser.Scene,
+  reads: string,
+  style: SizedStyle,
+  height: number,
+  name: string,
+): Ribbon {
+  const title = addText(scene, 0, 0, reads, style).setOrigin(0.5).setName(`${name}-title`);
+  const ribbon = sliceOf(scene, RIBBON).setName(`${name}-ribbon`);
+  const width = ownBoxOf(title).width + 2 * RIBBON_PAST * height;
+  return {
+    ribbon,
+    title,
+    place(x, y) {
+      fit(ribbon, RIBBON, { x: x - width / 2, y: y - height / 2, width, height });
+      title.setPosition(x, y - RIBBON_LIFT * height);
+    },
+  };
+}
+
 /**
  * A window of the menu on the box: a panel at the window's rim, taking the pointer so that a press on
  * it is no press on what stands under it, and the gold band laid inside its top edge, the dark line
@@ -170,6 +221,25 @@ export function placeChromeWell(
   fit(well, wellOf(piece), box);
 }
 
+/** The veil a thing a press lands on wears under the pointer, named `name`, hidden; `veilOver` lays it. */
+export function createVeil(scene: Phaser.Scene, name: string): Phaser.GameObjects.Rectangle {
+  const { colour, strength } = LOOK.underPointer;
+  return scene.add
+    .rectangle(0, 0, 1, 1, colour, strength)
+    .setOrigin(0, 0)
+    .setVisible(false)
+    .setName(name);
+}
+
+/** The veil laid over the box, its corners rounded that far. */
+export function veilOver(
+  veil: Phaser.GameObjects.Rectangle,
+  box: Box,
+  corner: number,
+): Phaser.GameObjects.Rectangle {
+  return veil.setRounded(corner).setSize(box.width, box.height).setPosition(box.x, box.y);
+}
+
 /** A well a press lands on: its face, and the veil it wears under the pointer. */
 export type PressableWell = {
   readonly face: Phaser.GameObjects.NineSlice;
@@ -185,20 +255,11 @@ export type PressableWell = {
 export function createPressableWell(scene: Phaser.Scene, box: Box, name: string): PressableWell {
   const face = reactsToPress(takesThePointer(createChromeWell(scene, name)));
   placeChromeWell(face, 'inactive-tab', box);
-  const corner = INACTIVE_TAB.corner * fittedScale(INACTIVE_TAB, box);
-  const { colour, strength } = LOOK.underPointer;
-  const veil = scene.add
-    .rectangle(
-      box.x + box.width / 2,
-      box.y + box.height / 2,
-      box.width,
-      box.height,
-      colour,
-      strength,
-    )
-    .setRounded(corner)
-    .setVisible(false)
-    .setName(`${name}-veil`);
+  const veil = veilOver(
+    createVeil(scene, `${name}-veil`),
+    box,
+    INACTIVE_TAB.corner * fittedScale(INACTIVE_TAB, box),
+  );
   let fielded = false;
   const dress = (): void => {
     veil.setVisible(hover.hovered && !fielded);

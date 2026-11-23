@@ -77,7 +77,10 @@ export function countText(scene: Phaser.Scene): Phaser.GameObjects.Text {
   return addText(scene, 0, 0, '', COUNT_STYLE).setOrigin(0.5, 0.5);
 }
 
-/** A count as a pile reads it: its number, named `name`, on the kit's counter chip, `<name>-chip`. */
+/**
+ * A count as a pile reads it, and a stack its copies: its number, named `name`, on the kit's counter
+ * chip, `<name>-chip`.
+ */
 export type Count = {
   readonly chip: Phaser.GameObjects.NineSlice;
   readonly number: Phaser.GameObjects.Text;
@@ -86,23 +89,32 @@ export type Count = {
    * wide as the number it now reads asks; answers the chip's box.
    */
   lay(on: Box, corner: 'left' | 'right'): Box;
+  /** The count laid with its chip's right edge and its middle at the point, as `lay` widens it. */
+  layAt(right: number, middle: number): Box;
 };
 
-/** A count drawing nothing yet: its chip and its number, named `name`, laid by `lay`. */
+/** A count drawing nothing yet: its chip and its number, named `name`, laid by `lay` or `layAt`. */
 export function createCount(scene: Phaser.Scene, name: string): Count {
   const chip = createChromeCounter(scene).setName(`${name}-chip`);
   const number = countText(scene).setName(name);
+  const widthNow = (): number => Math.max(COUNT_LEAST, ownBoxOf(number).width + COUNT_PAD);
+  const stand = (counted: Box): Box => {
+    placeChromeCounter(chip, counted);
+    number.setPosition(counted.x + counted.width / 2, counted.y + COUNT_HEIGHT / 2);
+    return counted;
+  };
   return {
     chip,
     number,
     lay(on: Box, corner: 'left' | 'right'): Box {
-      const width = Math.max(COUNT_LEAST, ownBoxOf(number).width + COUNT_PAD);
+      const width = widthNow();
       const left =
         corner === 'left' ? on.x - COUNT_OVERHANG : on.x + on.width + COUNT_OVERHANG - width;
-      const counted = { x: left, y: on.y - COUNT_OVERHANG, width, height: COUNT_HEIGHT };
-      placeChromeCounter(chip, counted);
-      number.setPosition(left + width / 2, counted.y + COUNT_HEIGHT / 2);
-      return counted;
+      return stand({ x: left, y: on.y - COUNT_OVERHANG, width, height: COUNT_HEIGHT });
+    },
+    layAt(right: number, middle: number): Box {
+      const width = widthNow();
+      return stand({ x: right - width, y: middle - COUNT_HEIGHT / 2, width, height: COUNT_HEIGHT });
     },
   };
 }

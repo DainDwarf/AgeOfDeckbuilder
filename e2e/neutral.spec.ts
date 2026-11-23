@@ -585,7 +585,7 @@ test('a worker of the neutral’s standing on a tile its city holds builds there
   expect(problems).toEqual([]);
 });
 
-test('a warrior of the player’s standing on the neutral’s city through the enemy phase captures it: the city’s mark gone, the window rising under its building’s name and lore with each reward of several copies a stack whose badge reads them, and the take adding every copy to the discard pile', async ({
+test('a warrior of the player’s standing on the neutral’s city through the enemy phase captures it: the city’s mark gone, the window rising under its building’s name and lore with each reward of several copies a stack whose count reads them, and the take adding every copy to the discard pile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -602,7 +602,7 @@ test('a warrior of the player’s standing on the neutral’s city through the e
   const added = [...walked(taking)].find((stage) => stage.name === 'added');
   const mark = `building-${tileKey(city)}`;
   const faces = rewards.map((_, at) => `deal-card-${at}`);
-  const badges = faces.map((face) => `${face}-copies`);
+  const counts = faces.map((face) => `${face}-copies`);
   expect(dealt.neutral).toBeUndefined();
   expect(idsOf(added?.chronicle.discardPile ?? []).slice(-copies)).toEqual(
     Array.from({ length: copies }, () => card),
@@ -613,13 +613,13 @@ test('a warrior of the player’s standing on the neutral’s city through the e
   await stoppedTurn(page);
   await restedOnDeal(page);
 
-  const read = await readings(page, [mark, 'deal-title', 'deal-lore', ...faces, ...badges]);
+  const read = await readings(page, [mark, 'deal-title', 'deal-lore', ...faces, ...counts]);
   expect(read(mark).standing).toBe(false);
   expect(read('deal-title').text).toBe(buildingName(deal.building));
   expect(read('deal-lore').text).toBe(captureLore(deal.building));
   for (const [at, [, each]] of rewards.entries()) {
     expect(read(faces[at]).standing).toBe(true);
-    expect(read(badges[at]).text).toBe(
+    expect(read(counts[at]).text).toBe(
       each > 1 ? text('collection.row-copies', { copies: each }) : undefined,
     );
   }

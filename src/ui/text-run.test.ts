@@ -54,7 +54,26 @@ describe('a run with glyphs in it', () => {
     const run = laid('aaaaaa 10[food]');
     expect(linesOf(run)[0]).toBe('aaaaaa');
     expect(linesOf(run)[1].trimEnd()).toBe('10');
-    expect(run.glyphs).toEqual([{ symbol: 'food', x: expect.any(Number), line: 1 }]);
+    expect(run.glyphs).toEqual([
+      {
+        symbol: 'food',
+        x: expect.any(Number),
+        line: 1,
+        number: { reads: '10', from: expect.any(Number), to: expect.any(Number) },
+      },
+    ]);
+  });
+
+  it('reads the number written against a glyph, and the stretch it is drawn across', () => {
+    const run = laid('aa 10[food]');
+    const { number } = run.glyphs[0];
+    expect(number?.reads).toBe('10');
+    expect(number?.from).toBe(measure('aa ') - edgeOf(run, 0));
+    expect(number && number.to - number.from).toBe(measure('10'));
+  });
+
+  it('reads no number against a glyph the run writes none before', () => {
+    expect(laid('aa [food]').glyphs[0].number).toBeUndefined();
   });
 
   it('stands a glyph off the number it is written against by its bearing', () => {
@@ -75,7 +94,14 @@ describe('a run with glyphs in it', () => {
 
   it('marks a symbol of the cast that is no resource as it marks a resource', () => {
     const run = laid('1[population]');
-    expect(run.glyphs).toEqual([{ symbol: 'population', x: expect.any(Number), line: 0 }]);
+    expect(run.glyphs).toEqual([
+      {
+        symbol: 'population',
+        x: expect.any(Number),
+        line: 0,
+        number: { reads: '1', from: expect.any(Number), to: expect.any(Number) },
+      },
+    ]);
   });
 
   it('refuses a mark that names no symbol of the cast', () => {

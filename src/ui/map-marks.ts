@@ -26,7 +26,7 @@ import { addText, corners, DESIGN_HEIGHT, DESIGN_WIDTH, ownBoxOf, UI_FONT } from
 import { inMovePoints } from './face';
 import { asGlyph, glyphMark, glyphOf } from './glyphs';
 import type { HealthBar } from './health-bar';
-import { css, darkeningOf, LOOK, multiplied, type Tone, type Wash } from './look';
+import { css, darkeningOf, LOOK, multiplied, type Tone, tintedBy, type Wash } from './look';
 import {
   BUILDING_PATCH,
   BUILDING_SHEET,
@@ -850,13 +850,8 @@ export function asUnitHealthBar(
     { colour: multiplied(LOOK.attack, tint), strength: 1, share: bar.removed },
   );
   const { symbol, square } = bar.kills ? SKULL : HEART;
-  asGlyph(worn.getAt<Phaser.GameObjects.Container>(4), symbol, square, { tone: shadeTone(tint) });
+  asGlyph(worn.getAt<Phaser.GameObjects.Container>(4), symbol, square, { tone: tintedBy(tint) });
   return worn;
-}
-
-/** What a unit's colours go through under the tint its shade multiplies them by. */
-function shadeTone(tint: number): Tone {
-  return (colour) => multiplied(colour, tint);
 }
 
 /**
@@ -882,7 +877,7 @@ function asUnitDisc(
     .setAlpha(1)
     .setVisible(symbol !== undefined);
   if (symbol !== undefined) {
-    asGlyph(glyph, symbol, UNIT_BADGE_GLYPH, { tone: shadeTone(tint), outlined: false });
+    asGlyph(glyph, symbol, UNIT_BADGE_GLYPH, { tone: tintedBy(tint), outlined: false });
   }
 }
 

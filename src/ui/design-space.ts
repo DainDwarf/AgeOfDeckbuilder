@@ -514,6 +514,16 @@ export function createScrim(scene: Phaser.Scene, back: () => void): Phaser.GameO
   return scrim;
 }
 
+/** The faint rule between two rows: a line of the pale ink that wide, its top left at the point. */
+export function faintRule(
+  scene: Phaser.Scene,
+  x: number,
+  y: number,
+  width: number,
+): Phaser.GameObjects.Rectangle {
+  return scene.add.rectangle(x, y, width, 1, LOOK.paleInk, LOOK.rowRule).setOrigin(0, 0);
+}
+
 /** A scrim risen over a scene, said of its input plugin; nothing inside Phaser listens to it. */
 export const COVERED = 'covered';
 
@@ -695,26 +705,4 @@ export function addText(
 export function inked(label: Phaser.GameObjects.Text, colour: number): Phaser.GameObjects.Text {
   const ink = css(colour);
   return label.style.color === ink ? label : label.setColor(ink);
-}
-
-/** The ink a window's title reads in. */
-export const TITLE_INK = css(LOOK.paleInk);
-
-/** The heading a window's cards stand under, named after the window it heads. */
-export function headingOf(
-  scene: Phaser.Scene,
-  name: string,
-  heading: string,
-): Phaser.GameObjects.Text {
-  const title = addText(scene, 0, BAR_HEIGHT + MARGIN, heading, {
-    fontFamily: UI_FONT,
-    fontSize: '26px',
-    fontStyle: 'bold',
-    color: TITLE_INK,
-  })
-    .setName(`${name}-title`)
-    .setOrigin(0.5, 0);
-  return placedWhileUp(title, () => {
-    title.setX(screenSize().width / 2);
-  });
 }

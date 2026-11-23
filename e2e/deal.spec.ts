@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
@@ -8,16 +8,21 @@ import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
 import {
   besideTheDeal,
+  capstoneClosed,
   chronicleOf,
   click,
+  continued,
   cursorAt,
   enemiesOf,
   eventDealRead,
+  type Frame,
   firstDealtAlone,
   firstEntriesTaken,
   firstSeed,
   offeredOn,
   openSaved,
+  pieceOnScreenOf,
+  plantSaved,
   playerCityTile,
   readings,
   refusalLines,
@@ -26,6 +31,8 @@ import {
   settledOn,
   standing,
   take,
+  tooltipText,
+  tooltipUp,
   watch,
 } from './chronicle-screen';
 
@@ -37,6 +44,31 @@ const RATION = 'ration';
 
 /** The cursor over something that reacts to a left click or a rest. */
 const HAND = 'pointer';
+
+/** The bubble every hover on the scrim raises. */
+const TOOLTIP = 'tooltip-overlay';
+
+/**
+ * The window's ribbon, its own box on the page, read in one question with its title standing on it,
+ * its lore under it and its first entry under the lore, each asserted.
+ */
+async function titledDownward(page: Page, window: string): Promise<Frame> {
+  const seen = await readings(
+    page,
+    ['ribbon', 'title', 'lore', 'card-0'].map((part) => `${window}-${part}`),
+  );
+  const ribbon = pieceOnScreenOf(seen(`${window}-ribbon`));
+  const title = seen(`${window}-title`).boundsOnScreen;
+  const lore = seen(`${window}-lore`).boundsOnScreen;
+  const row = seen(`${window}-card-0`).boundsOnScreen;
+  expect(title.x).toBeGreaterThanOrEqual(ribbon.x);
+  expect(title.x + title.width).toBeLessThanOrEqual(ribbon.x + ribbon.width);
+  expect(title.y).toBeGreaterThanOrEqual(ribbon.y);
+  expect(title.y + title.height).toBeLessThanOrEqual(ribbon.y + ribbon.height);
+  expect(lore.y).toBeGreaterThanOrEqual(ribbon.y + ribbon.height);
+  expect(row.y).toBeGreaterThanOrEqual(lore.y + lore.height);
+  return ribbon;
+}
 
 /**
  * The chronicle of the first seed and turn, inside forty turns, whose deal offers an answer the city
@@ -127,7 +159,27 @@ test('the events phase deals a choice, and the turn plays on from the one a left
   expect(problems).toEqual([]);
 });
 
-test('a left click on an answer the city cannot pay for says why over it, takes and pays nothing, and the inspection key then shows nothing', async ({
+test('the capstone’s window and a deal’s each stand their title on the ribbon, the ribbon at one height, the lore under the title and the row under the lore', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await plantSaved(page, firstDealtAlone(LEAN_SEASON));
+  await continued(page);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  await rested(page);
+  const capstone = await titledDownward(page, 'capstone');
+
+  await capstoneClosed(page);
+  await restedOnDeal(page);
+  const deal = await titledDownward(page, 'deal');
+  expect(deal.y).toBeCloseTo(capstone.y, 3);
+  expect(deal.height).toBeCloseTo(capstone.height, 3);
+
+  expect(problems).toEqual([]);
+});
+
+test('the pointer resting on an answer the city cannot pay for says why over it, and a left click on it says it again in the note, takes and pays nothing, and the inspection key then shows nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -143,7 +195,19 @@ test('a left click on an answer the city cannot pay for says why over it, takes 
   await openSaved(page, dealt);
   await restedOnDeal(page);
 
-  await click(page, `deal-card-${at}`);
+  const refusedAnswer = `deal-card-${at}`;
+  const seen = await readings(page, [refusedAnswer]);
+  const box = seen(refusedAnswer).boundsOnScreen;
+  const { unit } = seen(refusedAnswer).onScreen;
+  // In the answer's padding over its name, off every name its text draws.
+  await page.mouse.move(box.x + 12 * unit, box.y + 6 * unit);
+  await expect.poll(() => tooltipUp(page, TOOLTIP)).toBe(true);
+  expect(await tooltipText(page, TOOLTIP)).toBe(said.join('\n'));
+  const bubble = await readings(page, [TOOLTIP, refusedAnswer]);
+  const over = bubble(TOOLTIP).boundsOnScreen;
+  expect(over.y + over.height).toBeLessThanOrEqual(bubble(refusedAnswer).boundsOnScreen.y);
+
+  await click(page, refusedAnswer);
   await expect.poll(() => refusalLines(page)).toEqual(said);
   expect(await standing(page, 'deal')).toBe(true);
   expect(await chronicleOf(page)).toEqual(dealt);
