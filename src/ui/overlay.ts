@@ -243,6 +243,7 @@ export function createOverlay({
         return said.length > 0 || names.rests(at);
       },
       inspect(at) {
+        browser.tooltip.hide();
         names.inspect(at);
       },
     };
@@ -435,6 +436,7 @@ export function createOverlay({
         if (!playable(refusal)) {
           const { x, y, width } = own;
           const { across, offset } = laid.panel;
+          browser.tooltip.hide();
           note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
           return;
         }

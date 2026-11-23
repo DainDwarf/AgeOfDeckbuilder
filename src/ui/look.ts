@@ -175,9 +175,11 @@ export type Look = {
   readonly cardArtGround: number;
   /**
    * The red of a cost the player's city cannot pay: the tint its disc is multiplied by, and the ink of
-   * its number in an answer's text; and the tint of the disc of a card nothing plays.
+   * its number in an answer's text.
    */
   readonly unaffordable: number;
+  /** The tint the disc of a card nothing plays is multiplied by. */
+  readonly playedByNothingDisc: number;
   /** How much larger than its own size a card lifted out of the hand's lane is drawn. */
   readonly liftedCard: number;
   /** The shadow under a card lifted out of the hand's lane, its numbers in units of the card at its own size. */
@@ -329,6 +331,7 @@ export const LOOK: Look = {
   cardGlass: 0.8,
   cardArtGround: 0x666666,
   unaffordable: 0xff6b66,
+  playedByNothingDisc: 0xff6b66,
   liftedCard: 1.1,
   liftedShadow: { colour: 0x000000, strength: 0.5, blur: 9, fall: 5 },
   aimSlab: 0x232833,

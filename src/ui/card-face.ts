@@ -967,7 +967,7 @@ export function createCardFace(
 
     sign.setVisible(next.playedByNothing);
     if (next.playedByNothing) {
-      signDisc.setTint(toned(LOOK.unaffordable));
+      signDisc.setTint(toned(LOOK.playedByNothingDisc));
       asGlyph(signGlyph, 'played-by-nothing', size(SIGN_SIZE), { tone: toned, outlined: false });
       const middle = costAt(next.front, 0);
       discs.push(middle);

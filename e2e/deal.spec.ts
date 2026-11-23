@@ -179,7 +179,7 @@ test('the capstone’s window and a deal’s each stand their title on the ribbo
   expect(problems).toEqual([]);
 });
 
-test('the pointer resting on an answer the city cannot pay for says why over it, and a left click on it says it again in the note, takes and pays nothing, and the inspection key then shows nothing', async ({
+test('the pointer resting on an answer the city cannot pay for says why over it, and a left click on it takes that down and says it again in the note, takes and pays nothing, and the inspection key then shows nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -209,6 +209,7 @@ test('the pointer resting on an answer the city cannot pay for says why over it,
 
   await click(page, refusedAnswer);
   await expect.poll(() => refusalLines(page)).toEqual(said);
+  expect(await tooltipUp(page, TOOLTIP)).toBe(false);
   expect(await standing(page, 'deal')).toBe(true);
   expect(await chronicleOf(page)).toEqual(dealt);
 
