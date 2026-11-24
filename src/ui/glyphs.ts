@@ -46,6 +46,7 @@ function colourOf(symbol: CastSymbol): number {
     case 'move':
     case 'action':
     case 'sight':
+    case 'damage':
     case 'hostile':
       return LOOK.cardTextInk;
     case 'draw-pile':
@@ -102,6 +103,7 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'move':
     case 'action':
     case 'sight':
+    case 'damage':
       return true;
   }
 }

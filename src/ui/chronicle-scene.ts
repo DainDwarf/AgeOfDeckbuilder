@@ -15,11 +15,12 @@ import {
   type UnitCommand,
 } from '../rules/chronicle';
 import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rules/city';
-import { sameTile, type TileCoords, tileAt, tileKey } from '../rules/map';
+import { sameTile, type TileCoords, type TilesBeside, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
 import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
+import { tileYield } from '../rules/yields';
 import { chronicleScreenAtSpeed } from './animation-speed';
 import { createBand, trayNow } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
@@ -63,6 +64,7 @@ import { createResourceBar } from './resource-bar';
 import { campaignHeld, keepChronicle, type Opening } from './save-entry';
 import { createSmallCards } from './small-card';
 import { createStanding } from './standing';
+import { createSummary } from './summary';
 import { text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
 
@@ -199,6 +201,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       modeFrame: stratum(),
       band: stratum(),
       modeChip: stratum(),
+      summary: stratum(),
       pinned: stratum(),
       /** The piles and the resting cards of the hand. */
       resting: stratum(),
@@ -291,6 +294,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const note = createRefusalNote(map, map.strata.note);
     // A press reaches the map only where this scene lets it through.
     note.hearPressesOf(this);
+    const summary = createSummary(this, ui.summary, CATALOGUE, tooltip.ui);
 
     /**
      * The tile selected or the one the selected unit stands on, and nothing while neither is: which
@@ -428,6 +432,27 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
     };
 
+    /** The summary reading the selection as the map now draws its tile, or down where none stands. */
+    const summarise = (): void => {
+      const face = selection === undefined ? undefined : view.drawnAs(selection.tile);
+      summary.read(
+        face === undefined
+          ? undefined
+          : {
+              cards: cardsOn(face),
+              unit: view.unitSelected(),
+              tile: face.tile,
+              yields: tileYield(CATALOGUE, this.current, face.tile, besideOnMap),
+            },
+      );
+    };
+
+    /** The selection standing marked on the map, the unit on its tile where `unit`, and summarised. */
+    const markSelection = (unit: boolean): void => {
+      view.markSelected(selection?.tile, unit, thresholdOn(selection));
+      summarise();
+    };
+
     /**
      * The one place the screen's selection changes: the unit on the tile, or the tile where `unit` is
      * false or the map has no unit to select there, or nothing; and the card the hand held, the
@@ -439,13 +464,13 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       note.hide();
       uninspect();
       hand.unselect();
-      view.markSelected(found?.tile, unit, thresholdOn(found));
+      markSelection(unit);
     };
 
     /** The unit being aimed let go of: selected no more, the inspection standing. */
     const unaimUnit = (): void => {
       selection = undefined;
-      view.markSelected(undefined, false, undefined);
+      markSelection(false);
     };
 
     /** Whatever is being aimed let go of, a card or a unit, as a left click on a thing lets it go. */
@@ -476,12 +501,15 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       inspection = { on, face, cards, card: stepped };
     };
 
+    /** The faces the map draws, read beside any tile: what a tile's yield is read on. */
+    const besideOnMap: TilesBeside = (coord) => view.drawnAs(coord)?.tile;
+
     /**
      * The cards an inspection steps on a tile the map draws so, as the screen now shows the discs and
      * the signs.
      */
     const cardsOn = (face: Drawn): Card[] =>
-      cardsOf(CATALOGUE, face, this.current, (coord) => view.drawnAs(coord)?.tile, {
+      cardsOf(CATALOGUE, face, this.current, besideOnMap, {
         discs: iconsButton.shown(),
         signs: signs(),
       });
@@ -858,6 +886,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
       veiled: (veils) => {
         view.showVeils(veils);
+        summarise();
       },
       unit: {
         reads: () => {
@@ -889,6 +918,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       // face until the hand has let it go.
       { render: faces.cards.fillIn },
       view,
+      // After the map, whose faces it reads.
+      { render: summarise },
       bar,
       createPiles(
         this,

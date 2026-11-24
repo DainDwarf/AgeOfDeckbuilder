@@ -108,6 +108,8 @@ export type Look = {
   /** The ink words and signs read in on the chrome's silver and gold: a button's, and a window's gold band. */
   readonly metalInk: number;
   readonly paleInk: number;
+  /** The paler ink the summary reads in: the signs of move, action and damage, and what ends its first row. */
+  readonly summaryPalerInk: number;
   /** The ink a reached row of the pinned achievements' ledger reads in. */
   readonly reachedAchievementInk: number;
   /** The strength a rule between two rows of a panel rests at, in the pale ink. */
@@ -278,6 +280,7 @@ export const LOOK: Look = {
   charcoalInk: 0xf2f6ff,
   metalInk: 0x0d1014,
   paleInk: 0xd4d7db,
+  summaryPalerInk: 0xd4d7db,
   reachedAchievementInk: 0x9aa1a9,
   rowRule: 0.18,
   answerInk: 0x9aa1a9,

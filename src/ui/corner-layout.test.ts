@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layOutCorner } from './corner-layout';
+import { layOutCorner, SUMMARY_HEIGHT } from './corner-layout';
 
 /** The smallest screen's width and a wider one's, and a margin and a strip of the test's own. */
 const SMALLEST = 1280;
@@ -47,6 +47,21 @@ describe('the buttons at the screen’s top right corner', () => {
       expect(hexGrid.width).toBe(signs.width);
       expect(hexGrid.height).toBe(signs.height);
       expect(signs.x - (hexGrid.x + hexGrid.width)).toBe(icons.x - (signs.x + signs.width));
+    }
+  });
+
+  it('stands the summary under the Menu button, its right edge on the button’s, at one height on any width', () => {
+    for (const { menu, summary } of [smallest, wider]) {
+      expect(summary.right).toBe(menu.x + menu.width);
+      expect(summary.top).toBeGreaterThan(menu.y + menu.height);
+    }
+    expect(wider.summary.top).toBe(smallest.summary.top);
+  });
+
+  it('stands a mode’s chip under the summary’s two rows, its right edge on the summary’s', () => {
+    for (const { summary, chip } of [smallest, wider]) {
+      expect(chip.right).toBe(summary.right);
+      expect(chip.top).toBeGreaterThan(summary.top + SUMMARY_HEIGHT);
     }
   });
 });

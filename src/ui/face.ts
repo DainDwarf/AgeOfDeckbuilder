@@ -314,7 +314,7 @@ export type Face = {
 const BESIDE_RANGE = 1;
 
 /** One resource to each point of the amounts, in the order the resource bar reads. */
-function onePerPoint(amounts: Partial<Resources>): Resource[] {
+export function onePerPoint(amounts: Partial<Resources>): Resource[] {
   return RESOURCES.flatMap((resource) => Array<Resource>(amounts[resource] ?? 0).fill(resource));
 }
 
@@ -672,12 +672,14 @@ export function terrainFace({
     },
     {
       gives: onePerPoint(gives),
-      footDisc: {
-        symbol: 'move',
-        reading: cost === undefined ? text('face.no-movement-cost') : inMovePoints(cost),
-      },
+      footDisc: { symbol: 'move', reading: movementCostReading(cost) },
     },
   );
+}
+
+/** What entering a tile is read to cost, in move points, and a dash where nothing crosses it. */
+export function movementCostReading(cost: number | undefined): string {
+  return cost === undefined ? text('face.no-movement-cost') : inMovePoints(cost);
 }
 
 /** A face drawn as a terrain's is, labelled Terrain on its plain oval front, marking nothing. */
@@ -864,11 +866,9 @@ export function unitStats(catalogue: Catalogue, unit: UnitReading): NonNullable<
   const { stats, embarked } = unit;
   const over = (held: string, own: string): string =>
     text('reading.over', { count: held, over: own });
-  const carried = unit.damage - stats.damage;
-  const damage = statReading('damage', embarked ? 0 : stats.damage);
+  const carried = embarked ? 0 : unit.damage - stats.damage;
   return {
-    damage:
-      embarked || carried === 0 ? damage : `${damage}${text('reading.plus', { count: carried })}`,
+    damage: damageReading(statReading('damage', embarked ? 0 : stats.damage), carried),
     health: over(
       statReading('health', stats.health),
       statReading('health', fullHealth(catalogue, stats)),
@@ -878,6 +878,11 @@ export function unitStats(catalogue: Catalogue, unit: UnitReading): NonNullable<
     range: statReading('range', embarked ? 0 : stats.range),
     sight: statReading('sight', stats.sight),
   };
+}
+
+/** What a unit's damage reads, and after a plus sign the bonus it carries where it carries one. */
+export function damageReading(damage: string, bonus: number): string {
+  return bonus === 0 ? damage : `${damage}${text('reading.plus', { count: bonus })}`;
 }
 
 /**

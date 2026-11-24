@@ -1,16 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import type { Campaign } from '../src/rules/campaign';
-import { built } from '../src/rules/cards';
 import { ageOf, bonusOf, fullHealth, placingOf, unitKind } from '../src/rules/catalogue';
 import { enemyEntering } from '../src/rules/enemies';
 import {
   type FeatureId,
   MOVE_POINT,
   movementCost,
-  neighbours,
   runsAlong,
-  type Tile,
   type TileCoords,
   tileAt,
   tileKey,
@@ -34,11 +31,15 @@ import {
 import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
+  BUILT,
+  besideCity,
+  besideOn,
   besideTiles,
+  builtBeside,
   campBeside,
   cardOnFace,
-  claimedAt,
   dragSlack,
+  type Found,
   firstSeed,
   freeGround,
   inspected,
@@ -98,37 +99,6 @@ function browserMenu(page: Page): Promise<boolean | undefined> {
 }
 
 /**
- * The chronicle a search over the seeds found, a tile touching its city, and so well inside the
- * frame, and what the search found there.
- */
-type Found<T> = { readonly chronicle: Chronicle; readonly tile: Tile; readonly found: T };
-
-/** The first of the city's neighbours that `found` answers, and its answer. */
-function besideOn<T>(
-  chronicle: Chronicle,
-  found: (tile: Tile) => T | undefined,
-): Found<T> | undefined {
-  for (const at of neighbours(playerCityTile(chronicle))) {
-    const tile = tileAt(chronicle.tiles, at);
-    if (tile === undefined) continue;
-    const answer = found(tile);
-    if (answer !== undefined) return { chronicle, tile, found: answer };
-  }
-  return undefined;
-}
-
-/** The first seed's turn 1 on the Nomadic content, its city settled bare, with a neighbour `found` answers. */
-function besideCity<T>(
-  complaint: string,
-  found: (tile: Tile, chronicle: Chronicle) => T | undefined,
-): Found<T> {
-  return firstSeed(complaint, (seed) => {
-    const chronicle = settledOn(seed);
-    return besideOn(chronicle, (tile) => found(tile, chronicle));
-  });
-}
-
-/**
  * A chronicle whose city tile and the tile west of it hold nothing but what the spec steps: no
  * river runs along either, and the west one is bare, so its terrain card is the only one it holds.
  */
@@ -179,22 +149,6 @@ function bareBeside(): Found<string> {
 }
 
 /**
- * The first card of the catalogue that builds a building of its own, taking upkeep, naming no
- * feature and no river and giving nothing beside it, and that building.
- */
-const BUILT = (() => {
-  for (const [card, content] of Object.entries(CATALOGUE.cards)) {
-    const placing = placingOf(content);
-    if (placing?.thing !== 'building' || placing.over !== undefined) continue;
-    const { upkeep, features, river, givesBeside } = buildingKind(CATALOGUE, placing.building);
-    if (upkeep !== undefined && !features && !river && !givesBeside) {
-      return { card, building: placing.building };
-    }
-  }
-  throw new Error('no card of the catalogue builds a building taking upkeep alone');
-})();
-
-/**
  * The first card of the catalogue that builds its building over another, that building, and the one
  * it is built over.
  */
@@ -207,25 +161,6 @@ const BUILT_OVER = (() => {
   }
   throw new Error('no card of the catalogue builds a building over another');
 })();
-
-/**
- * A tile beside the city the first of the buildings goes on, bare of building and improvement and
- * with nobody on it, claimed, and the buildings built there in turn, each over the one before.
- */
-function builtBeside(buildings: readonly string[]): Found<Chronicle> {
-  const { terrains } = buildingKind(CATALOGUE, buildings[0]);
-  return besideCity(`claims a tile beside the city ${buildings[0]} goes on`, (tile, chronicle) => {
-    if (!terrains.includes(tile.terrain) || tile.building !== undefined) return undefined;
-    if (tile.improvements.length > 0 || unitAt(chronicle.units, tile) !== undefined)
-      return undefined;
-    const claimed = claimedAt(chronicle, tile);
-    if (claimed === undefined) return undefined;
-    return buildings.reduce(
-      (standing, building) => built(CATALOGUE, standing, tile, building).chronicle,
-      claimed,
-    );
-  });
-}
 
 /** What a face reads that the infopanel's is held to: its card, its text, its picture, and what it names. */
 type FaceRead = {

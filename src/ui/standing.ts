@@ -14,15 +14,6 @@ import { cornerNow } from './menu';
 /** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
 const STROKE = 8;
 
-/** How far the chip stands clear of the stroke's inner edge, to its right. */
-const CLEAR = 16;
-
-/** How far the chip stands in from the screen's right edge. */
-const CHIP_INSET = STROKE + CLEAR;
-
-/** How far under the Menu button the chip stands. */
-const UNDER_THE_MENU = 14;
-
 /** How far the chip's fill reaches past its label, sideways and down. */
 const PADDING = { x: 40, y: 10 };
 
@@ -49,7 +40,7 @@ export type Stood = {
 
 /**
  * What the chronicle screen shows it is standing in — city mode, the settle phase: a frame round the
- * screen in that colour and the chip naming it under the Menu button. What is on is the scene's.
+ * screen in that colour and the chip naming it under the summary's place. What is on is the scene's.
  */
 export function createStanding(
   scene: Phaser.Scene,
@@ -83,11 +74,9 @@ export function createStanding(
     frame
       .setPosition(STROKE / 2, STROKE / 2)
       .setSize(screen.width - STROKE, screen.height - STROKE);
-    const { menu } = cornerNow();
-    const x = screen.width - CHIP_INSET - width;
-    const y = menu.y + menu.height + UNDER_THE_MENU;
-    chip.setPosition(x, y);
-    label.setPosition(x + width / 2, y + height / 2);
+    const { right, top } = cornerNow().chip;
+    chip.setPosition(right - width, top);
+    label.setPosition(right - width / 2, top + height / 2);
   });
 
   const leave = stood.leave;

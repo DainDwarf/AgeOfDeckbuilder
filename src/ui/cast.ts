@@ -17,8 +17,8 @@ export type ButtonSign =
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
- * a unit's move, action or sight, an attack that would kill, what a prepare lands as, a unit of the
- * neutral's while it is hostile, a faction, a site, a card nothing plays, a pile, or a button.
+ * a unit's move, action, sight or damage, an attack that would kill, what a prepare lands as, a unit
+ * of the neutral's while it is hostile, a faction, a site, a card nothing plays, a pile, or a button.
  */
 export type CastSymbol =
   | Resource
@@ -29,6 +29,7 @@ export type CastSymbol =
   | 'move'
   | 'action'
   | 'sight'
+  | 'damage'
   | 'killed'
   | PreparedAs
   | 'hostile'
@@ -53,6 +54,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   move: 'material-design-icons/arrow-all.svg',
   action: 'game-icons/fist.svg',
   sight: 'material-design-icons/eye.svg',
+  damage: 'material-design-icons/sword.svg',
   killed: 'game-icons/death-skull.svg',
   pillage: 'game-icons/fire.svg',
   capture: 'material-design-icons/flag-variant.svg',

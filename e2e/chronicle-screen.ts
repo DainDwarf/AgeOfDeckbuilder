@@ -38,6 +38,7 @@ import {
   type InfluenceCard,
   neutralOf,
   neutralScriptOf,
+  placingOf,
   standsOnEntering,
   strikeOf,
   technologyOf,
@@ -3192,6 +3193,72 @@ export function claimedAt(chronicle: Chronicle, tile: TileCoords): Chronicle | u
   return claimed === cultured ? undefined : claimed;
 }
 
+/**
+ * The chronicle a search over the seeds found, a tile touching its city, and so well inside the
+ * frame, and what the search found there.
+ */
+export type Found<T> = { readonly chronicle: Chronicle; readonly tile: Tile; readonly found: T };
+
+/** The first of the city's neighbours that `found` answers, and its answer. */
+export function besideOn<T>(
+  chronicle: Chronicle,
+  found: (tile: Tile) => T | undefined,
+): Found<T> | undefined {
+  for (const at of neighbours(playerCityTile(chronicle))) {
+    const tile = tileAt(chronicle.tiles, at);
+    if (tile === undefined) continue;
+    const answer = found(tile);
+    if (answer !== undefined) return { chronicle, tile, found: answer };
+  }
+  return undefined;
+}
+
+/** The first seed's turn 1 on the Nomadic content, its city settled bare, with a neighbour `found` answers. */
+export function besideCity<T>(
+  complaint: string,
+  found: (tile: Tile, chronicle: Chronicle) => T | undefined,
+): Found<T> {
+  return firstSeed(complaint, (seed) => {
+    const chronicle = settledOn(seed);
+    return besideOn(chronicle, (tile) => found(tile, chronicle));
+  });
+}
+
+/**
+ * The first card of the catalogue that builds a building of its own, taking upkeep, naming no
+ * feature and no river and giving nothing beside it, and that building.
+ */
+export const BUILT = (() => {
+  for (const [card, content] of Object.entries(CATALOGUE.cards)) {
+    const placing = placingOf(content);
+    if (placing?.thing !== 'building' || placing.over !== undefined) continue;
+    const { upkeep, features, river, givesBeside } = buildingKind(CATALOGUE, placing.building);
+    if (upkeep !== undefined && !features && !river && !givesBeside) {
+      return { card, building: placing.building };
+    }
+  }
+  throw new Error('no card of the catalogue builds a building taking upkeep alone');
+})();
+
+/**
+ * A tile beside the city the first of the buildings goes on, bare of building and improvement and
+ * with nobody on it, claimed, and the buildings built there in turn, each over the one before.
+ */
+export function builtBeside(buildings: readonly string[]): Found<Chronicle> {
+  const { terrains } = buildingKind(CATALOGUE, buildings[0]);
+  return besideCity(`claims a tile beside the city ${buildings[0]} goes on`, (tile, chronicle) => {
+    if (!terrains.includes(tile.terrain) || tile.building !== undefined) return undefined;
+    if (tile.improvements.length > 0 || unitAt(chronicle.units, tile) !== undefined)
+      return undefined;
+    const claimed = claimedAt(chronicle, tile);
+    if (claimed === undefined) return undefined;
+    return buildings.reduce(
+      (standing, building) => built(CATALOGUE, standing, tile, building).chronicle,
+      claimed,
+    );
+  });
+}
+
 /** A turn 1 whose worker stands on a tile beside the city, a card in the hand and paid for. */
 export type Paid = {
   readonly chronicle: Chronicle;
@@ -3448,6 +3515,27 @@ export function terrainRead(chronicle: Chronicle, at: TileCoords): TerrainRead {
     rules: face.rules,
     numbers: givesRead(face),
     discs: [{ glyph: glyphFileOf(symbol), number: reading }],
+  };
+}
+
+/**
+ * What the summary reads: its name, what ends its first row, and its second row as `numbers` reads a
+ * face's row.
+ */
+export type SummaryRead = {
+  readonly name: string | undefined;
+  readonly aside: string | undefined;
+  readonly numbers: readonly string[];
+};
+
+/** What the summary reads, in one question to the page, and nothing while it stands down. */
+export async function summaryRead(page: Page): Promise<SummaryRead | undefined> {
+  const read = await readings(page, ['summary', 'summary-name', 'summary-aside']);
+  if (!read('summary').standing) return undefined;
+  return {
+    name: read('summary-name').text,
+    aside: read('summary-aside').text,
+    numbers: read('summary').numbers,
   };
 }
 

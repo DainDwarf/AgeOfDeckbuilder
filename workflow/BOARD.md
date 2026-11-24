@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A short info window on selection** — a left click that selects a unit or a tile raises the summary under the four buttons of the screen's top right corner: one panel of one size reading a unit's name, whose it is and its health, move, action and damage, or a tile's name, all it yields, its building's upkeep and what entering it costs; it reads again at each change that lands and goes with the selection, the chip of a mode stands under its place, damage wears a sword of the cast, and `e2e/summary.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/MAP-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`. [board/summary.md](board/summary.md)
 - **The combat log** — a readable record of what the end of turn did, for a player who missed the motion or wants it in words, at the bottom left of the screen.
 - **Credits and licences in the game** — a screen off the menu reading the packs' licence record and the build's dependency notices.
 - **The cursor** — the cursor saying what a press would do now, and whether the game draws a cursor of its own.

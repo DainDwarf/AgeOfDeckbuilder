@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import type { ButtonSign } from './cast';
 import type { SignButton } from './chrome';
-import type { CornerLayout } from './corner-layout';
+import type { CornerButton } from './corner-layout';
 import type { Stratum } from './design-space';
 import { LOOK } from './look';
 import { cornerNow, createSquareButton } from './menu';
@@ -36,7 +36,7 @@ export function createDisplayButton(
     symbol,
     at,
     reads,
-  }: { readonly symbol: ButtonSign; readonly at: keyof CornerLayout; readonly reads: TextKey },
+  }: { readonly symbol: ButtonSign; readonly at: CornerButton; readonly reads: TextKey },
   shown: boolean,
   show: (shown: boolean) => void,
 ): DisplayButton {

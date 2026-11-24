@@ -694,12 +694,18 @@ export function unitMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
     scene.add.image(0, 0, UNIT_SHEET.key, CANOE),
     scene.add.image(0, 0, UNIT_SHEET.key),
     scene.add.image(0, 0, UNIT_SHEET.key),
-    scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
-    glyphMark(scene),
-    scene.add.circle(0, 0, UNIT_BADGE_SIZE / 2),
-    glyphMark(scene),
+    ...unitDiscMarker(scene, UNIT_BADGE_SIZE),
+    ...unitDiscMarker(scene, UNIT_BADGE_SIZE),
     healthBarMarker(scene),
   ]);
+}
+
+/** A unit's badge or its faction sign drawing nothing yet, a disc that wide and the glyph on it, about its middle. */
+export function unitDiscMarker(
+  scene: Phaser.Scene,
+  across: number,
+): [Phaser.GameObjects.Arc, Phaser.GameObjects.Container] {
+  return [scene.add.circle(0, 0, across / 2), glyphMark(scene)];
 }
 
 /** A width and a height laid along a bar and across it. */
@@ -854,31 +860,37 @@ export function asUnitHealthBar(
   return worn;
 }
 
-/**
- * A disc of a unit's faction's colour with a badge's rim, and the symbol's glyph on it, at `across`
- * from its tile's middle and level with it, darkened by the tint; both hidden where no symbol is
- * handed.
- */
+/** An `asFactionDisc` on a unit's mark, at `across` from its tile's middle and level with it. */
 function asUnitDisc(
-  [disc, glyph]: [Phaser.GameObjects.Arc, Phaser.GameObjects.Container],
+  disc: [Phaser.GameObjects.Arc, Phaser.GameObjects.Container],
   across: number,
   faction: Faction,
   symbol: CastSymbol | undefined,
   tint: number,
 ): void {
+  for (const part of disc) part.setPosition(across, 0).setAlpha(1);
+  asFactionDisc(disc, faction, symbol, UNIT_BADGE_GLYPH, tint);
+}
+
+/**
+ * A `unitDiscMarker` drawn as the map draws a unit's badge and its faction sign: a disc of the
+ * faction's colour, its rim as wide a share of it as a badge's, the symbol's glyph on it `glyph`
+ * units a side, darkened by the tint; both hidden where no symbol is handed.
+ */
+export function asFactionDisc(
+  [disc, mark]: [Phaser.GameObjects.Arc, Phaser.GameObjects.Container],
+  faction: Faction,
+  symbol: CastSymbol | undefined,
+  glyph: number,
+  tint: number,
+): void {
+  const rim = (BADGE_RIM.width * 2 * disc.radius) / UNIT_BADGE_SIZE;
   disc
-    .setPosition(across, 0)
     .setFillStyle(multiplied(FACTION_COLOURS[faction], tint))
-    .setStrokeStyle(BADGE_RIM.width, multiplied(BADGE_RIM.colour, tint), BADGE_RIM.strength)
-    .setAlpha(1)
+    .setStrokeStyle(rim, multiplied(BADGE_RIM.colour, tint), BADGE_RIM.strength)
     .setVisible(symbol !== undefined);
-  glyph
-    .setPosition(across, 0)
-    .setAlpha(1)
-    .setVisible(symbol !== undefined);
-  if (symbol !== undefined) {
-    asGlyph(glyph, symbol, UNIT_BADGE_GLYPH, { tone: tintedBy(tint), outlined: false });
-  }
+  mark.setVisible(symbol !== undefined);
+  if (symbol !== undefined) asGlyph(mark, symbol, glyph, { tone: tintedBy(tint), outlined: false });
 }
 
 /**
