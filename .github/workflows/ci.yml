@@ -28,14 +28,9 @@ jobs:
         shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: ./.github/actions/store
+      - uses: ./.github/actions/dependencies
         with:
           key: ${{ secrets.STORE_DEPLOY_KEY }}
-      - uses: actions/setup-node@v7.0.0
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run e2e -- --shard=${{ matrix.shard }}/4
       - uses: actions/upload-artifact@v7.0.1
@@ -45,10 +40,23 @@ jobs:
           path: test-results/
           if-no-files-found: ignore
 
-  # Pages is served from the `Latest` branch only, and only once every check above has passed on it.
-  pages:
-    if: github.ref == 'refs/heads/Latest'
+  # A job of its own rather than a step of `pages`: deploy-pages fails on a run that uploaded no artifact.
+  tip:
+    if: github.ref == 'refs/heads/main'
     needs: [check, e2e]
+    runs-on: ubuntu-latest
+    outputs:
+      tip: ${{ steps.tip.outputs.tip }}
+    steps:
+      - id: tip
+        shell: bash
+        run: |
+          main=$(git ls-remote "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" refs/heads/main | cut -f1)
+          if [ "$main" = "$GITHUB_SHA" ]; then echo "tip=true"; else echo "tip=false"; fi >> "$GITHUB_OUTPUT"
+
+  pages:
+    if: needs.tip.outputs.tip == 'true'
+    needs: tip
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,14 +67,9 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           fetch-depth: 0
-      - uses: ./.github/actions/store
+      - uses: ./.github/actions/dependencies
         with:
           key: ${{ secrets.STORE_DEPLOY_KEY }}
-      - uses: actions/setup-node@v7.0.0
-        with:
-          node-version: 24
-          cache: npm
-      - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
@@ -87,3 +90,24 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  itch:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check, e2e]
+    runs-on: ubuntu-latest
+    steps:
+      # The whole history and its tags, so the version the build reads names the tag.
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/dependencies
+        with:
+          key: ${{ secrets.STORE_DEPLOY_KEY }}
+      - run: |
+          curl -fsSL -o "$RUNNER_TEMP/butler.zip" https://broth.itch.zone/butler/linux-amd64/15.32.0/archive/default
+          unzip -q "$RUNNER_TEMP/butler.zip" -d "$RUNNER_TEMP/butler"
+          chmod +x "$RUNNER_TEMP/butler/butler"
+          echo "$RUNNER_TEMP/butler" >> "$GITHUB_PATH"
+      - run: npm run itch
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}

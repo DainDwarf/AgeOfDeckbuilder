@@ -1,0 +1,18 @@
+name: Dependencies
+description: The checked-out tree made ready to run, its asset store and its npm packages installed.
+inputs:
+  key:
+    description: The store's deploy key, the STORE_DEPLOY_KEY secret.
+    required: true
+runs:
+  using: composite
+  steps:
+    - uses: ./.github/actions/store
+      with:
+        key: ${{ inputs.key }}
+    - uses: actions/setup-node@v7.0.0
+      with:
+        node-version: 24
+        cache: npm
+    - shell: bash
+      run: npm ci

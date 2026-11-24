@@ -19,4 +19,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 ## Lines
 
 - **The cursor** — the cursor saying what a press would do now, and whether the game draws a cursor of its own.
-- **Change the deployment behavior** — a green run on `main` deploys Pages while its commit is still `main`'s tip, a green run on a version's tag pushes itch through `npm run itch`, the `Latest` branch is gone, and `DOGMAS.md`, `README.md`, `CLAUDE.md` and the roadmap say so. Doc-impact: none. [board/change-the-deployment-behavior.md](board/change-the-deployment-behavior.md)

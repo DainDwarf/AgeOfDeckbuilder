@@ -155,10 +155,10 @@ How this code base is shaped, and what a change never deviates from:
 | Dev server and bundler | Vite 8 |
 | Rules tests | Vitest 4 |
 | UI verification | Playwright, Chromium only |
-| CI | GitHub Actions on every push, any branch: typecheck, lint, rules tests, e2e. On `Latest`, once that passes: build and deploy to Pages |
+| CI | GitHub Actions on every push, any branch or tag: typecheck, lint, rules tests, e2e. Once that passes: on `main`, build and deploy to Pages, a run deploying only while its commit is still `main`'s tip; on a version's tag, build and push to itch |
 | Lint and format | Biome for code, one `biome.json`; Prettier for markdown, one `.prettierrc` |
 | Package manager | npm on Node 24; `package-lock.json` is committed |
-| Hosting | GitHub Pages, the `dist/` built from `Latest`, served under `/AgeOfDeckbuilder/`; the itch.io page, restricted to the playtest group, the same bundle built with a relative base and pushed by butler from any tree (`npm run itch`). No server, ever. |
+| Hosting | GitHub Pages, the `dist/` built from `main`'s last green tip, served under `/AgeOfDeckbuilder/`; the itch.io page, restricted to the playtest group, the same bundle built with a relative base and pushed by butler (`npm run itch`), by CI from each version's tag. No server, ever. |
 | Desktop wrapper | Tauri 2 — not installed; it needs Rust, and it is installed when the desktop target is taken |
 | Licence | MIT, in `LICENSE`, for everything but `public/assets/`, where each pack keeps its own. The build carries the licence and its bundled dependencies' notices |
 
@@ -184,7 +184,7 @@ src/rules/          pure TypeScript: state, commands, the seeded generator
 src/content/        the catalogue: one module per age, merged into the one the boot hands the rules and the screen
 src/ui/             Phaser scenes, and the design space they lay out in
 e2e/                Playwright specs
-.github/workflows/  the CI check
+.github/workflows/  the CI check, and the two deployments it gates
 tools/              the standing scripts: the itch push, the save forge, the simulator
 public/assets/      art, sound, music, each pack with its licence entry
 public/assets/store/  the bought packs that may not be handed out on their own: a private repository, a submodule
