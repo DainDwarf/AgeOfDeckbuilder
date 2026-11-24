@@ -18,6 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **Credits and licences in the game** — a screen off the menu reading the packs' licence record and the build's dependency notices.
+- **Credits and licences in the game** — the menu lists Credits, whose window reads the makers' list off the packs' licence record and opens the licences' page; the menu's first window carries the three links and the version; `e2e/credits.spec.ts` passes. Doc-impact: `docs/INTERFACE.md`, `docs/LOOK.md`. [board/credits-and-licences.md](board/credits-and-licences.md)
 - **The cursor** — the cursor saying what a press would do now, and whether the game draws a cursor of its own.
 - **Change the deployment behavior** — GitHub Pages following main, and itch.io following the latest version.
