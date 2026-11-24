@@ -225,6 +225,7 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   await expect.poll(() => slotReads(page, 'pan-up', 1)).toBe('K');
 
   await reloadedOnCapstone(page);
+  await capstoneClosed(page);
   await intoControls(page);
   expect(await slotReads(page, 'pan-up', 1)).toBe('K');
   expect(await slotReads(page, 'pan-up', 0)).toBe('W');
@@ -235,10 +236,6 @@ test('a slot takes the next key pressed, and keeps it across a reload', async ({
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
-  // The reload lands on the address that continued the save: the capstone's window a resumed
-  // chronicle opens under waited under the menu.
-  await click(page, 'capstone-card-0');
-  await expect.poll(() => standing(page, 'capstone')).toBe(false);
 
   // The frame pans up, so what stands on the map comes down the screen.
   expect(await heldBy(page, 'k')).toBeGreaterThan(40);
