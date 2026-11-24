@@ -56,8 +56,13 @@ const TAB = 'pinned-achievements-tab';
 const SIGN = 'pinned-achievements-tab-sign';
 const TALLY = 'pinned-achievements-tally';
 
-/** What stops the pointer over the capstone's row, at the ledger's top. */
-const CAPSTONE_STOP = 'pinned-capstone-stop';
+/**
+ * The frame the ledger's rows stand in, which stops a press over the map; the capstone's row and its
+ * name, at the ledger's top.
+ */
+const ROWS_FRAME = 'pinned-achievements-rows-frame';
+const CAPSTONE = 'pinned-capstone';
+const CAPSTONE_NAME = `${CAPSTONE}-name`;
 
 /** What the technology's pinned achievement draws, read in one question. */
 function partsOf(technology: string): string[] {
@@ -170,11 +175,12 @@ test('a chronicle of the second age stands the pinned achievements it reads in o
   await openSaved(page, reached, campaign);
   const seen = await readings(page, [
     ...partsOf(HOLDING),
-    ...each('stop'),
+    ...stack.map(pinnedAchievement),
     ...each('name'),
     ...each('rule'),
     PANEL,
-    CAPSTONE_STOP,
+    ROWS_FRAME,
+    CAPSTONE,
   ]);
   expect(seen(name).text).toBe(
     text('achievement.reached', { achievement: technologyName(HOLDING) }),
@@ -190,28 +196,45 @@ test('a chronicle of the second age stands the pinned achievements it reads in o
   for (const left of lefts) expect(left).toBeCloseTo(lefts[0]);
   expect(each('rule').map((rule) => seen(rule).standing)).toEqual(stack.map(() => true));
 
-  const boxes = each('stop').map((stop) => seen(stop).boundsOnScreen);
-  const ruled = [seen(CAPSTONE_STOP).boundsOnScreen, ...boxes];
-  for (const [above, box] of ruled.slice(1).entries()) {
-    expect(box.y).toBeCloseTo(ruled[above].y + ruled[above].height);
+  // A row stands from its rule down to the next row's, the last down to the ledger's foot less the
+  // panel's reach under it, the capstone's from the ledger's top down to the first rule.
+  const ledger = pieceOnScreenOf(seen(PANEL));
+  const { unit } = seen(each('rule')[0]).onScreen;
+  const tops = each('rule').map((rule) => seen(rule).boundsOnScreen.y);
+  const bottoms = [...tops.slice(1), ledger.y + ledger.height - LEDGER.foot * unit];
+  const capstone = seen(CAPSTONE).boundsOnScreen;
+  expect(seen(ROWS_FRAME).boundsOnScreen.y).toBeCloseTo(ledger.y);
+  expect(capstone.y + capstone.height).toBeLessThanOrEqual(tops[0]);
+  const drawn = stack.map((technology) => seen(pinnedAchievement(technology)).boundsOnScreen);
+  for (const [index, box] of drawn.entries()) {
+    expect(box.y).toBeCloseTo(tops[index]);
+    expect(box.y + box.height).toBeLessThan(bottoms[index]);
   }
-  // The last row's stop reaches over the ledger's foot.
-  const { unit } = seen(each('stop')[0]).onScreen;
-  const rowHeights = boxes.map(
-    ({ height }, index) => height - (index === boxes.length - 1 ? LEDGER.foot * unit : 0),
-  );
+  const rowHeights = tops.map((top, index) => bottoms[index] - top);
+  expect(rowHeights[at]).toBeCloseTo(tops[0] - ledger.y);
   for (const [index, technology] of stack.entries()) {
     if (rowOf(reached, technology).reached) expect(rowHeights[index]).toBeCloseTo(rowHeights[at]);
     else expect(rowHeights[index]).toBeGreaterThan(rowHeights[at]);
   }
-  const ledger = pieceOnScreenOf(seen(PANEL));
-  const last = boxes[boxes.length - 1];
-  expect(last.y + last.height).toBeCloseTo(ledger.y + ledger.height);
+  // The last row reaches the ledger's foot: under what it draws, it stands as far as a row drawing as
+  // much stands under it elsewhere in the ledger.
+  const under = drawn.map((box, index) => bottoms[index] - (box.y + box.height));
+  const last = stack.length - 1;
+  const alike = stack
+    .slice(0, last)
+    .flatMap((technology, index) =>
+      rowOf(reached, technology).reached === rowOf(reached, stack[last]).reached &&
+      Math.abs(drawn[index].height - drawn[last].height) < 0.5
+        ? [index]
+        : [],
+    );
+  expect(alike.length).toBeGreaterThan(0);
+  for (const index of alike) expect(under[last]).toBeCloseTo(under[index], 1);
 
   expect(problems).toEqual([]);
 });
 
-test('a ledger holding the capstone’s row alone stands as far under its tab as over it, the row covering the ledger down to its foot, and folds to its tab wearing its triangle alone, in its middle', async ({
+test('a ledger holding the capstone’s row alone stands as far under its tab as over it, the frame stopping a press over it covering the ledger down to its foot, and folds to its tab wearing its triangle alone, in its middle', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -222,12 +245,13 @@ test('a ledger holding the capstone’s row alone stands as far under its tab as
   expect(stackedIn(chronicle, campaign.pins)).toEqual([]);
 
   await openSaved(page, chronicle, campaign);
-  const seen = await readings(page, [CAPSTONE_STOP, PANEL, TAB]);
+  const seen = await readings(page, [ROWS_FRAME, PANEL, TAB]);
   const ledger = pieceOnScreenOf(seen(PANEL));
   const tab = pieceOnScreenOf(seen(TAB));
-  const row = seen(CAPSTONE_STOP).boundsOnScreen;
+  const frame = seen(ROWS_FRAME).boundsOnScreen;
   expect(ledger.y + ledger.height - (tab.y + tab.height)).toBeCloseTo(tab.y - ledger.y);
-  expect(row.y + row.height).toBeCloseTo(ledger.y + ledger.height);
+  expect(frame.y).toBeCloseTo(ledger.y);
+  expect(frame.y + frame.height).toBeCloseTo(ledger.y + ledger.height);
 
   await click(page, TAB);
   await expect.poll(() => standing(page, PANEL)).toBe(false);
@@ -247,12 +271,12 @@ test('the pinned achievements’ ledger stands against the screen’s left edge 
   const campaign = wonCampaign();
   const { chronicle } = paidOnDeer(HUNT, [], campaign);
 
-  /** Where the first row, the ledger, its tab, the resource bar and the map's frame stand on the page. */
+  /** Where the rows' frame, the ledger, its tab, the resource bar and the map's frame stand on the page. */
   const laidOut = async () => {
-    const seen = await readings(page, [CAPSTONE_STOP, PANEL, TAB, 'resource-bar']);
+    const seen = await readings(page, [ROWS_FRAME, PANEL, TAB, 'resource-bar']);
     return {
-      row: seen(CAPSTONE_STOP).boundsOnScreen,
-      unit: seen(CAPSTONE_STOP).onScreen.unit,
+      row: seen(ROWS_FRAME).boundsOnScreen,
+      unit: seen(ROWS_FRAME).onScreen.unit,
       ledger: pieceOnScreenOf(seen(PANEL)),
       tab: pieceOnScreenOf(seen(TAB)),
       bar: seen('resource-bar').boundsOnScreen,
@@ -292,9 +316,9 @@ test('a left click on the tab folds the ledger into the screen’s edge and lets
   const campaign = wonCampaign();
   const paid = paidOnDeer(HUNT, [], campaign);
   const stack = stackedIn(paid.chronicle, campaign.pins);
-  const stops = [
-    CAPSTONE_STOP,
-    ...stack.map((technology) => `${pinnedAchievement(technology)}-stop`),
+  const names = [
+    CAPSTONE_NAME,
+    ...stack.map((technology) => `${pinnedAchievement(technology)}-name`),
   ];
   const tally = text('achievement.tally', {
     reached: stack.filter((technology) => rowOf(paid.chronicle, technology).reached).length,
@@ -304,17 +328,17 @@ test('a left click on the tab folds the ledger into the screen’s edge and lets
 
   /** What the ledger and its tab show, in one question to the page. */
   const laidOut = async () => {
-    const seen = await readings(page, [...stops, PANEL, TAB, SIGN, TALLY]);
+    const seen = await readings(page, [...names, ROWS_FRAME, PANEL, TAB, SIGN, TALLY]);
     return {
-      rows: stops.map((stop) => seen(stop).standing),
+      rows: names.map((name) => seen(name).standing),
       ledger: seen(PANEL).standing,
       tab: pieceOnScreenOf(seen(TAB)),
       turn: seen(SIGN).axes.x.x,
       tally: seen(TALLY).standing ? seen(TALLY).text : undefined,
-      edge: seen(stops[0]).boundsOnScreen.x,
+      edge: seen(ROWS_FRAME).boundsOnScreen.x,
     };
   };
-  const unfolded = { rows: stops.map(() => true), ledger: true, tally: undefined };
+  const unfolded = { rows: names.map(() => true), ledger: true, tally: undefined };
 
   await openSaved(page, paid.chronicle, campaign);
   const open = await laidOut();
@@ -327,7 +351,7 @@ test('a left click on the tab folds the ledger into the screen’s edge and lets
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   await rested(page);
   const folded = await laidOut();
-  expect(folded).toMatchObject({ rows: stops.map(() => false), ledger: false, tally });
+  expect(folded).toMatchObject({ rows: names.map(() => false), ledger: false, tally });
   expect(folded.tab.x).toBeLessThan(open.edge);
   expect(folded.tab.x + folded.tab.width).toBeGreaterThan(open.edge);
   expect(folded.tab.y).toBeCloseTo(open.tab.y);
@@ -377,7 +401,7 @@ test('a chronicle of the first age beside a campaign pinning a technology of the
   expect(campaign.pins).toContain(HUNTING);
 
   await openSaved(page, chronicle, campaign, choices);
-  const shown = [pinnedAchievement(HUNTING), PANEL, TAB, CAPSTONE_STOP];
+  const shown = [pinnedAchievement(HUNTING), PANEL, TAB, CAPSTONE_NAME];
   const seen = await readings(page, shown);
   expect(shown.map((name) => seen(name).standing)).toEqual([false, true, true, true]);
 

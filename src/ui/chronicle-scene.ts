@@ -48,7 +48,8 @@ import {
 import { createDisplayButton } from './display-button';
 import { createHand } from './hand';
 import { type Card, cardsOf, createInfoPanel } from './infopanel';
-import { onKeyDown, onWheelNotches } from './keys';
+import { onKeyDown, onWheel, onWheelNotches } from './keys';
+import { createLog } from './log';
 import { LOOK } from './look';
 import { type AimShown, createMapView, type Drawn, type PressedTile } from './map';
 import { mapOf } from './map-scene';
@@ -370,6 +371,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (after !== this.current) this.payment = keepChronicle(this.choices, after);
       const running = { leaves: after };
       this.sequence = running;
+      log.hear(stages);
       let held = false;
 
       try {
@@ -832,11 +834,18 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       landings.delete(press);
     });
 
+    onWheel(this, (by, over) => {
+      for (const panel of [ledger.scrolls, log.scrolls]) if (panel.under(over)) panel.wheel(by);
+    });
     // On this scene and not the map's: this one stops the pointer over the hand and the bar, where
     // the wheel still zooms.
-    onWheelNotches(this, (notches) => {
-      view.zoom(-notches);
-    });
+    onWheelNotches(
+      this,
+      (over) => ![ledger.scrolls, log.scrolls].some((panel) => panel.under(over)),
+      (notches) => {
+        view.zoom(-notches);
+      },
+    );
 
     // A window on the overlay takes every key ahead of this scene, so nothing here is gated on what
     // stands over the screen; the map's own reader reacts to the pan and zoom keys.
@@ -913,10 +922,36 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (up) overlayOf(this).input.emit(COVERED);
     });
 
+    const ledger = createPinnedAchievements(
+      this,
+      ui.pinned,
+      CATALOGUE,
+      this.current,
+      campaignHeld().pins,
+      {
+        small: faces.small,
+        inspect: (name) => {
+          overlay.inspectNamed(name);
+        },
+        tooltip: tooltip.ui,
+        unaim: unaimAll,
+        capstone: () => {
+          overlay.raiseCapstone(this.current);
+        },
+      },
+    );
+    const log = createLog(this, ui.pinned, {
+      tooltip: tooltip.ui,
+      unaim: unaimAll,
+      sightOn: view.sightOn,
+    });
+
     parts.push(
       // A card added has its face before the piles and the hand read it, and a card banished keeps its
       // face until the hand has let it go.
       { render: faces.cards.fillIn },
+      // Ahead of the map, so it asks what the map plays a stage on before the map renders past it.
+      log,
       view,
       // After the map, whose faces it reads.
       { render: summarise },
@@ -934,17 +969,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       { render: faces.cards.lose },
       endTurn,
       { render: showSettleStanding },
-      createPinnedAchievements(this, ui.pinned, CATALOGUE, this.current, campaignHeld().pins, {
-        small: faces.small,
-        inspect: (name) => {
-          overlay.inspectNamed(name);
-        },
-        tooltip: tooltip.ui,
-        unaim: unaimAll,
-        capstone: () => {
-          overlay.raiseCapstone(this.current);
-        },
-      }),
+      ledger,
       overlay,
     );
     paint();

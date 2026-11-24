@@ -88,6 +88,7 @@ const TEXT = {
   'button.faction-signs': 'Faction signs',
   'button.hex-grid': 'Hex grid',
   'button.pinned-achievements': 'Goals',
+  'button.log': 'Log',
   'button.minimize': 'Minimize',
   'kind.settle': 'Settle',
   'kind.unit': 'Unit',
@@ -391,6 +392,20 @@ const TEXT = {
   'achievement.reached': '✓ {achievement}',
   'achievement.count': '{count}/{need}',
   'achievement.tally': '{reached}/{pinned}',
+  'log.attack': '{attacker} attacks {target}: {damage} damage',
+  'log.kill': '{attacker} kills {target}',
+  'log.attacked': '{target} is attacked: {damage} damage',
+  'log.killed': '{target} is killed',
+  'log.attacks': '{attacker} attacks',
+  'log.enters': '{unit} enters',
+  'log.prepares-to-capture-your-city': '{unit} prepares to capture your city',
+  'log.prepares-to-capture': '{unit} prepares to capture {building}',
+  'log.prepares-to-pillage': '{unit} prepares to pillage',
+  'log.pillages': '{unit} pillages {removed}',
+  'log.captures': '{unit} captures {captured}',
+  'log.income': 'Income',
+  'log.strikes': '{card} strikes',
+  'log.grows': 'Your city grows',
   'plate.learned': '✓ {technology}',
   'plate.goal': 'Goal',
   'plate.reward': 'Reward',
@@ -409,7 +424,7 @@ const TEXT = {
   'launch.civilization': 'Civilization',
   'launch.button': 'Launch',
   'launch.continue': 'Continue',
-  'launch.turn': 'Turn {turn}',
+  'chronicle.turn': 'Turn {turn}',
   'launch.settle-phase': 'Settle phase',
   'launch.warning':
     'Launching ends the chronicle in progress, and its achievements and influence cards are not paid. This cannot be undone.',
@@ -463,6 +478,33 @@ export type TextKey = keyof typeof TEXT;
 /** The entry a key names, each `{name}` filled with its value; a placeholder handed no value is refused. */
 export function text(key: TextKey, values: Record<string, string | number> = {}): string {
   return withValues(TEXT[key], values, key);
+}
+
+/** A part of an entry cut at its slots: its words, or a slot something other than words stands in. */
+export type Around = string | { readonly slot: string };
+
+/**
+ * The entry a key names cut at the placeholders `slots` names, in the order they stand, every other
+ * `{name}` filled with its value; a placeholder neither a slot nor handed a value is refused.
+ */
+export function textAround(
+  key: TextKey,
+  slots: readonly string[],
+  values: Record<string, string | number> = {},
+): Around[] {
+  const cut: Around[] = [];
+  for (const part of TEXT[key].split(/(\{\w+\})/)) {
+    const slot = /^\{(\w+)\}$/.exec(part)?.[1];
+    if (slot !== undefined && slots.includes(slot)) {
+      cut.push({ slot });
+      continue;
+    }
+    const words = withValues(part, values, key);
+    const last = cut[cut.length - 1];
+    if (typeof last === 'string') cut[cut.length - 1] = last + words;
+    else if (words !== '') cut.push(words);
+  }
+  return cut;
 }
 
 /** An entry held under that key, each `{name}` filled with its value; a placeholder handed no value is refused. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { text } from './text';
+import { text, textAround } from './text';
 
 describe('an entry read off the text table', () => {
   it('reads the value handed for its placeholder where the placeholder stood', () => {
@@ -23,6 +23,20 @@ describe('an entry read off the text table', () => {
   it('refuses an entry of several placeholders where any one of them is handed no value', () => {
     expect(() => text('reading.over', { count: 1, over: 2 })).not.toThrow();
     expect(() => text('reading.over', { count: 1 })).toThrow('{over}');
+  });
+
+  it('cut at its slots, reads its words and its slots in the order they stand, every other placeholder filled with its value', () => {
+    const cut = textAround('log.attack', ['attacker', 'target'], { damage: 3 });
+    expect(cut.map((part) => (typeof part === 'string' ? 'words' : part.slot))).toEqual([
+      'attacker',
+      'words',
+      'target',
+      'words',
+    ]);
+    expect(cut.map((part) => (typeof part === 'string' ? part : `<${part.slot}>`)).join('')).toBe(
+      text('log.attack', { attacker: '<attacker>', target: '<target>', damage: 3 }),
+    );
+    expect(() => textAround('log.attack', ['attacker', 'target'])).toThrow('{damage}');
   });
 
   it('reads an entry with no placeholder as it stands, whatever values it is handed', () => {

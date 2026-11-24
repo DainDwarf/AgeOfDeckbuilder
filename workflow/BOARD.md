@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The combat log** — a log stands against the screen's left edge under the pinned achievements' ledger, its top at one height on every window, reading in sentences what the chronicle did where the map played it in sight, on the player's turn and through the end of turn, each line landing as its change plays, under a heading to each turn and five turns back; it is as tall as its lines down to just over the resting cards, scrolls past that as a browse does and folds by a tab as the ledger's; the ledger is as wide as the log, stops a little over the log's top and scrolls past it; the wheel over either never zooms the map; and `e2e/log.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`. [board/combat-log.md](board/combat-log.md)
 - **The log's lines on the map** — a line of the log that reads a tile is lighter under the pointer and rings its tiles on the map, each inside its own tile in a light tone of the colour of the faction the line names there, and a left click on it centres the map on them; a line that reads no tile reacts to nothing; and `e2e/log.spec.ts` passes. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/log-on-the-map.md](board/log-on-the-map.md)
 - **Credits and licences in the game** — a screen off the menu reading the packs' licence record and the build's dependency notices.
 - **The cursor** — the cursor saying what a press would do now, and whether the game draws a cursor of its own.

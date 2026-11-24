@@ -673,11 +673,14 @@ export function ditchesOf(
 /** What a unit's mark is darkened by: nothing, the fog, or the dim of a unit of the player's. */
 export type UnitShade = 'clear' | 'fog' | 'dimmed';
 
+/** The tint that darkens nothing: a clear shade's, and a disc's drawn as the map draws one on a panel. */
+export const UNDARKENED = 0xffffff;
+
 /** The tint a shade multiplies a unit's images by, and the colours of its shapes. */
 function shadeTint(shade: UnitShade): number {
   switch (shade) {
     case 'clear':
-      return 0xffffff;
+      return UNDARKENED;
     case 'fog':
       return LOOK.fog;
     case 'dimmed':

@@ -29,7 +29,7 @@ import {
 import { asGlyph, glyphMark } from './glyphs';
 import type { Card } from './infopanel';
 import { css, LOOK } from './look';
-import { asFactionDisc, unitDiscMarker } from './map-marks';
+import { asFactionDisc, UNDARKENED, unitDiscMarker } from './map-marks';
 import { cornerNow } from './menu';
 import { poolOf } from './pool';
 import { buildingName, terrainName, text, unitName } from './text';
@@ -66,9 +66,6 @@ const DISC = 14;
 const DISC_GLYPH = 9;
 const DISC_TO_NAME = 6;
 const NAME_TO_BADGE = 8;
-
-/** The tint a disc drawn as the map draws one is darkened by: nothing. */
-const UNDARKENED = 0xffffff;
 
 const NAME_STYLE = {
   fontFamily: UI_FONT,

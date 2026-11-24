@@ -113,7 +113,7 @@ function readingsOf(catalogue: Catalogue, chronicle: Chronicle): CountedLine[] {
     {
       reads: onSettlePhase(chronicle)
         ? text('launch.settle-phase')
-        : text('launch.turn', { turn: chronicle.turn }),
+        : text('chronicle.turn', { turn: chronicle.turn }),
     },
     ...unpaidOf(catalogue, chronicle),
   ];

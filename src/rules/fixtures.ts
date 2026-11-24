@@ -1216,6 +1216,23 @@ export const SLICES: readonly Slice[] = Object.entries(agesOver(CAMP, REGIONS)).
 /** The content every fixture is played on, its numbers the fixture's own. */
 export const CATALOGUE: Catalogue = merged('fixture', SLICES);
 
+/** The fixture's content, its enemies staying where they stand and doing what `acts` names. */
+export function naming(acts: UnitScript['acts']): Catalogue {
+  return catalogued({
+    ...CATALOGUE,
+    scripts: {
+      ...CATALOGUE.scripts,
+      [SCRIPT]: {
+        moveTo: (_catalogue, chronicle, enemy) => ({
+          landing: { tile: enemy.tile, cost: 0 },
+          rng: chronicle.rng,
+        }),
+        acts,
+      },
+    },
+  });
+}
+
 /** The content handed in, the fixture's unless named, its camp naming these over the fixture camp's own. */
 export function camping(named: Partial<Camp>, content: Catalogue = CATALOGUE): Catalogue {
   return catalogued({ ...content, ages: agesOver({ ...CAMP, ...named }, REGIONS) });

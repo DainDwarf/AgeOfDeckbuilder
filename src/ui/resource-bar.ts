@@ -598,7 +598,7 @@ function showReckoning(
 ): void {
   // Each of the two writes compares before it redraws (phaser/src/gameobjects/text/Text.js:651-656,
   // phaser/src/gameobjects/text/TextStyle.js:625-635).
-  reckoning.setText(reckoningReads(count)).setFontStyle(taken ? ON_THE_PILL : '');
+  reckoning.setText(signedCount(count)).setFontStyle(taken ? ON_THE_PILL : '');
   const after = ownBoxOf(value);
   const start = after.x + after.width + space;
   reckoning.x += (taken ? start + PILL_PAD.x : start) - ownBoxOf(reckoning).x;
@@ -685,8 +685,8 @@ function reckoningOf(read: Reckoning, key: BarReading): Reckoned {
   }
 }
 
-/** How a reckoning paints: signed, and nothing where it moves nothing. */
-function reckoningReads(count: number): string {
+/** How a count of what moves paints: signed, and nothing where it moves nothing. */
+export function signedCount(count: number): string {
   if (count > 0) return text('reading.plus', { count });
   if (count < 0) return text('reading.minus', { count: -count });
   return '';

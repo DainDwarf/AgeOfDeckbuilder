@@ -14,7 +14,7 @@ import {
   whileUp,
 } from './design-space';
 import { LOOK } from './look';
-import { createScroll, heldAt, pointInBox, reachOf, thumbOf } from './scroll';
+import { createScroll, heldAt, pointInBox, reachOf, type Thumb, thumbOf } from './scroll';
 import type { Point, Reactions } from './stack';
 
 /**
@@ -187,8 +187,13 @@ export type Panel = {
   readonly offset: number;
   /** How far across what it holds stands from where it was laid. */
   readonly across: number;
-  /** Cut at another frame, what it holds standing `across` from where it was laid. */
-  place(frame: Box, across: number): void;
+  /**
+   * Cut at another frame, what it holds standing `across` from where it was laid, its last line ending
+   * at `foot` where it is handed one.
+   */
+  place(frame: Box, across: number, foot?: number): void;
+  /** Stands at its last line, a fling running on it stopped. */
+  toFoot(): void;
   /**
    * Whether the pointer is on it. Read from the game loop alone: a hit test inside an input handler
    * refills the list Phaser's dispatch is walking (docs/PHASER.md).
@@ -215,10 +220,11 @@ export type Panel = {
  */
 export function createPanel(
   { scene, on, follow, carrier }: Surface,
-  { name, frame: laidIn, parts, held, foot, beside }: PanelOf,
+  { name, frame: laidIn, parts, held, foot: laidTo, beside }: PanelOf,
   offset = 0,
 ): Panel {
   let frame = laidIn;
+  let foot = laidTo;
   const root = scene.add.container(0, 0, [...parts]).setName(name);
   on.layer.add(root);
   // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
@@ -240,11 +246,10 @@ export function createPanel(
    * pointer that may hold still, and each time it moves.
    */
   let moved = true;
-  let bar: Scrollbar | undefined;
-  let shown = true;
+  const bar = createScrollbar(scene, on, name);
   const scroll = createScroll((offset) => {
     root.setY(-offset);
-    bar?.stand(offset);
+    bar.stand(offset);
     follow();
     moved = true;
   });
@@ -255,12 +260,10 @@ export function createPanel(
     stencil.setPosition(middle.x, middle.y).setSize(frame.width, frame.height);
     zone.setPosition(middle.x, middle.y).setSize(frame.width, frame.height);
     const reach = reachOf(frame.height, foot - frame.y);
-    bar?.down();
-    bar = scrollbarOf(scene, on, name, frame, reach);
-    bar?.show(shown);
+    bar.cut(frame, reach);
     root.setData('overflow', reach);
     scroll.reach(reach);
-    bar?.stand(scroll.offset);
+    bar.stand(scroll.offset);
     moved = true;
   };
   cut(frame);
@@ -360,9 +363,13 @@ export function createPanel(
     get across() {
       return root.x;
     },
-    place(at, across) {
+    place(at, across, to = foot) {
+      foot = to;
       root.setX(across);
       cut(at);
+    },
+    toFoot() {
+      scroll.stand(Number.POSITIVE_INFINITY);
     },
     get pointed() {
       return thingUnder(scene.game) === zone;
@@ -380,10 +387,9 @@ export function createPanel(
       return over.includes(zone);
     },
     show(on) {
-      shown = on;
       root.setVisible(on);
       zone.setVisible(on);
-      bar?.show(on);
+      bar.show(on);
       if (on) {
         moved = true;
         return;
@@ -399,47 +405,56 @@ export function createPanel(
       unheard();
       zone.destroy();
       root.destroy();
-      bar?.down();
+      bar.down();
     },
   };
 }
 
 /** A panel's scrollbar, its thumb standing where an offset puts it. */
-type Scrollbar = { stand(offset: number): void; show(on: boolean): void; down(): void };
+type Scrollbar = {
+  /** Down the right edge of the frame over a scroll reaching this far; none where that is nowhere. */
+  cut(frame: Box, reach: number): void;
+  stand(offset: number): void;
+  show(on: boolean): void;
+  down(): void;
+};
 
-/**
- * The scrollbar down the right edge of a panel's frame over a scroll reaching this far, drawn over
- * the panel and reacting to no press; none where the room holds the panel whole.
- */
-function scrollbarOf(
-  scene: Phaser.Scene,
-  on: Stratum,
-  name: string,
-  frame: Box,
-  reach: number,
-): Scrollbar | undefined {
-  const thumbAt = thumbOf(frame, reach);
-  if (thumbAt === undefined) return undefined;
+/** The scrollbar of a panel, drawn over the panel and reacting to no press. */
+function createScrollbar(scene: Phaser.Scene, on: Stratum, name: string): Scrollbar {
   const width = 8;
-  const x = frame.x + frame.width - 4 - width;
-  const track = scene.add
-    .graphics({ x, y: frame.y })
-    .setName(`${name}-track`)
-    .fillStyle(LOOK.scrollbarTrack)
-    .fillRoundedRect(0, 0, width, frame.height, width / 2);
-  const thumb = scene.add
-    .graphics({ x, y: thumbAt.top(0) })
-    .setName(`${name}-thumb`)
-    .fillStyle(LOOK.scrollbarThumb)
-    .fillRoundedRect(0, 0, width, thumbAt.length, width / 2);
+  const track = scene.add.graphics().setName(`${name}-track`);
+  const thumb = scene.add.graphics().setName(`${name}-thumb`);
   on.layer.add([track, thumb]);
+  let thumbAt: Thumb | undefined;
+  let shown = true;
+  const showing = (): void => {
+    track.setVisible(shown && thumbAt !== undefined);
+    thumb.setVisible(shown && thumbAt !== undefined);
+  };
   return {
+    cut(frame, reach) {
+      thumbAt = thumbOf(frame, reach);
+      track.clear();
+      thumb.clear();
+      if (thumbAt !== undefined) {
+        const x = frame.x + frame.width - 4 - width;
+        track
+          .setPosition(x, frame.y)
+          .fillStyle(LOOK.scrollbarTrack)
+          .fillRoundedRect(0, 0, width, frame.height, width / 2);
+        thumb
+          .setX(x)
+          .fillStyle(LOOK.scrollbarThumb)
+          .fillRoundedRect(0, 0, width, thumbAt.length, width / 2);
+      }
+      showing();
+    },
     stand(offset) {
-      thumb.setY(thumbAt.top(offset));
+      if (thumbAt !== undefined) thumb.setY(thumbAt.top(offset));
     },
     show(on) {
-      track.setVisible(on);
-      thumb.setVisible(on);
+      shown = on;
+      showing();
     },
     down() {
       track.destroy();

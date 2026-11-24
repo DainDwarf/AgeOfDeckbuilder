@@ -107,13 +107,20 @@ export function onWheel(
   onBareWheel(scene, (by, over) => wheeled(inverted().scroll ? -by : by, over));
 }
 
-/** Every whole notch of the wheel Phaser hands the scene, told as how many the map zooms, out above zero. */
-export function onWheelNotches(scene: Phaser.Scene, notched: (notches: number) => void): void {
+/**
+ * Every whole notch of the wheel Phaser hands the scene where `zooms` lets it through, told by the
+ * interactive object under the pointer, as how many the map zooms, out above zero.
+ */
+export function onWheelNotches(
+  scene: Phaser.Scene,
+  zooms: (over: readonly Phaser.GameObjects.GameObject[]) => boolean,
+  notched: (notches: number) => void,
+): void {
   /** How far the wheel has turned towards its next notch, and when it last turned. */
   let rolled = 0;
   let turned = 0;
-  onBareWheel(scene, (by, _over, time) => {
-    if (by === 0) return;
+  onBareWheel(scene, (by, over, time) => {
+    if (by === 0 || !zooms(over)) return;
     const lapsed = time - turned > NOTCH_WINDOW;
     turned = time;
     if (lapsed || Math.sign(by) !== Math.sign(rolled)) rolled = 0;

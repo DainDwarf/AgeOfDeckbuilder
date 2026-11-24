@@ -46,7 +46,7 @@ test('on a save holding a chronicle the bare address lands on the campaign scree
   expect(await page.evaluate(() => window.game?.scene.isActive('ui'))).toBe(false);
   expect(await continueReads(page)).toEqual([
     text('launch.continue'),
-    text('launch.turn', { turn: saved.turn }),
+    text('chronicle.turn', { turn: saved.turn }),
   ]);
 
   await pressContinue(page);

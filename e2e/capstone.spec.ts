@@ -32,9 +32,9 @@ import {
   wonCampaign,
 } from './chronicle-screen';
 
-/** The capstone's row of the ledger, and what a click on raises the capstone's window. */
+/** The capstone's row of the ledger, and its name, which a click on raises the capstone's window. */
 const ROW = 'pinned-capstone';
-const ROW_PRESS = `${ROW}-press`;
+const ROW_NAME = `${ROW}-name`;
 
 /** What the capstone's window draws its row of things from: each one's face, and a stack's holder. */
 const NAMED = 'capstone-named';
@@ -133,7 +133,7 @@ function stackedLanding(campaign: Campaign): {
 
 /** Raises the capstone's window by a click of that button on the ledger's row, and rests. */
 async function raisedFromRow(page: Page, button: 'left' | 'right'): Promise<void> {
-  const at = await onScreen(page, ROW_PRESS);
+  const at = await onScreen(page, ROW_NAME);
   await page.mouse.click(at.x, at.y, { button });
   await expect.poll(() => standing(page, 'capstone')).toBe(true);
   await rested(page);
@@ -152,8 +152,8 @@ test('a left click and a right click on the capstone’s row each raise its wind
   const count = `${faces[stacked]}-copies`;
 
   await openSaved(page, before, campaign);
-  const row = await readings(page, [`${ROW}-name`, `${ROW}-word`]);
-  expect([row(`${ROW}-name`).text, row(`${ROW}-word`).text]).toEqual([
+  const row = await readings(page, [ROW_NAME, `${ROW}-word`]);
+  expect([row(ROW_NAME).text, row(`${ROW}-word`).text]).toEqual([
     capstoneName(capstone),
     text('capstone.word'),
   ]);

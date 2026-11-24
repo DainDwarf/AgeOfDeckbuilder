@@ -114,10 +114,18 @@ type MapInMotion = {
   hold(tiles: readonly TileCoords[]): Promise<void> | undefined;
 };
 
+/** Whether the map plays a stage on a tile: what it shows the player of that tile. */
+export type SightOn = (tile: TileCoords) => boolean;
+
 /** The stages the map plays. */
 export type MapMotion = {
   /** Nothing answered is the scene's word to render the stage itself. */
   play(stage: Stage): Promise<void> | undefined;
+  /**
+   * Which tiles a stage leaving this chronicle plays on, asked as the stage plays: the tiles drawn
+   * live on the map as it stands or on that chronicle.
+   */
+  sightOn(chronicle: Chronicle): SightOn;
   /** What the map has in the air taken down: its settle paints nothing. */
   takeDown(): void;
 };
@@ -125,6 +133,12 @@ export type MapMotion = {
 export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMotion {
   /** What the map has in the air; a render takes it down. */
   let flight: symbol | undefined;
+
+  const sightOn = (chronicle: Chronicle): SightOn => {
+    const live = view.live();
+    const watched = view.liveOn(chronicle);
+    return (tile) => live.has(tileKey(tile)) || watched.has(tileKey(tile));
+  };
 
   /** Takes the map for one stage's motion, and hands back the token that settles it. */
   const takeOff = (): symbol => {
@@ -602,10 +616,7 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
     chronicle: Chronicle,
     motion: () => Promise<void> | undefined,
   ): Promise<void> | undefined => {
-    const live = view.live();
-    const watched = view.liveOn(chronicle);
-    const plays = tiles.some((tile) => live.has(tileKey(tile)) || watched.has(tileKey(tile)));
-    if (!plays) return undefined;
+    if (!tiles.some(sightOn(chronicle))) return undefined;
     return heldThen(tiles, chronicle, motion);
   };
 
@@ -705,6 +716,8 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
         }
       }
     },
+
+    sightOn,
 
     takeDown(): void {
       flight = undefined;

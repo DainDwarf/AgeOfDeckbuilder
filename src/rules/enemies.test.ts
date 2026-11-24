@@ -1,13 +1,6 @@
 import { expect, test } from 'vitest';
 import { chartedTile, improvementPlaced } from './cards';
-import {
-  type Catalogue,
-  catalogued,
-  neutralOf,
-  type UnitScript,
-  unitKind,
-  type Wave,
-} from './catalogue';
+import { type Catalogue, catalogued, neutralOf, unitKind, type Wave } from './catalogue';
 import { apply, outcome } from './chronicle';
 import { cityCommand, claimable, warDeclared } from './city';
 import { attackOrNone, enteredOnCamp, raided, rowsDrawn } from './enemies';
@@ -48,6 +41,7 @@ import {
   NEUTRAL_TILE,
   NO_GROWTH,
   namesOf,
+  naming,
   neutralStanding,
   only,
   onlyStocks,
@@ -1353,23 +1347,6 @@ test('an enemy its move leaves out of range attacks nothing', () => {
   ]);
   expect(after.units[0].stats.health).toBe(city.units[0].stats.health);
 });
-
-/** The fixture's content, its enemies staying where they stand and doing what `acts` names. */
-function naming(acts: UnitScript['acts']): Catalogue {
-  return catalogued({
-    ...CATALOGUE,
-    scripts: {
-      ...CATALOGUE.scripts,
-      [SCRIPT]: {
-        moveTo: (_catalogue, chronicle, enemy) => ({
-          landing: { tile: enemy.tile, cost: 0 },
-          rng: chronicle.rng,
-        }),
-        acts,
-      },
-    },
-  });
-}
 
 /** The fixture's content, its enemies staying where they stand and attacking the player's first unit. */
 const RECKLESS = naming((_catalogue, chronicle) =>

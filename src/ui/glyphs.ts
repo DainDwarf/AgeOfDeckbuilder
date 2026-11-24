@@ -59,7 +59,7 @@ function colourOf(symbol: CastSymbol): number {
     case 'faction-signs-button':
     case 'hex-grid-button':
     case 'minimize-button':
-    case 'pinned-achievements-tab':
+    case 'fold-tab':
       return LOOK.metalInk;
   }
 }
@@ -80,7 +80,7 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'faction-signs-button':
     case 'hex-grid-button':
     case 'minimize-button':
-    case 'pinned-achievements-tab':
+    case 'fold-tab':
       return false;
     case 'food':
     case 'production':

@@ -3647,6 +3647,47 @@ export function loreOf(page: Page, name: string): Promise<string | undefined> {
   return textOf(page, `${name}-lore`);
 }
 
+/** An entry of the log: a turn's heading, or a line's words, every space left out. */
+export type LogEntry = { readonly heading: string } | { readonly line: string };
+
+/** An entry's words with every space left out: what `logRead` reads a line as. */
+export function squeezed(entry: string): string {
+  return entry.replace(/\s+/g, '');
+}
+
+/**
+ * What the log holds, top down, and nothing where it stands none: each heading, and each line's words
+ * row by row, left to right on each, their spaces left out, the log laying a space as a gap.
+ */
+export function logRead(page: Page): Promise<LogEntry[]> {
+  return page.evaluate(() => {
+    const held = window.named?.('log-held')?.object as Phaser.GameObjects.Container | undefined;
+    if (held === undefined) return [];
+    const shown = <T extends Phaser.GameObjects.GameObject>(list: T[]): T[] =>
+      list.filter((part) => (part as unknown as Phaser.GameObjects.Components.Visible).visible);
+    const named = (prefix: string) =>
+      shown(held.list).filter((part) => part.name.startsWith(prefix)) as (
+        | Phaser.GameObjects.Text
+        | Phaser.GameObjects.Container
+      )[];
+    const headings = (named('log-heading-') as Phaser.GameObjects.Text[]).map((heading) => ({
+      y: heading.y,
+      entry: { heading: heading.text },
+    }));
+    const lines = (named('log-line-') as Phaser.GameObjects.Container[]).map((line) => {
+      const texts = shown(line.list).filter(
+        (part): part is Phaser.GameObjects.Text => part.type === 'Text',
+      );
+      texts.sort((one, other) => one.y - other.y || one.x - other.x);
+      return {
+        y: line.y,
+        entry: { line: texts.map((part) => part.text.replace(/\s+/g, '')).join('') },
+      };
+    });
+    return [...headings, ...lines].sort((one, other) => one.y - other.y).map(({ entry }) => entry);
+  });
+}
+
 /** What the line over the hand says the card being aimed is played at, or nothing while none stands. */
 export function aimLine(page: Page): Promise<string | undefined> {
   return page.evaluate(() => {

@@ -112,6 +112,8 @@ export type Look = {
   readonly summaryPalerInk: number;
   /** The ink a reached row of the pinned achievements' ledger reads in. */
   readonly reachedAchievementInk: number;
+  /** The fainter ink a turn's heading reads in on the log. */
+  readonly logHeadingInk: number;
   /** The strength a rule between two rows of a panel rests at, in the pale ink. */
   readonly rowRule: number;
   readonly answerInk: number;
@@ -282,6 +284,7 @@ export const LOOK: Look = {
   paleInk: 0xd4d7db,
   summaryPalerInk: 0xd4d7db,
   reachedAchievementInk: 0x9aa1a9,
+  logHeadingInk: 0x9aa1a9,
   rowRule: 0.18,
   answerInk: 0x9aa1a9,
   // `index.html`'s style reset holds this value too, for the page before the canvas covers it.

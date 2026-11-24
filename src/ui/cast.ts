@@ -13,7 +13,7 @@ export type ButtonSign =
   | 'faction-signs-button'
   | 'hex-grid-button'
   | 'minimize-button'
-  | 'pinned-achievements-tab';
+  | 'fold-tab';
 
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
@@ -73,7 +73,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'faction-signs-button': 'material-design-icons/shield-crown.svg',
   'hex-grid-button': 'material-design-icons/hexagon-multiple-outline.svg',
   'minimize-button': 'material-design-icons/eye-off.svg',
-  'pinned-achievements-tab': 'material-design-icons/menu-left.svg',
+  'fold-tab': 'material-design-icons/menu-left.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */

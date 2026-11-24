@@ -40,6 +40,8 @@ export type TrayLayout = {
   readonly baseline: number;
   /** Where the resting cards' tops stand. */
   readonly restingTop: number;
+  /** Where a foot standing just over the resting cards stands. */
+  readonly overTheHand: number;
   /** Where a card lifted out of the lane stands its bottom edge, wherever on the fan it rests. */
   readonly liftedBottom: number;
   /** The lane the hand fans out in, its padding left out. */
@@ -88,9 +90,11 @@ export function layOutTray(screen: Screen, smallest: number, cardHeight: number)
   const exhaust = discard + ROUND + PILE_GAP;
   const trayRight = right + RIGHT_OF_LANE;
   const cornerLeft = width - CORNER_IN - END_TURN;
+  const overTheHand = restingTop - OVER_THE_HAND;
   return {
     baseline,
     restingTop,
+    overTheHand,
     liftedBottom: height - LIFTED_OVER,
     lane: { left, right },
     tray: { x: trayLeft, y: trayTop, width: trayRight - trayLeft, height: height - trayTop },
@@ -104,7 +108,7 @@ export function layOutTray(screen: Screen, smallest: number, cardHeight: number)
         ? { x: cornerLeft, y: height - CORNER_IN - END_TURN, width: END_TURN, height: END_TURN }
         : {
             x: exhaust + ROUND / 2 - END_TURN,
-            y: restingTop - OVER_THE_HAND - END_TURN,
+            y: overTheHand - END_TURN,
             width: END_TURN,
             height: END_TURN,
           },

@@ -48,8 +48,8 @@ export type RunNames = {
 
 /**
  * An entry drawn on the face as a run wrapped at that width in that ink, from the middle of its first
- * line at that point down, its glyphs where the run stands them and a zone over each of its names;
- * the names react.
+ * line at that point down, its glyphs where the run stands them; where `reactions` are handed, a zone
+ * over each of its names reacts with them, and where none are, the names are the caller's to react.
  */
 export function drawRun(
   scene: Phaser.Scene,
@@ -58,7 +58,7 @@ export function drawRun(
   first: { readonly x: number; readonly y: number },
   width: number,
   ink: number,
-  reactions: RunNames,
+  reactions: RunNames | undefined,
 ): { label: Phaser.GameObjects.Text; lines: number; names: Name[] } {
   const { label, run } = addRun(scene, entry, { ...TEXT_STYLE, color: css(ink) }, width);
   const lines = run.widths.length;
@@ -87,6 +87,7 @@ export function drawRun(
       height: pitch,
     };
     names.push(each);
+    if (reactions === undefined) continue;
     const raiser: Raiser = { name: each, where: () => spotOn(face, each) };
     const zone = reactsToPress(
       scene.add.zone(each.x, each.y, each.width, each.height).setInteractive(),
