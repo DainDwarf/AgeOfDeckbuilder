@@ -1,13 +1,13 @@
 ---
 name: upkeep
-description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, the memory lint, and the upstream traps. Run when asked — the ship hand-back reminds the user once 20 lines have shipped or 30 days have passed since the last upkeep, or the parked leftovers pass 100 lines.
+description: The maintenance loop — docs lint, board and ideas eviction, the harness ratchet that turns recurring corrections into DOGMAS.md lines, the memory lint, and the upstream traps. Run when asked — the delivery hand-back reminds the user once 20 lines have been delivered or 30 days have passed since the last upkeep, or the parked leftovers pass 100 lines.
 ---
 
 # Upkeep
 
 A recurring pass over five surfaces. Findings become board lines through `/todo` on the user's word, or edits made now; the pass itself changes nothing silently — every change is listed in the report.
 
-Count cycles from the git log: one cycle is one commit that deleted a board line. The pass commits under an `Upkeep:` subject — that commit is where the next pass, and the ship hand-back's reminder, count from.
+Count cycles from the git log: one cycle is one commit that deleted a board line. The pass commits under an `Upkeep:` subject — that commit is where the next pass, and the delivery hand-back's reminder, count from.
 
 ## 1. Docs lint
 
@@ -39,7 +39,7 @@ Three occurrences of the same class is a harness problem, not a code problem. Fo
 
 Read every file in the project memory directory. Memory holds what the repo does not: who the user is, how they want the work done, calls and intents the docs do not carry, questions they have not answered. For each file:
 
-- **Repeats the repo** — a commit hash, a shipped line, a settled number, a call that became a `docs/` page or a board line: cut it. Git, `docs/` and `workflow/BOARD.md` hold it.
+- **Repeats the repo** — a commit hash, a delivered line, a settled number, a call that became a `docs/` page or a board line: cut it. Git, `docs/` and `workflow/BOARD.md` hold it.
 - **Journal shape** — a paragraph per pitch or per session: rewrite as facts, one line each, grouped by what they are (standing calls, parked intents, open questions, candidates).
 - **Stale pointer** — a file, function, flag or line it names: verify against the tree, fix or drop.
 - **Wrong or overtaken** — the user reversed it, or the code moved on: delete.

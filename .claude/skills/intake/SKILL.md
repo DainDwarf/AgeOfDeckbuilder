@@ -1,11 +1,11 @@
 ---
 name: intake
-description: Take one BOARD.md line — the first without a dossier unless the user names one — and settle its design with the user: the forks, the contradictions with the docs, the scope. Ends with a task dossier a later ship session executes with no design question left. Or cut one rung into lines when the user asks, or when no line waits. Use when asked to intake, design, prepare or cut a line or a rung.
+description: Take one BOARD.md line — the first without a dossier unless the user names one — and settle its design with the user: the forks, the contradictions with the docs, the scope. Ends with a task dossier a later delivery session executes with no design question left. Or cut one rung into lines when the user asks, or when no line waits. Use when asked to intake, design, prepare or cut a line or a rung.
 ---
 
 # Intake
 
-One board line per invocation: the first line with no dossier link, unless the user names another. The output is a dossier specific enough that the ship session — another model, no memory of this conversation — opens no design question.
+One board line per invocation: the first line with no dossier link, unless the user names another. The output is a dossier specific enough that the delivery session — another model, no memory of this conversation — opens no design question.
 
 **Or one rung**, when the user names one or the Lines section holds no line waiting for intake: the first rung, unless the user names another. A rung is read and challenged as a line is, and the discussion settles what its lines are — the shared mechanism that links them, the order they land in, what each leaves standing — and no more: a line's own forks wait for its intake. A content rung is cut one piece of content per line, every line put down at once, the mechanism a piece needs riding inside its line as an inert commit. The output is the rung's lines on the Lines section, in order, each a title and one sentence, the rung deleted; the shared design that the lines rest on goes to the `docs/` pages in the same commit, since nothing durable cites a line. The first line's dossier is the next invocation.
 
@@ -21,7 +21,7 @@ Seven checks, in order; stop at the first that decides the line's fate:
 2. **Order.** Does a later line or rung rework the surface this line lays out or the content it fits? Ask in one sentence whether the line waits for it, before any mockup.
 3. **Wheel.** For a line that builds a tool, a script, an analysis or a format: name the tool on the machine or in the ecosystem that does the job, and say why it does not serve, before any design. A job such a tool does becomes a skill recipe, not code. A line that names the thing to build — "a verb", "a tool" — is the shape this check catches: the name is the todo's, not a decision.
 4. **Completability.** Can a done-condition be written — a state of the repo someone can check? If not, the line is docs content (a standing fact, a domain claim) or an idea: route it there and delete the line. A content line's checkable state is the content standing in its catalogue, the catalogue's coherence test passing and its age page saying so — never a test on the content: its numbers are tuning and change. A mechanism the content needs is held by one test on a fixture, and is its own line where it is a real boundary.
-5. **Scope.** Can one ship session hold the whole thing? Split only on a real abstraction boundary, never to defer the hard part; each part becomes its own line, and this pass dossiers the first.
+5. **Scope.** Can one delivery session hold the whole thing? Split only on a real abstraction boundary, never to defer the hard part; each part becomes its own line, and this pass dossiers the first.
 6. **Novelty.** For a content line — an answer, a card, anything the rules resolve — does this content do something no content of its kind has done before? Then the mechanism is named in the dossier and gets its one test on the fixture: in this line where it is the one small helper the content needs, in a line ahead of it where it is a real boundary. A content line that reads as content alone and carries a mechanism unnamed is the shape this check catches.
 7. **Doc-impact.** Name the `docs/` pages the work will change, or "none".
 
@@ -47,7 +47,7 @@ Once every fork is settled and every likeness chosen, and not before, write `wor
 **Doc-impact:** the pages, or "none — <why>".
 **Scope:** what is in, what is out, the corner cases decided here and how, and what the reconcile chose for each likeness.
 **Traps:** the non-local facts the implementer cannot see from the files it edits.
-**Plan:** the files the change touches and the order the work lands in, each step by what it leaves standing. Never a function, a signature, or which function owns what: the implementer reads the code once, at the ship, and decides that.
+**Plan:** the files the change touches and the order the work lands in, each step by what it leaves standing. Never a function, a signature, or which function owns what: the implementer reads the code once, at the delivery, and decides that.
 **Verify:** the commands to run; the one spec that proves the line, by name, or none; and the specs CI proves on the push, listed for the hand-back.
 ```
 
@@ -61,4 +61,4 @@ Where a check ended the line instead — a docs edit made now, an idea, nothing 
 
 ## Report
 
-Commit the dossier and `workflow/BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the ship's commit and the history loses the intake. Then one line: the dossier's path and what the ship session will not have to decide, or the line's fate. Then hand the turn back; the ship is a new invocation. A rung's cut commits the board and the docs pages as `Intake: Cut <title>`, and reports the lines as written, in order.
+Commit the dossier and `workflow/BOARD.md` — and whatever a check moved, a docs edit or an idea — as `Intake: <title>`, staging those files alone; a dossier left uncommitted lands in the delivery's commit and the history loses the intake. Then one line: the dossier's path and what the delivery session will not have to decide, or the line's fate. Then hand the turn back; the delivery is a new invocation. A rung's cut commits the board and the docs pages as `Intake: Cut <title>`, and reports the lines as written, in order.

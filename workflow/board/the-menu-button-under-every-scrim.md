@@ -12,7 +12,7 @@
 - `docs/CHRONICLE-SCREEN.md` _The ending screen_: `the menu opens over the screen and closes back onto it` becomes `the back key opens the menu over the screen, which closes back onto it`.
 - No player-facing sentence is added or changed.
 
-**Doc-impact:** `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`; `docs/PHASER.md` where a sentence of it names the scene the Menu button stands on, if the ship moves it.
+**Doc-impact:** `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`; `docs/PHASER.md` where a sentence of it names the scene the Menu button stands on, if the delivery moves it.
 
 **Scope:**
 

@@ -1,11 +1,11 @@
 ---
-name: ship
-description: Execute one dossiered BOARD.md line end to end — implement through the implementer agent, land code + docs + line deletion as one change, get the egress-reviewer's verdict, commit and push, hand back while CI runs, stop. Use when asked to ship, implement, do, or take the next line.
+name: deliver
+description: Execute one dossiered BOARD.md line end to end — implement through the implementer agent, land code + docs + line deletion as one change, get the egress-reviewer's verdict, commit and push, hand back while CI runs, stop. Use when asked to deliver, implement, do, or take the next line.
 ---
 
-# Ship
+# Deliver
 
-One board line per invocation: the top line with a dossier link, unless the user names another. A line without a dossier is not shipped — say so and stop; `/intake` comes first.
+One board line per invocation: the top line with a dossier link, unless the user names another. A line without a dossier is not delivered — say so and stop; `/intake` comes first.
 
 ## 1. Load the line
 
@@ -50,11 +50,11 @@ Spawn the `egress-reviewer` with: the diff (`git diff` plus the list of untracke
 
 ## 5. Commit
 
-Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUDE.md` and the touched `docs/` pages for staleness, fix in the same commit, run `npm run fmt`, write the message to a scratchpad file, `git commit -F`. One commit per line. Then push, which sends every unpushed commit on `main` with it, take the run's id from `gh run list`, and watch it in the background with `gh run watch <id> --exit-status`.
+Once the review is LOOKS GOOD (or its blocking findings are fixed): check `CLAUDE.md` and the touched `docs/` pages for staleness, fix in the same commit, run `npm run fmt`, write the message to a scratchpad file, `git commit -F`. One commit per line, its subject `Deliver: <title>`. Then push, which sends every unpushed commit on `main` with it, take the run's id from `gh run list`, and watch it in the background with `gh run watch <id> --exit-status`.
 
 ## 6. Hand back
 
-Report to the user, while the CI run goes on, what needs their eyes and nothing else: what shipped, the commit and the run's id, the review's verdict in one word, every look and every pick, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, what to inspect and how, and what the next line would do. Every deviation, advisory and discovery is one of three: nothing, with the precedent it follows; look, with what to see on screen, folded into what to inspect; or pick, two options with a recommendation. A detail the design left open that changes what the screen looks like is a look. The items answered nothing are not relayed one by one: one line gives their count, and they stay in the conversation for the asking. The specs CI runs are not listed; the run's verdict covers them. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
+Report to the user, while the CI run goes on, what needs their eyes and nothing else: what was delivered, the commit and the run's id, the review's verdict in one word, every look and every pick, the authored sentences, each quoted with its key or page and one line on where a player or reader meets it, what to inspect and how, and what the next line would do. Every deviation, advisory and discovery is one of three: nothing, with the precedent it follows; look, with what to see on screen, folded into what to inspect; or pick, two options with a recommendation. A detail the design left open that changes what the screen looks like is a look. The items answered nothing are not relayed one by one: one line gives their count, and they stay in the conversation for the asking. The specs CI runs are not listed; the run's verdict covers them. Then stop — the user reads the report, answers the authored sentences, and orders what becomes a shave or a `/todo`; the next line is a new invocation.
 
 A visual check the dossier's Verify plans starts in the same turn as the hand-back, unasked, before any file under `src/` is edited; its report is relayed when it lands.
 
@@ -62,7 +62,7 @@ The run's verdict is relayed the turn it lands, whatever the conversation is on;
 
 What the user leaves unordered — an advisory, a discovery, a question they did not answer — is parked in the project memory's `project-status.md`, one line under its heading, for `/upkeep`'s triage.
 
-The hand-back ends with the upkeep reminder when one is due: count the `Ship:` commits since the last `Upkeep:` commit, and the days since it. At 20 lines or more, 30 days or more, or parked leftovers past 100 lines, the report's last line says so with the numbers — _"23 lines and 34 days since the last upkeep."_ It is a reminder, never a stop: the hand-back ends as it would, the next `/ship` runs as it would, and the reminder returns at every hand-back until an upkeep lands.
+The hand-back ends with the upkeep reminder when one is due: count the `Deliver:` and `Ship:` commits since the last `Upkeep:` commit, and the days since it. At 20 lines or more, 30 days or more, or parked leftovers past 100 lines, the report's last line says so with the numbers — _"23 lines and 34 days since the last upkeep."_ It is a reminder, never a stop: the hand-back ends as it would, the next `/deliver` runs as it would, and the reminder returns at every hand-back until an upkeep lands.
 
 ## Notifications
 

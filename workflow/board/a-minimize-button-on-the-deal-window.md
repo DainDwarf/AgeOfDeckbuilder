@@ -40,7 +40,7 @@
   - A window resized, or the interface size changed, while minimized: the ribbon and the button stand where a risen window's would.
   - A page reloaded on a minimized window opens as any chronicle opened on a deal does, on the window whole.
   - A browse or the capstone's window raised while minimized stands on the scrim as over a clean screen; the minimized ribbon and its button are under that scrim, dimmed with the rest, and stand lit again once it closes.
-- The verdict: the hand-back asks the user to judge it in play. Kept, nothing more is owed. Taken out, the ship's commit is reverted, pages included.
+- The verdict: the hand-back asks the user to judge it in play. Kept, nothing more is owed. Taken out, the delivery's commit is reverted, pages included.
 
 **Traps:**
 

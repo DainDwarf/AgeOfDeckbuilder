@@ -27,7 +27,7 @@
       "PowerShell(Invoke-WebRequest -Uri http://localhost:5173*)",
       "Skill(todo)",
       "Skill(intake)",
-      "Skill(ship)",
+      "Skill(deliver)",
       "Skill(upkeep)",
       "Skill(run)",
       "Skill(visual-check)",
