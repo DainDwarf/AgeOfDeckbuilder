@@ -180,7 +180,9 @@ export type Browser = Surface & {
   /** The scrim whole, a fade in flight cut short. */
   standWhole(): void;
   /** One thing raised on the scrim, which goes with what stands. */
-  carries<T extends Phaser.GameObjects.GameObject>(object: T): T;
+  carries<T extends Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible>(
+    object: T,
+  ): T;
   /**
    * A window's title on the kit's ribbon raised on the scrim, named after the window: its words, and
    * the ribbon stood centred across the screen, its middle that far under the screen's top, answering
@@ -194,17 +196,26 @@ export type Browser = Surface & {
     standAt(middle: number): { readonly foot: number; readonly ribbon: () => Box };
   };
   /**
-   * The panel laid on the scrim from `top` to the screen's foot, scrolled `offset` far, which goes
-   * with what stands: what it holds is laid about the middle of 1280 units, the wheel and the two pan
-   * keys scroll it, a card rising large holds it still, and a press beside what it holds steps back.
+   * The panel laid on the scrim from `top` to the screen's foot, which goes with what stands: what it
+   * holds is laid about the middle of 1280 units, the wheel and the two pan keys scroll it, a card
+   * rising large holds it still, and a press beside what it holds steps back.
    */
-  lay(
-    of: Omit<PanelOf, 'beside' | 'frame'> & { readonly top: number; readonly offset?: number },
-  ): Panel;
+  lay(of: Omit<PanelOf, 'beside' | 'frame'> & { readonly top: number }): Panel;
   /** A browse raised under its title, its stacks eight to a line from the frame's top left. */
   browse(of: BrowseOf): void;
   /** What stands taken down, and the scrim with it. */
   close(): void;
+  /**
+   * What stands kept hidden as it stands, out of what a raise or a close takes down, and the scrim
+   * down with what the screen raised beside it, as at a close.
+   */
+  setAside(): SetAside;
+};
+
+/** What stood on the scrim, kept hidden as it stood. */
+export type SetAside = {
+  /** What stands taken down, the scrim up, and what was set aside standing on it again as it stood. */
+  standAgain(): void;
 };
 
 /** The browser of a screen, on the overlay, a unit named wearing its sign as `signs` answers. */
@@ -226,7 +237,7 @@ export function standBrowser(
   let panel: Panel | undefined;
   /** Where the panel's frame starts down the screen. */
   let panelTop = 0;
-  let shown: Phaser.GameObjects.GameObject[] = [];
+  let shown: (Phaser.GameObjects.GameObject & Phaser.GameObjects.Components.Visible)[] = [];
 
   /** The panel's frame from its top to the screen's foot, a margin in from every edge. */
   const panelFrame = (): Box => {
@@ -265,15 +276,27 @@ export function standBrowser(
     tooltip.follow();
   };
 
-  /** What stands taken down, the cards shown large among it, the scrim itself left as it is. */
-  const wipe = (): void => {
+  /** The small cards, the cards shown large and what the screen raised beside what stands taken down. */
+  const downAround = (): void => {
     inspecting.small.down();
     large.down();
+    screen.down?.();
+  };
+
+  /** What stands taken down, the cards shown large among it, the scrim itself left as it is. */
+  const wipe = (): void => {
+    downAround();
     panel?.down();
     panel = undefined;
     for (const object of shown) object.destroy();
     shown = [];
-    screen.down?.();
+  };
+
+  /** The scrim down, and the screen told it is no longer covered. */
+  const lower = (): void => {
+    up = false;
+    scrim.setVisible(false);
+    screen.covering(false);
   };
 
   overlay.scrolls({
@@ -329,19 +352,15 @@ export function standBrowser(
         },
       };
     },
-    lay({ top, offset, ...of }) {
+    lay({ top, ...of }) {
       panelTop = top;
-      const laid = createPanel(
-        browser,
-        {
-          ...of,
-          frame: panelFrame(),
-          beside: () => {
-            screen.back();
-          },
+      const laid = createPanel(browser, {
+        ...of,
+        frame: panelFrame(),
+        beside: () => {
+          screen.back();
         },
-        offset,
-      );
+      });
       laid.place(panelFrame(), offMiddle().x);
       panel = laid;
       return laid;
@@ -361,9 +380,27 @@ export function standBrowser(
     },
     close() {
       wipe();
-      up = false;
-      scrim.setVisible(false);
-      screen.covering(false);
+      lower();
+    },
+    setAside() {
+      downAround();
+      const kept = { things: shown, panel, top: panelTop };
+      for (const object of kept.things) object.setVisible(false);
+      kept.panel?.show(false);
+      shown = [];
+      panel = undefined;
+      lower();
+      return {
+        standAgain() {
+          void browser.raise();
+          shown = kept.things;
+          for (const object of shown) object.setVisible(true);
+          panel = kept.panel;
+          panelTop = kept.top;
+          panel?.place(panelFrame(), offMiddle().x);
+          panel?.show(true);
+        },
+      };
     },
   };
   return browser;

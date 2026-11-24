@@ -202,6 +202,8 @@ export type Panel = {
   holdStill(): void;
   /** Whether it is among the objects an input event of its scene hands as under the pointer. */
   under(over: readonly Phaser.GameObjects.GameObject[]): boolean;
+  /** Shown, or hidden where it stands, held still where it is scrolled, taking no pointer and drawing nothing. */
+  show(on: boolean): void;
   /** Takes the panel down, and everything it reacts with. */
   down(): void;
 };
@@ -239,6 +241,7 @@ export function createPanel(
    */
   let moved = true;
   let bar: Scrollbar | undefined;
+  let shown = true;
   const scroll = createScroll((offset) => {
     root.setY(-offset);
     bar?.stand(offset);
@@ -254,6 +257,7 @@ export function createPanel(
     const reach = reachOf(frame.height, foot - frame.y);
     bar?.down();
     bar = scrollbarOf(scene, on, name, frame, reach);
+    bar?.show(shown);
     root.setData('overflow', reach);
     scroll.reach(reach);
     bar?.stand(scroll.offset);
@@ -375,6 +379,18 @@ export function createPanel(
     under(over) {
       return over.includes(zone);
     },
+    show(on) {
+      shown = on;
+      root.setVisible(on);
+      zone.setVisible(on);
+      bar?.show(on);
+      if (on) {
+        moved = true;
+        return;
+      }
+      scroll.stand(scroll.offset);
+      point(undefined);
+    },
     down() {
       point(undefined);
       stopStepping();
@@ -389,7 +405,7 @@ export function createPanel(
 }
 
 /** A panel's scrollbar, its thumb standing where an offset puts it. */
-type Scrollbar = { stand(offset: number): void; down(): void };
+type Scrollbar = { stand(offset: number): void; show(on: boolean): void; down(): void };
 
 /**
  * The scrollbar down the right edge of a panel's frame over a scroll reaching this far, drawn over
@@ -420,6 +436,10 @@ function scrollbarOf(
   return {
     stand(offset) {
       thumb.setY(thumbAt.top(offset));
+    },
+    show(on) {
+      track.setVisible(on);
+      thumb.setVisible(on);
     },
     down() {
       track.destroy();

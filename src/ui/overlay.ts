@@ -24,7 +24,7 @@ import {
 } from './answer-plate';
 import { balancedWrap } from './balanced-wrap';
 import { type Bind, boundTo } from './bindings';
-import { countedStackOf, standBrowser, WINDOW_RIBBON } from './browse';
+import { countedStackOf, type SetAside, standBrowser, WINDOW_RIBBON } from './browse';
 import { CARD_HEIGHT, createCardFace, type Name } from './card-face';
 import { CARD_WIDTH } from './card-frames';
 import { EASE, ended } from './card-motion';
@@ -154,16 +154,15 @@ type Browsing = { readonly stands: 'browse' };
 
 /**
  * The deal window on the scrim: the chronicle whose first deal it stands, which its answers read
- * their numbers and their refusal off, whether it has risen whole, whether it stands minimized, and
- * how far its row stood scrolled as it was. It closes on the take alone.
+ * their numbers and their refusal off, whether it has risen whole, and the window set aside while it
+ * stands minimized. It closes on the take alone.
  */
 type Dealing = {
   readonly stands: 'deal';
   readonly on: Chronicle;
   readonly deal: Deal;
   whole: boolean;
-  minimized: boolean;
-  scrolled: number;
+  minimized: SetAside | undefined;
 };
 
 /**
@@ -382,15 +381,14 @@ export function createOverlay({
   });
 
   /**
-   * A window laid from its title down, scrolled `offset` far: its title on the kit's ribbon, its lore,
-   * then what `body` lays from the top it is handed, the deal row's under the lore; the lore stands
-   * over what scrolls under it. Answers the panel, and the box the ribbon is painted on.
+   * A window laid from its title down: its title on the kit's ribbon, its lore, then what `body`
+   * lays from the top it is handed, the deal row's under the lore; the lore stands over what scrolls
+   * under it. Answers the panel, and the box the ribbon is painted on.
    */
   const layWindow = (
     name: string,
     { heading, lore }: Titled,
     body: (top: number) => Filled,
-    offset?: number,
   ): { readonly panel: Panel; readonly ribbon: () => Box } => {
     const { foot: ribbonFoot, ribbon } = browser
       .raiseTitle(name, heading)
@@ -409,7 +407,6 @@ export function createOverlay({
     const panel = browser.lay({
       name,
       top: ribbonFoot + MARGIN,
-      offset,
       ...body(told.y + told.height + ROW_UNDER_LORE),
     });
     carries(
@@ -557,38 +554,34 @@ export function createOverlay({
   };
 
   /**
-   * The deal window raised, rising out of nothing until it has stood whole once, taking a left click
-   * on an entry and on its Minimize button once it stands whole. It closes on the take alone, and the
-   * landing plays out under the caller.
+   * The deal window raised, rising out of nothing, taking a left click on an entry and on its Minimize
+   * button once it stands whole. It closes on the take alone, and the landing plays out under the
+   * caller.
    */
   const showDeal = (dealing: Dealing): void => {
     raiseOnScrim(dealing);
     standingDeal = dealing;
 
     const { entries, ...titled } = dealt(catalogue, dealing.on, dealing.deal);
-    const { panel, ribbon } = layWindow(
-      'deal',
-      titled,
-      (top) =>
-        rowsOf(
-          'deal',
-          entries,
-          top,
-          ({ costs, refusal, own, at }) => {
-            if (!playable(refusal)) {
-              const { x, y, width } = own;
-              const { across, offset } = panel;
-              browser.tooltip.hide();
-              note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
-              return;
-            }
-            standingDeal = undefined;
-            close();
-            take(at);
-          },
-          () => dealing.whole,
-        ),
-      dealing.scrolled,
+    const { panel, ribbon } = layWindow('deal', titled, (top) =>
+      rowsOf(
+        'deal',
+        entries,
+        top,
+        ({ costs, refusal, own, at }) => {
+          if (!playable(refusal)) {
+            const { x, y, width } = own;
+            const { across, offset } = panel;
+            browser.tooltip.hide();
+            note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
+            return;
+          }
+          standingDeal = undefined;
+          close();
+          take(at);
+        },
+        () => dealing.whole,
+      ),
     );
     const button = createMinimizeButton(
       scene,
@@ -596,30 +589,31 @@ export function createOverlay({
       browser.tooltip,
       { name: 'deal-minimize', ribbon, sunk: false, live: () => dealing.whole },
       () => {
-        dealing.minimized = true;
-        dealing.scrolled = panel.offset;
         browser.tooltip.hide();
-        close();
+        dealing.minimized = browser.setAside();
+        carried = undefined;
         minimizedDeal.show(titled.heading);
         minimizing.switched();
       },
     );
     carries(button.face);
     carries(button.sign);
-    if (!dealing.whole) {
-      void riseWhole(dealing).then(() => {
-        button.dress();
-      });
-    }
+    void riseWhole(dealing).then(() => {
+      button.dress();
+    });
   };
 
   const bringBack = (): void => {
     const dealing = standingDeal;
-    if (dealing?.minimized !== true) throw new Error('no deal window stands minimized');
-    dealing.minimized = false;
+    const aside = dealing?.minimized;
+    if (dealing === undefined || aside === undefined) {
+      throw new Error('no deal window stands minimized');
+    }
+    dealing.minimized = undefined;
     minimizedDeal.hide();
     minimizing.switched();
-    showDeal(dealing);
+    carried = dealing;
+    aside.standAgain();
   };
 
   const minimizedDeal = createMinimized(
@@ -686,8 +680,7 @@ export function createOverlay({
         on: chronicle,
         deal: chronicle.deals[0],
         whole: false,
-        minimized: false,
-        scrolled: 0,
+        minimized: undefined,
       });
     else endingScreen.stand();
   };
@@ -755,7 +748,7 @@ export function createOverlay({
       showCapstone({ stands: 'capstone', on: chronicle, raised: 'asked' });
     },
     minimized(): boolean {
-      return standingDeal?.minimized === true;
+      return standingDeal?.minimized !== undefined;
     },
     bringBack,
     render(chronicle: Chronicle): void {
