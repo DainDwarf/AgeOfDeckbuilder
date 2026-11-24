@@ -52,31 +52,42 @@ export type PathView = {
   readonly number: Phaser.GameObjects.Text;
 };
 
-// A Graphics strokes 2 units wide or less without joins or caps (docs/PHASER.md): the chevron's and
-// the arrow's round ends and round joins are a canvas's.
-/**
- * Strokes what is traced on the context as the path's chevrons are stroked: the map's dark outline
- * under a line in that colour, round at its ends and joins, in one stroke each.
- */
-function strokedAsPath(
+/** One stroke of a line: how wide, in the context's units, its colour and its strength. */
+export type Stroke = { readonly width: number; readonly colour: number; readonly strength: number };
+
+// A Graphics strokes 2 units wide or less without joins or caps (docs/PHASER.md): a round end or
+// join is a canvas's.
+/** Strokes what is traced on the context in each stroke in turn, round at its ends and joins. */
+export function strokedRound(
   context: CanvasRenderingContext2D,
   trace: (context: CanvasRenderingContext2D) => void,
-  colour: number,
+  strokes: readonly Stroke[],
 ): void {
   context.lineCap = 'round';
   context.lineJoin = 'round';
   context.beginPath();
   trace(context);
-  const strokes = [
-    { width: EDGE, colour: LOOK.mapOutline, strength: LOOK.pathEdge },
-    { width: LINE, colour, strength: LOOK.pathChevron },
-  ];
   for (const { width, colour, strength } of strokes) {
     context.lineWidth = width;
     context.strokeStyle = css(colour);
     context.globalAlpha = strength;
     context.stroke();
   }
+}
+
+/**
+ * Strokes what is traced on the context as the path's chevrons are stroked: the map's dark outline
+ * under a line in that colour.
+ */
+function strokedAsPath(
+  context: CanvasRenderingContext2D,
+  trace: (context: CanvasRenderingContext2D) => void,
+  colour: number,
+): void {
+  strokedRound(context, trace, [
+    { width: EDGE, colour: LOOK.mapOutline, strength: LOOK.pathEdge },
+    { width: LINE, colour, strength: LOOK.pathChevron },
+  ]);
 }
 
 /** A chevron's arms, pointing along x, its point at that x on the axis. */

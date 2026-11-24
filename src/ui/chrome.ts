@@ -246,6 +246,22 @@ export function veilOver(
   return veil.setRounded(corner).setSize(box.width, box.height).setPosition(box.x, box.y);
 }
 
+/**
+ * The veil laid over a row of a strip against the screen's left edge, from past the edge to the row's
+ * right end, `width` from the edge and `height` tall, its corners the strip's.
+ */
+export function veilOverStripRow(
+  veil: Phaser.GameObjects.Rectangle,
+  width: number,
+  height: number,
+): Phaser.GameObjects.Rectangle {
+  return veilOver(
+    veil,
+    { x: -PAST_THE_EDGE, y: 0, width: width + PAST_THE_EDGE, height },
+    PANEL.corner * PANEL_RIMS.strip,
+  );
+}
+
 /** A well a press lands on: its face, and the veil it wears under the pointer. */
 export type PressableWell = {
   readonly face: Phaser.GameObjects.NineSlice;

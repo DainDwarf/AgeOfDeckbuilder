@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CENTRE, type Tile, type TileCoords } from '../rules/map';
+import { atWallClock } from './animation-speed';
 import { trayNow } from './band';
 import { boundTo, type Control, type Press, pressOf } from './bindings';
 import { EASE, ended } from './card-motion';
@@ -31,7 +32,7 @@ const KEPT = 360;
 /** How far clear of every border a tile a stage plays on is brought, in design pixels. */
 const CLEARANCE = 24;
 
-/** How long the pan that brings a stage into the frame lasts, however far it has to go. */
+/** How long a pan of the frame's own lasts, however far it has to go. */
 const HOLD_LEAST = 200;
 const HOLD_MOST = 600;
 
@@ -84,6 +85,12 @@ export type MapCamera = {
    * it runs, and the two fight until the pan ends.
    */
   hold(tiles: readonly TileCoords[]): Promise<void> | undefined;
+  /**
+   * Pans the frame, its zoom standing, to hold the tiles' middle in its own or as near as the bounds
+   * let it, at `hold`'s pace whatever speed the motions play at, over the last such pan; nothing
+   * while the hand moves no map. A drag or a held key fights it as it fights `hold`.
+   */
+  centreOn(tiles: readonly TileCoords[]): void;
   /**
    * A zone over the whole screen the camera draws, under everything the UI draws: it takes every
    * press the UI does not. It is framed in map space, so it is re-cut on every pan and every zoom.
@@ -139,6 +146,15 @@ export function createMapCamera(
     return Math.min(Math.max(at, near + keep - span / 2), far - keep + span / 2);
   };
 
+  /** The middle the frame may hold nearest that one, at the zoom it stands at. */
+  const keptNear = (at: { x: number; y: number }): { x: number; y: number } => {
+    const { mapFrame: frame } = trayNow();
+    return {
+      x: bounded(at.x, box.left, box.right, frame.width / zoom),
+      y: bounded(at.y, box.top, box.bottom, frame.height / zoom),
+    };
+  };
+
   // `centre` is what stands at the middle of the frame, and the camera centres on the middle of its
   // viewport, the whole screen: the two middles are told apart here alone.
   const place = (): void => {
@@ -150,9 +166,9 @@ export function createMapCamera(
     // camera is cut here or not at all.
     camera.setViewport(screen.x, screen.y, screen.width, screen.height);
     camera.setZoom(factor * zoom);
-    const span = { x: frame.width / zoom, y: frame.height / zoom };
-    centre.x = bounded(centre.x, box.left, box.right, span.x);
-    centre.y = bounded(centre.y, box.top, box.bottom, span.y);
+    const kept = keptNear(centre);
+    centre.x = kept.x;
+    centre.y = kept.y;
     const topLeft = {
       x: centre.x - (frame.x + frame.width / 2) / zoom,
       y: centre.y - (frame.y + frame.height / 2) / zoom,
@@ -184,6 +200,24 @@ export function createMapCamera(
     if (hi - lo > 2 * room) return (lo + hi) / 2;
     return Math.min(Math.max(at, hi - room), lo + room);
   };
+
+  /** The frame's middle carried to that one, its zoom standing; no pan where it stands there. */
+  const panTo = (to: { x: number; y: number }): Phaser.Tweens.Tween | undefined => {
+    const away = Math.hypot(to.x - centre.x, to.y - centre.y) * zoom;
+    if (away === 0) return undefined;
+    const moving = { x: centre.x, y: centre.y };
+    return scene.tweens.add({
+      targets: moving,
+      x: to.x,
+      y: to.y,
+      duration: Math.min(Math.max((away / PAN_SPEED) * 1000, HOLD_LEAST), HOLD_MOST),
+      ease: EASE,
+      onUpdate: () => moveTo(moving.x, moving.y, zoom),
+    });
+  };
+
+  /** The pan `centreOn` runs, while it may still be running. */
+  let centring: Phaser.Tweens.Tween | undefined;
 
   const zoomBy = (notches: number): void => {
     if (!taking) return;
@@ -225,20 +259,23 @@ export function createMapCamera(
         x: holding(centre.x, Math.min(...xs), Math.max(...xs), frame.width / zoom),
         y: holding(centre.y, Math.min(...ys), Math.max(...ys), frame.height / zoom),
       };
-      const away = Math.hypot(to.x - centre.x, to.y - centre.y) * zoom;
-      if (away === 0) return undefined;
+      const pan = panTo(to);
+      return pan === undefined ? undefined : ended(pan);
+    },
 
-      const moving = { x: centre.x, y: centre.y };
-      return ended(
-        scene.tweens.add({
-          targets: moving,
-          x: to.x,
-          y: to.y,
-          duration: Math.min(Math.max((away / PAN_SPEED) * 1000, HOLD_LEAST), HOLD_MOST),
-          ease: EASE,
-          onUpdate: () => moveTo(moving.x, moving.y, zoom),
+    centreOn(tiles: readonly TileCoords[]): void {
+      if (!taking) return;
+      const at = tiles.map(positionOf);
+      const xs = at.map((point) => point.x);
+      const ys = at.map((point) => point.y);
+      centring?.stop();
+      const pan = panTo(
+        keptNear({
+          x: (Math.min(...xs) + Math.max(...xs)) / 2,
+          y: (Math.min(...ys) + Math.max(...ys)) / 2,
         }),
       );
+      centring = pan === undefined ? undefined : atWallClock(scene, pan);
     },
 
     catcherZone(name: string): Phaser.GameObjects.Zone {

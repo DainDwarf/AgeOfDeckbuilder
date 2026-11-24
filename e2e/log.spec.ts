@@ -1,15 +1,18 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { type Campaign, learnedInto, openingChoices } from '../src/rules/campaign';
-import { entered } from '../src/rules/catalogue';
-import { apply } from '../src/rules/chronicle';
+import { aimOf, gained } from '../src/rules/cards';
+import { cardOf, entered } from '../src/rules/catalogue';
+import { apply, outcome } from '../src/rules/chronicle';
 import { neighbours, type TileCoords, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
+import { addedToDrawPileTop } from '../src/rules/schedule';
 import { inSight } from '../src/rules/sight';
 import { type Group, walked } from '../src/rules/stages';
 import type { Chronicle } from '../src/rules/state';
 import { unitAt, unitOf } from '../src/rules/units';
 import { withAge } from '../src/ui/launch-layout';
+import { LOOK } from '../src/ui/look';
 import { text, unitName } from '../src/ui/text';
 import {
   learnedWithNeeds,
@@ -17,13 +20,21 @@ import {
   technologiesReaching,
 } from '../tools/learned-with-needs';
 import {
+  aimed,
+  aimLine,
+  chronicleOf,
   click,
+  cursorOverCanvas,
   endTurn,
   enemyBesideCity,
   enemyEnteredOn,
   firstSeed,
+  inHand,
   type LogEntry,
+  logLineNamed,
+  logPointed,
   logRead,
+  mapFrame,
   neutralInFog,
   offsetOf,
   onScreen,
@@ -31,12 +42,14 @@ import {
   pieceOnScreen,
   pieceOnScreenOf,
   playerCityTile,
+  type RingShown,
   readings,
   rested,
   settledOn,
   squeezed,
   standing,
   tileOnScreen,
+  tilePlayable,
   tooltipLines,
   tooltipUp,
   WARRIOR,
@@ -95,9 +108,12 @@ function attackReadings(attack: Attack): { both: string; all: string[] } {
 
 /**
  * The first seed's turn 1 with a warrior of the player's on the city's tile and an enemy beside it,
- * whose end of turn makes an attack the map plays on both its tiles; the attack.
+ * as `prepared` leaves it, whose end of turn makes an attack the map plays on both its tiles; the
+ * attack.
  */
-function besetInSight(): { chronicle: Chronicle; attack: Attack } {
+function besetInSight(
+  prepared: (chronicle: Chronicle) => Chronicle | undefined = (chronicle) => chronicle,
+): { chronicle: Chronicle; attack: Attack } {
   return firstSeed('makes an attack in sight at the end of its turn 1', (seed) => {
     const settled = settledOn(seed);
     const guarded = entered(CATALOGUE, settled, {
@@ -106,12 +122,63 @@ function besetInSight(): { chronicle: Chronicle; attack: Attack } {
       tile: playerCityTile(settled),
     }).chronicle;
     const beset = enemyBesideCity(guarded);
-    if (beset === undefined) return undefined;
-    const attack = attacksAtTheEndOfTurn(beset.chronicle).find(
+    const chronicle = beset === undefined ? undefined : prepared(beset.chronicle);
+    if (chronicle === undefined) return undefined;
+    const attack = attacksAtTheEndOfTurn(chronicle).find(
       (each) => seenAt(each, each.attacker) && seenAt(each, each.target),
     );
-    return attack === undefined ? undefined : { chronicle: beset.chronicle, attack };
+    return attack === undefined ? undefined : { chronicle, attack };
   });
+}
+
+/**
+ * The chronicle with the first card of the catalogue aimed at a tile added to its draw pile's top and
+ * its cost gained, where the hand its end of turn draws holds a card aimed at a tile the city can pay
+ * for; nothing where it does not.
+ */
+function drawingAimable(chronicle: Chronicle): Chronicle | undefined {
+  const id = Object.keys(CATALOGUE.cards).find(
+    (each) => aimOf(cardOf(CATALOGUE, each)).aim === 'tile',
+  );
+  if (id === undefined) throw new Error('the catalogue holds no card aimed at a tile');
+  const added = addedToDrawPileTop(CATALOGUE, chronicle, id).chronicle;
+  const paid = gained(added, cardOf(CATALOGUE, id).cost).chronicle;
+  const drawn = outcome(apply(CATALOGUE, paid, { type: 'end-turn' }));
+  return inHand(drawn, tilePlayable) === -1 ? undefined : paid;
+}
+
+/** The attack's two tiles, each with the log's ring of the faction of the unit standing there as it is made. */
+function ringsOf(attack: Attack): RingShown[] {
+  return [attack.attacker, attack.target]
+    .map((tile) => {
+      const unit = unitAt(attack.before.units, tile);
+      if (unit === undefined) throw new Error(`the attack names no unit on ${tileKey(tile)}`);
+      return { tile: tileKey(tile), colour: LOOK.logRing[unit.faction] };
+    })
+    .sort((one, other) => one.tile.localeCompare(other.tile));
+}
+
+/** Where the middle of the tiles' faces stands on the page, and what a unit of the map measures there. */
+async function middleOnScreen(
+  page: Page,
+  tiles: readonly TileCoords[],
+): Promise<{ x: number; y: number; unit: number }> {
+  const names = tiles.map((tile) => `tile-${tileKey(tile)}`);
+  const seen = await readings(page, names);
+  const at = names.map((name) => seen(name).onScreen);
+  const across = (axis: 'x' | 'y'): number =>
+    (Math.min(...at.map((each) => each[axis])) + Math.max(...at.map((each) => each[axis]))) / 2;
+  return { x: across('x'), y: across('y'), unit: at[0].unit };
+}
+
+/** How far the middle of the tiles stands from the middle of the map's frame, on the page. */
+async function offTheFrameMiddle(page: Page, tiles: readonly TileCoords[]): Promise<number> {
+  const frame = await mapFrame(page);
+  const middle = await middleOnScreen(page, tiles);
+  return Math.hypot(
+    middle.x - (frame.x + frame.width / 2),
+    middle.y - (frame.y + frame.height / 2),
+  );
 }
 
 /**
@@ -177,6 +244,69 @@ test('a fight in the fog at the end of turn lands no line', async ({ page }) => 
   const read = await logRead(page);
   expect(read.length).toBeGreaterThan(0);
   expect(read.filter((entry) => 'line' in entry && all.includes(entry.line))).toEqual([]);
+
+  expect(problems).toEqual([]);
+});
+
+test('the pointer on the line of an attack in sight lights it under a hand and rings the attacker’s tile and the attacked unit’s, each in the log’s ring of its unit’s faction, off the log nothing is lit or ringed, and a left click on it centres the map on the two tiles, its zoom standing; the Income line lights, rings and pans nothing', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const { chronicle, attack } = besetInSight();
+  const line = attackReadings(attack).both;
+  const tiles = [attack.attacker, attack.target];
+
+  await openSaved(page, chronicle);
+  await endTurn(page);
+  const income = (await logRead(page)).flatMap((entry) =>
+    'line' in entry && entry.line.startsWith(squeezed(text('log.income'))) ? [entry.line] : [],
+  );
+  expect(income).toHaveLength(1);
+
+  const stood = await middleOnScreen(page, tiles);
+  const onIncome = await onScreen(page, await logLineNamed(page, income[0]));
+  await page.mouse.move(onIncome.x, onIncome.y);
+  await rested(page);
+  expect(await logPointed(page)).toEqual({ lit: [], rings: [] });
+  expect(await cursorOverCanvas(page)).toBe('');
+  await page.mouse.click(onIncome.x, onIncome.y);
+  await rested(page);
+  expect(await middleOnScreen(page, tiles)).toEqual(stood);
+
+  const onLine = await onScreen(page, await logLineNamed(page, line));
+  await page.mouse.move(onLine.x, onLine.y);
+  await rested(page);
+  expect(await logPointed(page)).toEqual({ lit: [line], rings: ringsOf(attack) });
+  expect(await cursorOverCanvas(page)).toBe('pointer');
+
+  const frame = await mapFrame(page);
+  await page.mouse.move(frame.x + frame.width / 2, frame.y + frame.height / 2);
+  await rested(page);
+  expect(await logPointed(page)).toEqual({ lit: [], rings: [] });
+
+  expect(await offTheFrameMiddle(page, tiles)).toBeGreaterThan(stood.unit);
+  await page.mouse.click(onLine.x, onLine.y);
+  await expect.poll(() => offTheFrameMiddle(page, tiles)).toBeLessThan(stood.unit / 10);
+  expect((await middleOnScreen(page, tiles)).unit).toBe(stood.unit);
+
+  expect(problems).toEqual([]);
+});
+
+test('a left click on the line of an attack lets go of the card being aimed', async ({ page }) => {
+  const problems = watch(page);
+  const { chronicle, attack } = besetInSight(drawingAimable);
+  const line = attackReadings(attack).both;
+
+  await openSaved(page, chronicle);
+  await endTurn(page);
+  const card = await onScreen(page, `hand-${inHand(await chronicleOf(page), tilePlayable)}`);
+  await page.mouse.click(card.x, card.y);
+  await aimed(page);
+
+  const onLine = await onScreen(page, await logLineNamed(page, line));
+  await page.mouse.click(onLine.x, onLine.y);
+  await expect.poll(() => standing(page, 'aim')).toBe(false);
+  expect(await aimLine(page)).toBeUndefined();
 
   expect(problems).toEqual([]);
 });

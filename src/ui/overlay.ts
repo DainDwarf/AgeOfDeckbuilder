@@ -15,6 +15,7 @@ import {
   playable,
   type Refusal,
 } from '../rules/state';
+import { atWallClock } from './animation-speed';
 import {
   ANSWER_WIDTH,
   type AnswerPlate,
@@ -539,15 +540,15 @@ export function createOverlay({
    */
   const riseWhole = (dealing: Dealing): Promise<void> => {
     const { layer } = scene.strata.scrim;
-    const fade = scene.tweens.add({
-      targets: layer.setAlpha(0),
-      alpha: 1,
-      duration: 1000 / 3,
-      ease: EASE,
-    });
-    // The overlay's tweens play at the animation speed (`chronicleScreenAtSpeed`), and the beat is
-    // the wall clock's.
-    fade.setTimeScale(1 / scene.tweens.timeScale);
+    const fade = atWallClock(
+      scene,
+      scene.tweens.add({
+        targets: layer.setAlpha(0),
+        alpha: 1,
+        duration: 1000 / 3,
+        ease: EASE,
+      }),
+    );
     return ended(fade).then(() => {
       dealing.whole = true;
     });

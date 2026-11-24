@@ -74,6 +74,7 @@ import {
 } from './design-space';
 import { glyphMark } from './glyphs';
 import { type HealthBar, healthBarOf } from './health-bar';
+import { createLogRings, type Ringed } from './log-rings';
 import { LOOK } from './look';
 import {
   createBorder,
@@ -311,6 +312,10 @@ export type MapView = {
   reckons(on: boolean): void;
   /** Notches of zoom, in above zero, about the pointer. */
   zoom(notches: number): void;
+  /** Each tile handed wearing the log's ring of its faction, in place of those worn before. */
+  ringLogged(rings: readonly Ringed[]): void;
+  /** The map panned, its zoom standing, to centre these tiles in its frame, where the hand moves it. */
+  centreOn(tiles: readonly TileCoords[]): void;
 };
 
 /** Whether the map shows the discs of every tile's row, the faction signs and the hex grid. */
@@ -434,6 +439,7 @@ export function createMapView(
   const selected = group(strata.selection, 'selected');
   const pathGroup = group(strata.selection, 'path');
   const path = createPath(scene, pathGroup);
+  const logRings = createLogRings(scene, group(strata.selection, 'log-rings'));
   const marks = group(strata.units, 'units');
   // A Layer's alpha fades each child apart (`LayerWebGLRenderer.js:96`), one part showing through
   // another; its filter camera's alpha fades what it composites whole (`renderNodes/Camera.js:312`).
@@ -1510,6 +1516,10 @@ export function createMapView(
     },
 
     zoom: frame.zoomBy,
+
+    ringLogged: logRings,
+
+    centreOn: frame.centreOn,
 
     render,
 

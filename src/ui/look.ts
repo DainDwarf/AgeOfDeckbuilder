@@ -1,4 +1,5 @@
 import type { Resource } from '../rules/resources';
+import type { Faction } from '../rules/units';
 import type { BadgeStat, FrontColour } from './face';
 
 /**
@@ -58,6 +59,10 @@ export type Look = {
   /** The strength the hex grid's line rests at, and the dark edge under it. */
   readonly hexGridLine: number;
   readonly hexGridEdge: number;
+  /** The log's ring of each faction: the line round a tile a line of the log under the pointer reads. */
+  readonly logRing: Readonly<Record<Faction, number>>;
+  /** The strength the dark edge under the log's ring rests at. */
+  readonly logRingEdge: number;
   readonly pin: number;
   /** The dark line on each side of a pinned plate's edge. */
   readonly pinEdge: number;
@@ -255,6 +260,8 @@ export const LOOK: Look = {
   pathEdge: 0.63,
   hexGridLine: 0.7,
   hexGridEdge: 0.7,
+  logRing: { player: 0xf0b94e, enemy: 0xe8564a, neutral: 0x5b93d6 },
+  logRingEdge: 0.8,
   pin: 0xf2f6ff,
   pinEdge: 0x0d1014,
   pinMark: 0xb4453c,

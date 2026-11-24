@@ -40,6 +40,7 @@ const ORDER = [
   'selected',
   'aim-lit',
   'path',
+  'log-rings',
   'units',
   'city-badges',
   'yield-patches',

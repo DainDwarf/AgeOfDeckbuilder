@@ -4,10 +4,12 @@ import type { Chronicle } from '../rules/state';
 import { trayNow } from './band';
 import {
   createChromePanel,
+  createVeil,
   PANEL_RIMS,
   PAST_THE_EDGE,
   standChromePanel,
   takesThePointer,
+  veilOverStripRow,
 } from './chrome';
 import {
   addText,
@@ -28,12 +30,13 @@ import {
   logReaders,
   type Moved,
   type Named,
+  namedIn,
   type Removed,
 } from './log-lines';
 import { css, LOOK } from './look';
+import type { MapView } from './map';
 import { asFactionDisc, UNDARKENED, unitDiscMarker } from './map-marks';
-import type { SightOn } from './map-motion';
-import { createPanel, type Panel } from './panel';
+import { createPanel, type Held, type Panel } from './panel';
 import { LEDGER, LOG } from './pinned-layout';
 import { type Pool, poolOf, rootedPoolOf } from './pool';
 import { signedCount } from './resource-bar';
@@ -88,9 +91,10 @@ type Laid =
 /** A line laid: its parts, and how many rows it takes. */
 type LaidLine = { readonly parts: readonly Laid[]; readonly rows: number };
 
-/** What draws one line, its parts each from a pool of their kind. */
+/** What draws one line, its parts each from a pool of their kind, over the veil it wears lit. */
 type LineMarks = {
   readonly root: Phaser.GameObjects.Container;
+  readonly veil: Phaser.GameObjects.Rectangle;
   readonly words: Pool<Phaser.GameObjects.Text>;
   readonly names: Pool<Phaser.GameObjects.Text>;
   readonly numbers: Pool<Phaser.GameObjects.Text>;
@@ -110,9 +114,9 @@ export type Log = {
 };
 
 /**
- * The log against the screen's left edge under the ledger, reading in sentences what the chronicle
- * did where `sightOn` says the map plays it, each line under its turn's heading, as tall as its lines
- * down to just over the resting cards and scrolling past that; standing only while it holds a line.
+ * The log under the ledger, reading in sentences what the chronicle did where the map plays it, a
+ * turn's lines under its heading, standing only while it holds one; a line naming a unit is lit under
+ * the pointer, its tiles ringed on the map, and a left click on it centres the map on them.
  */
 export function createLog(
   scene: Phaser.Scene,
@@ -120,12 +124,12 @@ export function createLog(
   {
     tooltip,
     unaim,
-    sightOn,
+    map,
   }: {
     tooltip: Tooltip;
     /** Whatever is being aimed let go, as a left click on a thing lets it go. */
     unaim: () => void;
-    sightOn: (chronicle: Chronicle, standing?: Chronicle) => SightOn;
+    map: Pick<MapView, 'sightOn' | 'ringLogged' | 'centreOn'>;
   },
 ): Log {
   const tab = createFoldTab(scene, on, {
@@ -169,11 +173,14 @@ export function createLog(
   );
   let made = 0;
   const linePool = rootedPoolOf(held, (): LineMarks => {
-    const root = scene.add.container(0, 0).setName(`log-line-${made++}`);
+    const name = `log-line-${made++}`;
+    const veil = createVeil(scene, `${name}-veil`);
+    const root = scene.add.container(0, 0, [veil]).setName(name);
     const texts = (style: SizedStyle): Pool<Phaser.GameObjects.Text> =>
       poolOf(root, () => addText(scene, 0, 0, '', style).setOrigin(0, 0.5));
     return {
       root,
+      veil,
       words: texts(WORDS_STYLE),
       names: texts(NAME_STYLE),
       numbers: texts(WORDS_STYLE),
@@ -190,6 +197,33 @@ export function createLog(
   /** The stages of the play-out heard last that have played. */
   let played = new Set<Stage>();
   const laidLines = new WeakMap<LogReading, LaidLine>();
+  /** Each line drawn as last laid, and the marks drawing it. */
+  let drawn: { readonly marks: LineMarks; readonly reads: LogReading }[] = [];
+  /** The line under the pointer, lit, and nothing while the pointer is on none that reacts. */
+  let lit: LogReading | undefined;
+
+  /** The line lit in place of the one lit before, its tiles ringed on the map; nothing lights none. */
+  const light = (reading: LogReading | undefined): void => {
+    if (reading === lit) return;
+    lit = reading;
+    for (const { marks, reads } of drawn) marks.veil.setVisible(reads === reading);
+    map.ringLogged(reading === undefined ? [] : namedIn(reading));
+  };
+
+  /** What of the log reacts to the pointer for a line naming a unit, laid that high and that many rows tall. */
+  const heldOf = (reading: LogReading, top: number, rows: number): Held => ({
+    box: { x: 0, y: top, width: LEDGER.width, height: rows * ROW },
+    reactions: {
+      point(at) {
+        light(at === undefined ? undefined : reading);
+      },
+      rests: () => false,
+      inspect: () => {},
+    },
+    press: () => {
+      map.centreOn(namedIn(reading).map(({ tile }) => tile));
+    },
+  });
 
   const widthOfToken = (token: Token): number => {
     switch (token.kind) {
@@ -280,6 +314,7 @@ export function createLog(
         }
       }
     }
+    veilOverStripRow(marks.veil, LEDGER.width, rows * ROW).setVisible(reading === lit);
     return rows;
   };
 
@@ -293,11 +328,19 @@ export function createLog(
 
     headingPool.hide();
     linePool.hide();
+    drawn = [];
+    const reacting: Held[] = [];
     let top = LOG.top + PAD.y;
     for (const { turn, lines } of turns) {
       standText(headingPool.take(), text('chronicle.turn', { turn }), PAD.x, top + ROW / 2);
       top += ROW;
-      for (const line of lines) top += ROW * drawLine(linePool.take(), line, top);
+      for (const line of lines) {
+        const marks = linePool.take();
+        const rows = drawLine(marks, line, top);
+        drawn.push({ marks, reads: line });
+        if (namedIn(line).length > 0) reacting.push(heldOf(line, top, rows));
+        top += ROW * rows;
+      }
     }
     const rowsTop = LOG.top + PAD.y;
     const room = Math.floor((trayNow().overTheHand - rowsTop - PAD.y) / ROW) * ROW;
@@ -309,7 +352,12 @@ export function createLog(
       height,
     });
     // Cut inside the padding, so a log scrolled anywhere shows whole rows.
-    panel.place({ x: 0, y: rowsTop, width: LEDGER.width, height: height - 2 * PAD.y }, 0, top);
+    panel.place(
+      { x: 0, y: rowsTop, width: LEDGER.width, height: height - 2 * PAD.y },
+      0,
+      top,
+      reacting,
+    );
     tab.lay(LOG.top, undefined);
   };
   onResize(scene, lay);
@@ -342,7 +390,7 @@ export function createLog(
     play(stage) {
       played.add(stage);
       const reader = readers.get(stage);
-      const reads = reader?.read(sightOn(stage.chronicle));
+      const reads = reader?.read(map.sightOn(stage.chronicle));
       if (reader !== undefined && reads !== undefined) land([{ turn: reader.turn, reads }]);
       return undefined;
     },
@@ -351,7 +399,7 @@ export function createLog(
       played = new Set();
     },
     cutShort() {
-      land(linesSkipped(readers, played, (stage) => sightOn(stage.chronicle, stage.before)));
+      land(linesSkipped(readers, played, (stage) => map.sightOn(stage.chronicle, stage.before)));
       readers = new Map();
     },
     scrolls: {

@@ -189,9 +189,9 @@ export type Panel = {
   readonly across: number;
   /**
    * Cut at another frame, what it holds standing `across` from where it was laid, its last line ending
-   * at `foot` where it is handed one.
+   * at `foot` and the things in it that react being `held` where it is handed them.
    */
-  place(frame: Box, across: number, foot?: number): void;
+  place(frame: Box, across: number, foot?: number, held?: readonly Held[]): void;
   /** Stands at its last line, a fling running on it stopped. */
   toFoot(): void;
   /**
@@ -220,11 +220,12 @@ export type Panel = {
  */
 export function createPanel(
   { scene, on, follow, carrier }: Surface,
-  { name, frame: laidIn, parts, held, foot: laidTo, beside }: PanelOf,
+  { name, frame: laidIn, parts, held: laidHeld, foot: laidTo, beside }: PanelOf,
   offset = 0,
 ): Panel {
   let frame = laidIn;
   let foot = laidTo;
+  let held = laidHeld;
   const root = scene.add.container(0, 0, [...parts]).setName(name);
   on.layer.add(root);
   // Off every display list, or it paints; the mask's destroy leaves it standing (docs/PHASER.md).
@@ -363,8 +364,9 @@ export function createPanel(
     get across() {
       return root.x;
     },
-    place(at, across, to = foot) {
+    place(at, across, to = foot, holding = held) {
       foot = to;
+      held = holding;
       root.setX(across);
       cut(at);
     },

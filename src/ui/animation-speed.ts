@@ -41,6 +41,11 @@ export function chronicleScreenAtSpeed(scenes: Phaser.Scenes.SceneManager): void
   }
 }
 
+/** The tween played at the wall clock's pace, whatever speed its scene's tweens are set to. */
+export function atWallClock(scene: Phaser.Scene, tween: Phaser.Tweens.Tween): Phaser.Tweens.Tween {
+  return tween.setTimeScale(1 / scene.tweens.timeScale);
+}
+
 /** The speed moved on and kept, and taken at once by a chronicle screen standing. */
 export function pressAnimationSpeed(scenes: Phaser.Scenes.SceneManager): void {
   speedSet = speedAfter(animationSpeed());

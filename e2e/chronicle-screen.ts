@@ -3655,14 +3655,28 @@ export function squeezed(entry: string): string {
   return entry.replace(/\s+/g, '');
 }
 
+/** An entry of the log as it stands: a heading, or a line with the name of what draws it and whether it is lit. */
+type LogShownEntry =
+  | { readonly heading: string }
+  | { readonly line: string; readonly name: string; readonly lit: boolean };
+
 /**
- * What the log holds, top down, and nothing where it stands none: each heading, and each line's words
- * row by row, left to right on each, their spaces left out, the log laying a space as a gap.
+ * What the log holds, top down, nothing where it stands none, and each ring of the log's the map
+ * shows: each heading, and each line's words row by row, left to right on each, their spaces left
+ * out, the log laying a space as a gap; each ring by its tile's key, in key order, and its line's tint.
  */
-export function logRead(page: Page): Promise<LogEntry[]> {
+function logShown(page: Page): Promise<{ entries: LogShownEntry[]; rings: RingShown[] }> {
   return page.evaluate(() => {
+    // A ring is a container carrying its tile's key around its dark edge and its line, which the
+    // tint colours.
+    const rings = ((window.shownIn?.('log-rings') ?? []) as Phaser.GameObjects.Container[])
+      .map((ring) => ({
+        tile: ring.getData('tile') as string,
+        colour: (ring.list[1] as Phaser.GameObjects.Image).tint,
+      }))
+      .sort((one, other) => one.tile.localeCompare(other.tile));
     const held = window.named?.('log-held')?.object as Phaser.GameObjects.Container | undefined;
-    if (held === undefined) return [];
+    if (held === undefined) return { entries: [], rings };
     const shown = <T extends Phaser.GameObjects.GameObject>(list: T[]): T[] =>
       list.filter((part) => (part as unknown as Phaser.GameObjects.Components.Visible).visible);
     const named = (prefix: string) =>
@@ -3675,17 +3689,51 @@ export function logRead(page: Page): Promise<LogEntry[]> {
       entry: { heading: heading.text },
     }));
     const lines = (named('log-line-') as Phaser.GameObjects.Container[]).map((line) => {
-      const texts = shown(line.list).filter(
-        (part): part is Phaser.GameObjects.Text => part.type === 'Text',
-      );
+      const parts = shown(line.list);
+      const texts = parts.filter((part): part is Phaser.GameObjects.Text => part.type === 'Text');
       texts.sort((one, other) => one.y - other.y || one.x - other.x);
       return {
         y: line.y,
-        entry: { line: texts.map((part) => part.text.replace(/\s+/g, '')).join('') },
+        entry: {
+          line: texts.map((part) => part.text.replace(/\s+/g, '')).join(''),
+          name: line.name,
+          lit: parts.some((part) => part.name === `${line.name}-veil`),
+        },
       };
     });
-    return [...headings, ...lines].sort((one, other) => one.y - other.y).map(({ entry }) => entry);
+    const entries = [...headings, ...lines]
+      .sort((one, other) => one.y - other.y)
+      .map(({ entry }) => entry);
+    return { entries, rings };
   });
+}
+
+/**
+ * What the log holds, top down, and nothing where it stands none: each heading, and each line's words
+ * row by row, left to right on each, their spaces left out, the log laying a space as a gap.
+ */
+export async function logRead(page: Page): Promise<LogEntry[]> {
+  return (await logShown(page)).entries.map((entry) =>
+    'heading' in entry ? { heading: entry.heading } : { line: entry.line },
+  );
+}
+
+/** The name of what draws the line of the log reading so, as `logRead` reads one; none such throws. */
+export async function logLineNamed(page: Page, line: string): Promise<string> {
+  const found = (await logShown(page)).entries.find(
+    (entry) => 'line' in entry && entry.line === line,
+  );
+  if (found === undefined || !('name' in found)) throw new Error(`the log holds no line ${line}`);
+  return found.name;
+}
+
+/** The lines of the log lit, as `logRead` reads them, and the rings of the log's the map shows. */
+export async function logPointed(page: Page): Promise<{ lit: string[]; rings: RingShown[] }> {
+  const { entries, rings } = await logShown(page);
+  return {
+    lit: entries.flatMap((entry) => ('line' in entry && entry.lit ? [entry.line] : [])),
+    rings,
+  };
 }
 
 /** What the line over the hand says the card being aimed is played at, or nothing while none stands. */

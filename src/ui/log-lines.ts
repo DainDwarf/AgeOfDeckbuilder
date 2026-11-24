@@ -6,8 +6,8 @@ import { type CardId, type Chronicle, onSettlePhase } from '../rules/state';
 import { type Faction, type Unit, unitAt, unitOf } from '../rules/units';
 import type { SightOn } from './map-motion';
 
-/** A unit a line of the log names: its faction, and its kind. */
-export type Named = { readonly faction: Faction; readonly kind: string };
+/** A unit a line of the log names: its faction, its kind, and the tile it stood on as the line's change played. */
+export type Named = { readonly faction: Faction; readonly kind: string; readonly tile: TileCoords };
 
 /** What a stock or the population moved by, read on a line of the log. */
 export type Moved = { readonly symbol: Resource | 'population'; readonly count: number };
@@ -266,7 +266,32 @@ function builtOn(chronicle: Chronicle, tile: TileCoords): string {
 }
 
 function namedOf(unit: Unit): Named {
-  return { faction: unit.faction, kind: unit.stats.type };
+  return { faction: unit.faction, kind: unit.stats.type, tile: unit.tile };
+}
+
+/** The units a line names, in the order it reads them: none on a line that reads no tile. */
+export function namedIn(reading: LogReading): Named[] {
+  switch (reading.kind) {
+    case 'attack':
+    case 'kill':
+      return [reading.attacker, reading.target];
+    case 'attacked':
+    case 'killed':
+      return [reading.target];
+    case 'attacks':
+      return [reading.attacker];
+    case 'enters':
+    case 'prepares-to-capture-your-city':
+    case 'prepares-to-capture':
+    case 'prepares-to-pillage':
+    case 'pillages':
+    case 'captures':
+      return [reading.unit];
+    case 'income':
+    case 'strikes':
+    case 'grows':
+      return [];
+  }
 }
 
 /** What a stage read off its chronicles, which it holds; one it does not hold is refused. */

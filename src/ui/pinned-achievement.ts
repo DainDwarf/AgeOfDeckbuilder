@@ -9,9 +9,8 @@ import {
   PANEL_RIMS,
   PAST_THE_EDGE,
   standChromePanel,
-  veilOver,
+  veilOverStripRow,
 } from './chrome';
-import { PANEL } from './chrome-kit';
 import { addText, type Box, faintRule, inked, type Stratum } from './design-space';
 import { capstoneName } from './event-text';
 import { createFoldTab, TAB_ROOM } from './fold-tab';
@@ -227,11 +226,7 @@ function createCapstoneRow(
     ruled: false,
   });
   end.setText(text('capstone.word'));
-  const veil = veilOver(
-    createVeil(scene, `${plate}-veil`),
-    { x: -PAST_THE_EDGE, y: 0, width: LEDGER.width + PAST_THE_EDGE, height: NAME_ROW },
-    PANEL.corner * PANEL_RIMS.strip,
-  );
+  const veil = veilOverStripRow(createVeil(scene, `${plate}-veil`), LEDGER.width, NAME_ROW);
   root.addAt(veil, root.list.indexOf(face));
 
   return {

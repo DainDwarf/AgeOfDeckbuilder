@@ -31,7 +31,7 @@ import { RESOURCES } from '../rules/resources';
 import { type Stage, walked } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import type { Unit } from '../rules/units';
-import { type LogReading, linesSkipped, logReaders } from './log-lines';
+import { type LogReading, linesSkipped, logReaders, type Named } from './log-lines';
 import type { SightOn } from './map-motion';
 
 /** The map playing every stage on every tile. */
@@ -55,9 +55,9 @@ function linesOf(
   });
 }
 
-/** What reads a unit on a line: its faction and its kind. */
-function named(unit: Unit): { faction: Unit['faction']; kind: string } {
-  return { faction: unit.faction, kind: unit.stats.type };
+/** What reads a unit on a line: its faction, its kind and the tile it stands on. */
+function named(unit: Unit): Named {
+  return { faction: unit.faction, kind: unit.stats.type, tile: unit.tile };
 }
 
 const MINE: TileCoords = { q: 1, r: 0 };
@@ -113,28 +113,37 @@ test('an attack the map plays on one of its tiles alone names the unit on that t
   expect(reads(attack, hiding(MINE, THEIRS))).toEqual([]);
 });
 
-test('a unit that walks to bring an enemy in range and attacks it reads the attack alone, and the enemy attacking at the end of turn reads its attack too', () => {
+test('a unit that walks to bring an enemy in range and attacks it reads the attack alone, naming it on the tile it attacked from, and the enemy attacking at the end of turn reads its attack too', () => {
   const far = ringed(3, {
     ...NO_GROWTH,
     units: [standing('player', CITY), standing('enemy', THEIRS, { move: 0 })],
   });
-  const [mine, theirs] = far.units;
+  const [mine] = far.units;
 
-  const lines = linesOf(apply(CATALOGUE, far, attackOn(mine.id, THEIRS)));
+  const walkedTo = apply(CATALOGUE, far, attackOn(mine.id, THEIRS));
+  const from = [...walked(walkedTo)].flatMap((stage) =>
+    stage.kind === 'group' && stage.name === 'attack' ? [stage.attacker] : [],
+  );
+  const lines = linesOf(walkedTo);
   expect(lines.map(({ reads }) => reads.kind)).toEqual(['attack']);
+  expect(from).not.toEqual([CITY]);
+  expect(lines.map(({ reads }) => ('attacker' in reads ? reads.attacker.tile : undefined))).toEqual(
+    from,
+  );
 
   const near = ringed(3, {
     ...NO_GROWTH,
     units: [standing('player', MINE), standing('enemy', THEIRS, { move: 0 })],
   });
+  const [attacked, attacking] = near.units;
   const ended = linesOf(apply(CATALOGUE, near, { type: 'end-turn' }));
   expect(ended).toContainEqual({
     turn: near.turn,
     reads: {
       kind: 'attack',
-      attacker: named(theirs),
-      target: named(mine),
-      damage: theirs.stats.damage,
+      attacker: named(attacking),
+      target: named(attacked),
+      damage: attacking.stats.damage,
     },
   });
 });

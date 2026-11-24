@@ -947,7 +947,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const log = createLog(this, ui.pinned, {
       tooltip: tooltip.ui,
       unaim: unaimAll,
-      sightOn: view.sightOn,
+      map: view,
     });
 
     parts.push(
