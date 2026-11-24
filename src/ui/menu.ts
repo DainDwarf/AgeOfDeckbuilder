@@ -38,7 +38,6 @@ import {
   offMiddle,
   onClick,
   onHover,
-  onResize,
   placedWhileUp,
   type SizedStyle,
   type Stratum,
@@ -840,40 +839,54 @@ export function cornerNow(): CornerLayout {
   return layOutCorner(screenSize().width, MARGIN, BAR_HEIGHT);
 }
 
+/** A square of `createSquareButton`'s. */
+export type SquareButton = SignButton & {
+  /** The button laid again on the box its `laid` answers now. */
+  lay(): void;
+};
+
 /**
- * A square of the kit's bright silver on the stratum wearing the symbol's sign, its face named
- * `name`, standing at its place at the screen's top right corner; the rest on it raises `reads` under
- * it on the tooltip, and a click on it does what `pressed` does.
+ * A square of the kit's bright silver on the stratum wearing the symbol's sign, its face named `name`,
+ * on the box `laid` answers after every change of window; the rest on it raises `reads` under it on
+ * the tooltip, and a left click on it does what `pressed` does while `live` holds.
  */
-export function createCornerButton(
+export function createSquareButton(
   scene: Phaser.Scene,
   on: Stratum,
   {
     symbol,
     name,
-    at,
-  }: { readonly symbol: ButtonSign; readonly name: string; readonly at: keyof CornerLayout },
+    laid,
+    live = () => true,
+  }: {
+    readonly symbol: ButtonSign;
+    readonly name: string;
+    readonly laid: () => Box;
+    readonly live?: () => boolean;
+  },
   { tooltip, reads }: { readonly tooltip: Tooltip; readonly reads: string },
   pressed: () => void,
-): SignButton {
-  let box = cornerNow()[at];
-  const button = createSignButton(scene, 'silver', symbol, box, name);
+): SquareButton {
+  const button = createSignButton(scene, 'silver', symbol, laid(), name, { live });
   on.layer.add([button.face, button.sign]);
-  onClick(button.face, pressed);
-  onResize(scene, () => {
-    box = cornerNow()[at];
-    button.place(box);
+  onClick(button.face, () => {
+    if (live()) pressed();
   });
+  const lay = (): void => {
+    button.place(laid());
+  };
+  placedWhileUp(button.face, lay);
   onHover(
     button.face,
     () => {
-      tooltip.under(reads, box.x, box.y + box.height + STANDOFF);
+      const { x, y, height } = laid();
+      tooltip.under(reads, x, y + height + STANDOFF);
     },
     () => {
       tooltip.hide();
     },
   );
-  return button;
+  return { ...button, lay };
 }
 
 /** The Menu button at the top right corner of whatever screen stands under it, naming itself on the tooltip. */
@@ -883,10 +896,10 @@ export function createMenuButton(
   tooltip: Tooltip,
   pressed: () => void,
 ): void {
-  createCornerButton(
+  createSquareButton(
     scene,
     on,
-    { symbol: 'menu-button', name: 'menu-button', at: 'menu' },
+    { symbol: 'menu-button', name: 'menu-button', laid: () => cornerNow().menu },
     { tooltip, reads: text('menu.menu') },
     pressed,
   );

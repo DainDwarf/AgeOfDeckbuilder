@@ -84,11 +84,17 @@ type Selected = {
   atHand: boolean;
 };
 
+/**
+ * How much of the pointer the hand takes: every press; the hover, the rest and the right click, and
+ * no left click and no drag; or nothing.
+ */
+export type HandLive = 'live' | 'read' | 'dead';
+
 export type Hand = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
-  /** The one gate on the hand's pointer: no hover, no click and no drag while it is shut. */
-  live(on: boolean): void;
+  /** The one gate on the hand's pointer. */
+  live(state: HandLive): void;
   /** The card the hand has selected, for whoever shows it large; nothing while none is. */
   selection(): ChronicleCard | undefined;
   /** Lets the selected card go, the aim it stands on with it, and answers whether one was. */
@@ -158,14 +164,28 @@ export function createHand(
   let selected: Selected | undefined;
   /** The card the hand has let go of, waiting on the stages its play resolves as. */
   let letGo: CardRecord | undefined;
-  /** Whether the hand reacts to the pointer; a play-out puts it down for as long as it runs. */
-  let taking = true;
+  /** How much of the pointer the hand takes; a play-out puts it dead for as long as it runs. */
+  let taking: HandLive = 'live';
+
+  /** Whether the hand lifts the card under the pointer and raises what a rest on it raises. */
+  const reads = (): boolean => {
+    switch (taking) {
+      case 'live':
+      case 'read':
+        return true;
+      case 'dead':
+        return false;
+    }
+  };
+
+  /** Whether the hand takes a left click and a drag. */
+  const takes = (): boolean => taking === 'live';
 
   // A dead card stays interactive, so a press on it stops there, and no leave comes as the hand dies:
   // a bubble or a rest on a name the pointer on a card began is let go of here.
-  const live = (on: boolean): void => {
-    taking = on;
-    if (on) {
+  const live = (state: HandLive): void => {
+    taking = state;
+    if (reads()) {
       // A card kept through a render while dead heard its enter ignored, and no other comes.
       for (const record of laidOut.filter((one) => one.hover.hovered && !one.hovered)) {
         record.hovered = true;
@@ -423,14 +443,14 @@ export function createHand(
       hover: onHover(
         root,
         () => {
-          if (dragged !== undefined || !taking) return;
+          if (dragged !== undefined || !reads()) return;
           record.hovered = true;
           settle(record, 120);
         },
         () => {
           small.over(undefined);
           footBubble.over(face, undefined);
-          if (dragged !== undefined || !taking || !laidOut.includes(record)) return;
+          if (dragged !== undefined || !reads() || !laidOut.includes(record)) return;
           record.hovered = false;
           settle(record, 120);
         },
@@ -447,7 +467,7 @@ export function createHand(
       draggable: true,
     })
       .on('dragstart', (pointer: Phaser.Input.Pointer) => {
-        if (!taking) return;
+        if (!takes()) return;
         footBubble.over(face, undefined);
         unselect();
         record.hovered = true;
@@ -459,15 +479,24 @@ export function createHand(
         };
       })
       .on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        const reacting = taking && dragged === undefined;
+        const reacting = reads() && dragged === undefined;
         small.over(reacting ? nameUnder(record, pointer) : undefined);
         footBubble.over(face, reacting ? onFoot(record, pointer) : undefined);
       });
 
-    reactsToPress(root, () => taking);
+    reactsToPress(root, (pointer) => {
+      switch (taking) {
+        case 'live':
+          return true;
+        case 'read':
+          return nameUnder(record, pointer) !== undefined || onFoot(record, pointer) !== undefined;
+        case 'dead':
+          return false;
+      }
+    });
 
     onClick(root, () => {
-      if (!taking) return;
+      if (!takes()) return;
       const standing = selected;
       if (standing?.record === record) act(standing);
       else if (standing?.atHand === true) playAt(standing, record);
@@ -477,7 +506,7 @@ export function createHand(
     onClick(
       root,
       (pointer) => {
-        if (!taking) return;
+        if (!reads()) return;
         const named = nameUnder(record, pointer)?.name;
         if (named === undefined) presses.inspect(record.card);
         else presses.inspectNamed(named);
@@ -525,7 +554,7 @@ export function createHand(
         .setName(`hand-${index}`)
         .setDepth(index)
         .setInteractive();
-      record.hovered = taking && record.hover.hovered;
+      record.hovered = reads() && record.hover.hovered;
       settle(record, 0);
       return record;
     });

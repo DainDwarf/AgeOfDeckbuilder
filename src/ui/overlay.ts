@@ -37,6 +37,7 @@ import {
   MARGIN,
   ownBoxOf,
   placedWhileUp,
+  type Stratum,
   screenSize,
   UI_FONT,
 } from './design-space';
@@ -46,6 +47,7 @@ import { cardFace, cardFaceAtStart, type Face, namedFace, type SignsRead } from 
 import { css, LOOK } from './look';
 import { capstoneLore, captureLore, eventLore } from './lore';
 import { raiseMenu } from './menu-scene';
+import { createMinimizeButton, createMinimized } from './minimize';
 import type { OverlayScene } from './overlay-scene';
 import type { Filled, Held, Panel } from './panel';
 import { nameOver, pileOf } from './piles';
@@ -54,14 +56,18 @@ import { createRefusalNote } from './refusal-note';
 import { type Reactions, reactionsOf, reactionsOfNames } from './stack';
 import { buildingName, cardName, text } from './text';
 import { namedOnce, type Reference } from './text-run';
+import type { Tooltip } from './tooltip';
 
 const GRID_GAP = 26;
 
 /** How far the capstone's panel reaches over the cards its text names, under them and past them. */
 const AROUND_CARDS = 16;
 
-/** How far under the screen's top the ribbon a deal's title and the capstone's stand on stands. */
-const DEAL_RIBBON_TOP = 113;
+/**
+ * How far under the screen's top the middle of the ribbon a deal's title and the capstone's stand on
+ * stands, the deal window's minimized or not.
+ */
+const DEAL_RIBBON_MIDDLE = 113 + WINDOW_RIBBON / 2;
 
 /**
  * How far under the ribbon's foot a window's lore starts, how wide it is broken, and how far under
@@ -78,6 +84,10 @@ export type Overlay = {
   inspectNamed(name: Name): void;
   /** The capstone's window raised over the chronicle as it stands, closing onto the screen as it stood. */
   raiseCapstone(chronicle: Chronicle): void;
+  /** Whether the deal window stands minimized. */
+  minimized(): boolean;
+  /** The minimized deal window brought back, whole at once and as it stood. */
+  bringBack(): void;
   /**
    * Raises the capstone's window on the first render; after it, the deal window while the chronicle
    * waits on a deal and the ending screen once it has ended, and nothing while it runs.
@@ -144,13 +154,16 @@ type Browsing = { readonly stands: 'browse' };
 
 /**
  * The deal window on the scrim: the chronicle whose first deal it stands, which its answers read
- * their numbers and their refusal off, and whether it has risen whole. It closes on the take alone.
+ * their numbers and their refusal off, whether it has risen whole, whether it stands minimized, and
+ * how far its row stood scrolled as it was. It closes on the take alone.
  */
 type Dealing = {
   readonly stands: 'deal';
   readonly on: Chronicle;
   readonly deal: Deal;
   whole: boolean;
+  minimized: boolean;
+  scrolled: number;
 };
 
 /**
@@ -174,6 +187,16 @@ type Raising = keyof RaisedWith;
 /** What the scrim carries: a pile's browse, the deal window, the capstone's window, or the ending screen. */
 type Carried = Browsing | Dealing | Capstone | { readonly stands: 'ending' };
 
+/**
+ * Where on the chronicle screen the deal window stands minimized, the bubble its button raises
+ * there, and what is told each time the window is minimized or brought back.
+ */
+type Minimizing = {
+  readonly on: Stratum;
+  readonly tooltip: Tooltip;
+  readonly switched: () => void;
+};
+
 /** What the chronicle screen hands its overlay. */
 type OverlayOf = EndingOf & {
   readonly scene: OverlayScene;
@@ -181,6 +204,7 @@ type OverlayOf = EndingOf & {
   readonly signs: SignsRead;
   readonly covering: (covered: boolean) => void;
   readonly take: (at: number) => void;
+  readonly minimizing: Minimizing;
 };
 
 /**
@@ -196,6 +220,7 @@ export function createOverlay({
   take,
   paid,
   leave,
+  minimizing,
 }: OverlayOf): Overlay {
   const note = createRefusalNote(scene, scene.strata.note);
   /** What stands on the scrim, and nothing while the scrim is down. */
@@ -357,18 +382,19 @@ export function createOverlay({
   });
 
   /**
-   * A window laid from its title down: its title on the kit's ribbon, its lore, then what `body`
-   * lays from the top it is handed, the deal row's under the lore; the lore stands over what scrolls
-   * under it.
+   * A window laid from its title down, scrolled `offset` far: its title on the kit's ribbon, its lore,
+   * then what `body` lays from the top it is handed, the deal row's under the lore; the lore stands
+   * over what scrolls under it. Answers the panel, and the box the ribbon is painted on.
    */
   const layWindow = (
     name: string,
     { heading, lore }: Titled,
     body: (top: number) => Filled,
-  ): Panel => {
-    const ribbonFoot = browser
+    offset?: number,
+  ): { readonly panel: Panel; readonly ribbon: () => Box } => {
+    const { foot: ribbonFoot, ribbon } = browser
       .raiseTitle(name, heading)
-      .standAt(DEAL_RIBBON_TOP + WINDOW_RIBBON / 2);
+      .standAt(DEAL_RIBBON_MIDDLE);
     const told = addText(scene, 0, 0, lore, {
       fontFamily: UI_FONT,
       fontSize: '20px',
@@ -383,6 +409,7 @@ export function createOverlay({
     const panel = browser.lay({
       name,
       top: ribbonFoot + MARGIN,
+      offset,
       ...body(told.y + told.height + ROW_UNDER_LORE),
     });
     carries(
@@ -390,7 +417,7 @@ export function createOverlay({
         told.setX(screenSize().width / 2);
       }),
     );
-    return panel;
+    return { panel, ribbon };
   };
 
   /**
@@ -513,7 +540,7 @@ export function createOverlay({
    * The deal window risen out of nothing, everything the scrim's stratum holds fading in together, and
    * whole once the fade has ended.
    */
-  const riseWhole = (dealing: Dealing): void => {
+  const riseWhole = (dealing: Dealing): Promise<void> => {
     const { layer } = scene.strata.scrim;
     const fade = scene.tweens.add({
       targets: layer.setAlpha(0),
@@ -524,42 +551,83 @@ export function createOverlay({
     // The overlay's tweens play at the animation speed (`chronicleScreenAtSpeed`), and the beat is
     // the wall clock's.
     fade.setTimeScale(1 / scene.tweens.timeScale);
-    void ended(fade).then(() => {
+    return ended(fade).then(() => {
       dealing.whole = true;
     });
   };
 
   /**
-   * The deal window raised, taking a left click on an entry once it stands whole. It closes on the
-   * take alone, and the landing plays out under the caller.
+   * The deal window raised, rising out of nothing until it has stood whole once, taking a left click
+   * on an entry and on its Minimize button once it stands whole. It closes on the take alone, and the
+   * landing plays out under the caller.
    */
   const showDeal = (dealing: Dealing): void => {
     raiseOnScrim(dealing);
     standingDeal = dealing;
 
     const { entries, ...titled } = dealt(catalogue, dealing.on, dealing.deal);
-    const panel = layWindow('deal', titled, (top) =>
-      rowsOf(
-        'deal',
-        entries,
-        top,
-        ({ costs, refusal, own, at }) => {
-          if (!playable(refusal)) {
-            const { x, y, width } = own;
-            const { across, offset } = panel;
-            browser.tooltip.hide();
-            note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
-            return;
-          }
-          standingDeal = undefined;
-          close();
-          take(at);
-        },
-        () => dealing.whole,
-      ),
+    const { panel, ribbon } = layWindow(
+      'deal',
+      titled,
+      (top) =>
+        rowsOf(
+          'deal',
+          entries,
+          top,
+          ({ costs, refusal, own, at }) => {
+            if (!playable(refusal)) {
+              const { x, y, width } = own;
+              const { across, offset } = panel;
+              browser.tooltip.hide();
+              note.overCard(refused(costs, refusal), x + width / 2 + across, y - offset);
+              return;
+            }
+            standingDeal = undefined;
+            close();
+            take(at);
+          },
+          () => dealing.whole,
+        ),
+      dealing.scrolled,
     );
-    riseWhole(dealing);
+    const button = createMinimizeButton(
+      scene,
+      scene.strata.scrim,
+      browser.tooltip,
+      { name: 'deal-minimize', ribbon, sunk: false, live: () => dealing.whole },
+      () => {
+        dealing.minimized = true;
+        dealing.scrolled = panel.offset;
+        browser.tooltip.hide();
+        close();
+        minimizedDeal.show(titled.heading);
+        minimizing.switched();
+      },
+    );
+    carries(button.face);
+    carries(button.sign);
+    if (!dealing.whole) {
+      void riseWhole(dealing).then(() => {
+        button.dress();
+      });
+    }
   };
+
+  const bringBack = (): void => {
+    const dealing = standingDeal;
+    if (dealing?.minimized !== true) throw new Error('no deal window stands minimized');
+    dealing.minimized = false;
+    minimizedDeal.hide();
+    minimizing.switched();
+    showDeal(dealing);
+  };
+
+  const minimizedDeal = createMinimized(
+    minimizing.on,
+    minimizing.tooltip,
+    DEAL_RIBBON_MIDDLE,
+    bringBack,
+  );
 
   /**
    * The capstone's window closed: the opening's closes onto the screen as the chronicle stands, the
@@ -613,7 +681,14 @@ export function createOverlay({
     if (chronicle.ending !== undefined && !endingScreen.raised)
       void raiseEnding(chronicle, chronicle.ending);
     else if (chronicle.deals[0] !== undefined && standingDeal === undefined)
-      showDeal({ stands: 'deal', on: chronicle, deal: chronicle.deals[0], whole: false });
+      showDeal({
+        stands: 'deal',
+        on: chronicle,
+        deal: chronicle.deals[0],
+        whole: false,
+        minimized: false,
+        scrolled: 0,
+      });
     else endingScreen.stand();
   };
 
@@ -679,6 +754,10 @@ export function createOverlay({
     raiseCapstone(chronicle: Chronicle): void {
       showCapstone({ stands: 'capstone', on: chronicle, raised: 'asked' });
     },
+    minimized(): boolean {
+      return standingDeal?.minimized === true;
+    },
+    bringBack,
     render(chronicle: Chronicle): void {
       if (opened) {
         standAs(chronicle);

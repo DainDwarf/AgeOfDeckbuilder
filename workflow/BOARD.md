@@ -18,7 +18,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **A minimize button on the deal window, as a test** — a button at the end of the deal window's ribbon minimizes the window, the ribbon and the sunk button alone left standing, the chronicle screen read under it and nothing commanded, and a click on the button or the ribbon, or the back key, brings the window back whole; `e2e/minimize.spec.ts` proves it. Built for the user to judge in play, and kept or taken out on their word. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`. [board/a-minimize-button-on-the-deal-window.md](board/a-minimize-button-on-the-deal-window.md)
 - **The Menu button under every scrim** — under a browse, the deal window, the capstone's window, a card shown large and the ending screen, on the chronicle screen and on the meta screens alike, the Menu button is dimmed with the screen and reacts to nothing, a press there being a press on that scrim, as it already is under a scrim of the menu; the back key raises the menu wherever it did; `e2e/menu.spec.ts` proves it. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`. [board/the-menu-button-under-every-scrim.md](board/the-menu-button-under-every-scrim.md)
 - **A short info window on selection** — a small window in a corner reading the most useful facts of the selected unit or building.
 - **The combat log** — a readable record of what the end of turn did, for a player who missed the motion or wants it in words.

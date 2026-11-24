@@ -56,6 +56,8 @@ export type MapGrab = {
   homeAtOnce(): void;
   /** Whatever population a press holds no longer held; a unit held stands. */
   dropPopulation(): void;
+  /** Whether a left press takes hold of the unit or the population it lands on, or of nothing. */
+  takesHold(on: boolean): void;
 };
 
 export function createMapGrab(
@@ -66,6 +68,7 @@ export function createMapGrab(
 ): MapGrab {
   /** What the left press on the map has hold of; nothing while it holds nothing. */
   let grabbed: Grab | undefined;
+  let holding = true;
 
   /** Each mark a press let go of sliding home: where home is, and the slide. */
   const homing = new Map<
@@ -169,7 +172,7 @@ export function createMapGrab(
       frame.takePress(catcher, {
         down: (pointer) => {
           const shown = view.shown();
-          if (shown === undefined) return true;
+          if (shown === undefined || !holding) return true;
           const at = map.at(pointer.x, pointer.y);
           const under = view.tileUnder(at.x, at.y);
           if (under === undefined) return true;
@@ -236,6 +239,10 @@ export function createMapGrab(
       // press is a whole scene away: that hold is the mode's and goes with its marks, while a
       // unit's is held outside the mode and stands.
       if (grabbed?.kind === 'assigned') grabbed = undefined;
+    },
+
+    takesHold(on: boolean): void {
+      holding = on;
     },
   };
 }

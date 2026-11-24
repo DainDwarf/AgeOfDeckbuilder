@@ -12,6 +12,7 @@ export type ButtonSign =
   | 'icons-button'
   | 'faction-signs-button'
   | 'hex-grid-button'
+  | 'minimize-button'
   | 'pinned-achievements-tab';
 
 /**
@@ -69,6 +70,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'icons-button': 'material-design-icons/map-marker.svg',
   'faction-signs-button': 'material-design-icons/shield-crown.svg',
   'hex-grid-button': 'material-design-icons/hexagon-multiple-outline.svg',
+  'minimize-button': 'material-design-icons/eye-off.svg',
   'pinned-achievements-tab': 'material-design-icons/menu-left.svg',
 };
 

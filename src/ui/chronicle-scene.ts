@@ -203,6 +203,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       resting: stratum(),
       bar: stratum(),
       endTurn: stratum(),
+      /** The deal window's ribbon and its button, while the window stands minimized. */
+      minimized: stratum(),
       flight: stratum(),
       lifted: stratum(),
       aimLine: stratum(),
@@ -325,14 +327,24 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     /**
-     * The screen standing on the chronicle, every part painted on it, the hand, the button and the
-     * bar live.
+     * The hand, the button and the map's hold live, or, under the deal window minimized, the hand
+     * read and the button and the hold dead.
+     */
+    const liven = (): void => {
+      const minimized = overlay.minimized();
+      hand.live(minimized ? 'read' : 'live');
+      endTurn.live(!minimized);
+      view.takesHold(!minimized);
+    };
+
+    /**
+     * The screen standing on the chronicle, every part painted on it, the bar reckoning, and the hand,
+     * the button and the map's hold livened.
      */
     const stand = (on: Chronicle): void => {
       this.current = on;
       paint();
-      hand.live(true);
-      endTurn.live(true);
+      liven();
       reckons(true);
       this.sequence = undefined;
     };
@@ -356,7 +368,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
       try {
         endTurn.live(false);
-        hand.live(false);
+        hand.live('dead');
         reckons(reckoning);
         dismiss();
 
@@ -556,6 +568,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       leave: () => {
         this.leave();
       },
+      minimizing: { on: ui.minimized, tooltip: tooltip.ui, switched: liven },
     });
 
     const endTurn = this.addEndTurn(ui.endTurn, tooltip.ui, () => {
@@ -642,7 +655,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
     const enterCityMode = (): void => {
-      if (cityMode || this.current.city === undefined) return;
+      if (cityMode || overlay.minimized() || this.current.city === undefined) return;
       dismiss();
       cityMode = true;
       cityStanding.show(true);
@@ -650,9 +663,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       view.showCityMarks(true);
     };
 
-    /** City mode left, and whether it was on: the one way out, for the key, the chip and the back. */
+    /** City mode left, and whether it was left: the one way out, for the key, the chip and the back. */
     const leaveCityMode = (): boolean => {
-      if (!cityMode) return false;
+      if (!cityMode || overlay.minimized()) return false;
       cityMode = false;
       dismiss();
       cityStanding.show(false);
@@ -747,13 +760,19 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       throw new Error(`no place is ${JSON.stringify(unlisted)}`);
     };
 
-    /** Where each press held landed, and whether on the map. */
-    const landings = new Map<Press, { readonly place: Place; readonly onMap: boolean }>();
+    /**
+     * Where each press held landed, whether on the map, and whether under the deal window minimized,
+     * where a left click selects and acts on nothing however the window stands at its release.
+     */
+    const landings = new Map<
+      Press,
+      { readonly place: Place; readonly onMap: boolean; readonly minimized: boolean }
+    >();
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
       queueMicrotask(() => {
-        landings.set(press, placeUnder());
+        landings.set(press, { ...placeUnder(), minimized: overlay.minimized() });
       });
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -769,7 +788,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         if (!samePlace(from.place, to.place)) return;
         switch (press) {
           case 'left':
-            leftClicked(to.place);
+            if (!from.minimized) leftClicked(to.place);
             return;
           case 'right':
             rightClicked(to.place);
@@ -813,6 +832,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (!boundTo(press, 'back')) return;
       if (inspection !== undefined) {
         uninspect();
+        return;
+      }
+      if (overlay.minimized()) {
+        overlay.bringBack();
         return;
       }
       if (hand.unselect()) return;

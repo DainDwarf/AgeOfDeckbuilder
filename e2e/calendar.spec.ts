@@ -1,22 +1,17 @@
 import { expect, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { gained } from '../src/rules/cards';
-import { cardOf } from '../src/rules/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
-import type { Chronicle } from '../src/rules/state';
 import { cardName, text } from '../src/ui/text';
 import {
   campaignWith,
   chronicleOf,
   dragOut,
-  firstSeed,
-  idsOf,
   offeredOn,
   openSaved,
+  paidInHand,
   playedAtNothing,
   readings,
   restedOnDeal,
-  settledOn,
   standing,
   take,
   watch,
@@ -28,21 +23,11 @@ const CALENDAR = 'calendar';
 /** A new campaign with a copy of the card added to its deck. */
 const CAMPAIGN = campaignWith([CALENDAR]);
 
-/** The first seed's turn 1 whose hand holds the card, its cost gained, and where it lies. */
-function inHand(): { opened: Chronicle; index: number } {
-  return firstSeed(`opens turn 1 on ${CALENDAR} in hand`, (seed) => {
-    const settled = settledOn(seed, [], CAMPAIGN);
-    const index = idsOf(settled.hand).indexOf(CALENDAR);
-    if (index === -1) return undefined;
-    return { opened: gained(settled, cardOf(CATALOGUE, CALENDAR).cost).chronicle, index };
-  });
-}
-
 test('the calendar played raises the deal window under its name, dealing the cards the rules deal, and a left click on one leaves the chronicle the take leaves', async ({
   page,
 }) => {
   const problems = watch(page);
-  const { opened, index } = inHand();
+  const { chronicle: opened, index } = paidInHand(CALENDAR, CAMPAIGN);
   const dealt = playedAtNothing(opened, index);
   const offered = offeredOn(dealt);
   const chosen = offered.length - 1;

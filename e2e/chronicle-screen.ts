@@ -3202,6 +3202,17 @@ export function paidFor(
   return { chronicle: paid, index: idsOf(paid.hand).indexOf(card) };
 }
 
+/** The first seed's turn 1 from the campaign whose hand holds the card, paid for as `paidFor` pays. */
+export function paidInHand(
+  card: CardId,
+  campaign: Campaign,
+): { readonly chronicle: Chronicle; readonly index: number } {
+  return firstSeed(`opens turn 1 on ${card} in hand`, (seed) => {
+    const settled = settledOn(seed, [], campaign);
+    return idsOf(settled.hand).includes(card) ? paidFor(settled, card) : undefined;
+  });
+}
+
 /**
  * The first seed's turn 1, launched from the campaign as `settledOn` launches it, with the card in
  * hand, on the ground `made` makes of it, with the card paid for; a seed it makes none of is passed

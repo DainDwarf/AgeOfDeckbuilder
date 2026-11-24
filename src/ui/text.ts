@@ -88,6 +88,7 @@ const TEXT = {
   'button.faction-signs': 'Faction signs',
   'button.hex-grid': 'Hex grid',
   'button.pinned-achievements': 'Goals',
+  'button.minimize': 'Minimize',
   'kind.settle': 'Settle',
   'kind.unit': 'Unit',
   'kind.building': 'Building',

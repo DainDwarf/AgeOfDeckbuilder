@@ -138,7 +138,9 @@ const RIBBON_LIFT = 0.04;
 export type Ribbon = {
   readonly ribbon: Phaser.GameObjects.NineSlice;
   readonly title: Phaser.GameObjects.Text;
-  /** The ribbon laid with its middle on the point, its words on it. */
+  /** The box the ribbon is painted on laid with its middle on the point, as long as its words now ask. */
+  boxAt(x: number, y: number): Box;
+  /** The ribbon laid on `boxAt`'s box, its words on it. */
   place(x: number, y: number): void;
 };
 
@@ -155,12 +157,16 @@ export function createRibbon(
 ): Ribbon {
   const title = addText(scene, 0, 0, reads, style).setOrigin(0.5).setName(`${name}-title`);
   const ribbon = sliceOf(scene, RIBBON).setName(`${name}-ribbon`);
-  const width = ownBoxOf(title).width + 2 * RIBBON_PAST * height;
+  const boxAt = (x: number, y: number): Box => {
+    const width = ownBoxOf(title).width + 2 * RIBBON_PAST * height;
+    return { x: x - width / 2, y: y - height / 2, width, height };
+  };
   return {
     ribbon,
     title,
+    boxAt,
     place(x, y) {
-      fit(ribbon, RIBBON, { x: x - width / 2, y: y - height / 2, width, height });
+      fit(ribbon, RIBBON, boxAt(x, y));
       title.setPosition(x, y - RIBBON_LIFT * height);
     },
   };

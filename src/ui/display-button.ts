@@ -1,9 +1,10 @@
 import type Phaser from 'phaser';
 import type { ButtonSign } from './cast';
+import type { SignButton } from './chrome';
 import type { CornerLayout } from './corner-layout';
 import type { Stratum } from './design-space';
 import { LOOK } from './look';
-import { createCornerButton } from './menu';
+import { cornerNow, createSquareButton } from './menu';
 import { SUNK } from './resource-bar';
 import { type TextKey, text } from './text';
 import type { Tooltip } from './tooltip';
@@ -14,6 +15,13 @@ export type DisplayButton = {
   /** The display hidden if it is shown and shown if it is hidden, as a press on the button switches it. */
   switch(): void;
 };
+
+/** The button sunk in its well, its sign in the pale ink a step down and right; or standing on its face. */
+export function sink(button: SignButton, sunk: boolean): void {
+  button.latch(sunk);
+  if (sunk) button.ink(LOOK.charcoalInk, SUNK);
+  else button.ink();
+}
 
 /**
  * A button at the screen's top right corner, drawn as the Menu button is, wearing the symbol's sign at
@@ -33,23 +41,18 @@ export function createDisplayButton(
   show: (shown: boolean) => void,
 ): DisplayButton {
   let showing = shown;
-  const sink = (): void => {
-    button.latch(showing);
-    if (showing) button.ink(LOOK.charcoalInk, SUNK);
-    else button.ink();
-  };
   const switched = (): void => {
     showing = !showing;
     show(showing);
-    sink();
+    sink(button, showing);
   };
-  const button = createCornerButton(
+  const button = createSquareButton(
     scene,
     on,
-    { symbol, name: symbol, at },
+    { symbol, name: symbol, laid: () => cornerNow()[at] },
     { tooltip, reads: text(reads) },
     switched,
   );
-  sink();
+  sink(button, showing);
   return { shown: () => showing, switch: switched };
 }

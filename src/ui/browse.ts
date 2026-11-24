@@ -184,18 +184,23 @@ export type Browser = Surface & {
   /**
    * A window's title on the kit's ribbon raised on the scrim, named after the window: its words, and
    * the ribbon stood centred across the screen, its middle that far under the screen's top, answering
-   * its foot.
+   * its foot and the box it is painted on as the screen stands at each asking.
    */
   raiseTitle(
     name: string,
     heading: string,
-  ): { readonly title: Phaser.GameObjects.Text; standAt(middle: number): number };
+  ): {
+    readonly title: Phaser.GameObjects.Text;
+    standAt(middle: number): { readonly foot: number; readonly ribbon: () => Box };
+  };
   /**
-   * The panel laid on the scrim from `top` to the screen's foot, which goes with what stands: what it
-   * holds is laid about the middle of 1280 units, the wheel and the two pan keys scroll it, a card
-   * rising large holds it still, and a press beside what it holds steps back.
+   * The panel laid on the scrim from `top` to the screen's foot, scrolled `offset` far, which goes
+   * with what stands: what it holds is laid about the middle of 1280 units, the wheel and the two pan
+   * keys scroll it, a card rising large holds it still, and a press beside what it holds steps back.
    */
-  lay(of: Omit<PanelOf, 'beside' | 'frame'> & { readonly top: number }): Panel;
+  lay(
+    of: Omit<PanelOf, 'beside' | 'frame'> & { readonly top: number; readonly offset?: number },
+  ): Panel;
   /** A browse raised under its title, its stacks eight to a line from the frame's top left. */
   browse(of: BrowseOf): void;
   /** What stands taken down, and the scrim with it. */
@@ -313,22 +318,30 @@ export function standBrowser(
       return {
         title: titling.title,
         standAt(middle) {
+          const across = (): number => screenSize().width / 2;
           placedWhileUp(titling.title, () => {
-            titling.place(screenSize().width / 2, middle);
+            titling.place(across(), middle);
           });
-          return middle + WINDOW_RIBBON / 2;
+          return {
+            foot: middle + WINDOW_RIBBON / 2,
+            ribbon: () => titling.boxAt(across(), middle),
+          };
         },
       };
     },
-    lay({ top, ...of }) {
+    lay({ top, offset, ...of }) {
       panelTop = top;
-      const laid = createPanel(browser, {
-        ...of,
-        frame: panelFrame(),
-        beside: () => {
-          screen.back();
+      const laid = createPanel(
+        browser,
+        {
+          ...of,
+          frame: panelFrame(),
+          beside: () => {
+            screen.back();
+          },
         },
-      });
+        offset,
+      );
       laid.place(panelFrame(), offMiddle().x);
       panel = laid;
       return laid;

@@ -297,6 +297,11 @@ export type MapView = {
   showHexGrid(shown: boolean): void;
   /** Whether the pan and zoom keys and the wheel move the map; they do not while a scrim stands. */
   live(on: boolean): void;
+  /**
+   * Whether a left press takes hold of the unit or the population it lands on; one that takes hold of
+   * nothing pans the map.
+   */
+  takesHold(on: boolean): void;
   /** Whether the city's bars read what ending the turn would add, or show the stocks alone. */
   reckons(on: boolean): void;
   /** Notches of zoom, in above zero, about the pointer. */
@@ -1491,6 +1496,8 @@ export function createMapView(
 
   return {
     live: frame.live,
+
+    takesHold: grab.takesHold,
 
     reckons(on: boolean): void {
       reckoning = on;

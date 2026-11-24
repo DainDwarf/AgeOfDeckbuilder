@@ -57,6 +57,7 @@ function colourOf(symbol: CastSymbol): number {
     case 'icons-button':
     case 'faction-signs-button':
     case 'hex-grid-button':
+    case 'minimize-button':
     case 'pinned-achievements-tab':
       return LOOK.metalInk;
   }
@@ -77,6 +78,7 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'icons-button':
     case 'faction-signs-button':
     case 'hex-grid-button':
+    case 'minimize-button':
     case 'pinned-achievements-tab':
       return false;
     case 'food':
