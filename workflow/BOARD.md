@@ -20,4 +20,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 - **Credits and licences in the game** — a screen off the menu reading the packs' licence record and the build's dependency notices.
 - **The cursor** — the cursor saying what a press would do now, and whether the game draws a cursor of its own.
-- **A minimap with the map's toggles, as a try** — a minimap with the map's toggles as buttons on it, the Icons button among them, mocked on the real screen at its intake and taken or sent back to the ideas.
+- **Change the deployment behavior** — GitHub Pages following main, and itch.io following the latest version.
