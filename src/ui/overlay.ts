@@ -46,7 +46,7 @@ import { type AnswerShown, answerShown, capstoneShown, eventName } from './event
 import { cardFace, cardFaceAtStart, type Face, namedFace, type SignsRead } from './face';
 import { css, LOOK } from './look';
 import { capstoneLore, captureLore, eventLore } from './lore';
-import { raiseMenu } from './menu-scene';
+import { raiseMenu } from './menu';
 import { createMinimizeButton, createMinimized } from './minimize';
 import type { OverlayScene } from './overlay-scene';
 import type { Filled, Held, Panel } from './panel';

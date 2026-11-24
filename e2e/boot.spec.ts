@@ -97,7 +97,7 @@ test('Enter on the launch screen launches nothing, and the back key under the co
   expect(problems).toEqual([]);
 });
 
-test('Launch opens the chronicle on the firsts under its capstone’s window, and the address stays bare through Chronicle, Launch, Campaign, Chronicle and Launch again', async ({
+test('Launch opens the chronicle on the firsts under its capstone’s window, which a press on the Menu button closes, and the address stays bare through Chronicle, Launch, Campaign, Chronicle and Launch again', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -122,10 +122,8 @@ test('Launch opens the chronicle on the firsts under its capstone’s window, an
   await expect.poll(() => standing(page, 'menu-button')).toBe(true);
   await rested(page);
   await click(page, 'menu-button');
-  await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await page.keyboard.press('Escape');
-  await expect.poll(() => standing(page, 'menu')).toBe(false);
-  expect(await standing(page, 'capstone')).toBe(true);
+  await expect.poll(() => standing(page, 'capstone')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
 
   await rested(page);
   await click(page, 'menu-button');

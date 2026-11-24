@@ -36,6 +36,7 @@ import {
   firstDealtAlone,
   firstSeed,
   givesRead,
+  HAND,
   HUNT,
   IRRIGATION,
   idsOf,
@@ -110,9 +111,6 @@ async function raisedFreshUnit(
   expect(raised.windowUnit).toMatchObject({ halo, paintedAs: unitPaintingOf(kind).painting });
 }
 
-/** The cursor over something that reacts to a press. */
-const HAND = 'pointer';
-
 /**
  * The first answer the deal standing offers whose text names a thing of the kind: the answer, where
  * the deal window lays it out, the thing it names, and where that name stands among the text's names.
@@ -176,7 +174,7 @@ test('a card named in an answer’s text raises it small at a rest and shows it 
   await page.mouse.move(menu.x, menu.y);
   await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(false);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).not.toBe(HAND);
 
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);

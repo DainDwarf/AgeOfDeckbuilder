@@ -10,6 +10,7 @@ import {
   cardOnFace,
   cursorOverCanvas,
   dragBetween,
+  HAND,
   heldFor,
   heldSave,
   offsetOf,
@@ -32,9 +33,6 @@ import {
 
 /** The browse a right click on a pile raises. */
 const BROWSE = 'civilization-browse';
-
-/** The cursor over something that reacts to a left click or a rest. */
-const HAND = 'pointer';
 
 /** A new campaign, as the bare address with no save opens on. */
 const CAMPAIGN = freshCampaign(CATALOGUE);

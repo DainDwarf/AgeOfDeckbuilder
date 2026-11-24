@@ -889,18 +889,26 @@ export function createSquareButton(
   return { ...button, lay };
 }
 
-/** The Menu button at the top right corner of whatever screen stands under it, naming itself on the tooltip. */
-export function createMenuButton(
-  scene: Phaser.Scene,
-  on: Stratum,
-  tooltip: Tooltip,
-  pressed: () => void,
-): void {
+/** What a screen asks of the menu scene, and all it ever holds of it: the menu raised over it. */
+export type RaisesMenu = Phaser.Scene & { raise(): void };
+
+/** The menu raised over the screen standing, for whichever screen asked for it. */
+export function raiseMenu(scene: Phaser.Scene): void {
+  scene.game.scene.getScene<RaisesMenu>('menu').raise();
+}
+
+/**
+ * The screen's Menu button at its top right corner, on the stratum, naming itself on the screen's
+ * tooltip; a left click on it raises the menu over the screen.
+ */
+export function createMenuButton(scene: Phaser.Scene, on: Stratum, tooltip: Tooltip): void {
   createSquareButton(
     scene,
     on,
     { symbol: 'menu-button', name: 'menu-button', laid: () => cornerNow().menu },
     { tooltip, reads: text('menu.menu') },
-    pressed,
+    () => {
+      raiseMenu(scene);
+    },
   );
 }

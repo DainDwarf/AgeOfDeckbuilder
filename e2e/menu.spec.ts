@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { openingChoices } from '../src/rules/campaign';
 import { tileKey } from '../src/rules/map';
@@ -14,21 +14,29 @@ import {
   civilizationOpened,
   click,
   dragOut,
+  firstDealt,
   idsOf,
   intoSettings,
   launchedFromScreen,
   mapFrame,
   onScreen,
+  openLaunch,
   openSaved,
+  PAST_REST,
+  pieceWornOf,
   playerCityTile,
   readings,
   rested,
+  restedOnDeal,
   ringedTile,
   settledOn,
   standing,
   stoppedTurn,
   tileOnScreen,
+  tooltipUp,
+  waitGameClock,
   watch,
+  windowOnScreen,
 } from './chronicle-screen';
 
 /** Every card the chronicle holds, wherever it stands: the cards of the civilization it was begun on. */
@@ -219,17 +227,78 @@ test('Campaign opens the campaign screen, Chronicle there the launch screen on t
   expect(problems).toEqual([]);
 });
 
-test('the menu opens over the defeat screen, and Campaign, Chronicle then Launch take the chronicle screen back', async ({
+/**
+ * The pointer moved onto the Menu button and rested there past a tooltip's rest, and pressed: the
+ * button wore no hover look and raised no tooltip on the bubble of the screen it stands on.
+ */
+async function pressedUnderScrim(page: Page, tooltip = 'tooltip-ui'): Promise<void> {
+  const button = await onScreen(page, 'menu-button');
+  await page.mouse.move(button.x, button.y);
+  await waitGameClock(page, PAST_REST);
+  const seen = await readings(page, ['menu-button', tooltip]);
+  expect(pieceWornOf(seen('menu-button'))).toEqual({ piece: 'silver', look: 'normal' });
+  expect(seen(tooltip).shows).toBe(false);
+  await rested(page);
+  await page.mouse.click(button.x, button.y);
+  await rested(page);
+}
+
+test('under a card shown large on the chronicle screen and a civilization’s browse on the launch screen, a press on the Menu button is a press on the scrim: the card comes down, the browse closes, and no menu rises', async ({
   page,
 }) => {
   const problems = watch(page);
 
+  await openSaved(page, settledOn(1));
+  const card = await onScreen(page, 'hand-0');
+  await page.mouse.click(card.x, card.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'inspection')).toBe(true);
+  await rested(page);
+  await pressedUnderScrim(page);
+  await expect.poll(() => standing(page, 'inspection')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
+
+  await openLaunch(page);
+  const { civilization } = openingChoices(CATALOGUE, freshCampaign(CATALOGUE));
+  const pile = await windowOnScreen(page, `launch-civilization-${civilization}-card`);
+  await page.mouse.click(pile.x, pile.y, { button: 'right' });
+  await expect.poll(() => standing(page, 'civilization-browse')).toBe(true);
+  await rested(page);
+  await pressedUnderScrim(page, 'tooltip-launch');
+  await expect.poll(() => standing(page, 'civilization-browse')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
+
+  expect(problems).toEqual([]);
+});
+
+test('under the deal window, a browse and the defeat screen a press on the Menu button is a press on the scrim, the back key raises the menu over the deal window and the defeat screen, and Campaign, Chronicle then Launch take the chronicle screen back', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, firstDealt(1));
+  await restedOnDeal(page);
+  await pressedUnderScrim(page);
+  expect(await standing(page, 'deal')).toBe(true);
+  expect(await standing(page, 'menu')).toBe(false);
+  await page.keyboard.press('Escape');
+  await expect.poll(() => standing(page, 'menu')).toBe(true);
+
   await openSaved(page, beforeTheFall());
+  await browse(page, 'draw-pile');
+  await rested(page);
+  await pressedUnderScrim(page);
+  await expect.poll(() => standing(page, 'browse')).toBe(false);
+  expect(await standing(page, 'menu')).toBe(false);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+
   await stoppedTurn(page);
   await expect.poll(() => standing(page, 'defeat')).toBe(true);
   expect(await standing(page, 'capstone')).toBe(false);
+  await pressedUnderScrim(page);
+  expect(await standing(page, 'defeat')).toBe(true);
+  expect(await standing(page, 'menu')).toBe(false);
 
-  await click(page, 'menu-button');
+  await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
 
   await campaignThenChronicle(page);

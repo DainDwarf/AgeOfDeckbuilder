@@ -1383,6 +1383,9 @@ export async function restedOnDeal(page: Page): Promise<void> {
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 export const PAST_HANDOVER = 400;
 
+/** Longer than the rest a tooltip waits out, so one that were coming has had every chance to. */
+export const PAST_REST = 800;
+
 /** Waits out a span of the clock a scene's timers run on. */
 export function waitGameClock(page: Page, span: number): Promise<void> {
   return page.evaluate(
@@ -1514,6 +1517,9 @@ export async function kindLabelOnScreen(page: Page, face: string): Promise<Spot>
 export async function windowOnScreen(page: Page, face: string): Promise<OnScreen> {
   return (await reading(page, face)).windowOnScreen;
 }
+
+/** The cursor over something that reacts to a left click or a rest. */
+export const HAND = 'pointer';
 
 /** The cursor the page shows over the canvas. */
 export function cursorOverCanvas(page: Page): Promise<string> {

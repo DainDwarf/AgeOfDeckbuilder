@@ -19,6 +19,7 @@ import {
   firstDealtAlone,
   firstEntriesTaken,
   firstSeed,
+  HAND,
   offeredOn,
   openSaved,
   pieceOnScreenOf,
@@ -41,9 +42,6 @@ const LEAN_SEASON = 'lean-season';
 
 /** The answer of the lean season that enters warriors. */
 const RATION = 'ration';
-
-/** The cursor over something that reacts to a left click or a rest. */
-const HAND = 'pointer';
 
 /** The bubble every hover on the scrim raises. */
 const TOOLTIP = 'tooltip-overlay';

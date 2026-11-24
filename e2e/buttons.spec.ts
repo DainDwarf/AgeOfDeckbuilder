@@ -144,12 +144,10 @@ test('the Icons button stands left of the Menu button and level with it, sunk in
 
   const menuAt = await onScreen(page, 'menu-button');
   await page.mouse.move(menuAt.x, menuAt.y);
-  await expect.poll(() => tooltipUp(page, 'tooltip-menu')).toBe(true);
-  expect(await tooltipUp(page, 'tooltip-ui')).toBe(false);
-  expect(await tooltipLines(page, 'tooltip-menu')).toEqual([
-    { text: text('menu.menu'), bold: false },
-  ]);
-  const bubble = await bubbleOf(page, 'tooltip-menu');
+  await expect
+    .poll(() => tooltipLines(page, 'tooltip-ui'))
+    .toEqual([{ text: text('menu.menu'), bold: false }]);
+  const bubble = await bubbleOf(page, 'tooltip-ui');
   expect(bubble.y).toBeGreaterThan(menu.y + menu.height);
   expect(bubble.x + bubble.width).toBeLessThanOrEqual((await canvasOf(page)).right);
 
@@ -162,11 +160,11 @@ test('a scrim of the menu rising takes the Menu button’s name down', async ({ 
   await openSaved(page, settledOn(1));
   const menu = await onScreen(page, 'menu-button');
   await page.mouse.move(menu.x, menu.y);
-  await expect.poll(() => tooltipUp(page, 'tooltip-menu')).toBe(true);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
 
   await page.mouse.click(menu.x, menu.y);
   await expect.poll(() => standing(page, 'menu')).toBe(true);
-  await expect.poll(() => tooltipUp(page, 'tooltip-menu')).toBe(false);
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(false);
 
   expect(problems).toEqual([]);
 });

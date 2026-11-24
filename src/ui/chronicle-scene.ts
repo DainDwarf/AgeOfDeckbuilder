@@ -51,7 +51,8 @@ import { onKeyDown, onWheelNotches } from './keys';
 import { LOOK } from './look';
 import { type AimShown, createMapView, type Drawn, type PressedTile } from './map';
 import { mapOf } from './map-scene';
-import { type LeavesChronicles, raiseMenu, resetMenu, warnOfWar } from './menu-scene';
+import { createMenuButton, raiseMenu } from './menu';
+import { type LeavesChronicles, resetMenu, warnOfWar } from './menu-scene';
 import { createOverlay } from './overlay';
 import { overlayAhead, overlayOf } from './overlay-scene';
 import { countText, createCount, createPiles, nameOver, onCount } from './piles';
@@ -229,6 +230,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // down, and a second chain would stand a small card beside the first's.
     const footBubble = createFootBubble(tooltip.ui);
 
+    createMenuButton(this, ui.pinned, tooltip.ui);
     const iconsButton = createDisplayButton(
       this,
       ui.pinned,

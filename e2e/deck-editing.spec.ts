@@ -11,6 +11,7 @@ import {
   collectionOpened,
   cursorAt,
   cursorOverCanvas,
+  HAND,
   heldSave,
   kindLabelOnScreen,
   nameOnScreen,
@@ -26,9 +27,6 @@ import {
   standing,
   watch,
 } from './chronicle-screen';
-
-/** The cursor over something that reacts to a left click or a rest. */
-const HAND = 'pointer';
 
 /** A new campaign, as the bare address with no save opens on. */
 const CAMPAIGN = freshCampaign(CATALOGUE);

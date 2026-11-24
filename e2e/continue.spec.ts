@@ -4,6 +4,7 @@ import { LOOK } from '../src/ui/look';
 import { text } from '../src/ui/text';
 import {
   campaignShown,
+  capstoneClosed,
   chronicleButton,
   chronicleOf,
   click,
@@ -103,7 +104,9 @@ test('the menu’s Campaign leaves the chronicle launched on the launch screen i
   const launched = await chronicleOf(page);
   expect(onSettlePhase(launched)).toBe(true);
 
-  await expect.poll(() => standing(page, 'menu-button')).toBe(true);
+  await expect.poll(() => standing(page, 'capstone')).toBe(true);
+  await rested(page);
+  await capstoneClosed(page);
   await click(page, 'menu-button');
   await expect.poll(() => standing(page, 'menu')).toBe(true);
   await rested(page);

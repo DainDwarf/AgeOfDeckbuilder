@@ -2,12 +2,11 @@ import Phaser from 'phaser';
 import type { Command } from '../rules/chronicle';
 import { saveFileName } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
-import { createScrim, holdDesignSpace, stopsThePointer, stratumOf, whileUp } from './design-space';
+import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
 import {
   behind,
   type CountedLine,
-  createMenuButton,
   createRefusedSaveWindow,
   createWarning,
   createWindow,
@@ -15,6 +14,8 @@ import {
   type MenuWindow,
   type Opened,
   type Opens,
+  type RaisesMenu,
+  raiseMenu,
   type Said,
   type Warning,
 } from './menu';
@@ -22,7 +23,6 @@ import { META_SCREENS } from './navbar';
 import { type CoversOverlay, overlayAhead } from './overlay-scene';
 import { clearSave, keepSave, readSaveFileText, saveFileText } from './save-entry';
 import { onRefused } from './storage';
-import { createTooltip } from './tooltip';
 
 /** What the menu asks of the chronicle scene at the press, and all it ever holds of it. */
 export type LeavesChronicles = Phaser.Scene & { leave(): void };
@@ -47,7 +47,7 @@ const WAR_WARNINGS: Record<WarPress, Warning> = {
  * console and before every screen, so the console takes a key ahead of it and it takes one ahead of
  * whatever stands under it, and never stopped, so it outlives every chronicle.
  */
-export class MenuScene extends Phaser.Scene implements CoversOverlay {
+export class MenuScene extends Phaser.Scene implements CoversOverlay, RaisesMenu {
   /** The menu raised on its first window, over whatever stands. */
   raise!: () => void;
 
@@ -68,14 +68,8 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
   }
 
   create(): void {
-    const camera = this.cameras.main;
-    holdDesignSpace(this, camera);
-    const button = stratumOf(this.add.layer(), camera);
-    const tooltip = createTooltip(this, stratumOf(this.add.layer(), camera));
-    createMenuButton(this, button, tooltip, () => this.raise());
+    holdDesignSpace(this, this.cameras.main);
 
-    // Added after the button and its tooltip, which they therefore cover: a press there is a press on a
-    // scrim.
     const scrim = createScrim(this, () => back());
     // Its depth and its window's keep them over a window of the menu raised after them.
     const refusedSaveScrim = createScrim(this, () => takeDownRefusedSave()).setDepth(1);
@@ -218,11 +212,10 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay {
       if (boundTo(press, 'back')) back();
     };
 
-    // The Menu button reacts to no wheel, and the chronicle screen zooms under it.
     stopsThePointer(
       this,
-      () => (covered ? 'every' : 'no button held'),
-      () => covered,
+      () => 'every',
+      () => true,
     );
 
     readsKeys(this, (event) => {
@@ -274,11 +267,6 @@ function chooseFile(chosen: (text: string) => void): void {
     if (file !== undefined) void file.text().then(chosen);
   });
   input.click();
-}
-
-/** The menu raised over whatever stands, for whichever screen asked for it. */
-export function raiseMenu(scene: Phaser.Scene): void {
-  scene.game.scene.getScene<MenuScene>('menu').raise();
 }
 
 /** The launch warning raised over the launch screen, for the scene standing it. */

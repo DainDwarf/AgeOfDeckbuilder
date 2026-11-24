@@ -13,6 +13,7 @@ import {
   UI_FONT,
 } from './design-space';
 import { css, LOOK } from './look';
+import { createMenuButton } from './menu';
 import { overlayAhead } from './overlay-scene';
 import { createReading, placeReading, READING_GLYPH, readingWidth, SUNK } from './resource-bar';
 import { campaignHeld } from './save-entry';
@@ -67,7 +68,7 @@ export type Worn = {
 
 /**
  * The navbar down the left edge, the button of the screen standing sunk in a well, and the bar along
- * the top reading the influence.
+ * the top reading the influence, the Menu button at its right end.
  */
 export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
   // Interactive so that it is what the pointer is on over anything the screen slides under it.
@@ -109,9 +110,11 @@ export function wearNavbar(scene: Phaser.Scene, standing: MetaScreen): Worn {
 
   scene.add.rectangle(ROOM.x, 0, ROOM.width, BAR_HEIGHT, LOOK.panelFill).setOrigin(0, 0);
   scene.add.rectangle(ROOM.x, BAR_HEIGHT - 1, ROOM.width, 1, LOOK.panelEdge).setOrigin(0, 0);
+  const button = stratumOf(scene.add.layer(), scene.cameras.main);
 
   const bubbles = stratumOf(scene.add.layer(), scene.cameras.main);
   const tooltip = createTooltip(scene, bubbles);
+  createMenuButton(scene, button, tooltip);
   const influence = createReading(scene, tooltip, {
     name: 'influence',
     symbol: 'influence',

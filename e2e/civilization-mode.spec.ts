@@ -19,6 +19,7 @@ import {
   click,
   counted,
   cursorAt,
+  HAND,
   heldSave,
   kindLabelOnScreen,
   onScreen,
@@ -35,9 +36,6 @@ import {
   watch,
   wonCampaign,
 } from './chronicle-screen';
-
-/** The cursor over something that reacts to a left click or a rest. */
-const HAND = 'pointer';
 
 /** How many stacks a line holds in the civilization mode. */
 const ACROSS = 6;

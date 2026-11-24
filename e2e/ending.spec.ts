@@ -20,6 +20,7 @@ import {
   cursorOverCanvas,
   defeatShown,
   dragOut,
+  HAND,
   heldSave,
   influenceCardGaining,
   landed,
@@ -35,9 +36,6 @@ import {
   victoryShown,
   watch,
 } from './chronicle-screen';
-
-/** The cursor over something that reacts to a press. */
-const HAND = 'pointer';
 
 /** The chronicle opened and the play that wins it made: the ending screen rises from here. */
 async function playTheWin(

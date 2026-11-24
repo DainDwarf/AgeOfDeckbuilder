@@ -399,51 +399,6 @@ test('a right click on a card being dragged shows it large and brings it home, a
   expect(problems).toEqual([]);
 });
 
-test('a card dragged and right-clicked where no scrim rises follows the pointer on, and the left release plays it', async ({
-  page,
-}) => {
-  const problems = watch(page);
-  const { opened, unit } = playableAtNothing();
-
-  await openSaved(page, opened);
-
-  const card = `hand-${unit}`;
-  const home = await onScreen(page, card);
-  const menu = await onScreen(page, 'menu-button');
-
-  await page.mouse.move(home.x, home.y);
-  await page.mouse.down();
-  await page.mouse.move(home.x, home.y - LIFTED * home.unit, { steps: 5 });
-  await page.mouse.move(menu.x, menu.y, { steps: 5 });
-
-  // The Menu button swallows the press and raises nothing, while the release it never swallows ends
-  // Phaser's drag: from there the card follows the pointer on the hand's own carry.
-  await page.mouse.down({ button: 'right' });
-  await page.mouse.up({ button: 'right' });
-  expect(await standing(page, 'menu')).toBe(false);
-  expect(await standing(page, 'inspection')).toBe(false);
-  expect(await chronicleOf(page)).toEqual(opened);
-
-  // The carry is absolute, so it is exact from the first move the menu does not stop: both of these
-  // stand clear of the button, which swallows every move that lands on it and freezes the card.
-  const below = menu.y + 120 * menu.unit;
-  await page.mouse.move(menu.x, below, { steps: 4 });
-  await rested(page);
-  const carried = await onScreen(page, card);
-
-  const by = 160 * menu.unit;
-  await page.mouse.move(menu.x, below + by, { steps: 4 });
-  await expect
-    .poll(async () => Math.round((await onScreen(page, card)).y - carried.y))
-    .toBe(Math.round(by));
-
-  await page.mouse.up();
-  await playedOut(page);
-  expect(await chronicleOf(page)).toEqual(playedAtNothing(opened, unit));
-
-  expect(problems).toEqual([]);
-});
-
 test('a right click while a unit is carried inspects the tile under it and leaves the unit in hand, and the left release steps it there', async ({
   page,
 }) => {

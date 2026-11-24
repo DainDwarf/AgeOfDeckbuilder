@@ -14,12 +14,14 @@ import {
   endedTurn,
   endTurnHovered,
   firstDealt,
+  HAND,
   influenceCardGaining,
   kindLabelOnScreen,
   liftedPart,
   offCanvas,
   onScreen,
   openSaved,
+  PAST_REST,
   reading,
   restedOnDeal,
   settledOn,
@@ -32,12 +34,6 @@ import {
   waitGameClock,
   watch,
 } from './chronicle-screen';
-
-/** Longer than the rest a tooltip waits out, so one that were coming has had every chance to. */
-const PAST_REST = 800;
-
-/** The cursor over something that reacts to a press. */
-const HAND = 'pointer';
 
 test('a pointer that leaves the canvas over a resource raises no tooltip behind it', async ({
   page,
