@@ -15,10 +15,13 @@ export type ButtonSign =
   | 'minimize-button'
   | 'fold-tab';
 
+/** The menu's links, each wearing its site's mark, a symbol of the cast. */
+export type LinkSign = 'itch-io-link' | 'github-link' | 'discord-link';
+
 /**
  * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
  * a unit's move, action, sight or damage, an attack that would kill, what a prepare lands as, a unit
- * of the neutral's while it is hostile, a faction, a site, a card nothing plays, a pile, or a button.
+ * of the neutral's while it is hostile, a faction, a site, a card nothing plays, a pile, or a sign.
  */
 export type CastSymbol =
   | Resource
@@ -37,7 +40,8 @@ export type CastSymbol =
   | 'site'
   | 'played-by-nothing'
   | PileKind
-  | ButtonSign;
+  | ButtonSign
+  | LinkSign;
 
 /** The file each symbol's glyph is drawn from, white for a tint to colour, under the assets folder. */
 const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
@@ -74,6 +78,9 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'hex-grid-button': 'material-design-icons/hexagon-multiple-outline.svg',
   'minimize-button': 'material-design-icons/eye-off.svg',
   'fold-tab': 'material-design-icons/menu-left.svg',
+  'itch-io-link': 'simple-icons/itchdotio.svg',
+  'github-link': 'simple-icons/github.svg',
+  'discord-link': 'simple-icons/discord.svg',
 };
 
 /** The file a symbol's glyph is drawn from, and the frame of the glyphs sheet it stands in. */

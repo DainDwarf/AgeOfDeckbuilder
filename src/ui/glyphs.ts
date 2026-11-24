@@ -61,12 +61,16 @@ function colourOf(symbol: CastSymbol): number {
     case 'minimize-button':
     case 'fold-tab':
       return LOOK.metalInk;
+    case 'itch-io-link':
+    case 'github-link':
+    case 'discord-link':
+      return LOOK.charcoalInk;
   }
 }
 
 /**
  * Whether a symbol's glyph wears its outline where it is not told: the hostile glyph, read in a text's
- * ink, wears none, and neither does a pile's sign, on its rimmed round, nor a button's, on its metal.
+ * ink, wears none, and neither does a sign, a pile's on its round, a button's or a link's in its square.
  */
 function outlinedOf(symbol: CastSymbol): boolean {
   switch (symbol) {
@@ -81,6 +85,9 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'hex-grid-button':
     case 'minimize-button':
     case 'fold-tab':
+    case 'itch-io-link':
+    case 'github-link':
+    case 'discord-link':
       return false;
     case 'food':
     case 'production':

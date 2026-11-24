@@ -1,4 +1,3 @@
-/// <reference types="vite/client" />
 // First, before any import that can throw as it is evaluated: the watch is only as early as it is.
 import './failed-boot';
 import Phaser from 'phaser';

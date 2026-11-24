@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import type { Command } from '../rules/chronicle';
 import { saveFileName } from '../rules/save-file';
 import { type Bind, boundTo, keyPressed } from './bindings';
-import { createScrim, holdDesignSpace, stopsThePointer, whileUp } from './design-space';
+import { createScrim, holdDesignSpace, stopsThePointer, stratumOf, whileUp } from './design-space';
 import { readsKeys, takesMouseKeys } from './keys';
 import {
   behind,
@@ -23,6 +23,7 @@ import { META_SCREENS } from './navbar';
 import { type CoversOverlay, overlayAhead } from './overlay-scene';
 import { clearSave, keepSave, readSaveFileText, saveFileText } from './save-entry';
 import { onRefused } from './storage';
+import { createTooltip } from './tooltip';
 
 /** What the menu asks of the chronicle scene at the press, and all it ever holds of it. */
 export type LeavesChronicles = Phaser.Scene & { leave(): void };
@@ -71,8 +72,10 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay, RaisesMenu
     holdDesignSpace(this, this.cameras.main);
 
     const scrim = createScrim(this, () => back());
-    // Its depth and its window's keep them over a window of the menu raised after them.
-    const refusedSaveScrim = createScrim(this, () => takeDownRefusedSave()).setDepth(1);
+    // The depths keep the tooltip over a window of the menu raised after it, and the refused-save
+    // window's scrim and window over both.
+    const tooltip = createTooltip(this, stratumOf(this.add.layer().setDepth(1), this.cameras.main));
+    const refusedSaveScrim = createScrim(this, () => takeDownRefusedSave()).setDepth(2);
 
     /** The window standing, and nothing while the scrim is down. */
     let standing: Standing | undefined;
@@ -99,11 +102,16 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay, RaisesMenu
     };
 
     onRefused(() => {
-      refusedSave = createRefusedSaveWindow(this, takeDownRefusedSave).setDepth(1);
+      refusedSave = createRefusedSaveWindow(this, takeDownRefusedSave).setDepth(2);
       cover();
     });
 
-    const presses = { press: (press: MenuPress) => pressed(press), back: () => back() };
+    const presses = {
+      press: (press: MenuPress) => pressed(press),
+      back: () => back(),
+      open: openTab,
+      tooltip,
+    };
 
     /** The window laid in place of the one standing, and standing from now on. */
     const stand = (which: MenuWindow, lay: () => Opened): Standing => {
@@ -160,7 +168,11 @@ export class MenuScene extends Phaser.Scene implements CoversOverlay, RaisesMenu
         case 'settings':
         case 'controls':
         case 'graphics':
+        case 'credits':
           raise(press);
+          return;
+        case 'licences':
+          openTab(`${import.meta.env.BASE_URL}${import.meta.env.LICENCES_PAGE}`);
           return;
         case 'back':
           back();
@@ -267,6 +279,12 @@ function chooseFile(chosen: (text: string) => void): void {
     if (file !== undefined) void file.text().then(chosen);
   });
   input.click();
+}
+
+// A browser opens a tab only inside a press of the player's, as it does `chooseFile`'s window.
+/** The address opened in a new tab of the browser, the game standing as it was. */
+function openTab(address: string): void {
+  window.open(address, '_blank', 'noopener');
 }
 
 /** The launch warning raised over the launch screen, for the scene standing it. */

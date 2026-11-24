@@ -1,7 +1,7 @@
 import type { Box } from './design-space';
 
 /** How wide and how tall each button at the corner stands. */
-const SQUARE = 40;
+export const CORNER_SQUARE = 40;
 
 /** The gap between each button at the corner and the one right of it. */
 const APART = 8;
@@ -39,12 +39,12 @@ export type CornerLayout = Readonly<Record<CornerButton, Box>> & {
  */
 export function layOutCorner(width: number, margin: number, strip: number): CornerLayout {
   const menu = {
-    x: width - margin - SQUARE,
-    y: strip / 2 - SQUARE / 2,
-    width: SQUARE,
-    height: SQUARE,
+    x: width - margin - CORNER_SQUARE,
+    y: strip / 2 - CORNER_SQUARE / 2,
+    width: CORNER_SQUARE,
+    height: CORNER_SQUARE,
   };
-  const leftOf = (box: Box): Box => ({ ...box, x: box.x - APART - SQUARE });
+  const leftOf = (box: Box): Box => ({ ...box, x: box.x - APART - CORNER_SQUARE });
   const icons = leftOf(menu);
   const signs = leftOf(icons);
   const right = menu.x + menu.width;

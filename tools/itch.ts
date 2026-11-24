@@ -1,9 +1,8 @@
 import { execFileSync } from 'node:child_process';
 import { build } from 'vite';
+import { buildVersion } from './version.ts';
 
-const version = execFileSync('git', ['describe', '--tags', '--always', '--dirty'], {
-  encoding: 'utf8',
-}).trim();
+const version = buildVersion();
 
 await build({ base: './' });
 

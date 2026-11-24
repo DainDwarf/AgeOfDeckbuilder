@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
+import RECORD from '../../public/assets/LICENSES.md?raw';
 import { animationSpeed, pressAnimationSpeed } from './animation-speed';
-import { balancedWrap } from './balanced-wrap';
+import { balancedLines, balancedWrap } from './balanced-wrap';
 import {
   type Bind,
   bindings,
@@ -26,7 +27,8 @@ import {
   WINDOW_TITLE,
 } from './chrome';
 import { type ButtonPiece, WINDOW_BAND_FOOT } from './chrome-kit';
-import { type CornerLayout, layOutCorner } from './corner-layout';
+import { CORNER_SQUARE, type CornerLayout, layOutCorner } from './corner-layout';
+import { type Credit, creditsListed, LINKS, type Link, type MakersLine } from './credits';
 import {
   addText,
   BAR_HEIGHT,
@@ -38,13 +40,16 @@ import {
   offMiddle,
   onClick,
   onHover,
+  ownBoxOf,
   placedWhileUp,
+  reactsToPress,
   type SizedStyle,
   type Stratum,
   screenSize,
   UI_FONT,
   whileUp,
 } from './design-space';
+import { asGlyph, glyphMark, SIGN_SHARE } from './glyphs';
 import { interfaceSize, pressInterfaceSize, sizeRead } from './interface-size';
 import { css, LOOK } from './look';
 import { type TextKey, text } from './text';
@@ -59,24 +64,33 @@ export type Warning =
   | 'attack-warning';
 
 /** Every window the menu opens. */
-export type MenuWindow = 'menu' | 'settings' | 'controls' | 'graphics' | 'manage-save' | Warning;
+export type MenuWindow =
+  | 'menu'
+  | 'settings'
+  | 'controls'
+  | 'graphics'
+  | 'manage-save'
+  | 'credits'
+  | Warning;
 
 /** A window a press or a step back opens: every one but a warning. */
 export type Opens = Exclude<MenuWindow, Warning>;
 
 /**
  * What pressing a window's button does: opens the window it names, leaves the chronicle for the
- * campaign screen, steps back, or one of the save's doors.
+ * campaign screen, steps back, one of the save's doors, or opens the licences' page.
  */
 export type MenuPress =
   | 'manage-save'
   | 'settings'
   | 'controls'
   | 'graphics'
+  | 'credits'
   | 'campaign'
   | 'export'
   | 'import'
   | 'clear'
+  | 'licences'
   | 'back';
 
 /** What each press's button reads. */
@@ -85,10 +99,12 @@ const LABELS: Record<MenuPress, TextKey> = {
   settings: 'menu.settings',
   controls: 'menu.controls',
   graphics: 'menu.graphics',
+  credits: 'menu.credits',
   campaign: 'menu.campaign',
   export: 'manage-save.export',
   import: 'manage-save.import',
   clear: 'manage-save.clear',
+  licences: 'credits.licences',
   back: 'control.back',
 };
 
@@ -102,20 +118,30 @@ const THROUGH: Record<Warning, TextKey> = {
 };
 
 /**
- * The windows: the title each one reads, the lines under it, the buttons it lists in order, and the
- * one it closes back to, none closing onto the screen standing. Controls and a warning lay a pair of
- * their own instead of buttons, and Graphics its rows over them.
+ * The windows: the title each one reads, the lines under it, its buttons, and the one it closes back
+ * to, none closing onto the screen standing. Controls and a warning lay a pair of their own, Graphics
+ * its rows over its buttons, and Credits its list over its pair.
  */
 const WINDOWS: Record<
   MenuWindow,
   {
     readonly title: TextKey;
     readonly lines?: readonly TextKey[];
+    /** The buttons listed one under the other, in order, or the two laid side by side. */
     readonly buttons?: readonly MenuPress[];
+    readonly pair?: readonly [MenuPress, MenuPress];
+    /** Whether the links stand under the buttons, and the version at the window's foot. */
+    readonly linked?: true;
+    readonly versioned?: true;
     readonly from?: Opens;
   }
 > = {
-  menu: { title: 'menu.menu', buttons: ['manage-save', 'settings', 'campaign'] },
+  menu: {
+    title: 'menu.menu',
+    buttons: ['manage-save', 'settings', 'credits', 'campaign'],
+    linked: true,
+    versioned: true,
+  },
   settings: { title: 'menu.settings', buttons: ['controls', 'graphics'], from: 'menu' },
   controls: { title: 'menu.controls', from: 'settings' },
   graphics: { title: 'menu.graphics', buttons: ['back'], from: 'settings' },
@@ -125,6 +151,7 @@ const WINDOWS: Record<
     buttons: ['export', 'import', 'clear', 'back'],
     from: 'menu',
   },
+  credits: { title: 'menu.credits', pair: ['licences', 'back'], versioned: true, from: 'menu' },
   'import-warning': {
     title: 'menu.manage-save',
     lines: ['manage-save.line', 'manage-save.import-warning'],
@@ -223,6 +250,18 @@ const SLOT_GAP = 10;
 /** How far apart the last key's row and the first wheel's stand, the rule in the middle of that. */
 const RULE_ROOM = 13;
 
+/** How far apart the menu's last button and its links stand, the rule in the middle of that. */
+const LINKS_RULE_ROOM = 28;
+
+/** How far apart two links stand. */
+const LINK_GAP = 14;
+
+/** How far apart two headings' blocks of the Credits list stand. */
+const CREDITS_APART = 12;
+
+/** How far under what a window reads its version stands. */
+const VERSION_GAP = 12;
+
 /** Where a row's wells start and end, across the window. */
 const ROW_LEFT = DESIGN_WIDTH / 2 - WIDTH / 2 + PADDING;
 const ROW_RIGHT = DESIGN_WIDTH / 2 + WIDTH / 2 - PADDING;
@@ -282,6 +321,17 @@ const LINE_STYLE: SizedStyle = {
   align: 'center',
   wordWrap: balancedWrap(ROOM),
 };
+const CREDITS_HEADING_STYLE: SizedStyle = {
+  fontFamily: UI_FONT,
+  fontSize: '14px',
+  color: css(LOOK.creditsHeadingInk),
+};
+const MAKERS_STYLE: SizedStyle = { fontFamily: UI_FONT, fontSize: '18px', color: INK };
+const VERSION_STYLE: SizedStyle = {
+  fontFamily: UI_FONT,
+  fontSize: '12px',
+  color: css(LOOK.versionInk),
+};
 
 /** A window standing on the scrim, and the keyboard's one way into it. */
 export type Opened = {
@@ -290,10 +340,15 @@ export type Opened = {
   binds(press: Bind): boolean;
 };
 
-/** What a window is pressed for: a button of its own, or the step back the Back button takes. */
+/**
+ * What a window is pressed for: a button of its own, the step back the Back button takes, or a site
+ * opened in a new tab; and the tooltip a rest on a link raises.
+ */
 export type Presses = {
   press(press: MenuPress): void;
   back(): void;
+  open(address: string): void;
+  readonly tooltip: Tooltip;
 };
 
 /** A button of a window: its name, what it reads, the kit's button it is drawn as, and what pressing it does. */
@@ -676,13 +731,12 @@ export function createWindow(
   on: Presses,
   said: Said = {},
 ): Opened {
-  return layWindow(
-    scene,
-    which,
-    { kind: 'column', buttons: buttonsOf(scene, which, on) },
-    on,
-    said,
-  );
+  const { pair } = WINDOWS[which];
+  const laid: Laid =
+    pair === undefined
+      ? { kind: 'column', buttons: buttonsOf(scene, which, on) }
+      : { kind: 'pair', pair: [buttonOf(which, pair[0], on), buttonOf(which, pair[1], on)] };
+  return layWindow(scene, which, laid, on, said);
 }
 
 /** A warning, centred on the design space, the press it warns of, `through`, beside its Back. */
@@ -703,9 +757,193 @@ export function createWarning(
   return layWindow(scene, which, { kind: 'pair', pair }, on, said);
 }
 
+/** Something a window reads, centred across it: its objects, how tall it stands, and its top laid at `top`. */
+type CentredRead = {
+  readonly parts: readonly Phaser.GameObjects.GameObject[];
+  readonly height: number;
+  place(top: number): void;
+};
+
+/** What keeps an address on one row of its line: its spaces, drawn as spaces that break nothing. */
+const UNBROKEN = ' ';
+
 /**
- * One window: its panel with the gold band, its title on the gold, its lines, the list said, its
- * buttons, and the line said under them. The caller takes the window down.
+ * A makers' line in the fewest rows the window's room allows, each row named `${name}-${row}`, and
+ * each address on it underlined by a thin line of its ink, thicker under the pointer, a left click on
+ * it opening its site.
+ */
+function makersLaid(scene: Phaser.Scene, line: MakersLine, name: string, on: Presses): CentredRead {
+  const drawn = line
+    .map(({ reads, opens }) => (opens === undefined ? reads : reads.replaceAll(' ', UNBROKEN)))
+    .join('');
+  const first = addText(scene, 0, 0, drawn, MAKERS_STYLE).setOrigin(0.5, 0);
+  const measure = (shown: string): number => first.context.measureText(shown).width;
+  const shown = balancedLines(drawn, measure, ROOM).map((row) => row.replaceAll(UNBROKEN, ' '));
+  const rows = shown.map((reads, index) =>
+    (index === 0 ? first.setText(reads) : addText(scene, 0, 0, reads, MAKERS_STYLE))
+      .setOrigin(0.5, 0)
+      .setName(`${name}-${index}`),
+  );
+  /** Where each row starts in what the line draws, a space taken at each break. */
+  const starts = shown.map((_, index) =>
+    shown.slice(0, index).reduce((at, row) => at + row.length + 1, 0),
+  );
+
+  let from = 0;
+  const addresses = line.flatMap(({ reads, opens }, index) => {
+    const at = from;
+    from += reads.length;
+    if (opens === undefined) return [];
+    const row = starts.filter((start) => start <= at).length - 1;
+    const before = shown[row].slice(0, at - starts[row]);
+    const x = DESIGN_WIDTH / 2 - Math.ceil(measure(shown[row])) / 2 + measure(before);
+    const width = measure(reads);
+    const { height } = rows[row];
+    const zone = reactsToPress(
+      scene.add.zone(x, 0, width, height).setOrigin(0, 0).setName(`${name}-address-${index}`),
+    ).setInteractive();
+    const rule = scene.add
+      .rectangle(x, 0, width, 1, LOOK.charcoalInk)
+      .setOrigin(0, 0)
+      .setName(`${name}-address-${index}-rule`);
+    onHover(
+      zone,
+      () => rule.setSize(width, 2),
+      () => rule.setSize(width, 1),
+    );
+    onClick(zone, () => on.open(opens));
+    return [{ row, zone, rule }];
+  });
+
+  return {
+    parts: [...rows, ...addresses.flatMap(({ zone, rule }) => [rule, zone])],
+    height: rows.reduce((sum, row) => sum + row.height, 0),
+    place(top) {
+      let y = top;
+      for (const row of rows) {
+        row.setPosition(DESIGN_WIDTH / 2, y);
+        y += row.height;
+      }
+      for (const { row, zone, rule } of addresses) {
+        const label = rows[row];
+        zone.setY(label.y);
+        rule.setY(ownBoxOf(label).y + label.getTextMetrics().ascent + 2);
+      }
+    },
+  };
+}
+
+/** A thing given: its heading, named `name`, over its makers' lines, named after it. */
+function creditLaid(
+  scene: Phaser.Scene,
+  { heading, lines }: Credit,
+  name: string,
+  on: Presses,
+): CentredRead {
+  const label = addText(scene, 0, 0, heading, CREDITS_HEADING_STYLE)
+    .setOrigin(0.5, 0)
+    .setName(name);
+  const makers = lines.map((line, index) => makersLaid(scene, line, `${name}-${index}`, on));
+  return {
+    parts: [label, ...makers.flatMap(({ parts }) => parts)],
+    height: makers.reduce((sum, { height }) => sum + height, label.height),
+    place(top) {
+      label.setPosition(DESIGN_WIDTH / 2, top);
+      let y = top + label.height;
+      for (const each of makers) {
+        each.place(y);
+        y += each.height;
+      }
+    },
+  };
+}
+
+/** The Credits window's list, read off the packs' licence record, each heading's block a little apart. */
+function creditsLaid(scene: Phaser.Scene, on: Presses): CentredRead {
+  const credits = creditsListed(RECORD).map((credit, index) =>
+    creditLaid(scene, credit, `credits-${index}`, on),
+  );
+  return {
+    parts: credits.flatMap(({ parts }) => parts),
+    height:
+      credits.reduce((sum, { height }) => sum + height, 0) + (credits.length - 1) * CREDITS_APART,
+    place(top) {
+      let y = top;
+      for (const each of credits) {
+        each.place(y);
+        y += each.height + CREDITS_APART;
+      }
+    },
+  };
+}
+
+/** The version the build was made at, named after the window it stands at the foot of. */
+function versionLine(scene: Phaser.Scene, which: MenuWindow): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, import.meta.env.BUILD_VERSION, VERSION_STYLE)
+    .setOrigin(0.5, 0)
+    .setName(`${which}-version`);
+}
+
+/** How far the links reach, the rule's room over them included. */
+const LINKS_HEIGHT = LINKS_RULE_ROOM + CORNER_SQUARE;
+
+/**
+ * A link on the box, a well wearing its mark: the rest on it raises its name under it on the menu's
+ * tooltip, and a left click on it opens its site.
+ */
+function linkOn(
+  scene: Phaser.Scene,
+  { sign, reads, opens }: Link,
+  box: Box,
+  on: Presses,
+): Phaser.GameObjects.GameObject[] {
+  const { face, veil } = createPressableWell(scene, box, sign);
+  const mark = asGlyph(glyphMark(scene), sign, SIGN_SHARE * box.height)
+    .setPosition(box.x + box.width / 2, box.y + box.height / 2)
+    .setName(`${sign}-sign`);
+  onClick(face, () => on.open(opens));
+  onHover(
+    face,
+    () => {
+      const { x, y } = offMiddle();
+      on.tooltip.under(text(reads), box.x + x, box.y + box.height + STANDOFF + y);
+    },
+    () => {
+      on.tooltip.hide();
+    },
+  );
+  // A window taken down under a resting pointer ends no hover (`onHover` forgets it at the destroy).
+  face.once(Phaser.GameObjects.Events.DESTROY, () => {
+    on.tooltip.hide();
+  });
+  return [face, veil, mark];
+}
+
+/** The menu's links in a row centred across the window from `top` down, the faint rule over them. */
+function layLinks(
+  scene: Phaser.Scene,
+  root: Phaser.GameObjects.Container,
+  top: number,
+  on: Presses,
+): void {
+  const ruleTop = top + (LINKS_RULE_ROOM - 1) / 2;
+  root.add(faintRule(scene, ROW_LEFT, ruleTop, ROOM).setName('menu-links-rule'));
+  const across = LINKS.length * CORNER_SQUARE + (LINKS.length - 1) * LINK_GAP;
+  LINKS.forEach((link, index) => {
+    const box = {
+      x: (DESIGN_WIDTH - across) / 2 + index * (CORNER_SQUARE + LINK_GAP),
+      y: top + LINKS_RULE_ROOM,
+      width: CORNER_SQUARE,
+      height: CORNER_SQUARE,
+    };
+    root.add(linkOn(scene, link, box, on));
+  });
+}
+
+/**
+ * One window: its panel with the gold band, its title on the gold, its lines, the list said or the
+ * Credits list, its buttons, the links, the line said under them, and the version at its foot. The
+ * caller takes the window down.
  */
 function layWindow(
   scene: Phaser.Scene,
@@ -729,14 +967,22 @@ function layWindow(
     heading === undefined
       ? 0
       : PADDING + heading.height + list.reduce((sum, line) => sum + line.height, 0);
+  const credits = which === 'credits' ? creditsLaid(scene, on) : undefined;
+  const creditsHeight = credits === undefined ? 0 : PADDING + credits.height;
+  const linksHeight = shape.linked === undefined ? 0 : LINKS_HEIGHT;
   const under = said.under === undefined ? [] : [entryLine(scene, said.under)];
+  const version = shape.versioned === undefined ? undefined : versionLine(scene, which);
+  const versionHeight = version === undefined ? 0 : VERSION_GAP + version.height;
 
   const height =
     READ_FROM +
     linesHeight(over) +
     listHeight +
+    creditsHeight +
     bodyHeight(which, laid) +
+    linksHeight +
     linesHeight(under) +
+    versionHeight +
     PADDING;
   const top = Math.round((DESIGN_HEIGHT - height) / 2);
   const middle = DESIGN_WIDTH / 2;
@@ -755,12 +1001,17 @@ function layWindow(
     line.place(middle - line.width / 2, y);
     y += line.height;
   }
+  credits?.place(y + PADDING);
+  y += creditsHeight;
   const body = y + PADDING;
   y += bodyHeight(which, laid);
+  const links = y;
+  y += linksHeight;
   for (const line of under) {
     line.setPosition(middle, y + PADDING);
     y += PADDING + line.height;
   }
+  version?.setPosition(middle, y + VERSION_GAP);
 
   const root = scene.add
     .container(0, 0, [
@@ -769,10 +1020,13 @@ function layWindow(
       ...over,
       ...(heading === undefined ? [] : [heading]),
       ...list.flatMap(({ parts }) => parts),
+      ...(credits?.parts ?? []),
       ...under,
+      ...(version === undefined ? [] : [version]),
     ])
     .setName(which);
   root.add(buttonsLaid(scene, which, laid, body));
+  if (shape.linked !== undefined) layLinks(scene, root, links, on);
 
   if (which === 'graphics') layGraphics(scene, root, body);
   const binds = which === 'controls' ? layControls(scene, root, body, on.back) : () => false;

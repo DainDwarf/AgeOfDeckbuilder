@@ -55,7 +55,10 @@ jobs:
       pages: write
       id-token: write
     steps:
+      # The whole history and its tags, so the version the build reads names the last tag.
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       - uses: ./.github/actions/store
         with:
           key: ${{ secrets.STORE_DEPLOY_KEY }}
