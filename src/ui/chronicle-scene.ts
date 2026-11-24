@@ -402,8 +402,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     /**
-     * The play-out in flight let go of and the screen standing on the chronicle it leaves. Its
-     * motions are dropped, not stopped: a stop would run what each chains after it over that screen.
+     * The play-out in flight let go of, its skipped lines logged, the screen standing on what it
+     * leaves. Its motions are dropped, not stopped: a stop would run what each chains after it over
+     * that screen.
      */
     const jumpToEnd = (): void => {
       const running = this.sequence;
@@ -411,6 +412,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       this.sequence = undefined;
       dropWaitedMotion(this);
       dropWaitedMotion(map);
+      log.cutShort();
       stand(running.leaves);
     };
 

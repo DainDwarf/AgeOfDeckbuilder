@@ -31,7 +31,7 @@ import { RESOURCES } from '../rules/resources';
 import { type Stage, walked } from '../rules/stages';
 import type { Chronicle } from '../rules/state';
 import type { Unit } from '../rules/units';
-import { type LogReading, logReaders } from './log-lines';
+import { type LogReading, linesSkipped, logReaders } from './log-lines';
 import type { SightOn } from './map-motion';
 
 /** The map playing every stage on every tile. */
@@ -292,4 +292,26 @@ test('nothing reads on the settle phase, the unit its settle enters among it', (
   expect(
     linesOf(apply(CATALOGUE, settled, { type: 'end-turn' })).filter(({ turn }) => turn === 0),
   ).toEqual([]);
+});
+
+test('a play-out cut short reads the lines of every stage it skipped, in the order they would have played and where the map would have played each, and none of a stage that played', () => {
+  const city = ringed(3, {
+    ...NO_GROWTH,
+    hand: ['PH_Curse'],
+    resources: onlyStocks({ food: 2 * CURSE }),
+    units: [standing('player', MINE), standing('enemy', THEIRS, { move: 0 })],
+  });
+  const stages = apply(CATALOGUE, city, { type: 'end-turn' });
+  const readers = logReaders(stages);
+  const walk = [...walked(stages)];
+  const first = walk.findIndex((stage) => readers.get(stage)?.read(EVERYWHERE) !== undefined);
+  const played = new Set(walk.slice(0, first + 1));
+  const lines = linesOf(stages);
+  expect(lines.length).toBeGreaterThan(2);
+
+  expect(linesSkipped(readers, played, () => EVERYWHERE)).toEqual(lines.slice(1));
+  expect(linesSkipped(readers, new Set(), () => hiding(MINE, THEIRS))).toEqual(
+    linesOf(stages, hiding(MINE, THEIRS)),
+  );
+  expect(linesSkipped(readers, new Set(walk), () => EVERYWHERE)).toEqual([]);
 });

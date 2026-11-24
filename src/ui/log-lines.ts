@@ -47,8 +47,8 @@ export type LogReader = {
 };
 
 /**
- * Every stage among these, however deep, that may read as a line of the log, and how: none on the
- * settle phase.
+ * Every stage among these, however deep, that may read as a line of the log, and how, in the order
+ * they play: none on the settle phase.
  */
 export function logReaders(stages: readonly Stage[]): Map<Stage, LogReader> {
   const readers = new Map<Stage, LogReader>();
@@ -61,6 +61,25 @@ export function logReaders(stages: readonly Stage[]): Map<Stage, LogReader> {
   };
   among(stages);
   return readers;
+}
+
+/** A line of the log: the turn it stands under, and what it reads. */
+export type LogLine = { readonly turn: number; readonly reads: LogReading };
+
+/**
+ * The lines of the stages `logReaders` read that a play-out cut short never played, in the order
+ * they would have played, each where `sightOf` says the map would have played it.
+ */
+export function linesSkipped(
+  readers: ReadonlyMap<Stage, LogReader>,
+  played: ReadonlySet<Stage>,
+  sightOf: (stage: Stage) => SightOn,
+): LogLine[] {
+  return [...readers].flatMap(([stage, { turn, read }]): LogLine[] => {
+    if (played.has(stage)) return [];
+    const reads = read(sightOf(stage));
+    return reads === undefined ? [] : [{ turn, reads }];
+  });
 }
 
 type Read = LogReader['read'];

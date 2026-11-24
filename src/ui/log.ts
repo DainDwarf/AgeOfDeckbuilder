@@ -21,8 +21,10 @@ import {
 import { createFoldTab, TAB_ROOM } from './fold-tab';
 import { asGlyph, glyphMark } from './glyphs';
 import {
+  type LogLine,
   type LogReader,
   type LogReading,
+  linesSkipped,
   logReaders,
   type Moved,
   type Named,
@@ -102,6 +104,8 @@ export type Log = {
   play(stage: Stage): undefined;
   /** The stages a play-out is about to play, read ahead for the lines they may land. */
   hear(stages: readonly Stage[]): void;
+  /** The play-out cut short: the lines of every stage it skipped landed, in the order they would have. */
+  cutShort(): void;
   readonly scrolls: Pick<Panel, 'under' | 'wheel'>;
 };
 
@@ -121,7 +125,7 @@ export function createLog(
     tooltip: Tooltip;
     /** Whatever is being aimed let go, as a left click on a thing lets it go. */
     unaim: () => void;
-    sightOn: (chronicle: Chronicle) => SightOn;
+    sightOn: (chronicle: Chronicle, standing?: Chronicle) => SightOn;
   },
 ): Log {
   const tab = createFoldTab(scene, on, {
@@ -183,6 +187,8 @@ export function createLog(
   /** The turn the chronicle stands on, as last rendered. */
   let standing = 0;
   let readers = new Map<Stage, LogReader>();
+  /** The stages of the play-out heard last that have played. */
+  let played = new Set<Stage>();
   const laidLines = new WeakMap<LogReading, LaidLine>();
 
   const widthOfToken = (token: Token): number => {
@@ -316,10 +322,13 @@ export function createLog(
     return dropped;
   };
 
-  const land = (turn: number, reading: LogReading): void => {
-    const last = turns[turns.length - 1];
-    if (last?.turn === turn) last.lines.push(reading);
-    else turns.push({ turn, lines: [reading] });
+  const land = (lines: readonly LogLine[]): void => {
+    if (lines.length === 0) return;
+    for (const { turn, reads } of lines) {
+      const last = turns[turns.length - 1];
+      if (last?.turn === turn) last.lines.push(reads);
+      else turns.push({ turn, lines: [reads] });
+    }
     prune();
     lay();
     panel.toFoot();
@@ -331,13 +340,19 @@ export function createLog(
       if (prune()) lay();
     },
     play(stage) {
+      played.add(stage);
       const reader = readers.get(stage);
-      const reading = reader?.read(sightOn(stage.chronicle));
-      if (reader !== undefined && reading !== undefined) land(reader.turn, reading);
+      const reads = reader?.read(sightOn(stage.chronicle));
+      if (reader !== undefined && reads !== undefined) land([{ turn: reader.turn, reads }]);
       return undefined;
     },
     hear(stages) {
       readers = logReaders(stages);
+      played = new Set();
+    },
+    cutShort() {
+      land(linesSkipped(readers, played, (stage) => sightOn(stage.chronicle, stage.before)));
+      readers = new Map();
     },
     scrolls: {
       under: (over) => panel.under(over) || over.includes(back),

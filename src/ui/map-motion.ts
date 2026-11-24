@@ -122,10 +122,11 @@ export type MapMotion = {
   /** Nothing answered is the scene's word to render the stage itself. */
   play(stage: Stage): Promise<void> | undefined;
   /**
-   * Which tiles a stage leaving this chronicle plays on, asked as the stage plays: the tiles drawn
-   * live on the map as it stands or on that chronicle.
+   * Which tiles a stage leaving this chronicle plays on: the tiles drawn live on the map as it stands,
+   * asked as the stage plays, or as it would stand on `standing` for a stage that never played, or on
+   * the chronicle the stage leaves.
    */
-  sightOn(chronicle: Chronicle): SightOn;
+  sightOn(chronicle: Chronicle, standing?: Chronicle): SightOn;
   /** What the map has in the air taken down: its settle paints nothing. */
   takeDown(): void;
 };
@@ -134,8 +135,8 @@ export function createMapMotion(scene: Phaser.Scene, view: MapInMotion): MapMoti
   /** What the map has in the air; a render takes it down. */
   let flight: symbol | undefined;
 
-  const sightOn = (chronicle: Chronicle): SightOn => {
-    const live = view.live();
+  const sightOn = (chronicle: Chronicle, standing?: Chronicle): SightOn => {
+    const live = standing === undefined ? view.live() : view.liveOn(standing);
     const watched = view.liveOn(chronicle);
     return (tile) => live.has(tileKey(tile)) || watched.has(tileKey(tile));
   };

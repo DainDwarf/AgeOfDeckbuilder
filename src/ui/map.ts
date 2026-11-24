@@ -222,8 +222,11 @@ export type AimShown = {
 export type MapView = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
-  /** Which tiles a stage leaving this chronicle plays on, asked as the stage plays. */
-  sightOn(chronicle: Chronicle): SightOn;
+  /**
+   * Which tiles a stage leaving this chronicle plays on, asked as the stage plays, or with the
+   * chronicle the map would stand on for a stage that never played.
+   */
+  sightOn(chronicle: Chronicle, standing?: Chronicle): SightOn;
   /**
    * Lights the tiles it is given and rings the units, those the map draws, aims at their tiles,
    * plates what the lit tile the pointer is on would give, and answers the way to let the aim go,
