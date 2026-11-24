@@ -204,6 +204,8 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       modeChip: stratum(),
       summary: stratum(),
       pinned: stratum(),
+      /** The Menu button and the map's display buttons. */
+      corner: stratum(),
       /** The piles and the resting cards of the hand. */
       resting: stratum(),
       bar: stratum(),
@@ -234,10 +236,10 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // down, and a second chain would stand a small card beside the first's.
     const footBubble = createFootBubble(tooltip.ui);
 
-    createMenuButton(this, ui.pinned, tooltip.ui);
+    createMenuButton(this, ui.corner, tooltip.ui);
     const iconsButton = createDisplayButton(
       this,
-      ui.pinned,
+      ui.corner,
       tooltip.ui,
       { symbol: 'icons-button', at: 'icons', reads: 'button.icons' },
       true,
@@ -248,7 +250,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     );
     const signsButton = createDisplayButton(
       this,
-      ui.pinned,
+      ui.corner,
       tooltip.ui,
       { symbol: 'faction-signs-button', at: 'signs', reads: 'button.faction-signs' },
       false,
@@ -259,7 +261,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     );
     const hexGridButton = createDisplayButton(
       this,
-      ui.pinned,
+      ui.corner,
       tooltip.ui,
       { symbol: 'hex-grid-button', at: 'hexGrid', reads: 'button.hex-grid' },
       false,
