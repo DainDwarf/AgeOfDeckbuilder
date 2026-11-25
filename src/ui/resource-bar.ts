@@ -27,7 +27,7 @@ import {
   onHover,
   onResize,
   ownBoxOf,
-  reactsToPress,
+  reactsTo,
   type SizedStyle,
   type Stratum,
   screenSize,
@@ -158,10 +158,12 @@ export function createResourceBar(
   tooltip: Tooltip,
   presses: {
     cityMode: () => void;
+    /** Whether `cityMode` would enter city mode now. */
+    entersCityMode: () => boolean;
     toggleYield: (resource: Resource) => void;
   },
 ): ResourceBar {
-  const { cityMode, toggleYield } = presses;
+  const { cityMode, entersCityMode, toggleYield } = presses;
   const bar = scene.add.container(0, 0);
   on.layer.add(bar);
 
@@ -176,7 +178,15 @@ export function createResourceBar(
 
   const { space, pill } = measures(scene);
   const unplaced = READINGS.map((key) =>
-    createEntry(scene, bar, tooltip, key, roomOf(scene, key, space, pill), tipOf(key)),
+    createEntry(
+      scene,
+      bar,
+      tooltip,
+      key,
+      roomOf(scene, key, space, pill),
+      tipOf(key),
+      () => !managesCity(key) || entersCityMode(),
+    ),
   );
   const row = layOutReadings(
     unplaced.map((entry) => readingWidth(entry, entry.room)),
@@ -191,7 +201,7 @@ export function createResourceBar(
     width: row.width,
     height: BAR_HEIGHT + PAST_THE_EDGE,
   });
-  // Never marked as reacting to a press, or the pointer is the hand over the whole bar.
+  // Never marked as reacting: it lies between the readings, and the pointer there is the arrow.
   const paper = scene.add
     .zone(0, 0, row.width, BAR_HEIGHT)
     .setOrigin(0, 0)
@@ -205,7 +215,7 @@ export function createResourceBar(
 
   for (const entry of entries) {
     const { key } = entry;
-    onClick(reactsToPress(entry.hover), () => {
+    onClick(entry.hover, () => {
       if (managesCity(key)) cityMode();
       else toggleYield(key);
     });
@@ -442,13 +452,20 @@ export function chipAt(
 
 /**
  * A reading named `reading-<name>`, its value `reading-<name>-value`, its glyph `glyph` a side, and
- * the word where it is handed one, whose tooltip is raised under it. The caller adds its parts to the
- * bar and places it.
+ * the word where it is handed one, whose tooltip is raised under it, reacting to a left click while
+ * `clicks` holds. The caller adds its parts to the bar and places it.
  */
 export function createReading(
   scene: Phaser.Scene,
   tooltip: Tooltip,
-  shown: { name: string; symbol: CastSymbol; glyph: number; word?: string; tip: () => Tip },
+  shown: {
+    name: string;
+    symbol: CastSymbol;
+    glyph: number;
+    word?: string;
+    tip: () => Tip;
+    clicks?: () => boolean;
+  },
 ): Reading {
   const chip = glyphOf(scene, shown.symbol, shown.glyph);
   const word =
@@ -463,6 +480,7 @@ export function createReading(
     .setOrigin(0, 0)
     .setName(`reading-${shown.name}`)
     .setInteractive();
+  reactsTo(hover, () => ({ clicks: shown.clicks?.() === true, rests: true }));
   onHover(
     hover,
     () => {
@@ -481,12 +499,14 @@ function createEntry(
   key: BarReading,
   room: number,
   tip: () => Tip,
+  clicks: () => boolean,
 ): Omit<Entry, 'wellBox'> {
   const reading = createReading(scene, tooltip, {
     name: key,
     symbol: chipSymbol(key),
     glyph: BAR_GLYPH,
     tip,
+    clicks,
   });
   const { chip, value, hover } = reading;
   // Rounded past any height it is given: Phaser rounds a rectangle to half its smaller side at most.

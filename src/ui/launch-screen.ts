@@ -19,6 +19,7 @@ import { offerEntries } from './debug-console';
 import {
   addText,
   awayUnder,
+  CLICKS,
   COVERED,
   corners,
   DESIGN_WIDTH,
@@ -26,7 +27,7 @@ import {
   holdDesignSpace,
   MARGIN,
   onClick,
-  reactsToPress,
+  reactsTo,
   UI_FONT,
 } from './design-space';
 import { ledgerRowsOf } from './ending-screen';
@@ -360,7 +361,7 @@ export class LaunchScreen extends Phaser.Scene {
       fades,
     }: Option): Phaser.GameObjects.Container => {
       for (const hit of hits) {
-        reactsToPress(hit);
+        reactsTo(hit, () => CLICKS);
         onClick(hit, () => select(row, option));
       }
       return this.add
@@ -419,7 +420,7 @@ function buttonsOf(
     .rectangle(middle, launchY, BUTTON_WIDTH, BUTTON_HEIGHT, LOOK.button)
     .setName('launch-button')
     .setInteractive();
-  reactsToPress(launch);
+  reactsTo(launch, () => CLICKS);
   onClick(launch, () => {
     const held = savedOpening();
     const unpaid = held === undefined ? [] : unpaidOf(catalogue, held.resumed);
@@ -456,7 +457,7 @@ function buttonsOf(
     .setName('launch-continue');
   if (saved !== undefined) {
     face.setInteractive();
-    reactsToPress(face);
+    reactsTo(face, () => CLICKS);
     onClick(face, () => open(saved));
   }
   let y = top + (BUTTON_HEIGHT - label.height) / 2;

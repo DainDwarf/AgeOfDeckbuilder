@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import type { Chronicle } from '../src/rules/state';
+import type { Cursor } from '../src/ui/cursor';
 import { text } from '../src/ui/text';
 import {
   canvasOf,
@@ -40,10 +41,13 @@ async function bubbleOf(page: Page, name: string): Promise<Frame> {
   return (await readings(page, [name]))(name).boundsOnScreen;
 }
 
-/** The name the rest on the end-turn button raises, its bubble's foot over `over`. */
-async function endTurnNamed(page: Page, reads: string, over: number): Promise<void> {
+/**
+ * The name the rest on the end-turn button raises, its bubble's foot over `over`, the pointer wearing
+ * `worn` there.
+ */
+async function endTurnNamed(page: Page, reads: string, over: number, worn: Cursor): Promise<void> {
   const button = await onScreen(page, 'end-turn');
-  expect(await cursorAt(page, button)).toBe('pointer');
+  expect(await cursorAt(page, button)).toBe(worn);
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
   expect(await tooltipLines(page, 'tooltip-ui')).toEqual([{ text: reads, bold: false }]);
   const bubble = await bubbleOf(page, 'tooltip-ui');
@@ -79,19 +83,19 @@ test('End turn names itself on the rest over its chip on a turn', async ({ page 
 
   await openSaved(page, settledOn(1));
   const chip = await pieceOnScreen(page, 'end-turn-count-chip');
-  await endTurnNamed(page, text('button.end-turn'), chip.y);
+  await endTurnNamed(page, text('button.end-turn'), chip.y, 'pointing hand');
 
   expect(problems).toEqual([]);
 });
 
-test('End turn, dead on the settle phase, names the phase’s end on the rest over its square, the pointer the hand on it', async ({
+test('End turn, dead on the settle phase, names the phase’s end on the rest over its square, the pointer the arrow on it', async ({
   page,
 }) => {
   const problems = watch(page);
 
   await openSaved(page, launchedAs(1));
   const square = await pieceOnScreen(page, 'end-turn');
-  await endTurnNamed(page, text('button.end-settle-phase'), square.y);
+  await endTurnNamed(page, text('button.end-settle-phase'), square.y, 'arrow');
 
   expect(problems).toEqual([]);
 });

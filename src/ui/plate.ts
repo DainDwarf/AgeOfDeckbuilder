@@ -1,6 +1,6 @@
 import type Phaser from 'phaser';
 import { addRun, GLYPH_SHARE, type Name, type Raiser, spotOn } from './card-face';
-import { onClick, onHover, ownBoxOf, reactsToPress, UI_FONT } from './design-space';
+import { onClick, onHover, ownBoxOf, reactsTo, UI_FONT } from './design-space';
 import { glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 
@@ -89,8 +89,11 @@ export function drawRun(
     names.push(each);
     if (reactions === undefined) continue;
     const raiser: Raiser = { name: each, where: () => spotOn(face, each) };
-    const zone = reactsToPress(
+    const { click } = reactions;
+    const pointing = { clicks: click !== undefined, rests: true };
+    const zone = reactsTo(
       scene.add.zone(each.x, each.y, each.width, each.height).setInteractive(),
+      () => pointing,
     );
     onHover(
       zone,
@@ -99,7 +102,6 @@ export function drawRun(
     );
     // A press that dragged what the face stands on is released on the name.
     onClick(zone, () => reactions.inspect(each), 'right', 'within slack');
-    const { click } = reactions;
     if (click !== undefined) onClick(zone, click, 'left', 'within slack');
     face.add(zone);
   }

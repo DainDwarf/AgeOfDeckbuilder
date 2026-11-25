@@ -5,11 +5,13 @@ import { type Control, type Press, pressOf } from './bindings';
 import { createFootBubble, type Name, type Raiser } from './card-face';
 import {
   addText,
+  CLICKS,
   dragged,
   MARGIN,
   onClick,
   onLetGoOffCanvas,
-  reactsToPress,
+  reactsTo,
+  tookHold,
   UI_FONT,
 } from './design-space';
 import { UNSIGNED } from './face';
@@ -262,8 +264,9 @@ export function createTree(
           marking.setVisible(on);
           pinToggled(technology, on);
         };
-        const paper = reactsToPress(
+        const paper = reactsTo(
           paperOf(scene, PLATE_WIDTH, plateHeight, LOOK.panelFill).setInteractive(),
+          () => CLICKS,
         );
         // The tree's drag begins on the scene's own press: one that dragged it ends on a plate.
         onClick(paper, press, 'left', 'within slack');
@@ -398,6 +401,7 @@ export function createTree(
   scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
     if (drag === undefined) return;
     if (!drag.panned && !dragged(scene, drag, pointer)) return;
+    if (!drag.panned) tookHold(drag.press);
     drag.panned = true;
     const was = bubbles.at(drag.x, drag.y);
     const now = bubbles.at(pointer.x, pointer.y);

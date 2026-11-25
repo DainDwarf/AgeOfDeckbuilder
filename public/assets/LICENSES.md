@@ -65,6 +65,13 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 - **Licence:** the pack page's own terms, the bundle carrying no licence file: "Royalty-free for commercial and personal projects. Unlimited shipped games. No redistribution of raw assets." The page states that no generative AI was used; the kit's `pack.json` names its maker as DRStudios' own generator, UIForge, its pieces vector shapes and gradients. The files sit in the store, never in this repository.
 - **Credit:** Interface: DRStudios
 
+## Fantasy RPG Cursors (gold)
+
+- **What:** nine of Leonid Deburger's painted cursors, each at 32 and at 64 px, in `store/fantasy-rpg-cursors-gold/`, the pack's `Standard_Asset_Licence.docx` beside them: `pointer002`, `hand002`, `hand003`, `hand004`, `denied001`, `question002`, `walk001`, `sword001` and `pointer013`, of the pack's 120.
+- **From:** Leonid Androshcuk (Deburger), <https://deburger.itch.io/fantasy-rpg-cursors-gold>, bought on 2026-11-25, the files as released.
+- **Licence:** his Standard Asset Licence, as the pack's file has it: a non-exclusive licence to use the assets in games, free or commercial, and to modify, recolour or adapt them there; never redistributed, resold, shared or sub-licensed, changed or not, nor put in a package, tool or template others could take them from; no logo, trademark or merchandise, nothing on a blockchain, no training, generating or feeding of an AI or machine learning model; a project that succeeds takes a licence of its own, and this purchase is this game's. Credit is optional. The files sit in the store, never in this repository.
+- **Credit:** Cursors: Leonid Androshcuk (Deburger), [deburger.itch.io](https://deburger.itch.io)
+
 ## game-icons.net
 
 - **What:** nine glyphs, white on nothing, in `game-icons/`: Fire by sbed, Death skull by sbed, Two coins by Delapouite, Stack by Delapouite, Hamburger menu by Delapouite, Fist by Skoll, Crossed axes by Lorc, Hourglass by Lorc and Card discard by Faithtoken.

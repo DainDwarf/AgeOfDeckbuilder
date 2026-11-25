@@ -5,12 +5,14 @@ import { SLIDE_HOME, stopMotion, travel } from './card-motion';
 import {
   type Box,
   filtersFollow,
+  NO_REACTION,
   onClick,
   onHover,
   onLetGoOffCanvas,
-  reactsToPress,
+  reactsTo,
   type Stratum,
   thingUnder,
+  tookHold,
   whileUp,
 } from './design-space';
 import { LOOK } from './look';
@@ -36,6 +38,8 @@ export type Held = {
   readonly liesUnder?: (x: number, y: number) => boolean;
   readonly reactions: Reactions;
   readonly press?: () => void;
+  /** Whether it shows the refusal a left click on it now meets. */
+  readonly refused?: () => boolean;
   readonly carry?: Carry;
 };
 
@@ -140,6 +144,7 @@ export function createCarrier(scene: Phaser.Scene, on: Stratum): Carrier {
         home: { x: copy.x + moved.x, y: copy.y + moved.y },
         from,
       };
+      tookHold('left');
       follow(at);
     },
     down() {
@@ -247,6 +252,8 @@ export function createPanel(
    * pointer that may hold still, and each time it moves.
    */
   let moved = true;
+  /** How far the panel scrolls, as it was last cut. */
+  let overflow = 0;
   const bar = createScrollbar(scene, on, name);
   const scroll = createScroll((offset) => {
     root.setY(-offset);
@@ -261,6 +268,7 @@ export function createPanel(
     stencil.setPosition(middle.x, middle.y).setSize(frame.width, frame.height);
     zone.setPosition(middle.x, middle.y).setSize(frame.width, frame.height);
     const reach = reachOf(frame.height, foot - frame.y);
+    overflow = reach;
     bar.cut(frame, reach);
     root.setData('overflow', reach);
     scroll.reach(reach);
@@ -269,10 +277,29 @@ export function createPanel(
   };
   cut(frame);
   scroll.stand(offset);
-  reactsToPress(zone, (pointer) => {
+
+  /** What a press held on a thing lifts off the panel, where the surface carries it: its carry and its press. */
+  const liftedOff = (
+    under: Held | undefined,
+  ):
+    | { readonly carrier: Carrier; readonly carry: Carry; readonly press: () => void }
+    | undefined => {
+    const press = under?.press;
+    if (carrier === undefined || under?.carry === undefined || press === undefined)
+      return undefined;
+    return { carrier, carry: under.carry, press };
+  };
+
+  reactsTo(zone, (pointer) => {
     const at = on.at(pointer.x, pointer.y);
     const under = heldAt(frame, root, held, at.x, at.y);
-    return under !== undefined && (under.press !== undefined || under.reactions.rests(at));
+    if (under === undefined) return NO_REACTION;
+    return {
+      refused: under.refused?.() === true,
+      takesHold: liftedOff(under) !== undefined,
+      clicks: under.press !== undefined,
+      rests: under.reactions.rests(at),
+    };
   });
 
   /** The thing the pointer was last read on, and nothing while it is on none. */
@@ -296,10 +323,13 @@ export function createPanel(
   });
   zone.on('dragstart', (pointer: Phaser.Input.Pointer) => {
     const from = on.at(pointer.downX, pointer.downY);
-    const under = heldAt(frame, root, held, from.x, from.y);
-    if (carrier === undefined || under?.carry === undefined || under.press === undefined) {
-      scroll.grab(from.y);
-    } else carrier.lift(under.carry, under.press, root, from, on.at(pointer.x, pointer.y));
+    const lifted = liftedOff(heldAt(frame, root, held, from.x, from.y));
+    if (lifted !== undefined) {
+      lifted.carrier.lift(lifted.carry, lifted.press, root, from, on.at(pointer.x, pointer.y));
+      return;
+    }
+    scroll.grab(from.y);
+    if (overflow > 0) tookHold('left');
   });
   // Phaser ends a drag at any button's release (docs/PHASER.md): the scroll reads the scene's own
   // moves and releases.

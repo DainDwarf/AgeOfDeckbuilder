@@ -1,9 +1,11 @@
 import type Phaser from 'phaser';
 import {
   addText,
+  CLICKS,
+  NO_REACTION,
   onClick,
   onResize,
-  reactsToPress,
+  reactsTo,
   type Stratum,
   screenSize,
   UI_FONT,
@@ -29,13 +31,13 @@ export type Standing = { show(on: boolean): void };
 
 /**
  * What one standing is drawn for: the name its objects take, its colour, the word on its chip, and
- * what a press on that chip leaves — nothing on a chip that reacts to none.
+ * how a left click on that chip leaves it while `live` holds — nothing on a chip that reacts to none.
  */
 export type Stood = {
   readonly name: string;
   readonly colour: number;
   readonly label: string;
-  readonly leave?: () => void;
+  readonly leave?: { readonly press: () => void; readonly live: () => boolean };
 };
 
 /**
@@ -80,7 +82,12 @@ export function createStanding(
   });
 
   const leave = stood.leave;
-  if (leave !== undefined) onClick(reactsToPress(chip), leave);
+  if (leave !== undefined) {
+    onClick(
+      reactsTo(chip, () => (leave.live() ? CLICKS : NO_REACTION)),
+      leave.press,
+    );
+  }
 
   return {
     show(on: boolean): void {

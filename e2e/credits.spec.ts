@@ -8,7 +8,6 @@ import { buildVersion } from '../tools/version';
 import {
   click,
   cursorAt,
-  HAND,
   onScreen,
   openSaved,
   PAST_REST,
@@ -151,7 +150,7 @@ test('a rest on a link of the menu raises its name under it, a right click opens
 
   for (const { sign, reads, opens } of LINKS) {
     const at = await onScreen(page, sign);
-    expect(await cursorAt(page, at)).toBe(HAND);
+    expect(await cursorAt(page, at)).toBe('pointing hand');
     await waitGameClock(page, PAST_REST);
     expect(await tooltipUp(page, 'tooltip-menu')).toBe(true);
     expect(await tooltipText(page, 'tooltip-menu')).toBe(text(reads));
@@ -173,7 +172,7 @@ test('a rest on a link of the menu raises its name under it, a right click opens
   expect(problems).toEqual([]);
 });
 
-test('an address on the Credits list is the hand under the pointer, its underline thicker there, and a left click opens its site in a new tab, Credits standing as it was', async ({
+test('an address on the Credits list is the pointing hand under the pointer, its underline thicker there, and a left click opens its site in a new tab, Credits standing as it was', async ({
   page,
   baseURL,
 }) => {
@@ -193,7 +192,7 @@ test('an address on the Credits list is the hand under the pointer, its underlin
   for (const { name, opens } of addresses) {
     const resting = (await readings(page, [`${name}-rule`]))(`${name}-rule`);
     const at = await onScreen(page, name);
-    expect(await cursorAt(page, at)).toBe(HAND);
+    expect(await cursorAt(page, at)).toBe('pointing hand');
     const pointed = (await readings(page, [`${name}-rule`]))(`${name}-rule`);
     expect(pointed.boundsOnScreen.height).toBeGreaterThan(resting.boundsOnScreen.height);
 

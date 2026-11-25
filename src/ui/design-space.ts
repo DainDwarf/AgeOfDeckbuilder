@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { PRESSES, type Press, pressOf } from './bindings';
+import { type Cursor, cursorStyle, dense } from './cursor';
 import { interfaceSize, pixelsAt } from './interface-size';
 import { css, LOOK } from './look';
+import { assetAt } from './sheet';
 
 export const DESIGN_WIDTH = 1280;
 export const DESIGN_HEIGHT = 720;
@@ -552,21 +554,74 @@ export function awayUnder(scene: Phaser.Scene): (scrim: Scrim, up: boolean) => b
 type Hovering = { hovered: boolean; readonly enter: () => void; readonly leave: () => void };
 
 const hovers = new Map<Phaser.GameObjects.GameObject, Hovering[]>();
-const reacting = new WeakMap<
-  Phaser.GameObjects.GameObject,
-  (pointer: Phaser.Input.Pointer) => boolean
->();
+
+/** The command a left click on a thing is, which the pointer wears the sign of. */
+export type Commanded = 'step' | 'attack' | 'aim';
 
 /**
- * The object marked as reacting to a press where `where` says it does, everywhere on it unless
- * told: the pointer there is the hand, read each frame.
+ * What a press or a rest on a thing would do now: whether the screen shows a refusal on it, the
+ * command a left click on it is, whether a held press takes hold of it, whether it reacts to a left
+ * click, and whether a rest on it raises anything.
  */
-export function reactsToPress<T extends Phaser.GameObjects.GameObject>(
+export type Pointing = {
+  readonly refused?: boolean;
+  readonly commands?: Commanded;
+  readonly takesHold?: boolean;
+  readonly clicks?: boolean;
+  readonly rests?: boolean;
+};
+
+/** A thing that reacts to a left click, one a rest on raises something, one that reacts to nothing. */
+export const CLICKS: Pointing = { clicks: true };
+export const RESTS: Pointing = { rests: true };
+export const NO_REACTION: Pointing = {};
+
+const reacting = new WeakMap<
+  Phaser.GameObjects.GameObject,
+  (pointer: Phaser.Input.Pointer) => Pointing
+>();
+
+/** The object marked as reacting as `read` answers at the pointer, read each frame. */
+export function reactsTo<T extends Phaser.GameObjects.GameObject>(
   object: T,
-  where: (pointer: Phaser.Input.Pointer) => boolean = () => true,
+  read: (pointer: Phaser.Input.Pointer) => Pointing,
 ): T {
-  reacting.set(object, where);
+  reacting.set(object, read);
   return object;
+}
+
+/** The press whose drag has taken hold of what it drags, until its button is held no more. */
+let gripping: Press | undefined;
+
+/** A press of that button has become a drag that took hold of something. */
+export function tookHold(press: Press): void {
+  gripping = press;
+}
+
+const SIGNS: Readonly<Record<Commanded, Cursor>> = {
+  step: 'step sign',
+  attack: 'attack sign',
+  aim: 'aim sign',
+};
+
+/** The picture the pointer wears over a thing: the first that holds, in the order of `docs/INTERFACE.md`. */
+function cursorOver({ refused, commands, takesHold, clicks, rests }: Pointing): Cursor {
+  if (refused === true) return 'not-allowed sign';
+  if (commands !== undefined) return SIGNS[commands];
+  if (takesHold === true) return 'open hand';
+  if (clicks === true) return 'pointing hand';
+  if (rests === true) return 'help sign';
+  return 'arrow';
+}
+
+/**
+ * The picture written on the canvas's style, and the style as the canvas reads it back; a browser that
+ * does not take `image-set()` in a cursor leaves the style empty, and takes the 32 px picture.
+ */
+function wearCursor(canvas: HTMLCanvasElement, cursor: Cursor, onDense: boolean): string {
+  canvas.style.cursor = cursorStyle(cursor, assetAt, onDense);
+  if (canvas.style.cursor === '') canvas.style.cursor = cursorStyle(cursor, assetAt, false);
+  return canvas.style.cursor;
 }
 
 /** An object a hit test reads in its own space: placed in the world, about its display origin. */
@@ -642,8 +697,12 @@ export function thingUnder(game: Phaser.Game): Phaser.GameObjects.GameObject | u
 /** Every frame, every hover entered or left and the canvas's cursor set by what the pointer is on. */
 export function followPointer(game: Phaser.Game): void {
   let on: Phaser.GameObjects.GameObject | undefined;
-  let pointed = false;
+  let worn:
+    | { readonly cursor: Cursor; readonly dense: boolean; readonly style: string }
+    | undefined;
   game.events.on(Phaser.Core.Events.POST_STEP, () => {
+    const pointer = game.input.activePointer;
+    if (gripping !== undefined && (pointer.buttons & HOLDS[gripping]) === 0) gripping = undefined;
     const under = thingUnder(game);
     if (under !== on) {
       const left = on === undefined ? [] : (hovers.get(on) ?? []);
@@ -658,11 +717,14 @@ export function followPointer(game: Phaser.Game): void {
         hovering.enter();
       }
     }
-    const where = under === undefined ? undefined : reacting.get(under);
-    const pointing = where?.(game.input.activePointer) === true;
-    if (pointing === pointed) return;
-    pointed = pointing;
-    game.canvas.style.cursor = pointing ? 'pointer' : '';
+    const read = under === undefined ? undefined : reacting.get(under);
+    const cursor =
+      gripping === undefined ? cursorOver(read?.(pointer) ?? NO_REACTION) : 'closed hand';
+    const onDense = dense();
+    // A scene's input shutdown writes Phaser's default cursor over the style (docs/PHASER.md).
+    const kept = game.canvas.style.cursor === worn?.style;
+    if (kept && worn?.cursor === cursor && worn.dense === onDense) return;
+    worn = { cursor, dense: onDense, style: wearCursor(game.canvas, cursor, onDense) };
   });
 }
 

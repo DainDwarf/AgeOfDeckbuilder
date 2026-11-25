@@ -3,9 +3,10 @@ import { WINDOW_RIBBON } from './browse';
 import { createRibbon, takesThePointer, WINDOW_TITLE } from './chrome';
 import {
   type Box,
+  CLICKS,
   onClick,
   onResize,
-  reactsToPress,
+  reactsTo,
   type Stratum,
   screenSize,
 } from './design-space';
@@ -81,7 +82,7 @@ export function createMinimized(
 ): Minimized {
   const { scene } = on.layer;
   const titling = createRibbon(scene, '', WINDOW_TITLE, WINDOW_RIBBON, 'minimized-deal');
-  const ribbon = reactsToPress(takesThePointer(titling.ribbon));
+  const ribbon = reactsTo(takesThePointer(titling.ribbon), () => CLICKS);
   on.layer.add([ribbon, titling.title]);
   onClick(ribbon, bringBack);
   onClick(ribbon, bringBack, 'right');

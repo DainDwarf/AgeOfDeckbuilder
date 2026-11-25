@@ -19,7 +19,6 @@ import {
   click,
   counted,
   cursorAt,
-  HAND,
   heldSave,
   kindLabelOnScreen,
   onScreen,
@@ -217,7 +216,7 @@ test('in the civilization mode a right click on a stack or on the city section�
   expect(problems).toEqual([]);
 });
 
-test('in the civilization mode the pointer is the hand over Collection » and over a stack’s kind label and the arrow over its art, and a left click on a stack or a press held on it and moved sideways changes nothing of the save and carries nothing', async ({
+test('in the civilization mode the pointer is the pointing hand over Collection », the help sign over a stack’s kind label and the arrow over its art, and a left click on a stack or a press held on it and moved sideways changes nothing of the save and carries nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -225,16 +224,18 @@ test('in the civilization mode the pointer is the hand over Collection » and ov
   const [{ id }] = ROWS.cards;
   const face = `civilization-card-${id}`;
 
-  expect(await cursorAt(page, await onScreen(page, 'collection-to-deck-editing'))).toBe(HAND);
-  expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe(HAND);
+  expect(await cursorAt(page, await onScreen(page, 'collection-to-deck-editing'))).toBe(
+    'pointing hand',
+  );
+  expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe('help sign');
   // The marks of what the city section's card goes on stand at its window's foot and react, so its
   // art is read above them.
   const city = (await readings(page, ['civilization-city']))('civilization-city').boundsOnScreen;
   expect(await cursorAt(page, { x: city.x + city.width / 2, y: city.y + city.height / 4 })).toBe(
-    '',
+    'arrow',
   );
   const at = await onScreen(page, face);
-  expect(await cursorAt(page, at)).toBe('');
+  expect(await cursorAt(page, at)).toBe('arrow');
 
   await page.mouse.click(at.x, at.y);
   await rested(page);
@@ -276,7 +277,7 @@ test('in the civilization mode Collection » returns to the deck editing mode on
   expect(problems).toEqual([]);
 });
 
-test('in the civilization mode each stack’s reading stands centred between its buttons, − under a stack removes a copy, the reading, the section’s count and the save following, the last copy removed leaves the stack dimmed reading none over owned, − greyed, no hand and reacting to no press, + adds a copy back, undimmed, and a card at no copy stands no more once the mode is left and opened again', async ({
+test('in the civilization mode each stack’s reading stands centred between its buttons, − under a stack removes a copy, the reading, the section’s count and the save following, the last copy removed leaves the stack dimmed reading none over owned, − greyed, the arrow over it and reacting to no press, + adds a copy back, undimmed, and a card at no copy stands no more once the mode is left and opened again', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -327,8 +328,8 @@ test('in the civilization mode each stack’s reading stands centred between its
   expect(emptied(stack).dimmed).toBe(true);
   expect(emptied(`${face}-remove`).fill).toBe(LOOK.greyedFill);
   expect(emptied(`${face}-add`).fill).toBe(LOOK.panelFill);
-  expect(await cursorAt(page, emptied(`${face}-remove`).onScreen)).toBe('');
-  expect(await cursorAt(page, await onScreen(page, `${face}-add`))).toBe(HAND);
+  expect(await cursorAt(page, emptied(`${face}-remove`).onScreen)).toBe('arrow');
+  expect(await cursorAt(page, await onScreen(page, `${face}-add`))).toBe('pointing hand');
 
   await click(page, `${face}-remove`);
   await rested(page);
@@ -359,7 +360,7 @@ test('in the civilization mode each stack’s reading stands centred between its
   expect(problems).toEqual([]);
 });
 
-test('in the civilization mode, on a campaign a won chronicle paid into, under a stack whose copies the deck all holds the right button reads the card’s price, and a press on it buys a copy and adds it: the bar, the reading, the doubled price and the save following at once; the price of an unaffordable card stands greyed, no hand, and a press on it changes nothing', async ({
+test('in the civilization mode, on a campaign a won chronicle paid into, under a stack whose copies the deck all holds the right button reads the card’s price, and a press on it buys a copy and adds it: the bar, the reading, the doubled price and the save following at once; the price of an unaffordable card stands greyed, the arrow over it, and a press on it changes nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -387,7 +388,7 @@ test('in the civilization mode, on a campaign a won chronicle paid into, under a
   expect(opened('reading-influence-value').text).toBe(String(campaign.influence));
   expect(opened(`${face}-price`).text).toBe(text('collection.price', { price }));
   expect(opened(`${face}-buy`).fill).toBe(LOOK.panelFill);
-  expect(await cursorAt(page, opened(`${face}-buy`).onScreen)).toBe(HAND);
+  expect(await cursorAt(page, opened(`${face}-buy`).onScreen)).toBe('pointing hand');
 
   await pressed(page, `${face}-buy`, campaign, () => after);
   const unaffordable = `civilization-card-${greyed.id}-buy`;
@@ -409,7 +410,7 @@ test('in the civilization mode, on a campaign a won chronicle paid into, under a
   );
 
   expect(afterBuy(unaffordable).fill).toBe(LOOK.greyedFill);
-  expect(await cursorAt(page, afterBuy(unaffordable).onScreen)).toBe('');
+  expect(await cursorAt(page, afterBuy(unaffordable).onScreen)).toBe('arrow');
   await click(page, unaffordable);
   await rested(page);
   expect(await textOf(page, 'reading-influence-value')).toBe(String(after.influence));

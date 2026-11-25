@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { aimOf } from '../rules/cards';
+import { aimOf, playedByNothing } from '../rules/cards';
 import { type AimedCard, type Catalogue, cardOf, costOf } from '../rules/catalogue';
 import { refusalOf } from '../rules/chronicle';
 import type { Aimed, Change, Group, Stage } from '../rules/stages';
@@ -30,12 +30,15 @@ import { ended, SLIDE_HOME, STAGGER, stopMotion, travel, turnOver } from './card
 import type { ChronicleFaces } from './chronicle-faces';
 import {
   type Hover,
+  NO_REACTION,
   onClick,
   onHover,
   onLetGoOffCanvas,
   onResize,
-  reactsToPress,
+  type Pointing,
+  reactsTo,
   type Stratum,
+  tookHold,
 } from './design-space';
 import { cardFace } from './face';
 import { LOOK } from './look';
@@ -279,6 +282,10 @@ export function createHand(
 
   const beingAimed = (): boolean => selected?.cancel !== undefined || selected?.atHand === true;
 
+  /** Whether the card's face shows the rules refuse it: a cost the city cannot pay, or the sign of a card nothing plays. */
+  const refusedOnFace = ({ card, refusal }: CardRecord): boolean =>
+    refusal.unaffordable.length > 0 || playedByNothing(cardOf(catalogue, card.id));
+
   const unselect = (): boolean => {
     const standing = selected;
     if (standing === undefined) return false;
@@ -468,6 +475,7 @@ export function createHand(
     })
       .on('dragstart', (pointer: Phaser.Input.Pointer) => {
         if (!takes()) return;
+        tookHold('left');
         footBubble.over(face, undefined);
         unselect();
         record.hovered = true;
@@ -484,14 +492,18 @@ export function createHand(
         footBubble.over(face, reacting ? onFoot(record, pointer) : undefined);
       });
 
-    reactsToPress(root, (pointer) => {
+    reactsTo(root, (pointer): Pointing => {
       switch (taking) {
         case 'live':
-          return true;
+          if (selected?.atHand === true && selected.record !== record) return { commands: 'aim' };
+          return { refused: refusedOnFace(record), takesHold: true };
         case 'read':
-          return nameUnder(record, pointer) !== undefined || onFoot(record, pointer) !== undefined;
+          return {
+            rests:
+              nameUnder(record, pointer) !== undefined || onFoot(record, pointer) !== undefined,
+          };
         case 'dead':
-          return false;
+          return NO_REACTION;
       }
     });
 

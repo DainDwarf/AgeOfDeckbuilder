@@ -17,5 +17,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
 
 ## Lines
-
-- **The cursor** — on every screen the pointer wears one of nine painted gold pictures, by what a press on the thing under it would do now, drawn by the browser at 32 pixels; the pack stands in the store with its licence record and its credit; `e2e/cursor.spec.ts` passes. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/the-cursor.md](board/the-cursor.md)

@@ -13,6 +13,7 @@ import {
   type Stratum,
   screenOnCanvas,
   screenSize,
+  tookHold,
 } from './design-space';
 import { onHeldKeys, onKeyDown } from './keys';
 import { positionOf } from './map-marks';
@@ -314,6 +315,7 @@ export function createMapCamera(
       const pan = (pointer: Phaser.Input.Pointer): void => {
         if (from === undefined || taken === undefined) return;
         if (!panned && !dragged(scene, from, pointer)) return;
+        if (!panned) tookHold(taken);
         panned = true;
         carrying[taken] = true;
         const was = map.at(from.x, from.y);

@@ -67,7 +67,7 @@ test('the bare address with no save boots the campaign screen, Campaign sunk, Ch
   expect(problems).toEqual([]);
 });
 
-test('on a campaign a won chronicle paid into, the bar reads its influence, and the pointer resting on the reading raises its tooltip under an arrow', async ({
+test('on a campaign a won chronicle paid into, the bar reads its influence, and the pointer resting on the reading raises its tooltip under the help sign', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -84,7 +84,7 @@ test('on a campaign a won chronicle paid into, the bar reads its influence, and 
   await page.mouse.move(reading.x, reading.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-campaign')).toBe(true);
   expect(await tooltipText(page, 'tooltip-campaign')).toBe(text('tooltip.influence'));
-  expect(await cursorOverCanvas(page)).toBe('');
+  expect(await cursorOverCanvas(page)).toBe('help sign');
 
   expect(problems).toEqual([]);
 });

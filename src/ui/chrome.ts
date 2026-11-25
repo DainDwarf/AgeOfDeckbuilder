@@ -22,11 +22,13 @@ import {
 import {
   addText,
   type Box,
+  CLICKS,
   hitPointInWorld,
+  NO_REACTION,
   onHover,
   onLetGoOffCanvas,
   ownBoxOf,
-  reactsToPress,
+  reactsTo,
   type SizedStyle,
   UI_FONT,
 } from './design-space';
@@ -271,11 +273,11 @@ export type PressableWell = {
 };
 
 /**
- * A well on the box, its face named `name`, the pointer the hand on it, lighter under it through a veil
- * fitted to its rounded box; it wears no pressed look.
+ * A well on the box, its face named `name`, reacting to a left click, lighter under the pointer
+ * through a veil fitted to its rounded box; it wears no pressed look.
  */
 export function createPressableWell(scene: Phaser.Scene, box: Box, name: string): PressableWell {
-  const face = reactsToPress(takesThePointer(createChromeWell(scene, name)));
+  const face = reactsTo(takesThePointer(createChromeWell(scene, name)), () => CLICKS);
   placeChromeWell(face, 'inactive-tab', box);
   const veil = veilOver(
     createVeil(scene, `${name}-veil`),
@@ -330,9 +332,9 @@ export type ButtonReach = {
 };
 
 /**
- * A button of the kit on the box, its face named `name`, fitted to the box, the pointer the
- * hand on it. Live, it wears the hover look under the pointer, and the pressed look while a left press
- * that landed on it is held on it; dead, it wears neither.
+ * A button of the kit on the box, its face named `name`, fitted to the box. Live, it reacts to a left
+ * click, wears the hover look under the pointer, and the pressed look while a left press that landed
+ * on it is held on it; dead, it wears neither, and the pointer on it is the arrow whatever a rest raises.
  */
 export function createChromeButton(
   scene: Phaser.Scene,
@@ -343,7 +345,7 @@ export function createChromeButton(
 ): ChromeButton {
   let box = laidOn;
   const face = takesThePointer(sliceOf(scene, buttonIn(piece, 'normal')).setName(name), reaches);
-  reactsToPress(face);
+  reactsTo(face, () => (live() ? CLICKS : NO_REACTION));
   let latched = false;
   let held = false;
 

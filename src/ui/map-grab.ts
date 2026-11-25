@@ -4,7 +4,7 @@ import type { TileCoords } from '../rules/map';
 import { assignedTo, type Chronicle } from '../rules/state';
 import { unitAt, unitOf } from '../rules/units';
 import { EASE, SLIDE_HOME } from './card-motion';
-import { dragged, type Stratum, thingUnder } from './design-space';
+import { dragged, type Stratum, thingUnder, tookHold } from './design-space';
 import type { MapCamera } from './map-camera';
 import { assignedAt, positionOf } from './map-marks';
 
@@ -13,10 +13,12 @@ import { assignedAt, positionOf } from './map-marks';
  * by the tile it is assigned to — with where the press landed and whether it has come past the slack
  * that tells a drag from a click. A press holds one of them or nothing at all.
  */
-type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & (
+type Grab = { readonly from: { x: number; y: number }; dragging: boolean } & GrabTarget;
+
+/** What a left press on the map takes hold of: a unit by its number, or population by its tile. */
+type GrabTarget =
   | { readonly kind: 'unit'; readonly unit: number }
-  | { readonly kind: 'assigned'; readonly tile: TileCoords }
-);
+  | { readonly kind: 'assigned'; readonly tile: TileCoords };
 
 /** The mark a press takes hold of: a unit's, or a population's. */
 type GrabMark = Phaser.GameObjects.Container;
@@ -58,6 +60,8 @@ export type MapGrab = {
   dropPopulation(): void;
   /** Whether a left press takes hold of the unit or the population it lands on, or of nothing. */
   takesHold(on: boolean): void;
+  /** Whether a left press landing on that tile now would take hold of what stands there. */
+  holdsOn(tile: TileCoords): boolean;
 };
 
 export function createMapGrab(
@@ -128,11 +132,22 @@ export function createMapGrab(
     homing.set(mark, { ...home, slide });
   };
 
+  /** What a left press landing on the tile would take hold of now, and nothing where it takes none. */
+  const targetOn = (under: TileCoords): GrabTarget | undefined => {
+    const shown = view.shown();
+    if (shown === undefined || !holding) return undefined;
+    if (view.marking())
+      return assignedTo(shown, under) ? { kind: 'assigned', tile: under } : undefined;
+    const standing = unitAt(shown.units, under);
+    return standing?.faction === 'player' ? { kind: 'unit', unit: standing.id } : undefined;
+  };
+
   /**
    * A press's drag starting: what it holds, if it is sliding home, stops where it stands, and a unit
    * is carried over the others, lighting what it reaches.
    */
   const takeHold = (grab: Grab): void => {
+    tookHold('left');
     const mark = markOf(grab);
     if (mark !== undefined) homing.get(mark)?.slide.stop();
     if (grab.kind !== 'unit') return;
@@ -171,20 +186,11 @@ export function createMapGrab(
 
       frame.takePress(catcher, {
         down: (pointer) => {
-          const shown = view.shown();
-          if (shown === undefined || !holding) return true;
           const at = map.at(pointer.x, pointer.y);
           const under = view.tileUnder(at.x, at.y);
-          if (under === undefined) return true;
-          const from = { x: pointer.x, y: pointer.y };
-          if (view.marking()) {
-            if (!assignedTo(shown, under)) return true;
-            grabbed = { kind: 'assigned', tile: under, from, dragging: false };
-            return false;
-          }
-          const standing = unitAt(shown.units, under);
-          if (standing?.faction !== 'player') return true;
-          grabbed = { kind: 'unit', unit: standing.id, from, dragging: false };
+          const target = under === undefined ? undefined : targetOn(under);
+          if (target === undefined) return true;
+          grabbed = { ...target, from: { x: pointer.x, y: pointer.y }, dragging: false };
           return false;
         },
         release: (pointer) => {
@@ -243,6 +249,10 @@ export function createMapGrab(
 
     takesHold(on: boolean): void {
       holding = on;
+    },
+
+    holdsOn(tile: TileCoords): boolean {
+      return targetOn(tile) !== undefined;
     },
   };
 }

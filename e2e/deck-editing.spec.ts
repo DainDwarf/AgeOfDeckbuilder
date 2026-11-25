@@ -11,7 +11,6 @@ import {
   collectionOpened,
   cursorAt,
   cursorOverCanvas,
-  HAND,
   heldSave,
   kindLabelOnScreen,
   nameOnScreen,
@@ -144,7 +143,7 @@ function stackWith(campaign: Campaign, free: boolean): CardId {
   return found.id;
 }
 
-test('on the collection screen the pointer on a civilization’s pile is the hand', async ({
+test('on the collection screen the pointer on a civilization’s pile is the pointing hand', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -153,7 +152,7 @@ test('on the collection screen the pointer on a civilization’s pile is the han
   const pile = await onScreen(page, `collection-civilization-${CIVILIZATION}`);
   await page.mouse.move(pile.x, pile.y);
   await rested(page);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   expect(problems).toEqual([]);
 });
@@ -267,7 +266,7 @@ test('in the deck editing mode a right click on a row shows its card large, the 
   expect(problems).toEqual([]);
 });
 
-test('in the deck editing mode « Civilization stands as a button, the hand over it, and Collection » returns to the collection mode', async ({
+test('in the deck editing mode « Civilization stands as a button, the pointing hand over it, and Collection » returns to the collection mode', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -276,7 +275,7 @@ test('in the deck editing mode « Civilization stands as a button, the hand over
   const onward = await onScreen(page, 'collection-to-civilization');
   await page.mouse.move(onward.x, onward.y);
   await rested(page);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   await click(page, 'collection-to-collection');
   await expect.poll(() => standing(page, 'collection-mode')).toBe(true);
@@ -295,7 +294,7 @@ test('in the deck editing mode « Civilization stands as a button, the hand over
   expect(problems).toEqual([]);
 });
 
-test('in the collection mode the pointer on a stack is the hand over a name of its card and over its kind label, and the arrow over the rest of it', async ({
+test('in the collection mode the pointer on a stack is the help sign over a name of its card and over its kind label, and the arrow over the rest of it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -306,14 +305,14 @@ test('in the collection mode the pointer on a stack is the hand over a name of i
   );
   const face = `collection-card-${namingCard(seen)}`;
 
-  expect(await cursorAt(page, seen(face).onScreen)).toBe('');
-  expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe(HAND);
-  expect(await cursorAt(page, await nameOnScreen(page, face))).toBe(HAND);
+  expect(await cursorAt(page, seen(face).onScreen)).toBe('arrow');
+  expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe('help sign');
+  expect(await cursorAt(page, await nameOnScreen(page, face))).toBe('help sign');
 
   expect(problems).toEqual([]);
 });
 
-test('in the deck editing mode the pointer is the hand over a row and the arrow over the city section’s row, and on a stack whose copies the deck all holds the hand over a name of its card and its kind label and the arrow over the rest of it', async ({
+test('in the deck editing mode the pointer is the open hand over a row and the arrow over the city section’s row, and on a stack whose copies the deck all holds the help sign over a name of its card and its kind label and the arrow over the rest of it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -328,16 +327,16 @@ test('in the deck editing mode the pointer is the hand over a row and the arrow 
 
   expect(seen(stackOf(card)).dimmed).toBe(true);
 
-  expect(await cursorAt(page, seen(`deck-row-${id}`).onScreen)).toBe(HAND);
-  expect(await cursorAt(page, await onScreen(page, 'deck-city'))).toBe('');
-  expect(await cursorAt(page, await onScreen(page, face))).toBe('');
-  expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe(HAND);
-  expect(await cursorAt(page, await nameOnScreen(page, face))).toBe(HAND);
+  expect(await cursorAt(page, seen(`deck-row-${id}`).onScreen)).toBe('open hand');
+  expect(await cursorAt(page, await onScreen(page, 'deck-city'))).toBe('arrow');
+  expect(await cursorAt(page, await onScreen(page, face))).toBe('arrow');
+  expect(await cursorAt(page, await kindLabelOnScreen(page, face))).toBe('help sign');
+  expect(await cursorAt(page, await nameOnScreen(page, face))).toBe('help sign');
 
   expect(problems).toEqual([]);
 });
 
-test('in the deck editing mode a left click on a row removes a copy of its card and a left click on its stack adds one, a settle card in the settle section, each written to the save; a stack with a copy free is the hand and one the add leaves wholly held the arrow under a pointer holding still, the last copy removed takes its row away, and a reload reads the edit', async ({
+test('in the deck editing mode a left click on a row removes a copy of its card and a left click on its stack adds one, a settle card in the settle section, each written to the save; a stack with a copy free is the open hand and one the add leaves wholly held the arrow under a pointer holding still, the last copy removed takes its row away, and a reload reads the edit', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -351,14 +350,14 @@ test('in the deck editing mode a left click on a row removes a copy of its card 
     removedFrom(CATALOGUE, held, CIVILIZATION, many.id),
   );
   const removed = await readsAs(page, campaign, [`collection-card-${many.id}`]);
-  expect(await cursorAt(page, removed(`collection-card-${many.id}`).onScreen)).toBe(HAND);
+  expect(await cursorAt(page, removed(`collection-card-${many.id}`).onScreen)).toBe('open hand');
 
   campaign = await pressed(page, `collection-card-${many.id}`, campaign, (held) =>
     addedTo(CATALOGUE, held, CIVILIZATION, many.id),
   );
   const added = await readsAs(page, campaign);
   expect(added(stackOf(many.id)).dimmed).toBe(true);
-  expect(await cursorOverCanvas(page)).toBe('');
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   let emptied: ((name: string) => Reading) | undefined;
   for (let copy = 0; copy < settle.copies; copy++) {

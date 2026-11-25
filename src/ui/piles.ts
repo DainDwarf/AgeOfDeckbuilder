@@ -11,12 +11,13 @@ import type { ChronicleFaces } from './chronicle-faces';
 import {
   addText,
   type Box,
+  CLICKS,
   onClick,
   onHover,
   onResize,
   ownBoxOf,
   pressedWhere,
-  reactsToPress,
+  reactsTo,
   type Stratum,
   UI_FONT,
 } from './design-space';
@@ -366,7 +367,7 @@ function createPile(
   };
   onResize(scene, place);
 
-  reactsToPress(press);
+  reactsTo(press, () => CLICKS);
   onHover(
     press,
     () => {

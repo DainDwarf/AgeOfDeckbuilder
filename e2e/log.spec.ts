@@ -248,7 +248,7 @@ test('a fight in the fog at the end of turn lands no line', async ({ page }) => 
   expect(problems).toEqual([]);
 });
 
-test('the pointer on the line of an attack in sight lights it under a hand and rings the attacker’s tile and the attacked unit’s, each in the log’s ring of its unit’s faction, off the log nothing is lit or ringed, and a left click on it centres the map on the two tiles, its zoom standing; the Income line lights, rings and pans nothing', async ({
+test('the pointer on the line of an attack in sight lights it under the pointing hand and rings the attacker’s tile and the attacked unit’s, each in the log’s ring of its unit’s faction, off the log nothing is lit or ringed, and a left click on it centres the map on the two tiles, its zoom standing; the Income line lights, rings and pans nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -268,7 +268,7 @@ test('the pointer on the line of an attack in sight lights it under a hand and r
   await page.mouse.move(onIncome.x, onIncome.y);
   await rested(page);
   expect(await logPointed(page)).toEqual({ lit: [], rings: [] });
-  expect(await cursorOverCanvas(page)).toBe('');
+  expect(await cursorOverCanvas(page)).toBe('arrow');
   await page.mouse.click(onIncome.x, onIncome.y);
   await rested(page);
   expect(await middleOnScreen(page, tiles)).toEqual(stood);
@@ -277,7 +277,7 @@ test('the pointer on the line of an attack in sight lights it under a hand and r
   await page.mouse.move(onLine.x, onLine.y);
   await rested(page);
   expect(await logPointed(page)).toEqual({ lit: [line], rings: ringsOf(attack) });
-  expect(await cursorOverCanvas(page)).toBe('pointer');
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   const frame = await mapFrame(page);
   await page.mouse.move(frame.x + frame.width / 2, frame.y + frame.height / 2);

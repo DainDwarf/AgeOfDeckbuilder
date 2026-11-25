@@ -18,7 +18,7 @@ import {
   MARGIN,
   onClick,
   onHover,
-  reactsToPress,
+  reactsTo,
   type Stratum,
   screenSize,
 } from './design-space';
@@ -133,7 +133,10 @@ export function createSmallCards(
     pressedOnFace(face, { reach: () => toName })
       .setName(`small-card-${level}`)
       .setPosition(x, y);
-    reactsToPress(root);
+    reactsTo(root, (pointer) => {
+      const at = on.at(pointer.x, pointer.y);
+      return { rests: face.footAt(at.x, at.y) !== undefined };
+    });
     onClick(root, () => inspect(raiser.name), 'right', 'within slack');
     onHover(
       root,

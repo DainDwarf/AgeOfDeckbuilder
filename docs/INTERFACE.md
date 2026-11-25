@@ -54,7 +54,17 @@ Three presses work every screen: the **left click** selects, the **right click**
 
 **The screen reacts to a press as it is let go or as its drag starts, never as it lands.** Held still, a press leaves the screen as it stood, and everything it changes there comes at that one moment. A press becomes a drag once the pointer has travelled a short way from where it landed, as far for every thing dragged. Two things react to a press as it lands: a panel running on from a drag stops under it, and a button wears its pressed look for as long as the press that landed on it is held on it ([`LOOK.md`](LOOK.md)); the press changes nothing else until it is let go. The screen reacts to a key as it goes down.
 
-**The pointer is a hand over a thing that reacts to a left click or a rest**, and an arrow beside the things and over the map and a scrim, whatever those react to. It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still.
+**The pointer says what a press on the thing under it would do now.** It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still. It wears one of nine pictures, the first of these that holds:
+
+- the **closed hand**, from the moment a held press becomes a drag that took hold of something until that press is let go, wherever the pointer goes meanwhile: a card lifted out of the hand, a unit, an assigned population, a card carried on the collection screen, the map or the tree panned, a panel scrolled by its drag;
+- the **not-allowed sign** over a refusal the screen already shows: a card of the hand that is unaffordable or that nothing plays, an answer the player's city cannot pay, and, while a card is being aimed at a tile or at a unit, a drawn tile its aim does not admit, or every drawn tile where that card is unaffordable;
+- the sign of a command over what a left click commands: the **step sign** on a tile the unit being aimed lights, the **attack sign** on a unit it marks, the **aim sign** on a tile, a unit or a card of the hand the card being aimed admits;
+- the **open hand** over a thing a held press would take hold of now: a card of the hand, a unit of the player's, an assigned population, a card the collection screen lets be carried;
+- the **pointing hand** over any other thing that reacts to a left click, the selected tile among them where a left click on it acts;
+- the **help sign** over a thing that reacts to no left click and raises something under a pointer at rest;
+- the **arrow** everywhere else: beside the things, over a scrim, over the map wherever a left click only selects or lands off it, and over a dead button whatever a rest raises on it.
+
+The pointer says no more than the screen does. A card the rules refuse for anything but its cost wears the open hand as every card of the hand does, its face being drawn as any other; a tile a card being aimed is not admitted on wears the not-allowed sign because the map lights the ones it is. A click on a tile the unit being aimed neither lights nor marks is no refusal, so that tile wears the arrow.
 
 **The selection is one thing, a tile, a unit or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
 

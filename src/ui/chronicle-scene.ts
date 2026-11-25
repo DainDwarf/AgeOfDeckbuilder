@@ -561,14 +561,28 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       select(view.pressedOn(command.to));
     };
 
+    /**
+     * Whether a left click on the tile acts on the selection, the tile selected: the city's act there
+     * in city mode, and city mode entered on the player's city's own tile out of it.
+     */
+    const actsOn = (tile: TileCoords): boolean => {
+      if (selection === undefined || view.unitSelected() || !sameTile(tile, selection.tile)) {
+        return false;
+      }
+      if (cityMode) return tileRefusal(CATALOGUE, this.current, tile) !== undefined;
+      return cityOn(this.current, tile) === 'player' && entersCityMode();
+    };
+
     view.onPress(
       (found) => {
         if (selection === undefined || !sameTile(found.tile, selection.tile)) select(found);
-        else if (cityMode) void act(found);
-        else if (view.unitSelected()) select(found, false);
-        else if (cityOn(this.current, found.tile) === 'player') enterCityMode();
+        else if (actsOn(found.tile)) {
+          if (cityMode) void act(found);
+          else enterCityMode();
+        } else if (view.unitSelected()) select(found, false);
         else select(found);
       },
+      actsOn,
       () => {
         panel.rescale();
         note.rescale();
@@ -633,11 +647,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
         /** What the card's aim admits, as the map shows what it is aimed at: a tile, or a unit. */
         const shownAs = (admits: TileCoords[]): AimShown => {
+          const unaffordable = refusal.unaffordable.length > 0;
           switch (card.aim) {
             case 'tile':
-              return { tiles: admits, units: [], gives };
+              return { tiles: admits, units: [], gives, unaffordable };
             case 'unit':
-              return { tiles: [], units: admits, gives };
+              return { tiles: [], units: admits, gives, unaffordable };
           }
         };
 
@@ -675,8 +690,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       name: 'city',
       colour: LOOK.cityMode,
       label: text('button.city-mode'),
-      leave: () => {
-        leaveCityMode();
+      leave: {
+        press: () => {
+          leaveCityMode();
+        },
+        live: () => leavesCityMode(),
       },
     });
 
@@ -689,9 +707,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       settleStanding.show(onSettlePhase(chronicle) && !cityMode);
     };
 
+    /** Whether city mode would be raised now, and left now: neither under the deal window minimized. */
+    const entersCityMode = (): boolean =>
+      !cityMode && !overlay.minimized() && this.current.city !== undefined;
+    const leavesCityMode = (): boolean => cityMode && !overlay.minimized();
+
     /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
     const enterCityMode = (): void => {
-      if (cityMode || overlay.minimized() || this.current.city === undefined) return;
+      if (!entersCityMode()) return;
       dismiss();
       cityMode = true;
       cityStanding.show(true);
@@ -701,7 +724,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     /** City mode left, and whether it was left: the one way out, for the key, the chip and the back. */
     const leaveCityMode = (): boolean => {
-      if (!cityMode || overlay.minimized()) return false;
+      if (!leavesCityMode()) return false;
       cityMode = false;
       dismiss();
       cityStanding.show(false);
@@ -712,6 +735,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
       cityMode: enterCityMode,
+      entersCityMode,
       toggleYield: (resource) => {
         toggleYield(resource);
       },

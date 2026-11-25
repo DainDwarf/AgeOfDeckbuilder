@@ -65,9 +65,13 @@ import type { Press } from './bindings';
 import { stopMotion } from './card-motion';
 import { CITY_BAR_STOCKS, type CityBarStock, cityBarOf } from './city-bar';
 import {
+  type Commanded,
   cutTexts,
   filtersFollow,
+  NO_REACTION,
   onResize,
+  type Pointing,
+  reactsTo,
   type Stratum,
   thingUnder,
   whileUp,
@@ -212,12 +216,14 @@ export type Drawn = {
 
 /**
  * What a card being aimed admits as the map shows it: the tiles it lights, the tiles whose units it
- * rings, and what its play at a tile it lights would give, read on the faces the map draws.
+ * rings, what its play at a tile it lights would give, read on the faces the map draws, and whether
+ * the player's city cannot pay for it.
  */
 export type AimShown = {
   readonly tiles: readonly TileCoords[];
   readonly units: readonly TileCoords[];
   readonly gives: (tile: TileCoords, faces: TilesBeside) => readonly GivenTo[];
+  readonly unaffordable: boolean;
 };
 
 export type MapView = {
@@ -256,12 +262,13 @@ export type MapView = {
   /** Whether the selected unit lights or marks anything: it is being aimed. */
   unitBeingAimed(): boolean;
   /**
-   * Reports a click on a drawn tile to `clicked`; `commanded` is the step or the attack a click or a
-   * drag onto a lit unit's tile is, and `reassigned` the population a drag in city mode carries.
-   * Called once.
+   * Reports a click on a drawn tile to `clicked`, `acts` saying whether one on that tile acts on the
+   * selection; `commanded` is the step or the attack a click or a drag onto a lit unit's tile is, and
+   * `reassigned` the population a drag in city mode carries. Called once.
    */
   onPress(
     clicked: (found: PressedTile) => void,
+    acts: (tile: TileCoords) => boolean,
     zoomed: () => void,
     commanded: (command: UnitCommand) => void,
     reassigned: (command: ReassignCommand) => void,
@@ -369,6 +376,17 @@ function readOn(read: PointerReading): TileCoords {
       return read.step.tile;
     case 'attack':
       return read.target.tile;
+  }
+}
+
+/** The command a left click where the pointer read it is. */
+function commandOf(read: PointerReading): Commanded {
+  switch (read.kind) {
+    case 'path':
+    case 'step':
+      return 'step';
+    case 'attack':
+      return 'attack';
   }
 }
 
@@ -1532,6 +1550,7 @@ export function createMapView(
 
     onPress(
       clicked: (found: PressedTile) => void,
+      acts: (tile: TileCoords) => boolean,
       zoomed: () => void,
       commanded: (command: UnitCommand) => void,
       reassigned: (command: ReassignCommand) => void,
@@ -1539,6 +1558,13 @@ export function createMapView(
       rescale = zoomed;
       const catcher = frame.catcherZone('press');
       presser = catcher;
+      reactsTo(catcher, (): Pointing => {
+        const tile = pointerTile();
+        if (tile === undefined) return NO_REACTION;
+        const read = lit?.aimed === true ? readingOn(tile) : undefined;
+        if (read !== undefined) return { commands: commandOf(read) };
+        return { takesHold: grab.holdsOn(tile), clicks: acts(tile) };
+      });
 
       /** The step or the attack a release on a tile is for the unit the map has lit, and nothing else. */
       const commandUnitOn = (unit: number, on: TileCoords): boolean => {
@@ -1644,8 +1670,15 @@ export function createMapView(
       aiming = read;
       platesOn(undefined);
 
+      const admits = (tile: TileCoords): boolean =>
+        [...rimmed, ...ringing].some((coord) => sameTile(coord, tile));
+      reactsTo(catcher, (): Pointing => {
+        const tile = pointerTile();
+        if (tile === undefined) return NO_REACTION;
+        return !admitted.unaffordable && admits(tile) ? { commands: 'aim' } : { refused: true };
+      });
       const click = (tile: TileCoords): void => {
-        if ([...rimmed, ...ringing].some((coord) => sameTile(coord, tile))) chosen(tile);
+        if (admits(tile)) chosen(tile);
         else refused(pressedOn(tile));
       };
       aimClicked = click;

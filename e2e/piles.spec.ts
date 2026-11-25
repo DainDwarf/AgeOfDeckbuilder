@@ -59,7 +59,7 @@ test('each pile reads the count of its cards; the pointer is the hand on it and 
 
   for (const pile of PILES) {
     const at = await pileAt(page, pile);
-    expect(await cursorAt(page, at), pile).toBe('pointer');
+    expect(await cursorAt(page, at), pile).toBe('pointing hand');
     await expect.poll(() => tooltipUp(page, 'tooltip-ui'), pile).toBe(true);
     expect(await tooltipLines(page, 'tooltip-ui')).toEqual([
       { text: text(`tooltip.${pile}`), bold: false },

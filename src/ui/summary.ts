@@ -12,7 +12,8 @@ import {
   onHover,
   onResize,
   ownBoxOf,
-  reactsToPress,
+  RESTS,
+  reactsTo,
   type Stratum,
   UI_FONT,
 } from './design-space';
@@ -153,7 +154,10 @@ export function createSummary(
   const spans = new Map<Explained, { readonly from: number; readonly to: number }>();
   const zones = new Map(
     EXPLAINED.map((stat) => {
-      const zone = reactsToPress(scene.add.zone(0, SECOND_ROW, 1, SUMMARY_ROW).setInteractive())
+      const zone = reactsTo(
+        scene.add.zone(0, SECOND_ROW, 1, SUMMARY_ROW).setInteractive(),
+        () => RESTS,
+      )
         .setName(`summary-${stat}`)
         .setVisible(false);
       root.add(zone);

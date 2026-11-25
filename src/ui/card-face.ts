@@ -39,7 +39,8 @@ import {
   onClick,
   onHover,
   ownBoxOf,
-  reactsToPress,
+  RESTS,
+  reactsTo,
   resolutionAt,
   type SizedStyle,
   TYPE_FLOOR,
@@ -451,9 +452,12 @@ export function frontAt(
   return frontDrawsAt(silhouettesOf(image.scene.textures), front, image.getLocalPoint(x, y));
 }
 
-/** An interactive zone of a face that a pool or a re-read gives its place and its size. */
+/**
+ * An interactive zone of a face that a pool or a re-read gives its place and its size, a rest on it
+ * raising what it lies over.
+ */
 function faceZone(scene: Phaser.Scene): Phaser.GameObjects.Zone {
-  return reactsToPress(scene.add.zone(0, 0, 1, 1).setInteractive());
+  return reactsTo(scene.add.zone(0, 0, 1, 1).setInteractive(), () => RESTS);
 }
 
 /** The zones over a face's names: handed the names, it lays one over each. */

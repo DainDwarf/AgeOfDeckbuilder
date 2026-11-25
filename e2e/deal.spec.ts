@@ -3,7 +3,6 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
-import type { Chronicle } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
 import {
@@ -17,9 +16,6 @@ import {
   eventDealRead,
   type Frame,
   firstDealtAlone,
-  firstEntriesTaken,
-  firstSeed,
-  HAND,
   offeredOn,
   openSaved,
   pieceOnScreenOf,
@@ -29,11 +25,11 @@ import {
   refusalLines,
   rested,
   restedOnDeal,
-  settledOn,
   standing,
   take,
   tooltipText,
   tooltipUp,
+  unpaidDealt,
   watch,
 } from './chronicle-screen';
 
@@ -68,28 +64,6 @@ async function titledDownward(page: Page, window: string): Promise<Frame> {
   return ribbon;
 }
 
-/**
- * The chronicle of the first seed and turn, inside forty turns, whose deal offers an answer the city
- * cannot pay for, stopped on that deal, and that answer.
- */
-function unpaid(): { dealt: Chronicle; answer: string } {
-  return firstSeed('deals an answer its city cannot pay for inside forty turns', (seed) => {
-    let chronicle = settledOn(seed);
-    while (chronicle.turn < 40 && chronicle.ending === undefined) {
-      const dealt = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
-      const [deal] = dealt.deals;
-      if (deal?.of === 'event') {
-        const answer = offered(CATALOGUE, dealt, deal).find(
-          (id) => answerRefusal(CATALOGUE, dealt, deal.event, id).unaffordable.length > 0,
-        );
-        if (answer !== undefined) return { dealt, answer };
-      }
-      chronicle = firstEntriesTaken(dealt);
-    }
-    return undefined;
-  });
-}
-
 test('the events phase deals a choice, and the turn plays on from the one a left click takes', async ({
   page,
 }) => {
@@ -115,8 +89,11 @@ test('the events phase deals a choice, and the turn plays on from the one a left
     x: Math.min(Math.max(shown(city).onScreen.x, x + inset), x + width - inset),
     y: y + 6 * second.unit,
   };
-  expect(await cursorAt(page, { x: (first.x + second.x) / 2, y: first.y })).toBe('');
-  expect(await cursorAt(page, offNames)).toBe(HAND);
+  const unpayable = answerRefusal(CATALOGUE, dealt, LEAN_SEASON, answers[1]).unaffordable;
+  expect(await cursorAt(page, { x: (first.x + second.x) / 2, y: first.y })).toBe('arrow');
+  expect(await cursorAt(page, offNames)).toBe(
+    unpayable.length > 0 ? 'not-allowed sign' : 'pointing hand',
+  );
 
   // In the answer's padding over its name, as near the city's tile beneath as the answer reaches.
   await page.mouse.click(offNames.x, offNames.y, { button: 'right' });
@@ -181,7 +158,7 @@ test('the pointer resting on an answer the city cannot pay for says why over it,
   page,
 }) => {
   const problems = watch(page);
-  const { dealt, answer } = unpaid();
+  const { dealt, answer } = unpaidDealt();
   const [deal] = dealt.deals;
   if (deal?.of !== 'event') throw new Error(`turn ${dealt.turn} deals no event`);
   const at = offered(CATALOGUE, dealt, deal).indexOf(answer);

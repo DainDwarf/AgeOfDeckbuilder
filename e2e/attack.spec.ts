@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { damageOf, entered, fullHealth } from '../src/rules/catalogue';
+import { damageOf, fullHealth } from '../src/rules/catalogue';
 import { apply, broughtInRange, byHand, declaresWar, outcome } from '../src/rules/chronicle';
 import { MOVE_POINT, sameTile, type TileCoords, tileKey } from '../src/rules/map';
 import { unitDamaged } from '../src/rules/schedule';
@@ -21,27 +21,18 @@ import {
   enemyEnteredOn,
   firstSeed,
   freeGround,
+  guardedOn,
   litFor,
   onScreen,
   openSaved,
   paintedOn,
-  playerCityTile,
   playersOf,
   pointAt,
   rested,
   ringedTile,
-  settledOn,
   unitMarksOn,
-  WARRIOR,
   watch,
 } from './chronicle-screen';
-
-/** The seed's turn 1 with a warrior of the player's entered on the city's tile. */
-function guardedOn(seed: number): Chronicle {
-  const settled = settledOn(seed);
-  const city = playerCityTile(settled);
-  return entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city }).chronicle;
-}
 
 /**
  * The first seed's turn 1 with a warrior of the player's entered on the city's tile and one enemy of

@@ -36,6 +36,7 @@ import {
   addText,
   awayUnder,
   type Box,
+  CLICKS,
   COVERED,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
@@ -43,7 +44,7 @@ import {
   MARGIN,
   onClick,
   ownBoxOf,
-  reactsToPress,
+  reactsTo,
   stratumOf,
   UI_FONT,
 } from './design-space';
@@ -226,7 +227,7 @@ function civilizationsOf(
 
 /**
  * A button of the collection screen's head, its label on an edge: one end of it at `x`, the button
- * reaching `to` the left or the right of it. The pointer on it is the hand.
+ * reaching `to` the left or the right of it, reacting to a left click.
  */
 function modeButtonOf(
   scene: Phaser.Scene,
@@ -243,7 +244,7 @@ function modeButtonOf(
     .setStrokeStyle(1, LOOK.modeButtonEdge)
     .setName(name)
     .setInteractive();
-  reactsToPress(face);
+  reactsTo(face, () => CLICKS);
   return { face, parts: [face, words] };
 }
 

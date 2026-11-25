@@ -9,6 +9,7 @@ import { CARDS_SHEET } from './ui/card-frames';
 import { CHROME_SHEET } from './ui/chrome-kit';
 import { ChronicleScene, openChronicle } from './ui/chronicle-scene';
 import { CollectionScreen } from './ui/collection-screen';
+import { fetchCursors } from './ui/cursor';
 import { DebugConsole } from './ui/debug-console';
 import {
   backingSize,
@@ -33,7 +34,7 @@ import {
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
-import { drawSheets, queueSheet, type Sheet } from './ui/sheet';
+import { assetAt, drawSheets, queueSheet, type Sheet } from './ui/sheet';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -64,7 +65,7 @@ const first = firstScreen();
 
 /** One weight of the face fetched and in the document: a file that cannot be fetched rejects. */
 async function loadFace(file: string, weight: string): Promise<void> {
-  const source = `url(${import.meta.env.BASE_URL}assets/fonts/source-sans-3/${file})`;
+  const source = `url(${assetAt(`fonts/source-sans-3/${file}`)})`;
   const face = new FontFace(UI_FAMILY, source, { weight });
   document.fonts.add(await face.load());
 }
@@ -149,6 +150,7 @@ class LoadScene extends Phaser.Scene {
 await Promise.all([
   loadFace('SourceSans3-Regular.ttf.woff2', '400'),
   loadFace('SourceSans3-Bold.ttf.woff2', '700'),
+  fetchCursors(),
 ]);
 
 const backing = backingSize();

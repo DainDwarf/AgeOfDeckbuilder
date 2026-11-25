@@ -20,7 +20,6 @@ import {
   cursorOverCanvas,
   defeatShown,
   dragOut,
-  HAND,
   heldSave,
   influenceCardGaining,
   landed,
@@ -185,7 +184,7 @@ test('a defeat keeps on the ledger the challenge it kept, greyed, reading what i
   expect(problems).toEqual([]);
 });
 
-test('End chronicle reacts to no press and reads an arrow while the ending screen rises, and reads the hand under a pointer resting on it once the screen has risen', async ({
+test('End chronicle reacts to no press and reads an arrow while the ending screen rises, and reads the pointing hand under a pointer resting on it once the screen has risen', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -209,20 +208,20 @@ test('End chronicle reacts to no press and reads an arrow while the ending scree
   const at = await onScreen(page, 'end-chronicle');
   await page.mouse.move(at.x, at.y);
   await rested(page);
-  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
   await page.mouse.down();
   await page.mouse.up();
   await rested(page);
   expect(await victoryAlpha(page)).toBeLessThan(1);
   expect(await page.evaluate(() => window.game?.scene.isActive('campaign'))).toBe(false);
-  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   await page.evaluate(() => {
     window.game?.scene.getScene('overlay').tweens.resumeAll();
   });
   await expect.poll(() => victoryShown(page)).toBe(true);
   await rested(page);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
   await page.mouse.down();
   await page.mouse.up();
   await campaignShown(page);

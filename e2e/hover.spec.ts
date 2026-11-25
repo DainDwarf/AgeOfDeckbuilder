@@ -1,6 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
-import { apply, outcome } from '../src/rules/chronicle';
+import { playedByNothing } from '../src/rules/cards';
+import { cardOf } from '../src/rules/catalogue';
+import { apply, outcome, refusalOf } from '../src/rules/chronicle';
 import { growthThreshold } from '../src/rules/city';
 import { addedToDrawPileTop, offered } from '../src/rules/schedule';
 import { cardFace, cardFaceAtStart, kindTooltip } from '../src/ui/face';
@@ -14,7 +16,6 @@ import {
   endedTurn,
   endTurnHovered,
   firstDealt,
-  HAND,
   influenceCardGaining,
   kindLabelOnScreen,
   liftedPart,
@@ -66,7 +67,7 @@ test('a tooltip standing over a resource goes down when the pointer leaves the c
 
   await page.mouse.move(food.x, food.y);
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   await page.mouse.move(bare.x, bare.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(false);
@@ -141,12 +142,12 @@ test('the end-turn button wears its hover look under the pointer the last turn e
   await stoppedTurn(page);
 
   await expect.poll(() => endTurnHovered(page)).toBe(true);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   const beside = await besideTiles(page);
   await page.mouse.move(beside.x, beside.y);
   await expect.poll(() => endTurnHovered(page)).toBe(false);
-  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   expect(problems).toEqual([]);
 });
@@ -166,12 +167,12 @@ test('the end-turn button wears its hover look when the pointer comes back strai
 
   await page.mouse.move(button.x, button.y);
   await expect.poll(() => endTurnHovered(page)).toBe(true);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   const beside = await besideTiles(page);
   await page.mouse.move(beside.x, beside.y);
   await expect.poll(() => endTurnHovered(page)).toBe(false);
-  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   expect(problems).toEqual([]);
 });
@@ -231,7 +232,7 @@ test('the end-turn button wears its hover look the moment the menu falls under a
   await page.keyboard.press('Escape');
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await expect.poll(() => endTurnHovered(page)).toBe(true);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   expect(problems).toEqual([]);
 });
@@ -301,7 +302,10 @@ test("a card's kind label in the hand raises the bubble reading what its kind is
   await page.mouse.move(label.x, label.y, { steps: 5 });
   await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
   expect(await tooltipText(page, 'tooltip-ui')).toBe(kindTooltip(kind));
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  const refused =
+    refusalOf(CATALOGUE, opened, id).unaffordable.length > 0 ||
+    playedByNothing(cardOf(CATALOGUE, id));
+  expect(await cursorOverCanvas(page)).toBe(refused ? 'not-allowed sign' : 'open hand');
 
   const beside = await besideTiles(page);
   await page.mouse.move(beside.x, beside.y, { steps: 5 });

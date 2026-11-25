@@ -189,14 +189,18 @@ export function aroundPicture(
   };
 }
 
+/** The address of a file under the assets folder. */
+export function assetAt(file: string): string {
+  return `${import.meta.env.BASE_URL}assets/${file}`;
+}
+
 /** Every file of a sheet queued on a scene's loader under its own name, for `drawSheet` to read. */
 export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files, rasterised }: Sheet): void {
-  const at = (file: string): string => `${import.meta.env.BASE_URL}assets/${file}`;
-  for (const file of files) load.image(file, at(file));
+  for (const file of files) load.image(file, assetAt(file));
   if (rasterised === undefined) return;
   // Phaser rasterises an SVG once, at the size handed here (`src/loader/filetypes/SVGFile.js:97-139`).
   const { side } = rasterised;
-  for (const file of rasterised.files) load.svg(file, at(file), { width: side, height: side });
+  for (const file of rasterised.files) load.svg(file, assetAt(file), { width: side, height: side });
 }
 
 /**

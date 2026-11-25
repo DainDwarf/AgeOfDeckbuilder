@@ -643,7 +643,7 @@ test('a click on the bar’s paper drops the card being aimed, and one on a yiel
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  expect(await cursorAt(page, paper)).toBe('');
+  expect(await cursorAt(page, paper)).toBe('arrow');
   await page.mouse.click(paper.x, paper.y);
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   await expect.poll(() => selected(page, index, home)).toBe(false);

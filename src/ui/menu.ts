@@ -33,6 +33,7 @@ import {
   addText,
   BAR_HEIGHT,
   type Box,
+  CLICKS,
   DESIGN_HEIGHT,
   DESIGN_WIDTH,
   faintRule,
@@ -42,7 +43,7 @@ import {
   onHover,
   ownBoxOf,
   placedWhileUp,
-  reactsToPress,
+  reactsTo,
   type SizedStyle,
   type Stratum,
   screenSize,
@@ -799,8 +800,9 @@ function makersLaid(scene: Phaser.Scene, line: MakersLine, name: string, on: Pre
     const x = DESIGN_WIDTH / 2 - Math.ceil(measure(shown[row])) / 2 + measure(before);
     const width = measure(reads);
     const { height } = rows[row];
-    const zone = reactsToPress(
+    const zone = reactsTo(
       scene.add.zone(x, 0, width, height).setOrigin(0, 0).setName(`${name}-address-${index}`),
+      () => CLICKS,
     ).setInteractive();
     const rule = scene.add
       .rectangle(x, 0, width, 1, LOOK.charcoalInk)

@@ -10,7 +10,6 @@ import {
   cardOnFace,
   cursorOverCanvas,
   dragBetween,
-  HAND,
   heldFor,
   heldSave,
   offsetOf,
@@ -118,7 +117,7 @@ test('the navbar’s Collection opens the collection screen on a new campaign, C
   expect(problems).toEqual([]);
 });
 
-test('on a campaign a won chronicle paid into, a press on the price of an affordable card buys a copy of it: the bar reads the influence less the price, the stack one copy more and its price doubled, and the save the campaign the buy makes; the price of an unaffordable card stands greyed, no hand, and a press on it buys nothing', async ({
+test('on a campaign a won chronicle paid into, a press on the price of an affordable card buys a copy of it: the bar reads the influence less the price, the stack one copy more and its price doubled, and the save the campaign the buy makes; the price of an unaffordable card stands greyed, the arrow over it, and a press on it buys nothing', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -143,7 +142,7 @@ test('on a campaign a won chronicle paid into, a press on the price of an afford
   const button = opened(`collection-card-${card.id}-buy`).onScreen;
   await page.mouse.move(button.x, button.y);
   await rested(page);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('pointing hand');
 
   await page.mouse.click(button.x, button.y);
   await expect.poll(async () => (await heldSave(page)).campaign).toEqual(after);
@@ -165,7 +164,7 @@ test('on a campaign a won chronicle paid into, a press on the price of an afford
   const unaffordable = afterBuy(`collection-card-${greyed.id}-buy`).onScreen;
   await page.mouse.move(unaffordable.x, unaffordable.y);
   await rested(page);
-  expect(await cursorOverCanvas(page)).toBe('');
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   await page.mouse.click(unaffordable.x, unaffordable.y);
   await rested(page);
@@ -204,7 +203,7 @@ test('in the collection mode a right click on a civilization’s pile, on its co
   expect(problems).toEqual([]);
 });
 
-test('on the collection screen the pointer on a stack is no hand, a right click on it shows its card large, and the back key takes it down and raises no menu', async ({
+test('on the collection screen the pointer on a stack is the arrow, a right click on it shows its card large, and the back key takes it down and raises no menu', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -214,7 +213,7 @@ test('on the collection screen the pointer on a stack is no hand, a right click 
   const card = await onScreen(page, `collection-card-${id}`);
   await page.mouse.move(card.x, card.y);
   await rested(page);
-  expect(await cursorOverCanvas(page)).toBe('');
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   await page.mouse.click(card.x, card.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(id);

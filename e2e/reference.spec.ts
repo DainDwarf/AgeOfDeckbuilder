@@ -36,7 +36,6 @@ import {
   firstDealtAlone,
   firstSeed,
   givesRead,
-  HAND,
   HUNT,
   IRRIGATION,
   idsOf,
@@ -174,7 +173,7 @@ test('a card named in an answer’s text raises it small at a rest and shows it 
   await page.mouse.move(menu.x, menu.y);
   await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(false);
-  expect(await cursorOverCanvas(page)).not.toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   await page.mouse.move(name.x, name.y);
   await expect.poll(() => cardOnFace(page, 'small-card-0')).toBe(named);
@@ -183,7 +182,7 @@ test('a card named in an answer’s text raises it small at a rest and shows it 
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await waitGameClock(page, PAST_HANDOVER);
   expect(await standing(page, 'small-card-0')).toBe(true);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   const beside = await besideTheDeal(page);
   await page.mouse.move(beside.x, beside.y, { steps: 5 });
@@ -249,10 +248,10 @@ test('a card named on a card shown large stands over it at a right click on the 
 
   const large = await windowOnScreen(page, 'inspection');
   await page.mouse.move(large.x, large.y);
-  await expect.poll(() => cursorOverCanvas(page)).not.toBe(HAND);
+  await expect.poll(() => cursorOverCanvas(page)).toBe('arrow');
   const own = await nameOnScreen(page, 'inspection', naming);
   await page.mouse.move(own.x, own.y);
-  await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
+  await expect.poll(() => cursorOverCanvas(page)).toBe('help sign');
 
   await page.mouse.click(own.x, own.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(named);
@@ -301,7 +300,7 @@ test('a terrain marked on the settle card raises its own face small at a rest an
   await page.mouse.move(small.x, small.y, { steps: 5 });
   await waitGameClock(page, PAST_HANDOVER);
   expect(await cardOnFace(page, 'small-card-0')).toBe(marked);
-  expect(await cursorOverCanvas(page)).toBe(HAND);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
   const menu = await onScreen(page, 'menu-button');
   await page.mouse.move(menu.x, menu.y, { steps: 5 });
@@ -324,7 +323,7 @@ test('a terrain marked on the settle card raises its own face small at a rest an
   await rested(page);
   const named = await nameOnScreen(page, 'inspection');
   await page.mouse.move(named.x, named.y);
-  await expect.poll(() => cursorOverCanvas(page)).toBe(HAND);
+  await expect.poll(() => cursorOverCanvas(page)).toBe('help sign');
 
   await page.mouse.click(named.x, named.y, { button: 'right' });
   await expect.poll(() => cardOnFace(page, 'inspection')).toBe(marked);

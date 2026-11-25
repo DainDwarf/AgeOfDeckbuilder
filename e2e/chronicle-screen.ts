@@ -116,6 +116,7 @@ import {
 } from '../src/ui/chrome-kit';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
+import { CURSORS, type Cursor } from '../src/ui/cursor';
 import { eventName } from '../src/ui/event-text';
 import { type Face, namedFace, terrainFace, terrainOnTile } from '../src/ui/face';
 import { type BarReading, LOOK, multiplied } from '../src/ui/look';
@@ -1519,16 +1520,27 @@ export async function windowOnScreen(page: Page, face: string): Promise<OnScreen
   return (await reading(page, face)).windowOnScreen;
 }
 
-/** The cursor over something that reacts to a left click or a rest. */
-export const HAND = 'pointer';
-
-/** The cursor the page shows over the canvas. */
-export function cursorOverCanvas(page: Page): Promise<string> {
+/** What the canvas's style asks the browser to draw the pointer as. */
+export function cursorStyleOnCanvas(page: Page): Promise<string> {
   return page.locator('canvas').evaluate((canvas: HTMLCanvasElement) => canvas.style.cursor);
 }
 
-/** The cursor the pointer shows moved to this point, a drawn frame after. */
-export async function cursorAt(page: Page, at: { x: number; y: number }): Promise<string> {
+/** The picture a cursor style names, read by its file; a style naming none of the nine is refused. */
+export function cursorNamedBy(style: string): Cursor {
+  const named = (Object.keys(CURSORS) as Cursor[]).filter((cursor) =>
+    style.includes(`/${CURSORS[cursor].file}"`),
+  );
+  if (named.length !== 1) throw new Error(`the cursor style "${style}" names no one picture`);
+  return named[0];
+}
+
+/** The picture the pointer wears over the canvas. */
+export async function cursorOverCanvas(page: Page): Promise<Cursor> {
+  return cursorNamedBy(await cursorStyleOnCanvas(page));
+}
+
+/** The picture the pointer wears moved to this point, a drawn frame after. */
+export async function cursorAt(page: Page, at: { x: number; y: number }): Promise<Cursor> {
   await page.mouse.move(at.x, at.y);
   await rested(page);
   return cursorOverCanvas(page);
@@ -2983,6 +2995,13 @@ export function campBeside(
   return { chronicle: unitEntered(placed, planted(camp)), camp };
 }
 
+/** The seed's turn 1 with a warrior of the player's entered on the city's tile. */
+export function guardedOn(seed: number): Chronicle {
+  const settled = settledOn(seed);
+  const city = playerCityTile(settled);
+  return entered(CATALOGUE, settled, { type: WARRIOR, faction: 'player', tile: city }).chronicle;
+}
+
 /**
  * The chronicle with an enemy of the camp's kind entered with the raider script on the first tile
  * beside the city it stands on with nobody on it, charted, and the enemy; nothing where none is.
@@ -4357,6 +4376,28 @@ export function firstEntriesTaken(chronicle: Chronicle): Chronicle {
     taking = taken;
   }
   return taking;
+}
+
+/**
+ * The chronicle of the first seed and turn, inside forty turns, whose deal offers an answer the city
+ * cannot pay for, stopped on that deal, and that answer.
+ */
+export function unpaidDealt(): { dealt: Chronicle; answer: string } {
+  return firstSeed('deals an answer its city cannot pay for inside forty turns', (seed) => {
+    let chronicle = settledOn(seed);
+    while (chronicle.turn < 40 && chronicle.ending === undefined) {
+      const dealt = outcome(apply(CATALOGUE, chronicle, { type: 'end-turn' }));
+      const [deal] = dealt.deals;
+      if (deal?.of === 'event') {
+        const answer = offered(CATALOGUE, dealt, deal).find(
+          (id) => answerRefusal(CATALOGUE, dealt, deal.event, id).unaffordable.length > 0,
+        );
+        if (answer !== undefined) return { dealt, answer };
+      }
+      chronicle = firstEntriesTaken(dealt);
+    }
+    return undefined;
+  });
 }
 
 /** The deal standing first on the chronicle; a chronicle standing on none throws. */
