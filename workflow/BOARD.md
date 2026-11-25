@@ -18,4 +18,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The cursor** — the cursor saying what a press would do now, and whether the game draws a cursor of its own.
+- **The cursor** — on every screen the pointer wears one of nine painted gold pictures, by what a press on the thing under it would do now, drawn by the browser at 32 pixels; the pack stands in the store with its licence record and its credit; `e2e/cursor.spec.ts` passes. Doc-impact: `docs/INTERFACE.md`, `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`. [board/the-cursor.md](board/the-cursor.md)
