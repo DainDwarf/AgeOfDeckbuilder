@@ -373,7 +373,7 @@ export function createOverlay({
 
   /**
    * An entry laid, a left click on it running `press` where it answers one, and that click refused
-   * where the player's city cannot pay for the entry.
+   * where the rules refuse the entry, which darkens an answer.
    */
   const heldOf = (entry: Placed, press: () => (() => void) | undefined): Held => ({
     box: entry.box,
@@ -382,7 +382,7 @@ export function createOverlay({
     get press() {
       return press();
     },
-    refused: () => press() !== undefined && entry.refusal.unaffordable.length > 0,
+    refused: () => press() !== undefined && !playable(entry.refusal),
   });
 
   /**

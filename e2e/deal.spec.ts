@@ -3,6 +3,7 @@ import { CATALOGUE } from '../src/content/catalogue';
 import { apply, outcome } from '../src/rules/chronicle';
 import { tileKey } from '../src/rules/map';
 import { answerCost, answerOf, answerRefusal, offered } from '../src/rules/schedule';
+import { playable } from '../src/rules/state';
 import { eventLore } from '../src/ui/lore';
 import { refused } from '../src/ui/refusal-lines';
 import {
@@ -89,11 +90,9 @@ test('the events phase deals a choice, and the turn plays on from the one a left
     x: Math.min(Math.max(shown(city).onScreen.x, x + inset), x + width - inset),
     y: y + 6 * second.unit,
   };
-  const unpayable = answerRefusal(CATALOGUE, dealt, LEAN_SEASON, answers[1]).unaffordable;
+  const refused = !playable(answerRefusal(CATALOGUE, dealt, LEAN_SEASON, answers[1]));
   expect(await cursorAt(page, { x: (first.x + second.x) / 2, y: first.y })).toBe('arrow');
-  expect(await cursorAt(page, offNames)).toBe(
-    unpayable.length > 0 ? 'not-allowed sign' : 'pointing hand',
-  );
+  expect(await cursorAt(page, offNames)).toBe(refused ? 'not-allowed sign' : 'pointing hand');
 
   // In the answer's padding over its name, as near the city's tile beneath as the answer reaches.
   await page.mouse.click(offNames.x, offNames.y, { button: 'right' });
