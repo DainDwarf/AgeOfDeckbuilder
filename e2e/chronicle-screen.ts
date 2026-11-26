@@ -1382,6 +1382,14 @@ export async function restedOnDeal(page: Page): Promise<void> {
   await rested(page);
 }
 
+/** The deal window, standing whole, minimized by a left click on its button. */
+export async function dealMinimized(page: Page): Promise<void> {
+  await restedOnDeal(page);
+  await click(page, 'deal-minimize');
+  await expect.poll(() => standing(page, 'minimized-deal-ribbon')).toBe(true);
+  await rested(page);
+}
+
 /** Longer than the hand-over a small card waits out before it goes down, so one going has gone. */
 export const PAST_HANDOVER = 400;
 
@@ -1862,9 +1870,12 @@ export async function pieceWorn(page: Page, name: string): Promise<PieceWorn> {
   return pieceWornOf(await reading(page, name));
 }
 
-/** What a reading of the bar stands in, its well or the gold, and nothing while it stands in neither. */
-export async function wellWorn(page: Page, key: string): Promise<PieceWorn | undefined> {
-  const well = await reading(page, `reading-${key}-well`);
+/**
+ * What the named reading stands in, its well or the gold, and nothing while it stands in neither: a
+ * reading of the bar or one of city mode's panel.
+ */
+export async function wellWorn(page: Page, name: string): Promise<PieceWorn | undefined> {
+  const well = await reading(page, `${name}-well`);
   return well.shows ? pieceWornOf(well) : undefined;
 }
 
@@ -2780,17 +2791,19 @@ export function overflowingPiles(): Chronicle {
   return chronicle;
 }
 
-/**
- * The chronicle with its turns ended up to the one before its timeline's next deal, and that end of
- * turn applied: the chronicle stopped on the deal.
- */
-export function stoppedOnDeal(chronicle: Chronicle): Chronicle {
+/** The chronicle with its turns ended up to the one before its timeline's next deal. */
+export function beforeTheDeal(chronicle: Chronicle): Chronicle {
   let turning = chronicle;
   const due = turning.timeline.next;
   while (turning.turn < due - 1 && turning.ending === undefined) {
     turning = endedTurn(turning);
   }
-  return outcome(apply(CATALOGUE, turning, { type: 'end-turn' }));
+  return turning;
+}
+
+/** The chronicle `beforeTheDeal` leaves with that end of turn applied: the chronicle stopped on the deal. */
+export function stoppedOnDeal(chronicle: Chronicle): Chronicle {
+  return outcome(apply(CATALOGUE, beforeTheDeal(chronicle), { type: 'end-turn' }));
 }
 
 /** The seed's turn 1 on the Nomadic content, settled bare, stopped on its timeline's first deal. */

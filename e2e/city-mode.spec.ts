@@ -8,6 +8,7 @@ import { apply, type Command, outcome, reckoned } from '../src/rules/chronicle';
 import {
   arrived,
   claimable,
+  claimWaiting,
   givingYield,
   tileCost,
   tileRefusal,
@@ -28,18 +29,22 @@ import {
   thresholdOf,
   turnsLeft,
 } from '../src/ui/city-bar';
-import { LOOK } from '../src/ui/look';
+import { css, LOOK } from '../src/ui/look';
 import { refused } from '../src/ui/refusal-lines';
 import { buildingName, civilizationName, text } from '../src/ui/text';
 import {
   type BarParts,
   bareTile,
+  beforeTheDeal,
   besideTiles,
   chronicleOf,
   claimMarked,
   click,
   consoleKey,
   counted,
+  cursorAt,
+  cursorOverCanvas,
+  dealMinimized,
   dragTiles,
   drawnFaces,
   endTurn,
@@ -72,6 +77,7 @@ import {
   settledOn,
   shownCard,
   standing,
+  stoppedTurn,
   thresholdShown,
   tileOnScreen,
   tooltipLines,
@@ -86,6 +92,13 @@ import {
 
 /** What a reading stands on while its act in city mode waits: a button's gold, in its own look. */
 const ON_THE_GOLD: PieceWorn = { piece: 'gold', look: 'normal' };
+
+/** What culture's reading on the panel sits in while the claim is being aimed: the kit's inactive tab. */
+const IN_THE_WELL: PieceWorn = { piece: 'inactive-tab' };
+
+/** Culture's reading on city mode's panel, the button the claim is aimed by, and its turns left. */
+const CLAIM_BUTTON = 'city-mode-culture';
+const CLAIM_TURNS = 'city-mode-culture-turns';
 
 /** Seed 1's turn 1, the city settled and nothing else played. */
 function bareTurn(): Chronicle {
@@ -143,6 +156,12 @@ function unassignedHeld(chronicle: Chronicle): string[] {
     .filter((tile) => !assignedTo(chronicle, tile))
     .map(tileKey)
     .sort();
+}
+
+/** The claim aimed by a left click on culture's reading on the panel, the map marking what it may claim. */
+async function claimAimed(page: Page, chronicle: Chronicle): Promise<void> {
+  await click(page, CLAIM_BUTTON);
+  await expect.poll(() => claimMarked(page)).toEqual(claimableKeys(chronicle));
 }
 
 /** The name a tile's painting stands under. */
@@ -348,7 +367,7 @@ test('before the settle neither the city key nor culture nor idle enters city mo
   expect(problems).toEqual([]);
 });
 
-test('the city key enters city mode, where a click rings a tile and stands the culture threshold on it, and the back key drops both', async ({
+test('the city key enters city mode with nothing selected, where a tile the city may claim is ringed by a click and wears nothing, a second click there acting on nothing, and the back key drops it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -360,18 +379,26 @@ test('the city key enters city mode, where a click rings a tile and stands the c
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
+  expect(await claimMarked(page)).toEqual([]);
 
   const at = await tileOnScreen(page, near);
   await page.mouse.click(at.x, at.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(near));
-  expect(await thresholdShown(page)).toBe(thresholdWorn(bare, near));
-  expect(await refusalLines(page)).toBeUndefined();
-  expect((await chronicleOf(page)).held.map(tileKey)).not.toContain(tileKey(near));
+  expect(await thresholdShown(page)).toBeUndefined();
+  expect(await claimMarked(page)).toEqual([]);
+  await reacted(page);
+  expect(await cursorOverCanvas(page)).toBe('arrow');
 
-  // The first back key drops the selection and what it wore; the mode stands until the next one.
+  await page.mouse.click(at.x, at.y);
+  await reacted(page);
+  expect(await ringedTile(page)).toBe(tileKey(near));
+  expect(await thresholdShown(page)).toBeUndefined();
+  expect(await refusalLines(page)).toBeUndefined();
+  expect(await chronicleOf(page)).toEqual(bare);
+
+  // The first back key drops the selection; the mode stands until the next one.
   await page.keyboard.press('Escape');
   await expect.poll(() => ringedTile(page)).toBeUndefined();
-  expect(await thresholdShown(page)).toBeUndefined();
   expect(await inCityMode(page)).toBe(true);
 
   await page.keyboard.press('Escape');
@@ -499,25 +526,36 @@ test('a press beside the tiles in city mode drops the selection and the inspecti
   expect(problems).toEqual([]);
 });
 
-test('a press on culture or idle enters city mode, and the panel’s Close leaves it', async ({
+test('a press on culture enters city mode with the claim being aimed and one on idle with nothing selected, both dead once the mode is on, and the panel’s Close leaves it', async ({
   page,
 }) => {
   const problems = watch(page);
+  const bare = bareTurn();
+  // Culture enters with the claim aimed though the city cannot pay for one.
+  expect(claimWaiting(CATALOGUE, bare)).toBe(false);
 
-  await openSaved(page, bareTurn());
+  await openSaved(page, bare);
 
   await click(page, 'reading-culture');
   await expect.poll(() => inCityMode(page)).toBe(true);
-
-  await click(page, 'reading-idle');
-  await reacted(page);
-  expect(await inCityMode(page)).toBe(true);
+  await expect.poll(() => claimMarked(page)).toEqual(claimableKeys(bare));
+  expect(await wellWorn(page, CLAIM_BUTTON)).toEqual(IN_THE_WELL);
 
   await click(page, 'city-mode-close');
   await expect.poll(() => inCityMode(page)).toBe(false);
+  expect(await claimMarked(page)).toEqual([]);
 
   await click(page, 'reading-idle');
   await expect.poll(() => inCityMode(page)).toBe(true);
+  expect(await claimMarked(page)).toEqual([]);
+  expect(await wellWorn(page, CLAIM_BUTTON)).toBeUndefined();
+
+  for (const reading of ['reading-culture', 'reading-idle']) {
+    await click(page, reading);
+    await reacted(page);
+    expect(await inCityMode(page)).toBe(true);
+    expect(await claimMarked(page)).toEqual([]);
+  }
 
   expect(problems).toEqual([]);
 });
@@ -689,19 +727,46 @@ test('culture stands on the gold while the city can pay for a tile it may claim,
   const claimed = applied(paid, { type: 'claim', tile: near });
 
   await openSaved(page, paid);
-  await expect.poll(() => wellWorn(page, 'culture')).toEqual(ON_THE_GOLD);
+  await expect.poll(() => wellWorn(page, 'reading-culture')).toEqual(ON_THE_GOLD);
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
+  await claimAimed(page, paid);
   const at = await tileOnScreen(page, near);
-  await page.mouse.click(at.x, at.y);
-  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(paid, near));
-
   await page.mouse.click(at.x, at.y);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(claimed);
-  await expect.poll(() => wellWorn(page, 'culture')).toBeUndefined();
+  await expect.poll(() => wellWorn(page, 'reading-culture')).toBeUndefined();
+
+  expect(problems).toEqual([]);
+});
+
+test('culture’s reading on the panel is a button: on the gold while the city can pay for a tile it may claim, its turns left in a button’s ink, and in its well while the claim is aimed, the pointer on it the pointing hand', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const paid = culturePaid();
+  expect(claimWaiting(CATALOGUE, paid)).toBe(true);
+  const turns = `${CLAIM_BUTTON}-turns-value`;
+
+  await openSaved(page, paid);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  await expect.poll(() => wellWorn(page, CLAIM_BUTTON)).toEqual(ON_THE_GOLD);
+  expect((await readings(page, [turns]))(turns).ink).toBe(css(LOOK.metalInk));
+
+  for (const zone of [CLAIM_BUTTON, CLAIM_TURNS]) {
+    expect(await cursorAt(page, await onScreen(page, zone))).toBe('pointing hand');
+  }
+
+  await claimAimed(page, paid);
+  await expect.poll(() => wellWorn(page, CLAIM_BUTTON)).toEqual(IN_THE_WELL);
+  expect((await readings(page, [turns]))(turns).ink).toBe(css(LOOK.turnsLeftInk));
+
+  await click(page, CLAIM_BUTTON);
+  await expect.poll(() => wellWorn(page, CLAIM_BUTTON)).toEqual(ON_THE_GOLD);
+  expect(await claimMarked(page)).toEqual([]);
 
   expect(problems).toEqual([]);
 });
@@ -716,7 +781,7 @@ test('idle stands on the gold while one population is idle over a tile the city 
   const assigned = applied(unassigned, { type: 'assign', tile: own });
 
   await openSaved(page, bare);
-  expect(await wellWorn(page, 'idle')).toBeUndefined();
+  expect(await wellWorn(page, 'reading-idle')).toBeUndefined();
 
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
@@ -728,13 +793,13 @@ test('idle stands on the gold while one population is idle over a tile the city 
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(unassigned);
   expect(await counted(page, 'assigned')).toBe(unassigned.assigned.length);
-  await expect.poll(() => wellWorn(page, 'idle')).toEqual(ON_THE_GOLD);
+  await expect.poll(() => wellWorn(page, 'reading-idle')).toEqual(ON_THE_GOLD);
 
   await page.mouse.click(city.x, city.y);
   await playedOut(page);
   await expect.poll(() => chronicleOf(page)).toEqual(assigned);
   expect(await counted(page, 'assigned')).toBe(assigned.assigned.length);
-  await expect.poll(() => wellWorn(page, 'idle')).toBeUndefined();
+  await expect.poll(() => wellWorn(page, 'reading-idle')).toBeUndefined();
 
   expect(problems).toEqual([]);
 });
@@ -866,27 +931,68 @@ test('a unit’s tile selected in city mode lights nothing, and a click on the t
   expect(problems).toEqual([]);
 });
 
-test('city mode marks every tile the city can claim, and leaving it takes the marks down', async ({
+test('a left click on culture’s reading on the panel or on its turns left aims the claim, the map marking every tile the city may claim and the reading sunk in its well, a second lets it go, and leaving the mode takes the marks down', async ({
   page,
 }) => {
   const problems = watch(page);
   const bare = bareTurn();
+  expect(claimWaiting(CATALOGUE, bare)).toBe(false);
 
   await openSaved(page, bare);
-  expect(await claimMarked(page)).toEqual([]);
-
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-  expect(await claimMarked(page)).toEqual(claimableKeys(bare));
+  expect(await claimMarked(page)).toEqual([]);
+  expect(await wellWorn(page, CLAIM_BUTTON)).toBeUndefined();
 
-  await page.keyboard.press('Escape');
+  await claimAimed(page, bare);
+  expect(await wellWorn(page, CLAIM_BUTTON)).toEqual(IN_THE_WELL);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  await click(page, CLAIM_BUTTON);
+  await expect.poll(() => claimMarked(page)).toEqual([]);
+  expect(await wellWorn(page, CLAIM_BUTTON)).toBeUndefined();
+
+  await click(page, CLAIM_TURNS);
+  await expect.poll(() => claimMarked(page)).toEqual(claimableKeys(bare));
+  await click(page, CLAIM_TURNS);
+  await expect.poll(() => claimMarked(page)).toEqual([]);
+
+  await claimAimed(page, bare);
+  await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(false);
   expect(await claimMarked(page)).toEqual([]);
 
   expect(problems).toEqual([]);
 });
 
-test('a second click the city cannot pay for claims nothing and says so, and one on no act of the city’s says nothing', async ({
+test('the claim is a selection: aiming it drops the tile selected, and the back key and a left click on another thing let it go', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const bare = bareTurn();
+  const own = playerCityTile(bare);
+
+  await openSaved(page, bare);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  await click(page, `tile-${tileKey(own)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
+
+  await claimAimed(page, bare);
+  expect(await ringedTile(page)).toBeUndefined();
+
+  await page.keyboard.press('Escape');
+  await expect.poll(() => claimMarked(page)).toEqual([]);
+  expect(await inCityMode(page)).toBe(true);
+
+  await claimAimed(page, bare);
+  await click(page, 'draw-pile');
+  await expect.poll(() => claimMarked(page)).toEqual([]);
+
+  expect(problems).toEqual([]);
+});
+
+test('a click on a marked tile the city cannot pay for claims nothing and says what it costs, the tile under the pointer wearing it under the note and the claim still aimed, and a click on a tile it does not mark lets it go and selects that tile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -908,74 +1014,70 @@ test('a second click the city cannot pay for claims nothing and says so, and one
   await enter(page, 'uncharted');
   await consoleKey(page);
 
+  await claimAimed(page, bare);
   const near = await tileOnScreen(page, nearTile);
   const far = await tileOnScreen(page, farTile);
 
-  await page.mouse.click(near.x, near.y);
+  await page.mouse.move(near.x, near.y);
   await expect.poll(() => thresholdShown(page)).toBe(asked);
+  expect(await cursorOverCanvas(page)).toBe('not-allowed sign');
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(near.x, near.y);
   await reacted(page);
   expect(await refusalLines(page)).toEqual(unpaid);
-  // The tile goes on wearing what the claim asks for, under the note.
   expect(await thresholdShown(page)).toBe(asked);
   expect(await chronicleOf(page)).toEqual(bare);
+  expect(await claimMarked(page)).toEqual(claimableKeys(bare));
+  expect(await ringedTile(page)).toBeUndefined();
 
+  expect(await cursorAt(page, far)).toBe('arrow');
+  expect(await thresholdShown(page)).toBeUndefined();
   await page.mouse.click(far.x, far.y);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(farTile));
-  expect(await thresholdShown(page)).toBeUndefined();
+  expect(await claimMarked(page)).toEqual([]);
+  expect(await wellWorn(page, CLAIM_BUTTON)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
 
   await page.mouse.click(far.x, far.y);
   await reacted(page);
   expect(await ringedTile(page)).toBe(tileKey(farTile));
-  expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
   expect(await chronicleOf(page)).toEqual(bare);
 
   expect(problems).toEqual([]);
 });
 
-test('a second click the city can pay for claims the tile, which stays selected and asks for nothing more', async ({
+test('a click on a marked tile the city can pay for claims it, the claim let go as it lands and the tile claimed selected, and the claim aimed again marks the claims the moved border opens', async ({
   page,
 }) => {
   const problems = watch(page);
   const paid = culturePaid();
   const nearTile = firstClaim(paid);
-  const farTile = nearestUncharted(paid);
   const claimed = applied(paid, { type: 'claim', tile: nearTile });
+  expect(claimWaiting(CATALOGUE, claimed)).toBe(false);
 
   await openSaved(page, paid);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
 
-  await consoleKey(page);
-  await enter(page, 'uncharted');
-  await consoleKey(page);
-
+  await claimAimed(page, paid);
   const near = await tileOnScreen(page, nearTile);
-  const far = await tileOnScreen(page, farTile);
-
-  await page.mouse.click(near.x, near.y);
-  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(paid, nearTile));
+  expect(await cursorAt(page, near)).toBe('aim sign');
   await page.mouse.click(near.x, near.y);
   await playedOut(page);
 
   await expect.poll(() => chronicleOf(page)).toEqual(claimed);
   expect(await counted(page, 'assigned')).toBe(claimed.assigned.length);
-  // The tile claimed is a claim no longer, and the marks are the claims the moved border opens.
-  expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(nearTile));
-  expect(await claimMarked(page)).toEqual(claimableKeys(claimed));
-  // The tile the claim took stays selected, and asks for nothing more.
   await expect.poll(() => ringedTile(page)).toBe(tileKey(nearTile));
+  expect(await claimMarked(page)).toEqual([]);
   expect(await thresholdShown(page)).toBeUndefined();
   expect(await refusalLines(page)).toBeUndefined();
+  expect(await wellWorn(page, CLAIM_BUTTON)).toBeUndefined();
 
-  await page.mouse.click(far.x, far.y);
-  await reacted(page);
-  expect(await refusalLines(page)).toBeUndefined();
-  expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(farTile));
+  // The tile claimed is a claim no longer.
+  expect(claimable(CATALOGUE, claimed, 'player').map(tileKey)).not.toContain(tileKey(nearTile));
+  await claimAimed(page, claimed);
 
   expect(problems).toEqual([]);
 });
@@ -1097,33 +1199,37 @@ test('in city mode an assigned tile an enemy occupies keeps its mark and its pai
   expect(problems).toEqual([]);
 });
 
-test('the tile wearing the culture threshold shows none of the overlay’s glyphs, and shows them again once the selection drops', async ({
+test('while the claim is aimed the marked tile the pointer is on wears the culture threshold, which goes as the pointer leaves the tile and with the aim, and every other tile wears the arrow', async ({
   page,
 }) => {
   const problems = watch(page);
   const bare = bareTurn();
   const near = firstClaim(bare);
+  const unmarked = bareTile(bare);
+  expect(claimableKeys(bare)).not.toContain(tileKey(unmarked));
+  expect(unitAt(bare.units, unmarked)).toBeUndefined();
+  const asked = thresholdWorn(bare, near);
 
   await openSaved(page, bare);
-  await page.keyboard.press('Tab');
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
-
-  const chronicle = await chronicleOf(page);
-  const faces = drawnFaces(chronicle);
-  const all = glyphsOf(chronicle, faces);
-  const worn = glyphsOf(chronicle, faces, (face) => tileKey(face) !== tileKey(near));
-  expect(worn).not.toEqual(all);
-  expect(await glyphs(page)).toEqual(all);
+  await claimAimed(page, bare);
+  expect(await thresholdShown(page)).toBeUndefined();
 
   const at = await tileOnScreen(page, near);
-  await page.mouse.click(at.x, at.y);
-  await expect.poll(() => thresholdShown(page)).toBe(thresholdWorn(bare, near));
-  expect(await glyphs(page)).toEqual(worn);
+  await page.mouse.move(at.x, at.y);
+  await expect.poll(() => thresholdShown(page)).toBe(asked);
 
+  expect(await cursorAt(page, await tileOnScreen(page, unmarked))).toBe('arrow');
+  expect(await thresholdShown(page)).toBeUndefined();
+
+  await page.mouse.move(at.x, at.y);
+  await expect.poll(() => thresholdShown(page)).toBe(asked);
+
+  // The pointer never leaves the tile: the threshold goes with the aim.
   await page.keyboard.press('Escape');
   await expect.poll(() => thresholdShown(page)).toBeUndefined();
-  expect(await glyphs(page)).toEqual(all);
+  expect(await claimMarked(page)).toEqual([]);
 
   expect(problems).toEqual([]);
 });
@@ -1145,6 +1251,28 @@ test('a window standing over the chronicle screen takes the city key', async ({ 
   await expect.poll(() => standing(page, 'menu')).toBe(false);
   await page.keyboard.press('c');
   await expect.poll(() => inCityMode(page)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('under the deal window minimized culture’s reading on the panel is dead, the pointer on it the arrow', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  await openSaved(page, beforeTheDeal(bareTurn()));
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  await stoppedTurn(page);
+  await dealMinimized(page);
+  expect(await inCityMode(page)).toBe(true);
+
+  const at = await onScreen(page, CLAIM_BUTTON);
+  expect(await cursorAt(page, at)).toBe('arrow');
+  await page.mouse.click(at.x, at.y);
+  await reacted(page);
+  expect(await claimMarked(page)).toEqual([]);
+  const waiting = claimWaiting(CATALOGUE, await chronicleOf(page));
+  expect(await wellWorn(page, CLAIM_BUTTON)).toEqual(waiting ? ON_THE_GOLD : undefined);
 
   expect(problems).toEqual([]);
 });

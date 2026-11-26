@@ -57,16 +57,16 @@ Three presses work every screen: the **left click** selects, the **right click**
 **The pointer says what a press on the thing under it would do now.** It reads the one thing the pointer is on, as every hover does, so it is right the moment that thing rises, falls or comes live under a pointer that holds still. It wears one of nine pictures, the first of these that holds:
 
 - the **closed hand**, from the moment a held press becomes a drag that took hold of something until that press is let go, wherever the pointer goes meanwhile: a card lifted out of the hand, a unit, an assigned population, a card carried on the collection screen, the map or the tree panned, a panel scrolled by its drag;
-- the **not-allowed sign** over a refusal the screen already shows: a card of the hand that is unaffordable or that nothing plays, an answer the player's city cannot pay for or one refused, and, while a card is being aimed at a tile or at a unit, a drawn tile its aim does not admit, or every drawn tile where that card is unaffordable;
-- the sign of a command over what a left click commands: the **step sign** on a tile the unit being aimed lights, the **attack sign** on a unit it marks, the **aim sign** on a tile, a unit or a card of the hand the card being aimed admits;
+- the **not-allowed sign** over a refusal the screen already shows: a card of the hand that is unaffordable or that nothing plays, an answer the player's city cannot pay for or one refused, and, while a card is being aimed at a tile or at a unit, a drawn tile its aim does not admit, or every drawn tile where that card is unaffordable, and, while the claim is being aimed, a marked tile where the player's city cannot pay for it;
+- the sign of a command over what a left click commands: the **step sign** on a tile the unit being aimed lights, the **attack sign** on a unit it marks, the **aim sign** on a tile, a unit or a card of the hand the card being aimed admits, and on a tile the claim being aimed marks;
 - the **open hand** over a thing a held press would take hold of now: a card of the hand, a unit of the player's, an assigned population, a card the collection screen lets be carried;
 - the **pointing hand** over any other thing that reacts to a left click, the selected tile among them where a left click on it acts;
 - the **help sign** over a thing that reacts to no left click and raises something under a pointer at rest;
 - the **arrow** everywhere else: beside the things, over a scrim, over the map wherever a left click only selects or lands off it, and over a dead button whatever a rest raises on it.
 
-The pointer says no more than the screen does. A card the rules refuse for anything but its cost wears the open hand as every card of the hand does, its face being drawn as any other; a tile a card being aimed is not admitted on wears the not-allowed sign because the map lights the ones it is. A click on a tile the unit being aimed neither lights nor marks is no refusal, so that tile wears the arrow.
+The pointer says no more than the screen does. A card the rules refuse for anything but its cost wears the open hand as every card of the hand does, its face being drawn as any other; a tile a card being aimed is not admitted on wears the not-allowed sign because the map lights the ones it is. A click on a tile the unit being aimed neither lights nor marks is no refusal, so that tile wears the arrow, and so does a tile the claim being aimed does not mark.
 
-**The selection is one thing, a tile, a unit or a card, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
+**The selection is one thing, a tile, a unit, a card or the player's city's claim, and the left click makes it.** A press on a thing selects it, a new selection drops the old one whatever it was, and a press beside the things drops it and the inspection with it. A left click on the selection acts on it, and what it does is the selected thing's own.
 
 **A selected thing being aimed filters every left click by its aim.** It is being aimed while what its aim admits is offered, and its aim is at one kind of thing. A left click on a thing of that kind is the act attempted there, and the rules answer: an act refused says why over that thing, in the note a refusal raises, and the aim stands. A left click on anything else, the selection itself excepted, lets the aimed thing go, selected no more, the inspection standing, and then lands, in the one press, as it would on a clean screen. The right click inspects and the aim stands, and the back key lets the aimed thing go as the selection it is.
 
@@ -84,7 +84,7 @@ The pointer says no more than the screen does. A card the rules refuse for anyth
 
 The **back key** walks these back in this order: the thing shown large, the newest of them where several stand, then the window, then the inspection, then the selection.
 
-Two verbs cover it all. **Select** is the tile or the unit the map rings, or the card lifted out of the hand; **inspect** is the tile in the infopanel, the card shown large and the pile in its browse. "Zoom" stays the map's word.
+Two verbs cover it all. **Select** is the tile or the unit the map rings, the card lifted out of the hand, or the claim its reading stands sunk for; **inspect** is the tile in the infopanel, the card shown large and the pile in its browse. "Zoom" stays the map's word.
 
 ## A card's names and its label ✅
 

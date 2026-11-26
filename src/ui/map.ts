@@ -226,6 +226,18 @@ export type AimShown = {
   readonly unaffordable: boolean;
 };
 
+/**
+ * The claim being aimed as the map shows it at a tile the player's city may claim: what it asks for
+ * there and whether the city cannot pay for it, and what a left click there is.
+ */
+export type ClaimShown = {
+  readonly asks: (tile: TileCoords) => ClaimAsked;
+  readonly chosen: (at: PressedTile) => void;
+};
+
+/** What the claim asks for at a tile, and whether the player's city cannot pay for it there. */
+type ClaimAsked = { readonly cost: Cost; readonly unaffordable: boolean };
+
 export type MapView = {
   render(chronicle: Chronicle): void;
   play(stage: Stage): Promise<void> | undefined;
@@ -256,7 +268,8 @@ export type MapView = {
   carried(press: Press): boolean;
   /**
    * A left click on a drawn tile: the aim's while one stands, else the step or the attack of the unit
-   * lit where it lights that tile or marks the unit on it, else the tile reported to `onPress`.
+   * lit where it lights that tile or marks the unit on it, else the claim's where it marks the tile,
+   * else the tile reported to `onPress`.
    */
   click(tile: TileCoords): void;
   /** Whether the selected unit lights or marks anything: it is being aimed. */
@@ -275,10 +288,9 @@ export type MapView = {
   ): void;
   /**
    * Rings the unit the map draws on the selected tile, in sight or kept in fog, and lights what it
-   * can do where `unit` asks for it and city mode is off, else rims the tile. `cost` is the
-   * threshold the tile wears in its middle, over everything else and in place of its yield glyphs.
+   * can do where `unit` asks for it and city mode is off, else rims the tile.
    */
-  markSelected(tile: TileCoords | undefined, unit: boolean, cost: Cost | undefined): void;
+  markSelected(tile: TileCoords | undefined, unit: boolean): void;
   /** Whether `markSelected` on the tile, asking for its unit or not, would select what is selected. */
   isSelected(tile: TileCoords, unit: boolean): boolean;
   /** Whether what is selected is the unit drawn on the selected tile, and not the tile. */
@@ -300,6 +312,11 @@ export type MapView = {
    * player's city without its bars and its badge.
    */
   showCityMarks(on: boolean): void;
+  /**
+   * The claim being aimed, the claim marks on every tile the player's city may claim and the marked
+   * tile the pointer is on wearing what the claim asks for; nothing takes both down.
+   */
+  aimClaim(claim: ClaimShown | undefined): void;
   /** Draws the map under these veils: what the console's two switches take off and put back. */
   showVeils(veils: Veils): void;
   /** Shows or hides the faction sign every unit, every city and every camp wears. */
@@ -590,6 +607,13 @@ export function createMapView(
   let threshold: { readonly tile: TileCoords; readonly cost: Cost } | undefined;
 
   /**
+   * The claim being aimed, and the tiles its marks stand on with what it asks for at each, read as
+   * they were painted; nothing and none while it is not.
+   */
+  let claim: ClaimShown | undefined;
+  let claimMarked: readonly (ClaimAsked & { readonly tile: TileCoords })[] = [];
+
+  /**
    * The card being aimed as the pointer reads it: the catcher its aim runs on, the tiles it rims,
    * and what its play at one would give; nothing while no card is aimed.
    */
@@ -683,9 +707,9 @@ export function createMapView(
   };
 
   /**
-   * The glyphs of every tile the map draws on their patches: none on the tile wearing the culture
-   * threshold, every resource on a tile inside the border while city mode is on, and what the overlay
-   * is asked for on any other; paler in city mode on a tile not giving its yield at income.
+   * The glyphs of every tile the map draws on their patches: every resource on a tile inside the
+   * border while city mode is on, and what the overlay is asked for on any other; paler in city mode
+   * on a tile not giving its yield at income.
    */
   const paintYields = (): void => {
     glyphPool.hide();
@@ -696,7 +720,6 @@ export function createMapView(
     const faces = facesIn({ drawn, live, charted }, shown.tiles);
     const giving = givingYield(shown, 'player');
     for (const tile of shown.tiles) {
-      if (threshold !== undefined && sameTile(tile, threshold.tile)) continue;
       const face = drawnOf(tile);
       if (face === undefined) continue;
       const asked = inside.has(tileKey(tile)) ? EVERY_RESOURCE : showing;
@@ -712,10 +735,23 @@ export function createMapView(
     }
   };
 
-  /** The culture threshold on the tile that wears it: what the selection changes, and nothing else. */
+  /** The culture threshold on the tile that wears it. */
   const paintThreshold = (): void => {
     thresholdOnTile.root.setVisible(false);
     if (threshold !== undefined) showThreshold(thresholdOnTile, threshold.tile, threshold.cost);
+  };
+
+  /** The claim's mark on the tile handed, and nothing where it marks none. */
+  const claimMarkOn = (
+    tile: TileCoords | undefined,
+  ): (ClaimAsked & { readonly tile: TileCoords }) | undefined =>
+    tile === undefined ? undefined : claimMarked.find((marked) => sameTile(marked.tile, tile));
+
+  /** The tile handed wearing what the claim asks for there where the claim marks it, and no tile else. */
+  const thresholdOn = (tile: TileCoords | undefined): void => {
+    const on = claimMarkOn(tile);
+    threshold = on === undefined ? undefined : { tile: on.tile, cost: on.cost };
+    paintThreshold();
   };
 
   /** A plate on each tile the play under the pointer would give to, its sign at the map's zoom. */
@@ -819,22 +855,35 @@ export function createMapView(
   onResize(scene, paintAtZoom);
 
   /**
-   * City mode's marks: one on every tile the population stands on, and the claim marks on every tile
-   * the city may claim. An assign and a claim change them, so a render repaints them.
+   * City mode's marks, one on every tile the population stands on, and the claim's. An assign changes
+   * them, so a render repaints them.
    */
   const paintCityMarks = (): void => {
     assignedPool.hide();
     assignedMarks = new Map();
-    if (!marking || shown === undefined) {
-      claimMarks.paint(undefined);
-      return;
-    }
-
+    paintClaimMarks();
+    if (!marking || shown === undefined) return;
     for (const coord of shown.assigned) {
       const at = assignedAt(coord);
       assignedMarks.set(tileKey(coord), assignedPool.take().setPosition(at.x, at.y));
     }
-    claimMarks.paint({ held: shown.held, claimable: claimable(catalogue, shown, 'player') });
+  };
+
+  /**
+   * The claim marks on every tile the player's city may claim while the claim is being aimed, and on
+   * none while it is not; a claim moves them, so a render repaints them.
+   */
+  const paintClaimMarks = (): void => {
+    const current = shown;
+    const aimed = claim;
+    if (aimed === undefined || current === undefined) {
+      claimMarked = [];
+      claimMarks.paint(undefined);
+      return;
+    }
+    const tiles = claimable(catalogue, current, 'player');
+    claimMarked = tiles.map((tile) => ({ ...aimed.asks(tile), tile }));
+    claimMarks.paint({ held: current.held, claimable: tiles });
   };
 
   /**
@@ -1347,9 +1396,22 @@ export function createMapView(
         : { tile, gives: aiming.gives(tile, facesIn({ drawn, live, charted }, shown.tiles)) };
     paintPlates();
   };
+  /**
+   * The pointer read once a frame while the claim is being aimed: a marked tile it is on wears what
+   * the claim asks for there, and anywhere else, nothing does.
+   */
+  const followClaim = (): void => {
+    if (claim === undefined) return;
+    const under = presser !== undefined && thingUnder(scene.game) === presser;
+    const on = claimMarkOn(under ? pointerTile() : undefined)?.tile;
+    const was = threshold?.tile;
+    if (on === was || (on !== undefined && was !== undefined && sameTile(on, was))) return;
+    thresholdOn(on);
+  };
   // Outside Phaser's dispatch: a hit test inside it refills the list being walked (docs/PHASER.md).
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followPointer);
   whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followAim);
+  whileUp(scene, scene.events, Phaser.Scenes.Events.UPDATE, followClaim);
 
   /**
    * Every border on the chronicle the map stands on, darkened in fog: both cities' around each one's
@@ -1443,6 +1505,7 @@ export function createMapView(
     paintTileSigns();
     paintCityBars();
     paintCityMarks();
+    thresholdOn(threshold?.tile);
     paintYields();
     lightUnit(selectedUnit());
     platesOn(plated?.tile);
@@ -1563,6 +1626,9 @@ export function createMapView(
         if (tile === undefined) return NO_REACTION;
         const read = lit?.aimed === true ? readingOn(tile) : undefined;
         if (read !== undefined) return { commands: commandOf(read) };
+        const marked = claimMarkOn(tile);
+        if (marked !== undefined)
+          return marked.unaffordable ? { refused: true } : { commands: 'aim' };
         return { takesHold: grab.holdsOn(tile), clicks: acts(tile) };
       });
 
@@ -1582,23 +1648,21 @@ export function createMapView(
 
       clickedTile = (tile) => {
         if (lit !== undefined && commandUnitOn(lit.standing.id, tile)) return;
-        clicked(pressedOn(tile));
+        const marked = claimMarkOn(tile);
+        if (claim !== undefined && marked !== undefined) claim.chosen(pressedOn(marked.tile));
+        else clicked(pressedOn(tile));
       };
 
       grab.onPress(catcher, commandUnitOn, reassigned);
     },
 
-    markSelected(tile: TileCoords | undefined, unit: boolean, cost: Cost | undefined): void {
+    markSelected(tile: TileCoords | undefined, unit: boolean): void {
       selection = tile === undefined ? undefined : selectionOn(tile, unit);
-      threshold =
-        cost === undefined || selection === undefined ? undefined : { tile: selection.tile, cost };
       selected.setData('tile', tile === undefined ? undefined : tileKey(tile));
       if (tile !== undefined) {
         const { x, y } = positionOf(tile);
         for (const mark of selectedRim) mark.setPosition(x, y);
       }
-      paintThreshold();
-      paintYields();
       lightUnit(selectedUnit());
     },
 
@@ -1631,6 +1695,12 @@ export function createMapView(
       paintCityMarks();
       paintYields();
       lightUnit(selectedUnit());
+    },
+
+    aimClaim(aimed: ClaimShown | undefined): void {
+      claim = aimed;
+      paintClaimMarks();
+      thresholdOn(undefined);
     },
 
     showVeils(next: Veils): void {

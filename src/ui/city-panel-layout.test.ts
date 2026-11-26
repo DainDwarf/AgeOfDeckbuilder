@@ -51,6 +51,22 @@ describe('city mode’s panel', () => {
     expect(short.width).toBeGreaterThan(right);
   });
 
+  it('stands each reading’s well round its cell and the second line, a little past each, clear of the next cell and inside the panel', () => {
+    for (const [index, well] of short.wells.entries()) {
+      const left = short.cells[index];
+      expect(well.x).toBeLessThan(left);
+      expect(well.x + well.width).toBeGreaterThan(left + short.cell);
+      expect(well.y).toBeLessThan(short.secondLine);
+      expect(well.y + well.height).toBeGreaterThan(short.secondLine + short.secondLineHeight);
+      expect(well.y).toBeGreaterThan(short.close.y + short.close.height);
+      expect(well.y + well.height).toBeLessThan(short.height);
+    }
+    const [food, culture] = short.wells;
+    expect(food.x).toBeGreaterThan(0);
+    expect(culture.x).toBeGreaterThan(food.x + food.width);
+    expect(culture.x + culture.width).toBeLessThan(short.counts[0] - SHORT.counts[0] / 2);
+  });
+
   it('keeps a cell at one width whatever a reading that fits in it asks', () => {
     const wider = layOutCityPanel({
       ...SHORT,

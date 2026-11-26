@@ -1,11 +1,12 @@
 import type Phaser from 'phaser';
 import type { Catalogue } from '../rules/catalogue';
 import { type Reckoning, reckoned } from '../rules/chronicle';
-import { unitsCounted } from '../rules/city';
+import { claimWaiting, unitsCounted } from '../rules/city';
 import { type Chronicle, idle } from '../rules/state';
 import {
   createChromeButton,
   createChromePanel,
+  createChromeWell,
   PANEL_RIMS,
   standChromePanel,
   takesThePointer,
@@ -28,17 +29,20 @@ import {
 import {
   addText,
   BAR_HEIGHT,
+  inked,
+  NO_REACTION,
   onClick,
   onHover,
   onResize,
   ownBoxOf,
+  type Pointing,
   RESTS,
   reactsTo,
   type Stratum,
   screenSize,
   UI_FONT,
 } from './design-space';
-import { glyphOf } from './glyphs';
+import { asGlyph, glyphOf } from './glyphs';
 import { css, LOOK } from './look';
 import {
   asFactionDisc,
@@ -51,12 +55,14 @@ import {
   BAR_GLYPH,
   createReckoning,
   createValue,
-  inkReckoner,
   placeGlyphAndValue,
+  type Reckoned,
   type Reckoner,
   readingTip,
   reckoningOf,
+  type StandsOn,
   showReckoning,
+  standReading,
   type Tip,
   valueSpace,
 } from './resource-bar';
@@ -106,6 +112,8 @@ const COUNTS: readonly CountKind[] = ['idle', 'assigned', 'units'];
 type Cell = Reckoner & {
   readonly stock: CityBarStock;
   readonly root: Phaser.GameObjects.Container;
+  /** Everything the reading shows together, its bar among it: what the well presses down. */
+  readonly face: Phaser.GameObjects.Container;
   readonly row: Phaser.GameObjects.Container;
   readonly chip: Phaser.GameObjects.Container;
   readonly bar: Phaser.GameObjects.Container;
@@ -113,8 +121,11 @@ type Cell = Reckoner & {
   readonly hourglass: Phaser.GameObjects.Container;
   readonly hover: Phaser.GameObjects.Zone;
   readonly turnsHover: Phaser.GameObjects.Zone;
-  /** What the bar shows, read off the last chronicle rendered. */
+  /** The well or the gold the reading stands in, standing only while it does. */
+  readonly well: Phaser.GameObjects.NineSlice;
+  /** What the bar shows and what the reckoning reads, off the last chronicle rendered. */
   shown: CityBar;
+  reckoned: Reckoned;
 };
 
 /** A count of the population: its number over its glyph, and the zone its tooltip is raised from. */
@@ -135,12 +146,35 @@ export type CityPanel = {
   show(on: boolean): void;
   /** Close's look read again, for a liveness that has moved. */
   dress(): void;
+  /** Culture's reading sunk in its well while the claim is being aimed, or stood on what it reads. */
+  aimed(on: boolean): void;
 };
 
+/** Whether a left click on the stock's reading is the claim's: culture's is, food's reacts to none. */
+function aimsTheClaim(stock: CityBarStock): boolean {
+  switch (stock) {
+    case 'food':
+      return false;
+    case 'culture':
+      return true;
+  }
+}
+
+/** The ink the turns left and their hourglass read in on what their reading stands on. */
+function turnsInk(on: StandsOn): number {
+  switch (on) {
+    case 'gold':
+      return LOOK.metalInk;
+    case 'charcoal':
+    case 'inactive-tab':
+      return LOOK.turnsLeftInk;
+  }
+}
+
 /**
- * City mode's panel on the stratum, named `city-mode`, hidden: the player's city's name, food and
- * culture against their thresholds and the population, read off each chronicle rendered, and Close,
- * leaving the mode by `leave` while `leaves` holds; a rest on a reading raises its tooltip under it.
+ * City mode's panel on the stratum, named `city-mode`, hidden: the city's name, food, culture and
+ * population read off each chronicle rendered, a rest on a reading raising its tooltip; Close is
+ * `leave` while `leaves` holds, and a left click on culture's reading `claim` while `claims` does.
  */
 export function createCityPanel(
   scene: Phaser.Scene,
@@ -151,6 +185,8 @@ export function createCityPanel(
     readonly civilization: string;
     readonly leave: () => void;
     readonly leaves: () => boolean;
+    readonly claim: () => void;
+    readonly claims: () => boolean;
   },
 ): CityPanel {
   // Taking the pointer, though it reacts to no press, so no press reaches the map under it.
@@ -181,6 +217,7 @@ export function createCityPanel(
   let rendered: Chronicle | undefined;
   let live = true;
   let laid: CityPanelLayout | undefined;
+  let aimed = false;
 
   const chronicleRead = (): Chronicle => {
     if (rendered === undefined) throw new Error('the panel raised a tooltip before it rendered');
@@ -190,8 +227,12 @@ export function createCityPanel(
     if (laid === undefined) throw new Error('the panel raised a tooltip before it was laid');
     return root.y + laid.height;
   };
-  const tipped = (zone: Phaser.GameObjects.Zone, tip: () => Tip): void => {
-    reactsTo(zone, () => RESTS);
+  const tipped = (
+    zone: Phaser.GameObjects.Zone,
+    tip: () => Tip,
+    pointing: () => Pointing = () => RESTS,
+  ): void => {
+    reactsTo(zone, pointing);
     onHover(
       zone,
       () => {
@@ -220,17 +261,34 @@ export function createCityPanel(
       .setOrigin(0, 0)
       .setName(`${named}-turns`)
       .setInteractive();
-    tipped(hover, () => readingTip(chronicleRead(), stock));
-    tipped(turnsHover, () => ({
-      title: text('label.turns-left'),
-      message: text('tooltip.turns-left'),
-    }));
+    const aims = aimsTheClaim(stock);
+    const pointing = (): Pointing => {
+      if (!aims) return RESTS;
+      return city.claims() ? { clicks: true, rests: true } : NO_REACTION;
+    };
+    tipped(hover, () => readingTip(chronicleRead(), stock), pointing);
+    tipped(
+      turnsHover,
+      () => ({ title: text('label.turns-left'), message: text('tooltip.turns-left') }),
+      pointing,
+    );
+    if (aims) {
+      for (const zone of [hover, turnsHover]) {
+        onClick(zone, () => {
+          if (city.claims()) city.claim();
+        });
+      }
+    }
     const row = scene.add.container(0, 0, [chip, value, pill, reckoning, turns, hourglass]);
-    const cell = scene.add.container(0, 0, [bar, row, hover, turnsHover]);
-    root.add(cell);
+    const face = scene.add.container(0, 0, [bar, row]);
+    const cell = scene.add.container(0, 0, [face, hover, turnsHover]);
+    // Added before the cell, so the reading is painted inside it.
+    const well = createChromeWell(scene, `${named}-well`).setVisible(false);
+    root.add([well, cell]);
     return {
       stock,
       root: cell,
+      face,
       row,
       chip,
       value,
@@ -241,7 +299,9 @@ export function createCityPanel(
       hourglass,
       hover,
       turnsHover,
+      well,
       shown: { held: 0, added: 0 },
+      reckoned: reckoningOf(undefined, stock),
     };
   });
 
@@ -270,9 +330,8 @@ export function createCityPanel(
     const threshold = thresholdOf(chronicle, stock);
     value.setText(text('reading.over', { count: held, over: threshold }));
     placeGlyphAndValue(cell.chip, value, BAR_GLYPH, 0, 0);
-    const reckoned = reckoningOf(read, stock);
-    showReckoning(cell, reckoned, space);
-    inkReckoner(cell, 'charcoal', reckoned);
+    cell.reckoned = reckoningOf(read, stock);
+    showReckoning(cell, cell.reckoned, space);
     cell.shown = cityBarOf(chronicle, stock, read?.stocks[stock]);
 
     const reads = [ownBoxOf(value), ownBoxOf(reckoning)].map(({ x, width }) => x + width);
@@ -299,6 +358,26 @@ export function createCityPanel(
     if (laid !== undefined) root.setX((screenSize().width - laid.width) / 2);
   };
   onResize(scene, centre);
+
+  /**
+   * What a reading stands on: culture's in its well while the claim is being aimed, else on the gold
+   * while the claim's act waits; food's on the charcoal.
+   */
+  const standsOn = ({ stock }: Cell, chronicle: Chronicle): StandsOn => {
+    if (!aimsTheClaim(stock)) return 'charcoal';
+    if (aimed) return 'inactive-tab';
+    return claimWaiting(catalogue, chronicle) ? 'gold' : 'charcoal';
+  };
+
+  /** Every reading stood on what it stands on, over the box the layout gives its well. */
+  const stand = (layout: CityPanelLayout, chronicle: Chronicle): void => {
+    for (const [index, cell] of cells.entries()) {
+      const on = standsOn(cell, chronicle);
+      standReading(cell, on, layout.wells[index], cell.reckoned);
+      inked(cell.turns, turnsInk(on));
+      asGlyph(cell.hourglass, 'turns-left', HOURGLASS, { colour: turnsInk(on) });
+    }
+  };
 
   /** Everything the panel reads where the layout stands it, the panel and Close laid again where its width moved. */
   const lay = (layout: CityPanelLayout): void => {
@@ -341,14 +420,14 @@ export function createCityPanel(
       }),
     );
     const read = live ? reckoned(catalogue, chronicle) : undefined;
-    lay(
-      layOutCityPanel({
-        name: ownBoxOf(name).width,
-        close: closeWord,
-        cells: cells.map((cell) => readCell(cell, chronicle, read)),
-        counts: counts.map((count) => readCount(count, chronicle)),
-      }),
-    );
+    const layout = layOutCityPanel({
+      name: ownBoxOf(name).width,
+      close: closeWord,
+      cells: cells.map((cell) => readCell(cell, chronicle, read)),
+      counts: counts.map((count) => readCount(count, chronicle)),
+    });
+    lay(layout);
+    stand(layout, chronicle);
   };
 
   return {
@@ -362,6 +441,10 @@ export function createCityPanel(
     },
     dress(): void {
       close.dress();
+    },
+    aimed(on: boolean): void {
+      aimed = on;
+      if (laid !== undefined && rendered !== undefined) stand(laid, rendered);
     },
   };
 }

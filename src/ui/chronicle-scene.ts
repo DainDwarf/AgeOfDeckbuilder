@@ -18,7 +18,7 @@ import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rul
 import { sameTile, type TileCoords, type TilesBeside, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
-import { type Chronicle, type Cost, cityOn, onSettlePhase, playable } from '../rules/state';
+import { type Chronicle, cityOn, holds, onSettlePhase, playable } from '../rules/state';
 import { unitOf } from '../rules/units';
 import { tileYield } from '../rules/yields';
 import { chronicleScreenAtSpeed } from './animation-speed';
@@ -52,7 +52,7 @@ import { type Card, cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheel, onWheelNotches } from './keys';
 import { createLog } from './log';
 import { LOOK } from './look';
-import { type AimShown, createMapView, type Drawn, type PressedTile } from './map';
+import { type AimShown, type ClaimShown, createMapView, type Drawn, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { createMenuButton, raiseMenu } from './menu';
 import { type LeavesChronicles, resetMenu, warnOfWar } from './menu-scene';
@@ -311,6 +311,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     /** Whether city mode is on: a left click on the selection is the city's act on that tile. */
     let cityMode = false;
 
+    /** Whether the claim is what is selected, being aimed at the tiles the city may claim. */
+    let claimAimed = false;
+
     /** The tile the infopanel is inspecting, as the map draws it, its cards, and which of them it shows. */
     let inspection: { on: PressedTile; face: Drawn; cards: Card[]; card: number } | undefined;
 
@@ -432,17 +435,6 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       void playStages(chartedAndRead(CATALOGUE, this.current, stages), reckoning);
     };
 
-    /**
-     * What a claim on the tile selected in city mode asks for, which the tile wears from the moment
-     * it is selected. A tile the city holds asks for nothing and a tile it has no act on answers
-     * nothing, so neither wears anything; nor does any tile outside city mode.
-     */
-    const thresholdOn = (found: PressedTile | undefined): Cost | undefined => {
-      if (!cityMode || found === undefined) return undefined;
-      if (tileRefusal(CATALOGUE, this.current, found.tile) === undefined) return undefined;
-      return tileCost(this.current, found.tile).find(({ resource }) => resource === 'culture');
-    };
-
     /** The summary reading the selection as the map now draws its tile, or down where none stands. */
     const summarise = (): void => {
       const face = selection === undefined ? undefined : view.drawnAs(selection.tile);
@@ -460,21 +452,22 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     /** The selection standing marked on the map, the unit on its tile where `unit`, and summarised. */
     const markSelection = (unit: boolean): void => {
-      view.markSelected(selection?.tile, unit, thresholdOn(selection));
+      view.markSelected(selection?.tile, unit);
       summarise();
     };
 
     /**
      * The one place the screen's selection changes: the unit on the tile, or the tile where `unit` is
-     * false or the map has no unit to select there, or nothing; and the card the hand held, the
-     * inspection standing on whatever was selected before and the note over it are let go of.
+     * false or the map has no unit to select there, or the claim, or nothing; and the card the hand
+     * held, the inspection standing on whatever was selected before and the note over it let go of.
      */
-    const select = (found: PressedTile | undefined, unit = true): void => {
-      if (found !== undefined && view.isSelected(found.tile, unit)) return;
-      selection = found;
+    const select = (found: PressedTile | 'claim' | undefined, unit = true): void => {
+      if (found !== undefined && found !== 'claim' && view.isSelected(found.tile, unit)) return;
+      selection = found === 'claim' ? undefined : found;
       note.hide();
       uninspect();
       hand.unselect();
+      aimClaim(found === 'claim');
       markSelection(unit);
     };
 
@@ -484,10 +477,21 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       markSelection(false);
     };
 
-    /** Whatever is being aimed let go of, a card or a unit, as a left click on a thing lets it go. */
+    /**
+     * The claim being aimed or let go of, and nothing else: the map marking the tiles the city may
+     * claim, and culture's reading of the panel sunk, while it is.
+     */
+    const aimClaim = (on: boolean): void => {
+      claimAimed = on;
+      view.aimClaim(on ? claimShown : undefined);
+      cityPanel.aimed(on);
+    };
+
+    /** Whatever is being aimed let go of, a card, a unit or the claim, as a left click on a thing lets it go. */
     const unaimAll = (): void => {
       hand.unaim();
       if (view.unitBeingAimed()) unaimUnit();
+      if (claimAimed) aimClaim(false);
     };
 
     /**
@@ -544,6 +548,18 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       select(view.pressedOn(found.tile));
     };
 
+    /** The claim as the map shows it while it is being aimed: the rules' answer at a tile, and the act. */
+    const claimShown: ClaimShown = {
+      asks: (tile) => {
+        const [cost] = tileCost(this.current, tile);
+        const refusal = tileRefusal(CATALOGUE, this.current, tile);
+        return { cost, unaffordable: refusal !== undefined && !playable(refusal) };
+      },
+      chosen: (found) => {
+        void act(found);
+      },
+    };
+
     /** The press landed, or, where it declares war, the warning raised that lands it gone through. */
     const warnedOrLanded = (command: UnitCommand, land: () => void): void => {
       if (declaresWar(CATALOGUE, this.current, command)) warnOfWar(this, command, land);
@@ -568,13 +584,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     /**
      * Whether a left click on the tile acts on the selection, the tile selected: the city's act there
-     * in city mode, and city mode entered on the player's city's own tile out of it.
+     * in city mode where the city holds it, and city mode entered on the player's city's own tile out
+     * of it.
      */
     const actsOn = (tile: TileCoords): boolean => {
       if (selection === undefined || view.unitSelected() || !sameTile(tile, selection.tile)) {
         return false;
       }
-      if (cityMode) return tileRefusal(CATALOGUE, this.current, tile) !== undefined;
+      if (cityMode) return holds(this.current, tile);
       return cityOn(this.current, tile) === 'player' && entersCityMode();
     };
 
@@ -707,8 +724,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       !cityMode && !overlay.minimized() && this.current.city !== undefined;
     const leavesCityMode = (): boolean => cityMode && !overlay.minimized();
 
-    /** City mode raised: what was pending on the chronicle screen is let go of and it passes. */
-    const enterCityMode = (): void => {
+    /**
+     * City mode raised: what was pending on the chronicle screen is let go of and it passes, the claim
+     * selected where `claim` asks for it.
+     */
+    const enterCityMode = (claim = false): void => {
       if (!entersCityMode()) return;
       dismiss();
       cityMode = true;
@@ -716,6 +736,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       cityPanel.show(true);
       showSettleStanding(this.current);
       view.showCityMarks(true);
+      if (claim) select('claim');
     };
 
     /** City mode left, and whether it was left: the one way out, for the key, Close and the back. */
@@ -736,10 +757,17 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         leaveCityMode();
       },
       leaves: leavesCityMode,
+      claim: () => {
+        if (claimAimed) aimClaim(false);
+        else select('claim');
+      },
+      claims: () => !overlay.minimized(),
     });
 
     const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
-      cityMode: enterCityMode,
+      cityMode: (by) => {
+        enterCityMode(by === 'culture');
+      },
       entersCityMode,
       toggleYield: (resource) => {
         toggleYield(resource);
@@ -788,11 +816,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       return { place: { kind: 'thing', on }, onMap: false };
     };
 
-    /** The one door every left click takes, after the thing it lands on has reacted to its own. */
-    const leftClicked = (place: Place): void => {
+    /**
+     * The one door every left click takes, after the thing it lands on has reacted to its own: a claim
+     * that reaction aimed, the claim not aimed as the press landed, is no aimed thing to let go.
+     */
+    const leftClicked = (place: Place, claimWasAimed: boolean): void => {
       switch (place.kind) {
         case 'thing':
-          if (hand.owns(place.on)) return;
+          if (hand.owns(place.on) || (claimAimed && !claimWasAimed)) return;
           unaimAll();
           return;
         case 'tile':
@@ -826,18 +857,24 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     };
 
     /**
-     * Where each press held landed, whether on the map, and whether under the deal window minimized,
-     * where a left click selects and acts on nothing however the window stands at its release.
+     * Where each press held landed, whether on the map, whether under the deal window minimized, where
+     * a left click selects and acts on nothing however the window stands at its release, and whether
+     * the claim was being aimed then.
      */
     const landings = new Map<
       Press,
-      { readonly place: Place; readonly onMap: boolean; readonly minimized: boolean }
+      {
+        readonly place: Place;
+        readonly onMap: boolean;
+        readonly minimized: boolean;
+        readonly claimAimed: boolean;
+      }
     >();
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
       queueMicrotask(() => {
-        landings.set(press, { ...placeUnder(), minimized: overlay.minimized() });
+        landings.set(press, { ...placeUnder(), minimized: overlay.minimized(), claimAimed });
       });
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -853,7 +890,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         if (!samePlace(from.place, to.place)) return;
         switch (press) {
           case 'left':
-            if (!from.minimized) leftClicked(to.place);
+            if (!from.minimized) leftClicked(to.place, from.claimAimed);
             return;
           case 'right':
             rightClicked(to.place);
@@ -911,7 +948,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         return;
       }
       if (hand.unselect()) return;
-      if (selection !== undefined) {
+      if (selection !== undefined || claimAimed) {
         select(undefined);
         return;
       }

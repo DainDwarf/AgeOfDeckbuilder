@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { claimable } from '../src/rules/city';
-import { sameTile, type Tile, type TileCoords, tileKey } from '../src/rules/map';
+import { type Tile, tileKey } from '../src/rules/map';
 import { RESOURCES, type Resource } from '../src/rules/resources';
 import type { Chronicle } from '../src/rules/state';
 import {
@@ -35,19 +35,12 @@ async function only(page: Page, ...resources: Resource[]): Promise<YieldShown> {
 
 /**
  * What the map shows with these resources on the overlay while city mode is on: every tile inside
- * the border shows its whole yield, every other tile the map draws what the overlay is asked for,
- * and the tile wearing the culture threshold, where one is named, nothing.
+ * the border shows its whole yield, and every other tile the map draws what the overlay is asked for.
  */
-function withCityMode(
-  chronicle: Chronicle,
-  resources: readonly Resource[],
-  threshold?: TileCoords,
-): YieldShown {
+function withCityMode(chronicle: Chronicle, resources: readonly Resource[]): YieldShown {
   const held = new Set(chronicle.held.map(tileKey));
-  const asked = (face: Tile): readonly Resource[] => {
-    if (threshold !== undefined && sameTile(face, threshold)) return [];
-    return held.has(tileKey(face)) ? RESOURCES : resources;
-  };
+  const asked = (face: Tile): readonly Resource[] =>
+    held.has(tileKey(face)) ? RESOURCES : resources;
   return yieldOwed(chronicle, drawnFaces(chronicle), asked);
 }
 
@@ -149,7 +142,7 @@ test('the overlay is a display, not a mode: city mode and the back key leave it 
   expect(problems).toEqual([]);
 });
 
-test('a tile inside the border shows its whole yield on its patch while city mode stands, with the overlay or without it, and the tile wearing the culture threshold shows neither', async ({
+test('a tile inside the border shows its whole yield on its patch while city mode stands, with the overlay or without it, and the culture threshold a marked tile wears under the pointer hides none of it', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -172,10 +165,11 @@ test('a tile inside the border shows its whole yield on its patch while city mod
     withFood.patched.includes(tileKey(tile)),
   );
   if (near === undefined) throw new Error('no tile the city may claim shows a glyph');
+  await click(page, 'city-mode-culture');
   const at = await tileOnScreen(page, near);
-  await page.mouse.click(at.x, at.y);
+  await page.mouse.move(at.x, at.y);
   await expect.poll(() => thresholdShown(page)).toBeDefined();
-  expect(await yieldShown(page)).toEqual(withCityMode(chronicle, ['food'], near));
+  expect(await yieldShown(page)).toEqual(withFood);
 
   await page.keyboard.press('Escape');
   await expect.poll(() => thresholdShown(page)).toBeUndefined();

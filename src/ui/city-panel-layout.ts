@@ -34,6 +34,9 @@ const APART = 20;
 const TO_TURNS = 8;
 const COUNTS_APART = 16;
 
+/** How far a reading's well reaches past its cell's two ends, and over and under the second line. */
+const WELL_PAST = { x: 7, y: 1 };
+
 /** What a reading asks of its cell: how far its value and its reckoning reach, and how wide its turns left stand. */
 export type CellAsked = { readonly reading: number; readonly turns: number };
 
@@ -67,6 +70,8 @@ export type CityPanelLayout = {
   /** How wide each reading's cell stands, and each one's left end. */
   readonly cell: number;
   readonly cells: readonly number[];
+  /** The box each reading's well or gold stands over, round its cell and the second line. */
+  readonly wells: readonly Box[];
   /** Each count's middle across. */
   readonly counts: readonly number[];
 };
@@ -114,6 +119,12 @@ export function layOutCityPanel(measured: CityPanelMeasured): CityPanelLayout {
     secondLineHeight,
     cell,
     cells,
+    wells: cells.map((left) => ({
+      x: left - WELL_PAST.x,
+      y: secondLine - WELL_PAST.y,
+      width: cell + 2 * WELL_PAST.x,
+      height: secondLineHeight + 2 * WELL_PAST.y,
+    })),
     counts,
   };
 }

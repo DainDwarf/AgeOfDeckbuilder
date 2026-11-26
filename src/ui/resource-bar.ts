@@ -74,8 +74,10 @@ const READINGS: readonly BarReading[] = [...RESOURCES, 'idle'];
 /** The readings the city is managed by: pressing either of them enters city mode. */
 const CITY_READINGS = ['culture', 'idle'] as const;
 
+export type CityReading = (typeof CITY_READINGS)[number];
+
 /** Whether a press on this reading enters city mode instead of toggling its resource. */
-function managesCity(key: BarReading): key is (typeof CITY_READINGS)[number] {
+function managesCity(key: BarReading): key is CityReading {
   return CITY_READINGS.some((reading) => reading === key);
 }
 
@@ -164,7 +166,8 @@ export function createResourceBar(
   catalogue: Catalogue,
   tooltip: Tooltip,
   presses: {
-    cityMode: () => void;
+    /** City mode entered by a press on one of the two readings that enter it. */
+    cityMode: (by: CityReading) => void;
     /** Whether `cityMode` would enter city mode now. */
     entersCityMode: () => boolean;
     toggleYield: (resource: Resource) => void;
@@ -224,7 +227,7 @@ export function createResourceBar(
   for (const entry of entries) {
     const { key } = entry;
     onClick(entry.hover, () => {
-      if (managesCity(key)) cityMode();
+      if (managesCity(key)) cityMode(key);
       else toggleYield(key);
     });
   }
@@ -253,12 +256,7 @@ export function createResourceBar(
    */
   const dress = (): void => {
     for (const entry of entries) {
-      const on = standsOn(entry);
-      const down = on !== 'charcoal';
-      entry.well.setVisible(down);
-      if (down) placeChromeWell(entry.well, on, entry.wellBox);
-      entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
-      ink(entry);
+      standReading(entry, standsOn(entry), entry.wellBox, entry.reckoned.last);
     }
   };
 
@@ -673,6 +671,27 @@ export function inkReckoner(
     reckoning,
     taken ? LOOK.takenPastNothingInk : count > 0 ? inks.gain : count < 0 ? inks.loss : inks.value,
   );
+}
+
+/**
+ * A reading stood on what it stands on: in a well or on the gold, that piece laid over the box and
+ * what the reading shows together pressed down into it, and on the charcoal neither; its value and
+ * its reckoning inked for it.
+ */
+export function standReading(
+  reading: Reckoner & {
+    readonly face: Phaser.GameObjects.Container;
+    readonly well: Phaser.GameObjects.NineSlice;
+  },
+  on: StandsOn,
+  box: Box,
+  reckoned: Reckoned,
+): void {
+  const down = on !== 'charcoal';
+  reading.well.setVisible(down);
+  if (down) placeChromeWell(reading.well, on, box);
+  reading.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
+  inkReckoner(reading, on, reckoned);
 }
 
 /** What a reading's tooltip reads on the chronicle: its name over its sentence. */

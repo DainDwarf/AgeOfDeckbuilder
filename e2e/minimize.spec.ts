@@ -12,6 +12,7 @@ import {
   cardOnFace,
   chronicleOf,
   click,
+  dealMinimized,
   dealtAloneOn,
   dragBetween,
   firstAdmitted,
@@ -72,14 +73,6 @@ function scoutUnderTheDeal(): Chronicle {
   });
 }
 
-/** The deal window, standing whole, minimized by a left click on its button. */
-async function minimized(page: Page): Promise<void> {
-  await restedOnDeal(page);
-  await click(page, BUTTON);
-  await expect.poll(() => standing(page, RIBBON)).toBe(true);
-  await rested(page);
-}
-
 /** Whether the minimized window stands, and the deal window does not. */
 async function standsMinimized(page: Page): Promise<boolean[]> {
   const seen = await readings(page, [RIBBON, 'deal']);
@@ -104,7 +97,7 @@ test('the deal window minimized leaves its ribbon and its sunk button where they
   await expect.poll(() => tooltipUp(page, 'tooltip-overlay')).toBe(true);
   expect(await tooltipText(page, 'tooltip-overlay')).toBe(text('button.minimize'));
 
-  await minimized(page);
+  await dealMinimized(page);
   const shown = await readings(page, [RIBBON, TITLE, SUNK, 'deal']);
   expect(shown('deal').standing).toBe(false);
   expect(shown(TITLE).text).toBe(eventName(LEAN_SEASON));
@@ -164,12 +157,12 @@ test('the deal window minimized leaves its ribbon and its sunk button where they
   expect(await standsMinimized(page)).toEqual([false, true]);
   expect((await pieceWorn(page, BUTTON)).piece).toBe('silver');
 
-  await minimized(page);
+  await dealMinimized(page);
   await click(page, RIBBON);
   await restedOnDeal(page);
   expect(await standsMinimized(page)).toEqual([false, true]);
 
-  await minimized(page);
+  await dealMinimized(page);
   await page.keyboard.press('Escape');
   await restedOnDeal(page);
   expect(await standsMinimized(page)).toEqual([false, true]);
@@ -191,7 +184,7 @@ test('a card’s deal window minimizes under the card’s name, a left click on 
   const taken = outcome(apply(CATALOGUE, dealt, { type: 'take', at: 0 }));
 
   await openSaved(page, dealt, campaign);
-  await minimized(page);
+  await dealMinimized(page);
   expect((await readings(page, [TITLE]))(TITLE).text).toBe(cardName(CALENDAR));
 
   const home = await onScreen(page, 'hand-0');

@@ -442,7 +442,7 @@ export function tileRefusal(
   };
 }
 
-/** The chronicle screen and `apply` both answer the city-mode click by this, and by nothing else. */
+/** The chronicle screen and `apply` both answer the city's act on a tile by this, and nothing else. */
 export function cityCommand(
   catalogue: Catalogue,
   chronicle: Chronicle,
@@ -477,8 +477,8 @@ export function cityDrag(
 
 /**
  * One tile assigned or unassigned: the population already on it comes off, and an idle one goes on
- * a tile the city holds, one `assigned` either way. Anything the city-mode click on that tile is not,
- * or is refused for, answers nothing.
+ * a tile the city holds, one `assigned` either way. Anything the city's act on that tile is not, or
+ * is refused for, answers nothing.
  */
 export function assign(
   catalogue: Catalogue,
