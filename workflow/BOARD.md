@@ -22,3 +22,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **City mode's unassigned tiles** — how a held tile nobody is assigned to is shown in city mode, today darkened as the fog darkens, and how the yield glyphs of a tile that is not giving its yield at income read, today paler.
 - **The frame and the settle phase** — the line round the screen that tells city mode and the settle phase, how the settle phase is named once city mode's chip is gone, and the end-turn button's look on the settle phase.
 - **The settle cards left in hand** — something standing on the screen for the whole settle phase that says the settle cards still in hand are banished when it ends.
+- **The minimized deal window's presses** — under a minimized deal window every reaction that changes no game state is allowed, entering and leaving city mode among them, where today nothing enters city mode, nothing leaves it and a left click selects nothing.
