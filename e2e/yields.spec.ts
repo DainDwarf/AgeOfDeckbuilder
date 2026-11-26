@@ -132,12 +132,12 @@ test('the overlay is a display, not a mode: city mode and the back key leave it 
   const shown = await yieldShown(page);
 
   await page.keyboard.press('c');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   expect(await latched(page)).toEqual([...RESOURCES]);
   expect(await yieldShown(page)).toEqual(shown);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(false);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(false);
   expect(await latched(page)).toEqual([...RESOURCES]);
   expect(await yieldShown(page)).toEqual(shown);
 
@@ -158,7 +158,7 @@ test('a tile inside the border shows its whole yield on its patch while city mod
   const chronicle = await chronicleOf(page);
 
   await page.keyboard.press('c');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   const inside = withCityMode(chronicle, []);
   expect(await yieldShown(page)).toEqual(inside);
 
@@ -182,7 +182,7 @@ test('a tile inside the border shows its whole yield on its patch while city mod
   expect(await yieldShown(page)).toEqual(withFood);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(false);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(false);
   expect(await yieldShown(page)).toEqual(await only(page, 'food'));
 
   expect(problems).toEqual([]);

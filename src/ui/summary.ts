@@ -68,6 +68,9 @@ const DISC_GLYPH = 9;
 const DISC_TO_NAME = 6;
 const NAME_TO_BADGE = 8;
 
+/** How wide a faction's sign stands on its disc, a share of the disc. */
+export const SIGN_ON_DISC = DISC_GLYPH / DISC;
+
 const NAME_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '16px',

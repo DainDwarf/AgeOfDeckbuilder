@@ -1,15 +1,5 @@
 import type Phaser from 'phaser';
-import {
-  addText,
-  CLICKS,
-  NO_REACTION,
-  onClick,
-  onResize,
-  reactsTo,
-  type Stratum,
-  screenSize,
-  UI_FONT,
-} from './design-space';
+import { addText, onResize, type Stratum, screenSize, UI_FONT } from './design-space';
 import { css, LOOK } from './look';
 import { cornerNow } from './menu';
 
@@ -26,23 +16,20 @@ const LABEL_STYLE = {
   color: css(LOOK.ink),
 };
 
-/** The frame and the chip, both standing only while what they name is on. */
+/** The frame, and the chip where it wears one, standing only while what they name is on. */
 export type Standing = { show(on: boolean): void };
 
-/**
- * What one standing is drawn for: the name its objects take, its colour, the word on its chip, and
- * how a left click on that chip leaves it while `live` holds — nothing on a chip that reacts to none.
- */
+/** What one standing is drawn for: the name its objects take, its colour, and the word on its chip where it wears one. */
 export type Stood = {
   readonly name: string;
   readonly colour: number;
-  readonly label: string;
-  readonly leave?: { readonly press: () => void; readonly live: () => boolean };
+  readonly label?: string;
 };
 
 /**
  * What the chronicle screen shows it is standing in — city mode, the settle phase: a frame round the
- * screen in that colour and the chip naming it under the summary's place. What is on is the scene's.
+ * screen in that colour, and the chip naming it under the summary's place where it wears one, reacting
+ * to no press. What is on is the scene's.
  */
 export function createStanding(
   scene: Phaser.Scene,
@@ -55,7 +42,26 @@ export function createStanding(
     .setStrokeStyle(STROKE, stood.colour)
     .setName(`${stood.name}-frame`)
     .setVisible(false);
+  on.frame.layer.add(frame);
+  onResize(scene, () => {
+    const screen = screenSize();
+    frame
+      .setPosition(STROKE / 2, STROKE / 2)
+      .setSize(screen.width - STROKE, screen.height - STROKE);
+  });
+  const { label } = stood;
+  const chip = label === undefined ? undefined : createChip(scene, on.chip, { ...stood, label });
 
+  return {
+    show(on: boolean): void {
+      frame.setVisible(on);
+      chip?.show(on);
+    },
+  };
+}
+
+/** The chip naming a standing under the summary's place, standing only while it is on. */
+function createChip(scene: Phaser.Scene, on: Stratum, stood: Required<Stood>): Standing {
   const chip = scene.add
     .rectangle(0, 0, 1, 1, stood.colour)
     .setOrigin(0, 0)
@@ -65,36 +71,22 @@ export function createStanding(
     .setOrigin(0.5, 0.5)
     .setName(`${stood.name}-chip-label`)
     .setVisible(false);
-  on.frame.layer.add(frame);
-  on.chip.layer.add([chip, label]);
+  on.layer.add([chip, label]);
 
   const width = label.width + PADDING.x;
   const height = label.height + PADDING.y;
   chip.setSize(width, height);
   onResize(scene, () => {
-    const screen = screenSize();
-    frame
-      .setPosition(STROKE / 2, STROKE / 2)
-      .setSize(screen.width - STROKE, screen.height - STROKE);
     const { right, top } = cornerNow().chip;
     chip.setPosition(right - width, top);
     label.setPosition(right - width / 2, top + height / 2);
   });
 
-  const leave = stood.leave;
-  if (leave !== undefined) {
-    onClick(
-      reactsTo(chip, () => (leave.live() ? CLICKS : NO_REACTION)),
-      leave.press,
-    );
-  }
-
   return {
     show(on: boolean): void {
-      frame.setVisible(on);
       chip.setVisible(on);
       label.setVisible(on);
-      // Interactive while it stands, reacting to a press or not, so no press reaches the map under it.
+      // Interactive while it stands, reacting to no press, so no press reaches the map under it.
       if (on) chip.setInteractive();
       else chip.disableInteractive();
     },

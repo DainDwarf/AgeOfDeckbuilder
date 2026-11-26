@@ -726,20 +726,17 @@ function laidAs(
 }
 
 /**
- * A bar with nothing drawn on it yet, about its middle: its track, its ground the whole bar long,
- * the part filled from its start, the part past that, and whatever stands over them, bottom first.
+ * A bar with nothing drawn on it yet, about its middle, of no shape until `asBar` gives it one: its
+ * track, its ground the whole bar long, the part filled from its start, the part past that, and
+ * whatever stands over them, bottom first.
  */
 function barMarker(
   scene: Phaser.Scene,
-  { lie, length, width }: BarShape,
   over: Phaser.GameObjects.GameObject[] = [],
 ): Phaser.GameObjects.Container {
-  const track = laidAs(lie, length + 2 * MARK_EDGE, width + 2 * MARK_EDGE);
-  const whole = laidAs(lie, length, width);
-  const part = (): Phaser.GameObjects.Rectangle =>
-    scene.add.rectangle(0, 0, whole.width, whole.height);
+  const part = (): Phaser.GameObjects.Rectangle => scene.add.rectangle(0, 0, 1, 1);
   return scene.add.container(0, 0, [
-    scene.add.rectangle(0, 0, track.width, track.height).setRounded(TRACK_ROUND),
+    part().setRounded(TRACK_ROUND),
     part(),
     part(),
     part(),
@@ -762,9 +759,8 @@ function asBarPart(
 ): Phaser.GameObjects.Rectangle {
   const size = laidAs(lie, share * length, width);
   const start = from * length - length / 2;
-  part
+  sized(part, size)
     .setFillStyle(colour, strength)
-    .setSize(size.width, size.height)
     .setVisible(share > 0);
   switch (lie) {
     case 'upright':
@@ -774,9 +770,17 @@ function asBarPart(
   }
 }
 
+/** The rectangle at that size, set only where it stands at another: a rectangle's size rebuilds its path (docs/PHASER.md). */
+function sized(
+  part: Phaser.GameObjects.Rectangle,
+  { width, height }: { width: number; height: number },
+): Phaser.GameObjects.Rectangle {
+  return part.width === width && part.height === height ? part : part.setSize(width, height);
+}
+
 /**
- * A `barMarker` made to show a bar: its track and its ground in their colours, the part filled from
- * its start, and the part past it.
+ * A `barMarker` made to show a bar of that shape: its track and its ground in their colours, the part
+ * filled from its start, and the part past it.
  */
 function asBar(
   bar: Phaser.GameObjects.Container,
@@ -786,8 +790,11 @@ function asBar(
   past: BarPart,
 ): Phaser.GameObjects.Container {
   const [track, ground, fill, part] = bar.list as Phaser.GameObjects.Rectangle[];
-  track.setFillStyle(colours.track);
-  ground.setFillStyle(colours.ground);
+  const { lie, length, width } = shape;
+  sized(track, laidAs(lie, length + 2 * MARK_EDGE, width + 2 * MARK_EDGE)).setFillStyle(
+    colours.track,
+  );
+  sized(ground, laidAs(lie, length, width)).setFillStyle(colours.ground);
   asBarPart(fill, shape, 0, filled);
   asBarPart(part, shape, filled.share, past);
   return bar;
@@ -800,10 +807,7 @@ function asBar(
  */
 function healthBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
   const foot = HEALTH_BAR.length / 2 + MARK_EDGE + BAR_FOOT;
-  return barMarker(scene, HEALTH_BAR, [glyphMark(scene).setPosition(0, foot)]).setPosition(
-    -BAR_OFF,
-    UNIT_DROP,
-  );
+  return barMarker(scene, [glyphMark(scene).setPosition(0, foot)]).setPosition(-BAR_OFF, UNIT_DROP);
 }
 
 /** The faction sign of a `unitMarker`: its disc and its glyph. */
@@ -1241,16 +1245,13 @@ export function asSitePointer(
   return mark.setPosition(x, y - POINTER_RISE).setName(sitePointerAs(tileKey(coord)));
 }
 
-/** A threshold's bar of that size with nothing drawn on it yet, about its middle. */
-export function thresholdBarMarker(
-  scene: Phaser.Scene,
-  { length, width }: ThresholdBarSize,
-): Phaser.GameObjects.Container {
-  return barMarker(scene, { lie: 'flat', length, width });
+/** A threshold's bar with nothing drawn on it yet, about its middle; `asThresholdBar` sizes it. */
+export function thresholdBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return barMarker(scene);
 }
 
 /**
- * A `thresholdBarMarker` of that size showing the bar of a stock it is handed, in that resource's
+ * A `thresholdBarMarker` at that size showing the bar of a stock it is handed, in that resource's
  * colour, what the turn would add paler.
  */
 export function asThresholdBar(
@@ -1271,7 +1272,7 @@ export function asThresholdBar(
 
 /** A city's bar with nothing drawn on it yet, hidden. */
 export function cityBarMarker(scene: Phaser.Scene): Phaser.GameObjects.Container {
-  return thresholdBarMarker(scene, CITY_BAR).setVisible(false);
+  return thresholdBarMarker(scene).setVisible(false);
 }
 
 /** The player's city's bar of a stock standing on its tile, below the middle and centred across it. */

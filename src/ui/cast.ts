@@ -18,14 +18,13 @@ export type ButtonSign =
 /** The menu's links, each wearing its site's mark, a symbol of the cast. */
 export type LinkSign = 'itch-io-link' | 'github-link' | 'discord-link';
 
-/**
- * What a glyph of the cast is drawn for: a resource, population, influence, a unit's health, a range,
- * a unit's move, action, sight or damage, an attack that would kill, what a prepare lands as, a unit
- * of the neutral's while it is hostile, a faction, a site, a card nothing plays, a pile, or a sign.
- */
+/** What a glyph of the cast is drawn for: a symbol the screens read, or a sign. */
 export type CastSymbol =
   | Resource
   | 'population'
+  | 'sleep'
+  | 'units'
+  | 'turns-left'
   | 'influence'
   | 'health'
   | 'range'
@@ -52,6 +51,9 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   science: 'material-design-icons/lightbulb-on.svg',
   culture: 'material-design-icons/music.svg',
   population: 'material-design-icons/account.svg',
+  sleep: 'material-design-icons/sleep.svg',
+  units: 'material-design-icons/shield-account.svg',
+  'turns-left': 'game-icons/hourglass.svg',
   influence: 'material-design-icons/star.svg',
   health: 'material-design-icons/heart.svg',
   range: 'material-design-icons/target.svg',
@@ -88,8 +90,8 @@ export function glyphFileOf(symbol: CastSymbol): string {
   return GLYPH_FILES[symbol];
 }
 
-/** Every symbol's glyph file. */
-export const EVERY_GLYPH_FILE: readonly string[] = Object.values(GLYPH_FILES);
+/** Every symbol's glyph file, once however many symbols are drawn from it. */
+export const EVERY_GLYPH_FILE: readonly string[] = [...new Set(Object.values(GLYPH_FILES))];
 
 /** Whether a key names a symbol of the cast. */
 export function isCastSymbol(key: string): key is CastSymbol {

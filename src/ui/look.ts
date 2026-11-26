@@ -119,6 +119,8 @@ export type Look = {
   readonly reachedAchievementInk: number;
   /** The fainter ink a turn's heading reads in on the log. */
   readonly logHeadingInk: number;
+  /** The fainter ink the turns left read in on city mode's panel, their number and their hourglass. */
+  readonly turnsLeftInk: number;
   /** The fainter ink a heading of the Credits window reads in, over its makers' lines. */
   readonly creditsHeadingInk: number;
   /** The fainter ink the version reads in at a window's foot. */
@@ -296,6 +298,7 @@ export const LOOK: Look = {
   summaryPalerInk: 0xd4d7db,
   reachedAchievementInk: 0x9aa1a9,
   logHeadingInk: 0x9aa1a9,
+  turnsLeftInk: 0x9aa1a9,
   creditsHeadingInk: 0x9aa1a9,
   versionInk: 0x9aa1a9,
   rowRule: 0.18,

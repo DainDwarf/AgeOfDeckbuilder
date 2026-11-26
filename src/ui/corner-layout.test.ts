@@ -58,7 +58,7 @@ describe('the buttons at the screen’s top right corner', () => {
     expect(wider.summary.top).toBe(smallest.summary.top);
   });
 
-  it('stands a mode’s chip under the summary’s two rows, its right edge on the summary’s', () => {
+  it('stands the settle phase’s chip under the summary’s two rows, its right edge on the summary’s', () => {
     for (const { summary, chip } of [smallest, wider]) {
       expect(chip.right).toBe(summary.right);
       expect(chip.top).toBeGreaterThan(summary.top + SUMMARY_HEIGHT);

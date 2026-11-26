@@ -66,7 +66,7 @@ test('a selected unit wears the ring in place of its tile’s rim, whoever’s i
   await expect.poll(() => selectionShown(page)).toEqual(unitOn(cityKey, litFor(chronicle, city)));
 
   await page.keyboard.press('c');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   await click(page, `tile-${cityKey}`);
   await expect.poll(() => selectionShown(page)).toEqual(tileOn(cityKey));
 
@@ -110,10 +110,10 @@ test('successive left clicks on the city’s own tile a unit of the player’s s
 
   await click(page, `tile-${key}`);
   await expect.poll(() => selectionShown(page)).toEqual(tileOn(key));
-  expect(await shows(page, 'city-chip')).toBe(false);
+  expect(await shows(page, 'city-mode')).toBe(false);
 
   await click(page, `tile-${key}`);
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   expect(await selectionShown(page)).toEqual(NOTHING);
 
   expect(problems).toEqual([]);

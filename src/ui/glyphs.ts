@@ -22,7 +22,11 @@ function colourOf(symbol: CastSymbol): number {
     case 'culture':
       return LOOK.reading[symbol];
     case 'population':
+    case 'sleep':
+    case 'units':
       return LOOK.population;
+    case 'turns-left':
+      return LOOK.turnsLeftInk;
     case 'influence':
       return LOOK.influence;
     case 'health':
@@ -69,12 +73,13 @@ function colourOf(symbol: CastSymbol): number {
 }
 
 /**
- * Whether a symbol's glyph wears its outline where it is not told: the hostile glyph, read in a text's
- * ink, wears none, and neither does a sign, a pile's on its round, a button's or a link's in its square.
+ * Whether a symbol's glyph wears its outline where it is not told: the hostile glyph and the turns'
+ * hourglass, each read in an ink, wear none, and neither does a sign on its round or in its square.
  */
 function outlinedOf(symbol: CastSymbol): boolean {
   switch (symbol) {
     case 'hostile':
+    case 'turns-left':
     case 'draw-pile':
     case 'discard-pile':
     case 'exhaust-pile':
@@ -96,6 +101,8 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'science':
     case 'culture':
     case 'population':
+    case 'sleep':
+    case 'units':
     case 'influence':
     case 'health':
     case 'killed':

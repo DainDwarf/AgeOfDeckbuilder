@@ -1237,7 +1237,7 @@ test('a population carried in city mode onto a tile the infopanel stands over an
 
   await openSaved(page, chronicle);
   await page.keyboard.press('c');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
 
   const seen = await readings(page, [`tile-${tileKey(city)}`, 'assigned']);
   const home = seen(`tile-${tileKey(city)}`).onScreen;

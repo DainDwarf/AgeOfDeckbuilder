@@ -1,17 +1,38 @@
 import { expect, type Page, test } from '@playwright/test';
+import type Phaser from 'phaser';
 import { CATALOGUE } from '../src/content/catalogue';
+import { openingChoices } from '../src/rules/campaign';
 import { gained } from '../src/rules/cards';
-import { apply, type Command, outcome } from '../src/rules/chronicle';
-import { claimable, givingYield, tileCost, tileRefusal } from '../src/rules/city';
-import { type Tile, type TileCoords, tileKey } from '../src/rules/map';
+import { unitKind } from '../src/rules/catalogue';
+import { apply, type Command, outcome, reckoned } from '../src/rules/chronicle';
+import {
+  arrived,
+  claimable,
+  givingYield,
+  tileCost,
+  tileRefusal,
+  unitsCounted,
+} from '../src/rules/city';
+import { neighbours, type Tile, type TileCoords, tileKey } from '../src/rules/map';
 import { RESOURCES } from '../src/rules/resources';
+import { freshCampaign } from '../src/rules/save';
 import { charted } from '../src/rules/sight';
-import { assignedTo, type Chronicle } from '../src/rules/state';
+import { assignedTo, type Chronicle, idle } from '../src/rules/state';
 import { unitAt } from '../src/rules/units';
+import type { ChronicleScene } from '../src/ui/chronicle-scene';
+import {
+  CITY_BAR_STOCKS,
+  type CityBar,
+  type CityBarStock,
+  cityBarOf,
+  thresholdOf,
+  turnsLeft,
+} from '../src/ui/city-bar';
 import { LOOK } from '../src/ui/look';
 import { refused } from '../src/ui/refusal-lines';
-import { text } from '../src/ui/text';
+import { buildingName, civilizationName, text } from '../src/ui/text';
 import {
+  type BarParts,
   bareTile,
   besideTiles,
   chronicleOf,
@@ -21,8 +42,10 @@ import {
   counted,
   dragTiles,
   drawnFaces,
+  endTurn,
   enemyEnteredOn,
   enter,
+  freeFor,
   type Glyphs,
   glyphName,
   glyphs,
@@ -33,8 +56,11 @@ import {
   marksIn,
   nearestUncharted,
   noGlyphs,
+  onDesignedSpeed,
+  onScreen,
   openSaved,
   type PieceWorn,
+  pieceOnScreenOf,
   playedOut,
   playerCityTile,
   type Reading,
@@ -45,12 +71,14 @@ import {
   ringedTile,
   settledOn,
   shownCard,
-  shows,
   standing,
   thresholdShown,
   tileOnScreen,
+  tooltipLines,
+  unitEntered,
   unitMarksOn,
   unitsStrength,
+  WARRIOR,
   watch,
   wellWorn,
   workerStepped,
@@ -160,12 +188,131 @@ function owedByIncome(
   };
 }
 
-/** Whether the chronicle screen shows city mode is on: both marks stand, or neither does. */
+/** Whether the chronicle screen shows city mode is on: its frame and its panel stand, or neither does. */
 async function inCityMode(page: Page): Promise<boolean> {
-  const chip = await shows(page, 'city-chip');
-  const frame = await shows(page, 'city-frame');
-  expect(frame).toBe(chip);
-  return chip;
+  const read = await readings(page, ['city-mode', 'city-frame']);
+  const panel = read('city-mode').shows;
+  expect(read('city-frame').shows).toBe(panel);
+  return panel;
+}
+
+/** The counts the panel reads the population as, in its order. */
+const COUNTS = ['idle', 'assigned', 'units'] as const;
+
+/**
+ * What city mode's panel reads: its name; food's and culture's value, what ending the turn would do
+ * to it, and its turns left, nothing while they are down; and the three counts.
+ */
+type PanelRead = {
+  name: string | undefined;
+  stocks: { value: string | undefined; reckoning: string | undefined; turns: string | undefined }[];
+  counts: (string | undefined)[];
+};
+
+/** The names a stock's reading on the panel stands under. */
+function stockNames(stock: CityBarStock): string[] {
+  const named = `city-mode-${stock}`;
+  return [`${named}-value`, `${named}-reckoning`, `${named}-turns-value`, `${named}-bar`];
+}
+
+/** What the panel reads, in one question to the page, and the share each stock's bar fills and stands paler past it. */
+async function panelShown(page: Page): Promise<{ read: PanelRead; bars: BarParts[] }> {
+  const names = [
+    'city-mode-name',
+    ...CITY_BAR_STOCKS.flatMap(stockNames),
+    ...COUNTS.map((count) => `city-mode-${count}-value`),
+  ];
+  const seen = await readings(page, names);
+  return {
+    read: {
+      name: seen('city-mode-name').text,
+      stocks: CITY_BAR_STOCKS.map((stock) => {
+        const [value, reckoning, turns] = stockNames(stock).map(seen);
+        return {
+          value: value.text,
+          reckoning: reckoning.text,
+          turns: turns.shows ? turns.text : undefined,
+        };
+      }),
+      counts: COUNTS.map((count) => seen(`city-mode-${count}-value`).text),
+    },
+    bars: CITY_BAR_STOCKS.map((stock) => seen(`city-mode-${stock}-bar`).bar),
+  };
+}
+
+/** What ending the turn would move a stock by, signed, and nothing where it moves nothing. */
+function signed(count: number): string {
+  if (count > 0) return text('reading.plus', { count });
+  if (count < 0) return text('reading.minus', { count: -count });
+  return '';
+}
+
+/**
+ * What the panel reads by the rules on a chronicle launched on the civilization, what ending the turn
+ * would do read where `live`; and what each stock's bar shows.
+ */
+function panelOf(
+  chronicle: Chronicle,
+  civilization: string,
+  live = true,
+): { read: PanelRead; bars: CityBar[] } {
+  const turn = live ? reckoned(CATALOGUE, chronicle) : undefined;
+  const idled = idle(chronicle);
+  return {
+    read: {
+      name: text('city-panel.name', {
+        civilization: civilizationName(civilization),
+        building: buildingName(chronicle.citySection.building),
+      }),
+      stocks: CITY_BAR_STOCKS.map((stock) => {
+        const held = chronicle.resources[stock];
+        const threshold = thresholdOf(chronicle, stock);
+        const moved = turn?.stocks[stock];
+        const left = moved === undefined ? undefined : turnsLeft(stock, held, threshold, moved);
+        return {
+          value: text('reading.over', { count: held, over: threshold }),
+          reckoning: signed(moved ?? 0),
+          turns:
+            moved === undefined
+              ? undefined
+              : left === undefined
+                ? text('reading.never')
+                : `${left}`,
+        };
+      }),
+      counts: [idled, chronicle.population - idled, unitsCounted(chronicle, 'player')].map(String),
+    },
+    bars: CITY_BAR_STOCKS.map((stock) => cityBarOf(chronicle, stock, turn?.stocks[stock])),
+  };
+}
+
+/** Each bar's filled share and the share past it within a hair of what the rules give. */
+function barsOf(bars: readonly CityBar[]): unknown[] {
+  return bars.map(({ held, added }) => ({
+    filled: expect.objectContaining({ share: expect.closeTo(held, 6) }),
+    past: expect.objectContaining({ share: expect.closeTo(added, 6) }),
+  }));
+}
+
+/** The civilization a spec's campaign opens on. */
+function openedCivilization(): string {
+  return openingChoices(CATALOGUE, freshCampaign(CATALOGUE)).civilization;
+}
+
+/**
+ * Seed 1's turn 1 with its first worker on the city's tile, three population arrived idle, and a
+ * warrior entered beside the city: idle, assigned and the units each a count of its own.
+ */
+function peopled(): Chronicle {
+  let chronicle = settledOn(1, ['first-worker']);
+  for (let one = 0; one < 3; one++) chronicle = arrived(chronicle, 'player').chronicle;
+  const stats = unitKind(CATALOGUE, WARRIOR);
+  const beside = neighbours(playerCityTile(chronicle)).find((tile) =>
+    freeFor(chronicle, stats, tile),
+  );
+  if (beside === undefined)
+    throw new Error('seed 1 has no tile beside its city a warrior stands on');
+  return unitEntered(chronicle, { type: WARRIOR, faction: 'player', tile: beside });
 }
 
 /** What the tiles inside the border yield, point by point, and what every tile the map draws does. */
@@ -352,7 +499,9 @@ test('a press beside the tiles in city mode drops the selection and the inspecti
   expect(problems).toEqual([]);
 });
 
-test('a press on culture or idle enters city mode, and the chip leaves it', async ({ page }) => {
+test('a press on culture or idle enters city mode, and the panel’s Close leaves it', async ({
+  page,
+}) => {
   const problems = watch(page);
 
   await openSaved(page, bareTurn());
@@ -364,11 +513,169 @@ test('a press on culture or idle enters city mode, and the chip leaves it', asyn
   await reacted(page);
   expect(await inCityMode(page)).toBe(true);
 
-  await click(page, 'city-chip');
+  await click(page, 'city-mode-close');
   await expect.poll(() => inCityMode(page)).toBe(false);
 
   await click(page, 'reading-idle');
   await expect.poll(() => inCityMode(page)).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('in city mode a panel hangs from behind the resource bar’s foot, centred under it, reading the city’s name, food and culture against their thresholds with the turns left, and the idle, assigned and unit counts', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const chronicle = peopled();
+  const owed = panelOf(chronicle, openedCivilization());
+  const [food, culture] = owed.read.stocks;
+  // Every count a number of its own, food's turns a count and culture's the infinity sign.
+  expect(new Set(owed.read.counts).size).toBe(COUNTS.length);
+  expect(food.turns).toMatch(/^\d+$/);
+  expect(culture.turns).toBe(text('reading.never'));
+
+  await openSaved(page, chronicle);
+  expect(await inCityMode(page)).toBe(false);
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  const shown = await panelShown(page);
+  expect(shown.read).toEqual(owed.read);
+  expect(shown.bars).toEqual(barsOf(owed.bars));
+
+  const read = await readings(page, ['resource-bar-panel', 'city-mode-panel']);
+  const bar = pieceOnScreenOf(read('resource-bar-panel'));
+  const panel = pieceOnScreenOf(read('city-mode-panel'));
+  const foot = bar.y + bar.height;
+  expect(panel.y).toBeLessThan(foot);
+  expect(panel.y + panel.height).toBeGreaterThan(foot);
+  expect(panel.x + panel.width / 2).toBeCloseTo(bar.x + bar.width / 2, 1);
+
+  expect(problems).toEqual([]);
+});
+
+test('culture’s turns left read none once its stock covers its threshold', async ({ page }) => {
+  const problems = watch(page);
+  const paid = culturePaid();
+  const owed = panelOf(paid, openedCivilization());
+  expect(owed.read.stocks[CITY_BAR_STOCKS.indexOf('culture')].turns).toBe('0');
+
+  await openSaved(page, paid);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  expect((await panelShown(page)).read).toEqual(owed.read);
+
+  expect(problems).toEqual([]);
+});
+
+test('the panel reads again at each change that lands', async ({ page }) => {
+  const problems = watch(page);
+  const bare = bareTurn();
+  const own = playerCityTile(bare);
+  const unassigned = applied(bare, { type: 'assign', tile: own });
+  const civilization = openedCivilization();
+  expect(panelOf(unassigned, civilization).read.counts).not.toEqual(
+    panelOf(bare, civilization).read.counts,
+  );
+
+  await openSaved(page, bare);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  expect((await panelShown(page)).read).toEqual(panelOf(bare, civilization).read);
+
+  const city = await tileOnScreen(page, own);
+  await page.mouse.click(city.x, city.y);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(own));
+  await page.mouse.click(city.x, city.y);
+  await playedOut(page);
+  await expect.poll(() => chronicleOf(page)).toEqual(unassigned);
+  expect((await panelShown(page)).read).toEqual(panelOf(unassigned, civilization).read);
+
+  expect(problems).toEqual([]);
+});
+
+test('the pointer resting on a reading of the panel raises its tooltip: food’s and culture’s and idle’s the resource bar’s own, the turns left’s, assigned’s and the units’ their own', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const chronicle = peopled();
+
+  await openSaved(page, chronicle);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const raised = (title: string, message: string) => [
+    { text: title, bold: true },
+    { text: message, bold: false },
+  ];
+  const tips: [string, ReturnType<typeof raised>][] = [
+    ...CITY_BAR_STOCKS.map((stock): [string, ReturnType<typeof raised>] => [
+      `city-mode-${stock}`,
+      raised(
+        text(`label.${stock}`, {
+          count: chronicle.resources[stock],
+          over: thresholdOf(chronicle, stock),
+        }),
+        text(`tooltip.${stock}`),
+      ),
+    ]),
+    ['city-mode-food-turns', raised(text('label.turns-left'), text('tooltip.turns-left'))],
+    ['city-mode-idle', raised(text('label.idle'), text('tooltip.idle'))],
+    ['city-mode-assigned', raised(text('label.assigned'), text('tooltip.assigned'))],
+    ['city-mode-units', raised(text('label.units'), text('tooltip.units'))],
+  ];
+  for (const [zone, lines] of tips) {
+    const at = await onScreen(page, zone);
+    await page.mouse.move(at.x, at.y);
+    await expect.poll(() => tooltipLines(page, 'tooltip-ui')).toEqual(lines);
+  }
+
+  expect(problems).toEqual([]);
+});
+
+test('the panel reads no end of turn and no turns left, its bars paler by nothing, through the end of turn’s play-out, and the next hand’s once it stands', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const chronicle = peopled();
+  const civilization = openedCivilization();
+  onDesignedSpeed(page);
+
+  await openSaved(page, chronicle);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+
+  const midway = page.waitForFunction(
+    ({ stocks }) => {
+      const scene = window.game?.scene.getScene<ChronicleScene>('ui');
+      if (scene?.playing !== true) return undefined;
+      const named = (name: string) => window.named?.(name)?.object;
+      return stocks.map((stock) => ({
+        reckoning: (named(`city-mode-${stock}-reckoning`) as Phaser.GameObjects.Text | undefined)
+          ?.text,
+        turns: (named(`city-mode-${stock}-turns-value`) as Phaser.GameObjects.Text | undefined)
+          ?.visible,
+        past: window.readName?.(`city-mode-${stock}-bar`)?.bar,
+      }));
+    },
+    { stocks: CITY_BAR_STOCKS },
+  );
+  await endTurn(page);
+  const seen = await (await midway).jsonValue();
+  if (seen === undefined) throw new Error('waitForFunction resolved on no answer');
+  expect(seen).toEqual(
+    CITY_BAR_STOCKS.map(() => ({
+      reckoning: '',
+      turns: false,
+      past: { value: expect.objectContaining({ past: expect.objectContaining({ share: 0 }) }) },
+    })),
+  );
+
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  const next = await chronicleOf(page);
+  const settled = await panelShown(page);
+  expect(settled.read).toEqual(panelOf(next, civilization).read);
+  expect(settled.bars).toEqual(barsOf(panelOf(next, civilization).bars));
 
   expect(problems).toEqual([]);
 });

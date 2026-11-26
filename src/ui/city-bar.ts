@@ -37,6 +37,32 @@ export function barShares(stock: number, threshold: number, turn: number | undef
   return { held: stock / threshold, added: (reached - stock) / threshold };
 }
 
+/**
+ * The fewest ends of turn, each moving the stock by `turn`, after which it covers its threshold:
+ * food's counted from one, growth being the end of turn's, culture's from none; nothing where none do.
+ */
+export function turnsLeft(
+  stock: CityBarStock,
+  held: number,
+  threshold: number,
+  turn: number,
+): number | undefined {
+  const from = fewestTurns(stock);
+  if (held + from * turn >= threshold) return from;
+  if (turn <= 0) return undefined;
+  return Math.ceil((threshold - held) / turn);
+}
+
+/** The fewest ends of turn a stock's turns left count. */
+function fewestTurns(stock: CityBarStock): number {
+  switch (stock) {
+    case 'food':
+      return 1;
+    case 'culture':
+      return 0;
+  }
+}
+
 /** The bar of the player's city's stock on the chronicle, moved by what ending the turn would, where it is read. */
 export function cityBarOf(
   chronicle: Chronicle,

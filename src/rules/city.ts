@@ -213,8 +213,12 @@ export function costPaid(chronicle: Chronicle, whose: CityFaction, costs: readon
  */
 export function growthThreshold(chronicle: Chronicle, whose: CityFaction): number {
   const population = cityRows(chronicle, whose)?.population ?? 0;
-  const fielded = everyUnit(chronicle.units).filter((unit) => unit.faction === whose).length;
-  return 2 * (population + fielded);
+  return 2 * (population + unitsCounted(chronicle, whose));
+}
+
+/** The faction's units the growth threshold counts: every one of them, one carried by another among them. */
+export function unitsCounted(chronicle: Chronicle, whose: CityFaction): number {
+  return everyUnit(chronicle.units).filter((unit) => unit.faction === whose).length;
 }
 
 /** One population more for the faction's city, arriving idle, and nothing where that city is none. */

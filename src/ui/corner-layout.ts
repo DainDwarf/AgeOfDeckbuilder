@@ -14,7 +14,7 @@ export const SUMMARY_ROW = 22;
 export const SUMMARY_PAD_Y = 8;
 export const SUMMARY_HEIGHT = 2 * SUMMARY_PAD_Y + 2 * SUMMARY_ROW;
 
-/** How far under the Menu button the summary's top stands, and how far under its foot a mode's chip stands. */
+/** How far under the Menu button the summary's top stands, and how far under its foot the settle phase's chip stands. */
 const UNDER_THE_MENU = 14;
 const UNDER_THE_SUMMARY = 8;
 
@@ -24,18 +24,18 @@ export type TopRight = { readonly right: number; readonly top: number };
 /** The buttons at the screen's top right corner. */
 export type CornerButton = 'menu' | 'icons' | 'signs' | 'hexGrid';
 
-/** Where the buttons at the screen's top right corner stand, the summary under them, and a mode's chip under that. */
+/** Where the buttons at the screen's top right corner stand, the summary under them, and the settle phase's chip under that. */
 export type CornerLayout = Readonly<Record<CornerButton, Box>> & {
   /** Where the summary's top right corner stands. */
   readonly summary: TopRight;
-  /** Where a mode's chip's top right corner stands, whether a summary stands or not. */
+  /** Where the settle phase's chip's top right corner stands, whether a summary stands or not. */
   readonly chip: TopRight;
 };
 
 /**
  * The Menu button at the top right corner of a screen that wide, `margin` in from its right edge and
  * level with the middle of a strip that tall along its top, the other buttons in a row left of it,
- * the summary's place and a mode's chip's under it, their right edges on its own.
+ * the summary's place and the settle phase's chip's under it, their right edges on its own.
  */
 export function layOutCorner(width: number, margin: number, strip: number): CornerLayout {
   const menu = {

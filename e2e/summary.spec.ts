@@ -192,19 +192,18 @@ test('a press beside the things takes the summary down with the selection', asyn
   expect(problems).toEqual([]);
 });
 
-test('the summary stands under the Menu button, its right edge on the button’s, at one place in city mode and out of it, and city mode’s chip stands under it', async ({
+test('the summary stands under the Menu button, its right edge on the button’s, at one place in city mode and out of it', async ({
   page,
 }) => {
   const problems = watch(page);
   const chronicle = settledOn(1);
   const city = playerCityTile(chronicle);
-  /** Where the summary's panel, the Menu button and city mode's chip stand on the page, the shadows left out. */
+  /** Where the summary's panel and the Menu button stand on the page, the shadows left out. */
   const corner = async () => {
-    const read = await readings(page, ['summary-panel', 'menu-button', 'city-chip']);
+    const read = await readings(page, ['summary-panel', 'menu-button']);
     return {
       summary: pieceOnScreenOf(read('summary-panel')),
       menu: pieceOnScreenOf(read('menu-button')),
-      chip: read('city-chip').boundsOnScreen,
     };
   };
 
@@ -220,10 +219,8 @@ test('the summary stands under the Menu button, its right edge on the button’s
   await click(page, `tile-${tileKey(city)}`);
   await expect.poll(() => ringedTile(page)).toBe(tileKey(city));
   expect(await summaryRead(page)).toEqual(tileSummary(chronicle, city));
-  const { summary: inCityMode, chip } = await corner();
+  const { summary: inCityMode } = await corner();
   expect(inCityMode).toEqual(out);
-  expect(chip.y).toBeGreaterThan(inCityMode.y + inCityMode.height);
-  expect(chip.x + chip.width).toBeCloseTo(inCityMode.x + inCityMode.width, 1);
 
   expect(problems).toEqual([]);
 });

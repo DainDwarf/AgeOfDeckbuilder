@@ -327,6 +327,7 @@ export type ChromeButton = {
  * box.
  */
 export type ButtonReach = {
+  // Read while the button is built, so whatever it reads is declared before the button is made.
   readonly live?: () => boolean;
   readonly reaches?: (x: number, y: number) => boolean;
 };

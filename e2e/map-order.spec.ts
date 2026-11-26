@@ -90,7 +90,7 @@ test('what the map draws stands in one order whatever is switched on, a ringed u
   await page.keyboard.press('Tab');
   await expect.poll(() => latched(page)).toEqual([]);
   await page.keyboard.press('c');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   expect(await inOrder(false)).toEqual([]);
 
   await page.keyboard.press('Tab');

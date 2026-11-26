@@ -23,10 +23,13 @@ import {
   marksIn,
   onScreen,
   openSaved,
+  pieceOnScreenOf,
   pieceWorn,
   playedOn,
   playedOut,
+  readings,
   rested,
+  ringedTile,
   shows,
   standing,
   stoppedTurn,
@@ -128,15 +131,34 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   await expect.poll(async () => (await chronicleOf(page)).city).toEqual(CENTRE);
 
   await page.keyboard.press('c');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(true);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   expect(await shows(page, 'city-frame')).toBe(true);
   expect(await shows(page, 'settle-phase-chip')).toBe(false);
   expect(await shows(page, 'settle-phase-frame')).toBe(false);
 
   await page.keyboard.press('Escape');
-  await expect.poll(() => shows(page, 'city-chip')).toBe(false);
+  await expect.poll(() => shows(page, 'city-mode')).toBe(false);
   expect(await shows(page, 'settle-phase-chip')).toBe(true);
   expect(await shows(page, 'settle-phase-frame')).toBe(true);
+
+  expect(problems).toEqual([]);
+});
+
+test('the settle phase’s chip stands under the summary, its right edge on the summary’s', async ({
+  page,
+}) => {
+  const problems = watch(page);
+
+  await openSaved(page, launchedAs(1));
+  await click(page, `tile-${tileKey(CENTRE)}`);
+  await expect.poll(() => ringedTile(page)).toBe(tileKey(CENTRE));
+
+  const read = await readings(page, ['summary-panel', 'settle-phase-chip']);
+  expect(read('summary-panel').standing).toBe(true);
+  const summary = pieceOnScreenOf(read('summary-panel'));
+  const chip = read('settle-phase-chip').boundsOnScreen;
+  expect(chip.y).toBeGreaterThan(summary.y + summary.height);
+  expect(chip.x + chip.width).toBeCloseTo(summary.x + summary.width, 1);
 
   expect(problems).toEqual([]);
 });

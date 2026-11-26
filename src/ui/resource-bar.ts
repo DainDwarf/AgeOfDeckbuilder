@@ -53,7 +53,7 @@ const WORD_TO_VALUE = 8;
 const GLYPH_TO_VALUE = 6;
 
 /** A reading's glyph on the resource bar, a side of its square. */
-const BAR_GLYPH = 22;
+export const BAR_GLYPH = 22;
 
 /** How far the plate's ends stand off its first reading and its last. */
 const PLATE_END = 16;
@@ -80,7 +80,7 @@ function managesCity(key: BarReading): key is (typeof CITY_READINGS)[number] {
 }
 
 /** What a reading's tooltip reads: its sentence, under its name where it has one. */
-type Tip = { readonly title?: string; readonly message: string };
+export type Tip = { readonly title?: string; readonly message: string };
 
 /**
  * A reading as a bar draws one: the glyph, the word where it reads one, the value, the zone its
@@ -101,42 +101,49 @@ type ThresholdBar = {
   readonly stock: CityBarStock;
 };
 
-type Entry = Reading & {
-  readonly key: BarReading;
-  /** What ending the turn now would do to the value, after it. */
+/**
+ * A value, and after it what ending the turn now would do to it, on the pill it stands on while it
+ * reads a stock taken past nothing, or the population taken.
+ */
+export type Reckoner = {
+  readonly value: Phaser.GameObjects.Text;
   readonly reckoning: Phaser.GameObjects.Text;
-  /** The pill the reckoning stands on while it reads a stock taken past nothing, or the population taken. */
   readonly pill: Phaser.GameObjects.Rectangle;
-  /** The threshold's bar under food's reading and culture's, and none under the others. */
-  readonly threshold: ThresholdBar | undefined;
-  /** How far past the glyph the reading reaches, whatever its value reads: `roomOf`. */
-  readonly room: number;
-  /** Everything the reading shows together: what the well presses into the bar. */
-  readonly face: Phaser.GameObjects.Container;
-  /**
-   * The well the reading sits in while it is latched down, or the gold it stands on while its act
-   * waits; it stands only then, over the box `wellBox` holds.
-   */
-  readonly well: Phaser.GameObjects.NineSlice;
-  readonly wellBox: Box;
-  /** What the value reads, as the number a rise ticks through; the text follows it. */
-  readonly ticking: { count: number };
-  /** What the reckoning reads, as the last reckoning left it. */
-  readonly reckoned: { last: Reckoned };
 };
 
-/** What a reading stands on: the bar's charcoal, the well it is latched down in, or the gold of an act waiting. */
-type StandsOn = 'bar' | Exclude<WellPiece, 'field'>;
+type Entry = Reading &
+  Reckoner & {
+    readonly key: BarReading;
+    /** The threshold's bar under food's reading and culture's, and none under the others. */
+    readonly threshold: ThresholdBar | undefined;
+    /** How far past the glyph the reading reaches, whatever its value reads: `roomOf`. */
+    readonly room: number;
+    /** Everything the reading shows together: what the well presses into the bar. */
+    readonly face: Phaser.GameObjects.Container;
+    /**
+     * The well the reading sits in while it is latched down, or the gold it stands on while its act
+     * waits; it stands only then, over the box `wellBox` holds.
+     */
+    readonly well: Phaser.GameObjects.NineSlice;
+    readonly wellBox: Box;
+    /** What the value reads, as the number a rise ticks through; the text follows it. */
+    readonly ticking: { count: number };
+    /** What the reckoning reads, as the last reckoning left it. */
+    readonly reckoned: { last: Reckoned };
+  };
+
+/** What a reading stands on: a panel's charcoal, the well it is latched down in, or the gold of an act waiting. */
+export type StandsOn = 'charcoal' | Exclude<WellPiece, 'field'>;
 
 /** The inks a reading's value and its reckoning read in on what it stands on, a reckoning on its pill aside. */
 const INKS: Readonly<Record<StandsOn, { value: number; gain: number; loss: number }>> = {
-  bar: { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss },
+  charcoal: { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss },
   'inactive-tab': { value: LOOK.charcoalInk, gain: LOOK.gain, loss: LOOK.loss },
   gold: { value: LOOK.metalInk, gain: LOOK.gainOnGold, loss: LOOK.lossOnGold },
 };
 
 /** What ending the turn would do to a reading: the count it moves by, and whether it stands on the pill. */
-type Reckoned = { readonly count: number; readonly taken: boolean };
+export type Reckoned = { readonly count: number; readonly taken: boolean };
 
 const NOTHING_RECKONED: Reckoned = { count: 0, taken: false };
 
@@ -173,10 +180,11 @@ export function createResourceBar(
 
   const tipOf = (key: BarReading) => (): Tip => {
     if (rendered === undefined) throw new Error('the bar raised a tooltip before it rendered');
-    return { title: nameOf(rendered, key), message: text(`tooltip.${key}`) };
+    return readingTip(rendered, key);
   };
 
-  const { space, pill } = measures(scene);
+  const space = valueSpace(scene);
+  const pill = pillRoom(scene);
   const unplaced = READINGS.map((key) =>
     createEntry(
       scene,
@@ -231,18 +239,12 @@ export function createResourceBar(
   /** What a reading stands on as the bar stands. */
   const standsOn = ({ key }: Entry): StandsOn => {
     if (waiting.has(key)) return 'gold';
-    return key !== 'idle' && latched.has(key) ? 'inactive-tab' : 'bar';
+    return key !== 'idle' && latched.has(key) ? 'inactive-tab' : 'charcoal';
   };
 
   /** A reading's value and reckoning inked for what it stands on. */
   const ink = (entry: Entry): void => {
-    const inks = INKS[standsOn(entry)];
-    const { count, taken } = entry.reckoned.last;
-    inked(entry.value, inks.value);
-    inked(
-      entry.reckoning,
-      taken ? LOOK.takenPastNothingInk : count > 0 ? inks.gain : count < 0 ? inks.loss : inks.value,
-    );
+    inkReckoner(entry, standsOn(entry), entry.reckoned.last);
   };
 
   /**
@@ -252,7 +254,7 @@ export function createResourceBar(
   const dress = (): void => {
     for (const entry of entries) {
       const on = standsOn(entry);
-      const down = on !== 'bar';
+      const down = on !== 'charcoal';
       entry.well.setVisible(down);
       if (down) placeChromeWell(entry.well, on, entry.wellBox);
       entry.face.setPosition(down ? SUNK : 0, down ? SUNK : 0);
@@ -266,7 +268,7 @@ export function createResourceBar(
   const reckon = (): void => {
     const read = live && rendered !== undefined ? reckoned(catalogue, rendered) : undefined;
     for (const entry of entries) {
-      const reckoning = read === undefined ? NOTHING_RECKONED : reckoningOf(read, entry.key);
+      const reckoning = reckoningOf(read, entry.key);
       entry.reckoned.last = reckoning;
       showReckoning(entry, reckoning, space);
       const { threshold } = entry;
@@ -376,17 +378,18 @@ export function createResourceBar(
   };
 }
 
-/**
- * How wide a space after a value stands, and how wide a reckoning of two digits stands on its pill:
- * what every reading's room is measured with.
- */
-function measures(scene: Phaser.Scene): { space: number; pill: number } {
-  const space = measured(scene, ' ', VALUE_STYLE);
+/** How wide a space after a value stands: how far after it its reckoning starts. */
+export function valueSpace(scene: Phaser.Scene): number {
+  return measured(scene, ' ', VALUE_STYLE);
+}
+
+/** How wide a reckoning of two digits stands on its pill: what every reading's room is measured with. */
+function pillRoom(scene: Phaser.Scene): number {
   const loss = measured(scene, text('reading.minus', { count: '00' }), {
     ...RECKONING_STYLE,
     fontStyle: ON_THE_PILL,
   });
-  return { space, pill: loss + 2 * PILL_PAD.x };
+  return loss + 2 * PILL_PAD.x;
 }
 
 /** How wide that text stands in that style, its own box. */
@@ -472,9 +475,7 @@ export function createReading(
     shown.word === undefined
       ? undefined
       : addText(scene, 0, 0, shown.word, WORD_STYLE).setOrigin(0, 0.5);
-  const value = addText(scene, 0, 0, '', VALUE_STYLE)
-    .setOrigin(0, 0.5)
-    .setName(`reading-${shown.name}-value`);
+  const value = createValue(scene, `reading-${shown.name}`);
   const hover = scene.add
     .zone(0, 0, 1, BAR_HEIGHT)
     .setOrigin(0, 0)
@@ -490,6 +491,32 @@ export function createReading(
     () => tooltip.hide(),
   );
   return { chip, word, value, hover, glyph: shown.glyph };
+}
+
+/** A reading's value reading nothing yet, named `<name>-value`, standing from its left end. */
+export function createValue(scene: Phaser.Scene, name: string): Phaser.GameObjects.Text {
+  return addText(scene, 0, 0, '', VALUE_STYLE).setOrigin(0, 0.5).setName(`${name}-value`);
+}
+
+/**
+ * A reading's reckoning reading nothing yet, named `<name>-reckoning`, and its pill `<name>-pill`,
+ * hidden, both about a middle `middle` down; `showReckoning` places them after the value.
+ */
+export function createReckoning(
+  scene: Phaser.Scene,
+  name: string,
+  middle: number,
+): Pick<Reckoner, 'reckoning' | 'pill'> {
+  // Rounded past any height it is given: Phaser rounds a rectangle to half its smaller side at most.
+  const pill = scene.add
+    .rectangle(0, middle, 1, 1, LOOK.takenPastNothing)
+    .setRounded(BAR_HEIGHT)
+    .setName(`${name}-pill`)
+    .setVisible(false);
+  const reckoning = addText(scene, 0, middle, '', RECKONING_STYLE)
+    .setOrigin(0, 0.5)
+    .setName(`${name}-reckoning`);
+  return { reckoning, pill };
 }
 
 function createEntry(
@@ -509,15 +536,7 @@ function createEntry(
     clicks,
   });
   const { chip, value, hover } = reading;
-  // Rounded past any height it is given: Phaser rounds a rectangle to half its smaller side at most.
-  const pill = scene.add
-    .rectangle(0, BAR_HEIGHT / 2, 1, 1, LOOK.takenPastNothing)
-    .setRounded(BAR_HEIGHT)
-    .setName(`reading-${key}-pill`)
-    .setVisible(false);
-  const reckoning = addText(scene, 0, BAR_HEIGHT / 2, '', RECKONING_STYLE)
-    .setOrigin(0, 0.5)
-    .setName(`reading-${key}-reckoning`);
+  const { reckoning, pill } = createReckoning(scene, `reading-${key}`, BAR_HEIGHT / 2);
   const threshold = thresholdBarUnder(scene, key, readingWidth(reading, room));
   // The well is added first, so the reading it holds is painted inside it.
   const well = createChromeWell(scene, `reading-${key}-well`).setVisible(false);
@@ -554,7 +573,7 @@ function thresholdBarUnder(
     case 'culture': {
       const size = { length, width: THRESHOLD_BAR_WIDTH };
       return {
-        mark: thresholdBarMarker(scene, size).setName(`reading-${key}-bar`),
+        mark: thresholdBarMarker(scene).setName(`reading-${key}-bar`),
         size,
         stock: key,
       };
@@ -581,16 +600,27 @@ export function placeReading(
 ): void {
   const middle = BAR_HEIGHT / 2;
   if (word === undefined) {
-    chip.setPosition(at + glyph / 2, middle);
-    const start = at + glyph + GLYPH_TO_VALUE;
-    value.setPosition(start, middle);
-    value.x += start - ownBoxOf(value).x;
+    placeGlyphAndValue(chip, value, glyph, at, middle);
   } else {
     chip.setPosition(at + 5, middle);
     word.setPosition(at + CHIP_TO_WORD, middle);
     value.setPosition(at + CHIP_TO_WORD + word.width + WORD_TO_VALUE, middle);
   }
   hover.setPosition(zone.x, 0).setSize(zone.width, BAR_HEIGHT - 1);
+}
+
+/** A glyph that wide standing from `at`, about `middle`, and a value starting just past it. */
+export function placeGlyphAndValue(
+  chip: Phaser.GameObjects.Container,
+  value: Phaser.GameObjects.Text,
+  glyph: number,
+  at: number,
+  middle: number,
+): void {
+  chip.setPosition(at + glyph / 2, middle);
+  const start = at + glyph + GLYPH_TO_VALUE;
+  value.setPosition(start, middle);
+  value.x += start - ownBoxOf(value).x;
 }
 
 /** One reading where the row stands it, its threshold's bar under it, and the box its well is drawn over. */
@@ -611,8 +641,8 @@ function place(entry: Omit<Entry, 'wellBox'>, placed: Placed): Entry {
  * A reading's reckoning reading what it is handed, a space after the value, on its pill where it is
  * taken past nothing, set heavier there.
  */
-function showReckoning(
-  { value, reckoning, pill }: Entry,
+export function showReckoning(
+  { value, reckoning, pill }: Reckoner,
   { count, taken }: Reckoned,
   space: number,
 ): void {
@@ -629,6 +659,25 @@ function showReckoning(
   const height = number.height + 2 * PILL_PAD.y;
   if (pill.width !== width || pill.height !== height) pill.setSize(width, height);
   pill.setPosition(start + width / 2, reckoning.y);
+}
+
+/** A reading's value and reckoning inked for what it stands on and what the reckoning reads. */
+export function inkReckoner(
+  { value, reckoning }: Reckoner,
+  on: StandsOn,
+  { count, taken }: Reckoned,
+): void {
+  const inks = INKS[on];
+  inked(value, inks.value);
+  inked(
+    reckoning,
+    taken ? LOOK.takenPastNothingInk : count > 0 ? inks.gain : count < 0 ? inks.loss : inks.value,
+  );
+}
+
+/** What a reading's tooltip reads on the chronicle: its name over its sentence. */
+export function readingTip(chronicle: Chronicle, key: BarReading): Tip {
+  return { title: nameOf(chronicle, key), message: text(`tooltip.${key}`) };
 }
 
 /** What a reading's tooltip names it on the chronicle: food and culture with their stock over its threshold. */
@@ -689,9 +738,10 @@ function actsWaiting(catalogue: Catalogue, chronicle: Chronicle): ReadonlySet<Ba
 
 /**
  * What ending the turn would do to a reading: the count it moves by, and whether it is a stock taken
- * past nothing or the population taken.
+ * past nothing or the population taken; nothing where no reckoning is read.
  */
-function reckoningOf(read: Reckoning, key: BarReading): Reckoned {
+export function reckoningOf(read: Reckoning | undefined, key: BarReading): Reckoned {
+  if (read === undefined) return NOTHING_RECKONED;
   switch (key) {
     case 'idle':
       return { count: read.population, taken: read.population < 0 };
