@@ -8,7 +8,6 @@ Before intake: `- **Title** — what it is about.` After intake: `- **Title** �
 
 The look's pool — the ideas each rung takes, the fits and colour readings accepted until this version, the cursor finding — is [`LOOK.md`](LOOK.md), read at each rung's cut and deleted at the close.
 
-- **City mode and the settle phase** — how the two are shown: the map's frame and the chip naming the mode, the growth and culture bars and the population in city mode, and the claimable tiles shown once an extend button is pressed.
 - **The meta screens** — the launch screen with its region stills, the tree with its ages' grounds, the Stone ground among them, the collection.
 - **The palette** — the colours of what code still tints, read against every tileset and icon pack bought by then: the clashes measured, then the colour schemes for colour-blindness through the one look file; taken or dropped once the glyphs carry every meaning by shape.
 - **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, a transition into a chronicle and out of it, and the unit legibility readings.
@@ -17,3 +16,9 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
 
 ## Lines
+
+- **City mode's panel** — a panel standing while city mode is on, reading the food stock against the growth threshold, the culture stock against the culture threshold and the population, naming the mode and holding the way out of it, in place of the mode's chip.
+- **The extend button** — the claim marks shown only once a button of city mode is pressed, where today they stand for as long as the mode is on, and whether a claim waits for that press.
+- **City mode's unassigned tiles** — how a held tile nobody is assigned to is shown in city mode, today darkened as the fog darkens, and how the yield glyphs of a tile that is not giving its yield at income read, today paler.
+- **The frame and the settle phase** — the line round the screen that tells city mode and the settle phase, how the settle phase is named once city mode's chip is gone, and the end-turn button's look on the settle phase.
+- **The settle cards left in hand** — something standing on the screen for the whole settle phase that says the settle cards still in hand are banished when it ends.
