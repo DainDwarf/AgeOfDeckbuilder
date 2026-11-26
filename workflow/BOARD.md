@@ -17,7 +17,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **City mode's panel** — a panel standing while city mode is on, reading the food stock against the growth threshold, the culture stock against the culture threshold and the population, naming the mode and holding the way out of it, in place of the mode's chip.
+- **City mode's panel** — in city mode a panel hangs under the resource bar reading the city's name, food and culture against their thresholds with the turns left, and the idle, assigned and unit counts, its Close button leaves the mode, city mode's chip is gone, and `e2e/city-mode.spec.ts` proves it. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/city-modes-panel.md](board/city-modes-panel.md)
 - **The extend button** — the claim marks shown only once a button of city mode is pressed, where today they stand for as long as the mode is on, and whether a claim waits for that press.
 - **City mode's unassigned tiles** — how a held tile nobody is assigned to is shown in city mode, today darkened as the fog darkens, and how the yield glyphs of a tile that is not giving its yield at income read, today paler.
 - **The frame and the settle phase** — the line round the screen that tells city mode and the settle phase, how the settle phase is named once city mode's chip is gone, and the end-turn button's look on the settle phase.
