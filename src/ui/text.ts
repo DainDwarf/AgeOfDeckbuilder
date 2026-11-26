@@ -38,7 +38,7 @@ const TEXT = {
   'tooltip.culture': 'Claims more tiles for your city',
   'tooltip.idle': 'Assign to tile or turn into units',
   'tooltip.assigned': "Gives its tile's yield at income",
-  'tooltip.units': 'Count in the growth threshold',
+  'tooltip.units': 'Population turned into units on the map',
   'tooltip.turns-left': "Until the threshold, at this turn's income",
   'tooltip.health': 'Unit is killed when it reaches 0',
   'tooltip.damage': "The health this unit's attack removes",
