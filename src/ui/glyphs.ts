@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { type CastSymbol, glyphFileOf } from './cast';
 import { grownOf } from './fade';
-import { LOOK, type Tone, untoned } from './look';
+import { drained, LOOK, type Tone, untoned } from './look';
 import { GLYPH_PIXELS, GLYPH_SHEET } from './marks';
 import { aroundPicture, paintMade, washed } from './sheet';
 
@@ -167,11 +167,13 @@ function outlineOf(scene: Phaser.Scene, symbol: CastSymbol, square: number): str
 
 /**
  * How a glyph is drawn beside its symbol and its square: what its colours go through, the colour it
- * is drawn in where it is not its symbol's, and whether it wears its outline.
+ * is drawn in where it is not its symbol's, whether that colour is drained to its grey, and whether
+ * it wears its outline.
  */
 export type GlyphPaint = {
   readonly tone?: Tone;
   readonly colour?: number;
+  readonly grey?: boolean;
   readonly outlined?: boolean;
 };
 
@@ -192,14 +194,19 @@ export function asGlyph(
   mark: Phaser.GameObjects.Container,
   symbol: CastSymbol,
   square: number,
-  { tone = untoned, colour = colourOf(symbol), outlined = outlinedOf(symbol) }: GlyphPaint = {},
+  {
+    tone = untoned,
+    colour = colourOf(symbol),
+    grey = false,
+    outlined = outlinedOf(symbol),
+  }: GlyphPaint = {},
 ): Phaser.GameObjects.Container {
   const [outline, glyph] = mark.list as Phaser.GameObjects.Image[];
   const scale = square / GLYPH_PIXELS;
   glyph
     .setTexture(GLYPH_SHEET.key, glyphFileOf(symbol))
     .setScale(scale)
-    .setTint(tone(colour))
+    .setTint(tone(grey ? drained(colour) : colour))
     .setVisible(true);
   outline.setVisible(outlined);
   if (outlined) {

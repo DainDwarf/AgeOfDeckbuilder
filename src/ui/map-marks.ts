@@ -124,12 +124,12 @@ const YIELD_ROW = 4;
 const YIELD_PATCH_ROOM = 6;
 
 /**
- * The mark of an assigned tile: a side of its glyph's square, how wide its disc is, and how far below
- * the tile's middle it stands.
+ * The mark city mode puts on a held tile: a side of its glyph's square, how wide its disc is, and how
+ * far below the tile's middle it stands.
  */
-const ASSIGNED_GLYPH = 10;
-const ASSIGNED_DISC = 14;
-const ASSIGNED_DROP = 16;
+const HELD_MARK_GLYPH = 10;
+const HELD_MARK_DISC = 14;
+const HELD_MARK_DROP = 16;
 
 /**
  * The culture threshold on a tile: how the number reads, the glyph beside it with its gap, and the
@@ -246,10 +246,10 @@ export function unitStandsAt(tile: TileCoords): { x: number; y: number } {
   return { x, y: y + UNIT_DROP };
 }
 
-/** Where the mark of a tile the population stands on lies: below the middle of that tile. */
-export function assignedAt(tile: TileCoords): { x: number; y: number } {
+/** Where the mark city mode puts on a held tile lies: below the middle of that tile. */
+export function heldMarkAt(tile: TileCoords): { x: number; y: number } {
   const { x, y } = positionOf(tile);
-  return { x, y: y + ASSIGNED_DROP };
+  return { x, y: y + HELD_MARK_DROP };
 }
 
 /** What darkens a tile's paintings: nothing, the fog, or city mode's dark of a held tile nobody is assigned to. */
@@ -953,25 +953,24 @@ export function yieldPatch(scene: Phaser.Scene): Phaser.GameObjects.Image {
 }
 
 /**
- * A tile's yield glyphs from their pool at that strength, one to each point in the order handed,
- * touching and four to a row, each row centred across on the tile's middle and the rows together on
- * it; and its patch from its own pool, fitted to them.
+ * A tile's yield glyphs from their pool, in their colours or drained to their greys, one to each
+ * point in the order handed, touching and four to a row, each row centred across on the tile's middle
+ * and the rows together on it; and its patch from its own pool, fitted to them.
  */
 export function showTileYield(
   glyphs: Pool<Phaser.GameObjects.Container>,
   patches: Pool<Phaser.GameObjects.Image>,
   coord: TileCoords,
   owed: readonly Resource[],
-  strength: number,
+  grey: boolean,
 ): void {
   const { x, y } = positionOf(coord);
   const rows = Math.ceil(owed.length / YIELD_ROW);
   owed.forEach((resource, index) => {
     const row = Math.floor(index / YIELD_ROW);
     const inRow = Math.min(YIELD_ROW, owed.length - row * YIELD_ROW);
-    asGlyph(glyphs.take(), resource, YIELD_GLYPH)
+    asGlyph(glyphs.take(), resource, YIELD_GLYPH, { grey })
       .setName(`yield-${resource}`)
-      .setAlpha(strength)
       .setPosition(
         x + ((index % YIELD_ROW) - (inRow - 1) / 2) * YIELD_GLYPH,
         y + (row - (rows - 1) / 2) * YIELD_GLYPH,
@@ -986,14 +985,27 @@ export function showTileYield(
     .setName(`yield-patch-${tileKey(coord)}`);
 }
 
-/** The mark of an assigned tile: population's glyph, bare, on the feature disc's dark with its pale rim. */
-export function assignedMark(scene: Phaser.Scene): Phaser.GameObjects.Container {
-  return scene.add
-    .container(0, 0, [
-      asRowDisc(scene.add.circle(0, 0, ASSIGNED_DISC / 2), FEATURE_DISC, 'clear'),
-      glyphOf(scene, 'population', ASSIGNED_GLYPH, { outlined: false }),
-    ])
-    .setName('assigned');
+/** The mark city mode puts on a held tile: population's glyph, bare, on the feature disc's dark with its pale rim. */
+export function heldMark(scene: Phaser.Scene): Phaser.GameObjects.Container {
+  return scene.add.container(0, 0, [
+    asRowDisc(scene.add.circle(0, 0, HELD_MARK_DISC / 2), FEATURE_DISC, 'clear'),
+    glyphOf(scene, 'population', HELD_MARK_GLYPH, { outlined: false }),
+  ]);
+}
+
+/**
+ * A `heldMark` made to stand on a held tile: its glyph on its disc where one population is assigned
+ * to the tile, and its disc left empty where nobody is.
+ */
+export function asHeldMark(
+  mark: Phaser.GameObjects.Container,
+  tile: TileCoords,
+  assigned: boolean,
+): Phaser.GameObjects.Container {
+  const [, glyph] = mark.list as [Phaser.GameObjects.Arc, Phaser.GameObjects.Container];
+  glyph.setVisible(assigned);
+  const { x, y } = heldMarkAt(tile);
+  return mark.setName(assigned ? 'assigned' : `empty-disc-${tileKey(tile)}`).setPosition(x, y);
 }
 
 /** A rim round a pill: how wide it is, and its colour at its strength. */

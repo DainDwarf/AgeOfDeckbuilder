@@ -119,7 +119,7 @@ import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
 import { CURSORS, type Cursor } from '../src/ui/cursor';
 import { eventName } from '../src/ui/event-text';
 import { type Face, namedFace, terrainFace, terrainOnTile } from '../src/ui/face';
-import { type BarReading, LOOK, multiplied } from '../src/ui/look';
+import { type BarReading, drained, LOOK, multiplied } from '../src/ui/look';
 import { eventLore } from '../src/ui/lore';
 import { unitPaintingOf } from '../src/ui/marks';
 import { refused, type Said } from '../src/ui/refusal-lines';
@@ -147,6 +147,7 @@ type PageReading = {
   tint: Answer<number | undefined>;
   tints: (number | undefined)[];
   strengths: number[];
+  glyphColours: Answer<number[]>;
   place: Answer<{ x: number; y: number }>;
   placeOnScreen: Answer<OnScreen>;
   axes: Answer<Axes>;
@@ -854,6 +855,14 @@ export async function readNames(page: Page): Promise<void> {
         strengths: shownOf(all).map(
           ({ object }) => (object as Partial<Phaser.GameObjects.Components.Alpha>).alpha ?? 1,
         ),
+        glyphColours: answer(() => {
+          const glyphIn = window.glyphIn;
+          if (glyphIn === undefined) throw new Error('the page reads no glyph');
+          return shownOf(all).map(({ object }) => {
+            if (!isGlyphMark(object)) throw new Error(`${name} is no glyph`);
+            return glyphIn(object).tint;
+          });
+        }),
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
@@ -1922,6 +1931,8 @@ export type Reading = {
   readonly tints: readonly (number | undefined)[];
   /** The strength every object of the name that stands shown is drawn at, its own alpha. */
   readonly strengths: readonly number[];
+  /** The colour the glyph of every `glyphMark` of the name that stands shown is drawn in; any other object throws. */
+  readonly glyphColours: readonly number[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
   /** Where the point the object is drawn about sits on the page. */
@@ -2015,6 +2026,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     get strengths() {
       if (answered === undefined) throw new Error('no chronicle was opened on this page');
       return answered.strengths;
+    },
+    get glyphColours() {
+      return owed(name, answered?.glyphColours);
     },
     get place() {
       return owed(name, answered?.place);
@@ -2537,20 +2551,25 @@ export async function glyphs(page: Page): Promise<Glyphs> {
 }
 
 /**
- * How many yield glyphs of each resource stand on the map at their full strength, and how many at the
- * strength of a tile not giving its yield at income, read off the readings of each resource's
- * `glyphName`; any other strength throws.
+ * How many yield glyphs of each resource stand on the map in the resource's colour, and how many in
+ * its grey, read off the readings of each resource's `glyphName`; a glyph in any other colour, or at
+ * less than its full strength, throws.
  */
-export function glyphsByStrength(read: (name: string) => Reading): { full: Glyphs; pale: Glyphs } {
-  const [full, pale] = [noGlyphs(), noGlyphs()];
+export function glyphsByColour(read: (name: string) => Reading): { colour: Glyphs; grey: Glyphs } {
+  const [colour, grey] = [noGlyphs(), noGlyphs()];
   for (const resource of RESOURCES) {
-    for (const strength of read(glyphName(resource)).strengths) {
-      if (strength === 1) full[resource] += 1;
-      else if (strength === LOOK.yieldNotGiven) pale[resource] += 1;
-      else throw new Error(`a glyph of ${resource} stands at ${strength}`);
+    const glyph = read(glyphName(resource));
+    const own = LOOK.reading[resource];
+    for (const strength of glyph.strengths) {
+      if (strength !== 1) throw new Error(`a glyph of ${resource} stands at ${strength}`);
+    }
+    for (const drawn of glyph.glyphColours) {
+      if (drawn === own) colour[resource] += 1;
+      else if (drawn === drained(own)) grey[resource] += 1;
+      else throw new Error(`a glyph of ${resource} is drawn in ${drawn.toString(16)}`);
     }
   }
-  return { full, pale };
+  return { colour, grey };
 }
 
 /** The strength the map draws its units at: their group's own, by the strength of the sheet it composites them on where it does. */
@@ -4313,11 +4332,20 @@ export async function dragBetween(
   from: { x: number; y: number },
   to: { x: number; y: number },
 ): Promise<void> {
+  await carriedBetween(page, from, to);
+  await page.mouse.up();
+}
+
+/** A left press landed on one page point and carried to another past the drag slack, still held. */
+export async function carriedBetween(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+): Promise<void> {
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move((from.x + to.x) / 2, (from.y + to.y) / 2, { steps: 5 });
   await page.mouse.move(to.x, to.y, { steps: 5 });
-  await page.mouse.up();
 }
 
 /** The same gesture onto a tile the unit lands on, waited out until it stands there. */

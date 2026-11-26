@@ -19,6 +19,7 @@ import {
   besideTheCards,
   browse,
   cardOnFace,
+  carriedBetween,
   chronicleOf,
   click,
   cursorAt,
@@ -415,10 +416,7 @@ test('a right click while a unit is carried inspects the tile under it and leave
   const from = await onScreen(page, `tile-${tileKey(city)}`);
   const onto = await onScreen(page, `tile-${tileKey(tile)}`);
 
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move((from.x + onto.x) / 2, (from.y + onto.y) / 2, { steps: 5 });
-  await page.mouse.move(onto.x, onto.y, { steps: 5 });
+  await carriedBetween(page, from, onto);
 
   await page.mouse.down({ button: 'right' });
   await page.mouse.up({ button: 'right' });

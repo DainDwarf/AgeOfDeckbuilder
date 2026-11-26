@@ -217,8 +217,6 @@ export type Look = {
   readonly yieldPatch: Wash;
   /** The strength every unit is drawn at while city mode is on. */
   readonly unitsInCityMode: number;
-  /** The strength city mode draws the yield glyphs of a tile not giving its yield at income at. */
-  readonly yieldNotGiven: number;
   /** The strength a dimmed unit of the player's is darkened by. */
   readonly unitDim: number;
   /** The disc a feature's icon stands on, and the rim around it. */
@@ -307,7 +305,7 @@ export const LOOK: Look = {
   page: 0x0d1117,
   mapOutline: 0x0d1014,
   fog: 0x4d4d4d,
-  unassigned: 0x4d4d4d,
+  unassigned: 0x344d70,
   borderBand: 0.6,
   unitHalo: 0.9,
   built: 0xcfc6b4,
@@ -368,7 +366,6 @@ export const LOOK: Look = {
   refusedAnswer: 0.21,
   yieldPatch: { colour: 0x0d1014, strength: 0.7 },
   unitsInCityMode: 0.5,
-  yieldNotGiven: 0.5,
   unitDim: 0.6,
   featureDisc: { colour: 0x0d1014, strength: 0.72 },
   featureDiscRim: { colour: 0xece2cc, strength: 0.55 },
@@ -423,6 +420,13 @@ export function multiplied(colour: number, tint: number): number {
   const channel = (shift: number): number =>
     Math.round((((colour >> shift) & 0xff) * ((tint >> shift) & 0xff)) / 0xff);
   return (channel(16) << 16) | (channel(8) << 8) | channel(0);
+}
+
+/** A colour with its colour taken out, as light as it was: a grey. */
+export function drained(colour: number): number {
+  const channel = (shift: number): number => (colour >> shift) & 0xff;
+  const grey = Math.round(0.3 * channel(16) + 0.59 * channel(8) + 0.11 * channel(0));
+  return (grey << 16) | (grey << 8) | grey;
 }
 
 /** The tint that darkens a painting by as much as a wash of that strength darkens what lies under it. */

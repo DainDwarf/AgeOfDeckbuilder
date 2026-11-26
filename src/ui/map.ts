@@ -93,12 +93,11 @@ import { selectionRims, unitRings } from './map-fade';
 import { createMapGrab } from './map-grab';
 import {
   asBuildingPatch,
+  asHeldMark,
   asIcon,
   asPieces,
   asRowDisc,
   asSitePointer,
-  assignedAt,
-  assignedMark,
   asTerrain,
   asUnit,
   asUnitHealthBar,
@@ -110,6 +109,7 @@ import {
   featureMarksOn,
   fogDark,
   givenPlate,
+  heldMark,
   improvementLyingOf,
   improvementMarksOn,
   type Lying,
@@ -540,7 +540,10 @@ export function createMapView(
   );
   const glyphPool = poolOf(glyphs, () => glyphMark(scene));
   const yieldPatchPool = poolOf(yieldPatches, () => yieldPatch(scene));
-  const assignedPool = poolOf(assignedLayer, () => assignedMark(scene));
+  const heldMarkPool = poolOf(assignedLayer, () => heldMark(scene));
+  // Added before the pool makes any mark, so every mark stands over it.
+  const leftDisc = heldMark(scene).setVisible(false);
+  assignedLayer.add(leftDisc);
 
   /** The piece each corner of a river wears on the chronicle the map stands on, by the corner's key, and what painted it. */
   let riversWorn = new Map<string, { readonly piece: RiverPiece; readonly painted: Mark[] }>();
@@ -708,8 +711,8 @@ export function createMapView(
 
   /**
    * The glyphs of every tile the map draws on their patches: every resource on a tile inside the
-   * border while city mode is on, and what the overlay is asked for on any other; paler in city mode
-   * on a tile not giving its yield at income.
+   * border while city mode is on, and what the overlay is asked for on any other; in grey in city
+   * mode on a tile one population is assigned to that is not giving its yield at income.
    */
   const paintYields = (): void => {
     glyphPool.hide();
@@ -730,8 +733,8 @@ export function createMapView(
         for (let left = yields[resource] ?? 0; left > 0; left--) owed.push(resource);
       }
       if (owed.length === 0) continue;
-      const pale = marking && !giving(tile);
-      showTileYield(glyphPool, yieldPatchPool, tile, owed, pale ? LOOK.yieldNotGiven : 1);
+      const grey = marking && assignedTo(shown, tile) && !giving(tile);
+      showTileYield(glyphPool, yieldPatchPool, tile, owed, grey);
     }
   };
 
@@ -855,17 +858,21 @@ export function createMapView(
   onResize(scene, paintAtZoom);
 
   /**
-   * City mode's marks, one on every tile the population stands on, and the claim's. An assign changes
-   * them, so a render repaints them.
+   * City mode's marks, one on every tile the player's city holds, its disc empty where nobody is
+   * assigned to the tile, and the claim's. An assign changes them, so a render repaints them.
    */
   const paintCityMarks = (): void => {
-    assignedPool.hide();
+    heldMarkPool.hide();
+    leftDisc.setVisible(false);
     assignedMarks = new Map();
     paintClaimMarks();
     if (!marking || shown === undefined) return;
+    // The empty discs taken first, so a mark carried stands over every one of them.
+    for (const coord of shown.held) {
+      if (!assignedTo(shown, coord)) asHeldMark(heldMarkPool.take(), coord, false);
+    }
     for (const coord of shown.assigned) {
-      const at = assignedAt(coord);
-      assignedMarks.set(tileKey(coord), assignedPool.take().setPosition(at.x, at.y));
+      assignedMarks.set(tileKey(coord), asHeldMark(heldMarkPool.take(), coord, true));
     }
   };
 
@@ -1584,6 +1591,10 @@ export function createMapView(
       }
     },
     assignedMarkOn: (tile) => assignedMarks.get(tileKey(tile)),
+    leftEmpty: (tile) => {
+      leftDisc.setVisible(tile !== undefined);
+      if (tile !== undefined) asHeldMark(leftDisc, tile, false);
+    },
   });
 
   return {

@@ -6,7 +6,7 @@ import { unitAt, unitOf } from '../rules/units';
 import { EASE, SLIDE_HOME } from './card-motion';
 import { dragged, type Stratum, thingUnder, tookHold } from './design-space';
 import type { MapCamera } from './map-camera';
-import { assignedAt, positionOf } from './map-marks';
+import { heldMarkAt, positionOf } from './map-marks';
 
 /**
  * What one left press has hold of on the map — a unit by the number it is named by, or population
@@ -40,6 +40,8 @@ type MapUnderPress = {
   carry(unit: number | undefined): void;
   /** The mark drawn on a tile the population stands on, and nothing where none is. */
   assignedMarkOn(tile: TileCoords): Phaser.GameObjects.Container | undefined;
+  /** The empty disc on the tile a population carried left, and on no tile on nothing. */
+  leftEmpty(tile: TileCoords | undefined): void;
 };
 
 /** What the left presses on the map have hold of. */
@@ -73,6 +75,8 @@ export function createMapGrab(
   /** What the left press on the map has hold of; nothing while it holds nothing. */
   let grabbed: Grab | undefined;
   let holding = true;
+  /** The population carried whose tile wears the empty disc until it lands or comes home; nothing while none does. */
+  let leaving: Grab | undefined;
 
   /** Each mark a press let go of sliding home: where home is, and the slide. */
   const homing = new Map<
@@ -107,7 +111,7 @@ export function createMapGrab(
         return tile === undefined ? undefined : positionOf(tile);
       }
       case 'assigned':
-        return assignedAt(grab.tile);
+        return heldMarkAt(grab.tile);
     }
   };
 
@@ -119,6 +123,9 @@ export function createMapGrab(
     if (mark === undefined || home === undefined) return;
     const over = (): void => {
       homing.delete(mark);
+      if (leaving !== grab) return;
+      leaving = undefined;
+      view.leftEmpty(undefined);
     };
     const slide = scene.tweens.add({
       targets: mark,
@@ -143,14 +150,19 @@ export function createMapGrab(
   };
 
   /**
-   * A press's drag starting: what it holds, if it is sliding home, stops where it stands, and a unit
-   * is carried over the others, lighting what it reaches.
+   * A press's drag starting: what it holds, if it is sliding home, stops where it stands; a
+   * population leaves the empty disc on its tile, and a unit is carried over the others, lighting
+   * what it reaches.
    */
   const takeHold = (grab: Grab): void => {
     tookHold('left');
     const mark = markOf(grab);
     if (mark !== undefined) homing.get(mark)?.slide.stop();
-    if (grab.kind !== 'unit') return;
+    if (grab.kind === 'assigned') {
+      leaving = grab;
+      view.leftEmpty(grab.tile);
+      return;
+    }
     view.carry(grab.unit);
     view.lightUnit(tileOfUnit(grab.unit));
   };
