@@ -10,7 +10,7 @@ const NPM_E2E = /^\s*npm\s+run\s+e2e\b/;
 
 const REASON =
   "A local Playwright run names the spec it covers — the whole suite is CI's, so run one spec " +
-  '(npx playwright test e2e/<spec>.spec.ts).';
+  '(npx playwright test e2e/<spec>.spec.ts -x).';
 
 process.on('uncaughtException', () => process.exit(0));
 
