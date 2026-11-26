@@ -17,7 +17,7 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **City mode's unassigned tiles** — how a held tile nobody is assigned to is shown in city mode, today darkened as the fog darkens, and how the yield glyphs of a tile that is not giving its yield at income read, today paler.
+- **City mode's unassigned tiles** — in city mode a held tile nobody is assigned to wears the assigned mark's disc empty and a dark of its own, as dark as the fog's and cooler; the yield glyphs of an assigned tile a unit occupies stand in grey and every other glyph in its colour, nothing drawn paler; `e2e/city-mode.spec.ts` proves it. Doc-impact: `docs/MAP-SCREEN.md`, `docs/LOOK.md`. [board/city-modes-unassigned-tiles.md](board/city-modes-unassigned-tiles.md)
 - **The frame and the settle phase** — the line round the screen that tells city mode and the settle phase, how the settle phase is named once city mode's chip is gone, and the end-turn button's look on the settle phase.
 - **The settle cards left in hand** — something standing on the screen for the whole settle phase that says the settle cards still in hand are banished when it ends.
 - **The minimized deal window's presses** — under a minimized deal window every reaction that changes no game state is allowed, entering and leaving city mode among them, where today nothing enters city mode, nothing leaves it and a left click selects nothing, culture's reading of city mode's panel, which selects the claim, among what is dead there.
