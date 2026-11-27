@@ -17,4 +17,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The help sign's arrow** — instead of the help sign's lone question mark, the normal arrow composed with the `?`, or one the cursor pack already holds if it has it.
+- **The help sign's arrow** — the help sign is the arrow worn everywhere with a question mark at its top right, made from two of the pack's pictures and pointing with the arrow's tip; its two files stand in the store in place of the lone question mark's, and the licence record says how they were made; `e2e/cursor.spec.ts` passes. Doc-impact: `docs/LOOK.md`, `public/assets/LICENSES.md`. [board/the-help-signs-arrow.md](board/the-help-signs-arrow.md)
