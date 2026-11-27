@@ -367,8 +367,8 @@ export type ChromeButton = {
 };
 
 /**
- * Whether a button is live, whether it wears the kit's steel in its piece's place and in no look, and
- * where else on its surface its face takes the pointer than on its own box.
+ * Whether a button is live, whether a gold button wears the kit's steel in its gold's place and in no
+ * look, and where else on its surface its face takes the pointer than on its own box.
  */
 export type ButtonReach = {
   // Read while the button is built, so whatever it reads is declared before the button is made.
@@ -397,14 +397,14 @@ export function createChromeButton(
 
   const worn = (): ButtonLook =>
     !live() || !hover.hovered ? 'normal' : held ? 'pressed' : 'hover';
-  /** The piece the button stands as: its well while latched, else the steel or its piece in the look worn. */
-  const wornPiece = (): Fitted => {
-    if (latched) return INACTIVE_TAB;
-    return steel() ? STEEL : buttonIn(piece, worn());
-  };
+  /** The piece the button stands as out of its well: the steel, or its piece in the look worn. */
+  const wornPiece = (): Fitted => (steel() ? STEEL : buttonIn(piece, worn()));
+  // A look swaps the frame and lays nothing: a screen moves a face after it is made (`drawEnding`),
+  // and laying it again would put it back on the box it was made on.
   const dress = (): void => {
-    const fitted = wornPiece();
-    if (face.frame.name !== fitted.frame) fit(face, fitted, box);
+    if (latched) return;
+    const { frame } = wornPiece();
+    if (face.frame.name !== frame) face.setFrame(frame);
   };
   const hover = onHover(face, dress, dress);
 
@@ -431,7 +431,7 @@ export function createChromeButton(
   });
 
   const stand = (): void => {
-    fit(face, wornPiece(), box);
+    fit(face, latched ? INACTIVE_TAB : wornPiece(), box);
   };
   stand();
 
@@ -479,9 +479,12 @@ export function createSignButton(
   let box = laidOn;
   let colour: number | undefined;
   let step = 0;
-  const draw = (): void => {
+  const paint = (): void => {
     const inked = steel() ? LOOK.greyedInk : colour;
     asGlyph(sign, symbol, SIGN_SHARE * box.height, inked === undefined ? {} : { colour: inked });
+  };
+  const draw = (): void => {
+    paint();
     sign.setPosition(box.x + box.width / 2 + step, box.y + box.height / 2 + step);
   };
   draw();
@@ -490,7 +493,7 @@ export function createSignButton(
     sign,
     dress(): void {
       button.dress();
-      draw();
+      paint();
     },
     place(next: Box): void {
       box = next;
@@ -504,7 +507,7 @@ export function createSignButton(
     },
     wear(next: ButtonSign): void {
       symbol = next;
-      draw();
+      paint();
     },
   };
 }
