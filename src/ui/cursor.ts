@@ -27,14 +27,15 @@ type CursorPicture = {
 };
 
 const MIDDLE = { x: 16, y: 16 };
+const ARROW_TIP = { x: 1, y: 0 };
 
 export const CURSORS: Readonly<Record<Cursor, CursorPicture>> = {
-  arrow: { file: 'pointer002.png', point: { x: 1, y: 0 }, fallback: 'default' },
+  arrow: { file: 'pointer002.png', point: ARROW_TIP, fallback: 'default' },
   'pointing hand': { file: 'hand002.png', point: { x: 1, y: 1 }, fallback: 'pointer' },
   'open hand': { file: 'hand004.png', point: MIDDLE, fallback: 'grab' },
   'closed hand': { file: 'hand003.png', point: MIDDLE, fallback: 'grabbing' },
   'not-allowed sign': { file: 'denied001.png', point: MIDDLE, fallback: 'not-allowed' },
-  'help sign': { file: 'question002.png', point: MIDDLE, fallback: 'help' },
+  'help sign': { file: 'arrow-question.png', point: ARROW_TIP, fallback: 'help' },
   'step sign': { file: 'walk001.png', point: MIDDLE, fallback: 'pointer' },
   'attack sign': { file: 'sword001.png', point: MIDDLE, fallback: 'pointer' },
   'aim sign': { file: 'pointer013.png', point: MIDDLE, fallback: 'pointer' },

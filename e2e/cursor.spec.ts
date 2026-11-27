@@ -160,6 +160,7 @@ test('a unit selected wears the step sign on a tile it lights, the attack sign o
   expect(await wornAt(page, await tileOnScreen(page, enemy))).toBe('attack sign');
   expect(await wornAt(page, await tileOnScreen(page, bare))).toBe('arrow');
   expect(await wornAt(page, await onScreen(page, 'summary-health'))).toBe('help sign');
+  expect(await cursorStyleOnCanvas(page)).toMatch(/\/32\/arrow-question\.png"\) 1 0, help$/);
 
   expect(problems).toEqual([]);
 });
