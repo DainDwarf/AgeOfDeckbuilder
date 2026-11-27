@@ -39,6 +39,7 @@ import {
   reactsTo,
   type Stratum,
   tookHold,
+  whileUp,
 } from './design-space';
 import { cardFace } from './face';
 import { LOOK } from './look';
@@ -438,6 +439,18 @@ export function createHand(
     return record.face.footAt(at.x, at.y);
   };
 
+  // A card moves under a still pointer, which hears no `pointermove`: what of it the pointer is on is
+  // read on PRE_UPDATE, before the clock fires a rest (docs/PHASER.md).
+  whileUp(scene, scene.events, Phaser.Scenes.Events.PRE_UPDATE, () => {
+    const pointer = scene.input.activePointer;
+    const reacting = reads() && dragged === undefined;
+    for (const record of laidOut) {
+      if (!record.hover.hovered) continue;
+      small.over(reacting ? nameUnder(record, pointer) : undefined);
+      footBubble.over(record.face, reacting ? onFoot(record, pointer) : undefined);
+    }
+  });
+
   /** The record of a card the hand holds for the first time, every press on its face bound. */
   const meet = (card: ChronicleCard): CardRecord => {
     const face = cards.of(card.key);
@@ -472,25 +485,19 @@ export function createHand(
     pressedOnFace(face, {
       reach: () => (record.hovered ? riseOf(record) / LOOK.liftedCard : 0),
       draggable: true,
-    })
-      .on('dragstart', (pointer: Phaser.Input.Pointer) => {
-        if (!takes()) return;
-        tookHold('left');
-        footBubble.over(face, undefined);
-        unselect();
-        record.hovered = true;
-        settle(record, 0);
-        dragged = {
-          record,
-          grabbed: on.resting.at(pointer.downX, pointer.downY),
-          lifted: { x: record.home.x, y: restingY(record) },
-        };
-      })
-      .on('pointermove', (pointer: Phaser.Input.Pointer) => {
-        const reacting = reads() && dragged === undefined;
-        small.over(reacting ? nameUnder(record, pointer) : undefined);
-        footBubble.over(face, reacting ? onFoot(record, pointer) : undefined);
-      });
+    }).on('dragstart', (pointer: Phaser.Input.Pointer) => {
+      if (!takes()) return;
+      tookHold('left');
+      footBubble.over(face, undefined);
+      unselect();
+      record.hovered = true;
+      settle(record, 0);
+      dragged = {
+        record,
+        grabbed: on.resting.at(pointer.downX, pointer.downY),
+        lifted: { x: record.home.x, y: restingY(record) },
+      };
+    });
 
     reactsTo(root, (pointer): Pointing => {
       switch (taking) {

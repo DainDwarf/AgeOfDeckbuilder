@@ -17,5 +17,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The e2e flakes on CI** — `e2e/reference.spec.ts:278` passes 12 of 12 under `--repeat-each=12` at four local workers, where the code before the fix fails it; CI runs the Playwright suite on eight shards; `DOGMAS.md` _Testing_ says eight runners. Doc-impact: none in `docs/` (`DOGMAS.md` one word; `docs/PHASER.md` only if the cause is a Phaser trap it lacks). [board/e2e-flakes-on-ci.md](board/e2e-flakes-on-ci.md)
 - **Quick wins on the boot and the frame** — the same e2e tests run about 3.5× slower on CI than on 2026-10-30, the boot-only test from 1.0 s to 3.6–5 s, as the look's paintings landed: measure where the boot and the frame go under software drawing and take the cheap wins now, the deeper work left to the Deliverable rung.
