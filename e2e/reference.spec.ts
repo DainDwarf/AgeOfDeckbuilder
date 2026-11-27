@@ -336,7 +336,7 @@ test('a terrain marked on the settle card raises its own face small at a rest an
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standing(page, 'small-card-0')).toBe(false);
   expect(await selected(page, 0, card)).toBe(false);
-  expect(await shows(page, 'settle-phase-chip')).toBe(true);
+  expect(await shows(page, 'settle-phase')).toBe(true);
   expect(await chronicleOf(page)).toEqual(opened);
 
   expect(problems).toEqual([]);

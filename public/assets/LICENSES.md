@@ -60,7 +60,7 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 
 ## UIForge metal kit
 
-- **What:** DRStudios' metal UI kit, the pieces the chrome draws, in `store/uiforge-metal-ui-kit/`, the kit's `pack.json` beside them. The game lifts the shaded strip across the foot of the kit's buttons and paints out the placeholder bar the kit paints in its focused input field as it draws them, the files unchanged.
+- **What:** DRStudios' metal UI kit, the pieces the chrome draws, in `store/uiforge-metal-ui-kit/`, the kit's `pack.json` beside them. The game lifts the shaded strip across the foot of the kit's buttons and paints out the placeholder bar the kit paints in its focused input field as it draws them, the files unchanged. It draws the banner's rim and the panel's without the body inside them.
 - **From:** DRStudios (Deer Rock Studios), <https://drrstudios.itch.io/metal>, bought on 2026-11-20 in the bundle "GAME UI ASSETS PACK OR ONE", <https://itch.io/s/198337/game-ui-assets-pack-or-one>, generated on 2026-08-13 as the kit's `pack.json` records, the files as released.
 - **Licence:** the pack page's own terms, the bundle carrying no licence file: "Royalty-free for commercial and personal projects. Unlimited shipped games. No redistribution of raw assets." The page states that no generative AI was used; the kit's `pack.json` names its maker as DRStudios' own generator, UIForge, its pieces vector shapes and gradients. The files sit in the store, never in this repository.
 - **Credit:** Interface: DRStudios
@@ -74,9 +74,9 @@ Every pack in this folder is recorded here the moment it enters the repository, 
 
 ## game-icons.net
 
-- **What:** nine glyphs, white on nothing, in `game-icons/`: Fire by sbed, Death skull by sbed, Two coins by Delapouite, Stack by Delapouite, Hamburger menu by Delapouite, Fist by Skoll, Crossed axes by Lorc, Hourglass by Lorc and Card discard by Faithtoken.
-- **From:** <https://game-icons.net>, `1x1/sbed/fire`, `1x1/sbed/death-skull`, `1x1/delapouite/two-coins`, `1x1/delapouite/stack`, `1x1/delapouite/hamburger-menu`, `1x1/skoll/fist`, `1x1/lorc/crossed-axes`, `1x1/lorc/hourglass` and `1x1/faithtoken/card-discard`, the SVG files as downloaded on the day they entered.
-- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" and "Death skull" by sbed, <http://opengameart.org/content/95-game-icons>, "Two coins", "Stack" and "Hamburger menu" by Delapouite, <https://delapouite.com>, "Fist" by Skoll, "Crossed axes" and "Hourglass" by Lorc, <https://lorcblog.blogspot.com>, and "Card discard" by Faithtoken, <http://www.faithtoken.com>, from game-icons.net under CC BY 3.0. The files may be modified; the Credits window names the authors, and this record, shown on the licences' page, each glyph's title and its licence.
+- **What:** ten glyphs, white on nothing, in `game-icons/`: Fire by sbed, Death skull by sbed, Two coins by Delapouite, Stack by Delapouite, Hamburger menu by Delapouite, Village by Delapouite, Fist by Skoll, Crossed axes by Lorc, Hourglass by Lorc and Card discard by Faithtoken.
+- **From:** <https://game-icons.net>, `1x1/sbed/fire`, `1x1/sbed/death-skull`, `1x1/delapouite/two-coins`, `1x1/delapouite/stack`, `1x1/delapouite/hamburger-menu`, `1x1/delapouite/village`, `1x1/skoll/fist`, `1x1/lorc/crossed-axes`, `1x1/lorc/hourglass` and `1x1/faithtoken/card-discard`, the SVG files as downloaded on the day they entered.
+- **Licence:** CC BY 3.0, <https://creativecommons.org/licenses/by/3.0/>. Credit is required: "Fire" and "Death skull" by sbed, <http://opengameart.org/content/95-game-icons>, "Two coins", "Stack", "Hamburger menu" and "Village" by Delapouite, <https://delapouite.com>, "Fist" by Skoll, "Crossed axes" and "Hourglass" by Lorc, <https://lorcblog.blogspot.com>, and "Card discard" by Faithtoken, <http://www.faithtoken.com>, from game-icons.net under CC BY 3.0. The files may be modified; the Credits window names the authors, and this record, shown on the licences' page, each glyph's title and its licence.
 - **Credit:** Icons: sbed, Delapouite, Skoll, Lorc and Faithtoken, [game-icons.net](https://game-icons.net)
 
 ## Material Design Icons

@@ -8,6 +8,7 @@ export type PileKind = 'draw-pile' | 'discard-pile' | 'exhaust-pile';
 /** The buttons that wear a sign and no word, each a symbol of the cast. */
 export type ButtonSign =
   | 'end-turn-button'
+  | 'end-settle-phase-button'
   | 'menu-button'
   | 'icons-button'
   | 'faction-signs-button'
@@ -74,6 +75,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'discard-pile': 'game-icons/card-discard.svg',
   'exhaust-pile': 'material-design-icons/archive.svg',
   'end-turn-button': 'game-icons/hourglass.svg',
+  'end-settle-phase-button': 'game-icons/village.svg',
   'menu-button': 'game-icons/hamburger-menu.svg',
   'icons-button': 'material-design-icons/map-marker.svg',
   'faction-signs-button': 'material-design-icons/shield-crown.svg',

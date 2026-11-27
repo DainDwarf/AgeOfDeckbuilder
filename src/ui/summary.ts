@@ -82,7 +82,7 @@ const ASIDE_SIZE = 13;
 const ASIDE_STYLE = {
   fontFamily: UI_FONT,
   fontSize: `${ASIDE_SIZE}px`,
-  color: css(LOOK.summaryPalerInk),
+  color: css(LOOK.panelPalerInk),
 };
 
 /** What a stat of the summary raises at a rest: a stat a unit's card reads, or what entering a tile costs. */
@@ -213,7 +213,7 @@ export function createSummary(
   /** A unit's four numbers, each after its sign; how far across they reach. */
   const layStats = (stats: SummaryStats): number => {
     clearRow();
-    const paler = LOOK.summaryPalerInk;
+    const paler = LOOK.panelPalerInk;
     statAt('health', 'health', stats.health);
     x += BETWEEN_NUMBERS;
     statAt('move', 'move', stats.move, paler);
@@ -247,7 +247,7 @@ export function createSummary(
     asideGlyphs.hide();
     for (const glyph of centredMarks(aside, {}).glyphs) {
       asGlyph(asideGlyphs.take(), glyph.symbol, GLYPH_SHARE * ASIDE_SIZE, {
-        colour: LOOK.summaryPalerInk,
+        colour: LOOK.panelPalerInk,
       }).setPosition(glyph.x, glyph.y);
     }
   };
@@ -304,7 +304,7 @@ export function createSummary(
     );
     if (laid) x += BEFORE_MOVE;
     const { movementCost } = cardIn(cards, 'terrain').terrain;
-    statAt('movement-cost', 'move', movementCostReading(movementCost), LOOK.summaryPalerInk);
+    statAt('movement-cost', 'move', movementCostReading(movementCost), LOOK.panelPalerInk);
   };
 
   return {

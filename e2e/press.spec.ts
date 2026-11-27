@@ -757,7 +757,7 @@ test('a click on the line naming the aim lands on the tile under it, and plays t
   expect(problems).toEqual([]);
 });
 
-test('on the settle phase the chip and the dead end-turn button stop a press: each lets the settle card being aimed go and settles nothing, and the chip on a clean screen rings no tile', async ({
+test('on the settle phase its panel and the dead end-turn button stop a press: each lets the settle card being aimed go and settles nothing, and the panel on a clean screen rings no tile', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -766,19 +766,19 @@ test('on the settle phase the chip and the dead end-turn button stop a press: ea
   await openSaved(page, opened);
   const home = await onScreen(page, 'hand-0');
 
-  await carriedUnder(page, CENTRE, 'settle-phase-chip');
-  await click(page, 'settle-phase-chip');
+  await carriedUnder(page, CENTRE, 'settle-phase-panel');
+  await click(page, 'settle-phase-panel');
   await rested(page);
   expect(await ringedTile(page)).toBeUndefined();
 
   await page.mouse.click(home.x, home.y);
   await aimed(page);
-  await click(page, 'settle-phase-chip');
+  await click(page, 'settle-phase-panel');
   await expect.poll(() => standing(page, 'aim')).toBe(false);
   await expect.poll(() => selected(page, 0, home)).toBe(false);
   expect(await chronicleOf(page)).toEqual(opened);
 
-  // The centre stands under the chip, which a press on it would land on: its neighbour carries the map.
+  // The centre stands under the panel, which a press on it would land on: its neighbour carries the map.
   await carriedUnder(page, { q: CENTRE.q, r: CENTRE.r + 1 }, 'end-turn');
   await page.mouse.click(home.x, home.y);
   await aimed(page);

@@ -1,94 +1,95 @@
 import type Phaser from 'phaser';
-import { addText, onResize, type Stratum, screenSize, UI_FONT } from './design-space';
+import {
+  createChromeFrame,
+  createChromePanel,
+  hangChromePanel,
+  PANEL_RIMS,
+  standChromeFrame,
+  takesThePointer,
+} from './chrome';
+import type { ModeFrame } from './chrome-kit';
+import { HUNG_NAME_STYLE } from './city-panel';
+import {
+  addText,
+  BAR_HEIGHT,
+  onResize,
+  ownBoxOf,
+  type Stratum,
+  screenSize,
+  UI_FONT,
+} from './design-space';
 import { css, LOOK } from './look';
-import { cornerNow } from './menu';
+import { text } from './text';
 
-/** How wide the frame's stroke is; Phaser centres a stroke on its path, hence the half-width inset. */
-const STROKE = 8;
-
-/** How far the chip's fill reaches past its label, sideways and down. */
-const PADDING = { x: 40, y: 10 };
-
-const LABEL_STYLE = {
-  fontFamily: UI_FONT,
-  fontSize: '16px',
-  fontStyle: 'bold',
-  color: css(LOOK.ink),
-};
-
-/** The frame, and the chip where it wears one, standing only while what they name is on. */
+/** What the chronicle screen shows it is standing in, standing only while that is on. */
 export type Standing = { show(on: boolean): void };
 
-/** What one standing is drawn for: the name its objects take, its colour, and the word on its chip where it wears one. */
-export type Stood = {
-  readonly name: string;
-  readonly colour: number;
-  readonly label?: string;
-};
-
-/**
- * What the chronicle screen shows it is standing in — city mode, the settle phase: a frame round the
- * screen in that colour, and the chip naming it under the summary's place where it wears one, reacting
- * to no press. What is on is the scene's.
- */
-export function createStanding(
+/** The frame round the screen the standing is drawn as, on the stratum, named `name`, hidden. */
+export function createModeFrame(
   scene: Phaser.Scene,
-  on: { readonly frame: Stratum; readonly chip: Stratum },
-  stood: Stood,
+  on: Stratum,
+  stood: ModeFrame,
+  name: string,
 ): Standing {
-  const frame = scene.add
-    .rectangle(0, 0, 1, 1)
-    .setOrigin(0, 0)
-    .setStrokeStyle(STROKE, stood.colour)
-    .setName(`${stood.name}-frame`)
-    .setVisible(false);
-  on.frame.layer.add(frame);
+  const frame = createChromeFrame(scene, stood).setName(name).setVisible(false);
+  on.layer.add(frame);
   onResize(scene, () => {
-    const screen = screenSize();
-    frame
-      .setPosition(STROKE / 2, STROKE / 2)
-      .setSize(screen.width - STROKE, screen.height - STROKE);
+    standChromeFrame(frame, stood, screenSize());
   });
-  const { label } = stood;
-  const chip = label === undefined ? undefined : createChip(scene, on.chip, { ...stood, label });
-
   return {
     show(on: boolean): void {
       frame.setVisible(on);
-      chip?.show(on);
     },
   };
 }
 
-/** The chip naming a standing under the summary's place, standing only while it is on. */
-function createChip(scene: Phaser.Scene, on: Stratum, stood: Required<Stood>): Standing {
-  const chip = scene.add
-    .rectangle(0, 0, 1, 1, stood.colour)
-    .setOrigin(0, 0)
-    .setName(`${stood.name}-chip`)
-    .setVisible(false);
-  const label = addText(scene, 0, 0, stood.label, LABEL_STYLE)
-    .setOrigin(0.5, 0.5)
-    .setName(`${stood.name}-chip-label`)
-    .setVisible(false);
-  on.layer.add([chip, label]);
+/** How far the settle phase's panel reaches past its longer line on each side. */
+const PAST_THE_LINE = 24;
 
-  const width = label.width + PADDING.x;
-  const height = label.height + PADDING.y;
-  chip.setSize(width, height);
+/** How far under the resource bar's foot the middle of the phase's name stands, the middle of its sentence, and the panel's foot. */
+const UNDER_THE_BAR = { name: 18, sentence: 39, foot: 48 };
+
+const SENTENCE_STYLE = {
+  fontFamily: UI_FONT,
+  fontSize: '14px',
+  color: css(LOOK.panelPalerInk),
+};
+
+/**
+ * The settle phase's panel on the stratum, named `settle-phase`, hidden: hung under the resource
+ * bar's middle, the phase's name over what its end does to the hand.
+ */
+export function createSettlePanel(scene: Phaser.Scene, on: Stratum): Standing {
+  // Taking the pointer, though it reacts to no press, so no press reaches the map under it.
+  const panel = takesThePointer(createChromePanel(scene, PANEL_RIMS.plate)).setName(
+    'settle-phase-panel',
+  );
+  const name = addText(scene, 0, UNDER_THE_BAR.name, text('settle-panel.name'), HUNG_NAME_STYLE)
+    .setOrigin(0.5)
+    .setName('settle-phase-name');
+  const sentence = addText(
+    scene,
+    0,
+    UNDER_THE_BAR.sentence,
+    text('settle-panel.banished'),
+    SENTENCE_STYLE,
+  )
+    .setOrigin(0.5)
+    .setName('settle-phase-sentence');
+  const width = Math.max(ownBoxOf(name).width, ownBoxOf(sentence).width) + 2 * PAST_THE_LINE;
+  hangChromePanel(panel, -width / 2, width, UNDER_THE_BAR.foot);
+  const root = scene.add
+    .container(0, BAR_HEIGHT, [panel, name, sentence])
+    .setName('settle-phase')
+    .setVisible(false);
+  on.layer.add(root);
   onResize(scene, () => {
-    const { right, top } = cornerNow().chip;
-    chip.setPosition(right - width, top);
-    label.setPosition(right - width / 2, top + height / 2);
+    root.setX(screenSize().width / 2);
   });
 
   return {
     show(on: boolean): void {
-      chip.setVisible(on);
-      label.setVisible(on);
-      // Interactive while it stands, reacting to no press, so no press reaches the map under it.
-      if (on) chip.setInteractive();
-      else chip.disableInteractive();
+      root.setVisible(on);
     },
   };
 }

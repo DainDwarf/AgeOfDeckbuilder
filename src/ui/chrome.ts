@@ -9,12 +9,17 @@ import {
   COUNTER,
   FIELD,
   type Fitted,
+  FRAME_MARGIN,
+  FRAME_SCALE,
   INACTIVE_TAB,
+  MODE_FRAMES,
+  type ModeFrame,
   PANEL,
   type Piece,
   RIBBON,
   RIM,
   SHADOW_MARGIN,
+  STEEL,
   WINDOW_BAND,
   WINDOW_BAND_FOOT,
   WINDOW_RIM,
@@ -51,18 +56,19 @@ function sliceOf(scene: Phaser.Scene, { frame, cuts }: Piece): Phaser.GameObject
 }
 
 /**
- * The piece laid so its own box is the box handed, its shadow round it, each of its pixels drawn
- * `scale` units across.
+ * The piece laid so its own box is the box handed, its shadow round it reaching `margin` of its
+ * pixels past the box, each of its pixels drawn `scale` units across.
  */
 function lay(
   slice: Phaser.GameObjects.NineSlice,
   { frame, cuts }: Piece,
   box: Box,
   scale: number,
+  margin = SHADOW_MARGIN,
 ): Phaser.GameObjects.NineSlice {
   if (slice.frame.name !== frame) slice.setFrame(frame);
   const { left, top, right, bottom } = cuts;
-  const room = 2 * SHADOW_MARGIN;
+  const room = 2 * margin;
   slice.setSlices(box.width / scale + room, box.height / scale + room, left, right, top, bottom);
   // `setSlices` leaves the display origin a hit test reads where the old size put it
   // (phaser/src/gameobjects/nineslice/NineSlice.js:428-502, phaser/src/input/InputManager.js:966).
@@ -117,6 +123,44 @@ export function standChromePanel(
   box: Box,
 ): Phaser.GameObjects.NineSlice {
   return lay(panel, PANEL, box, panel.scaleX);
+}
+
+/** How far a panel hung from the resource bar's foot runs up behind it, its top corners with it. */
+const BEHIND_THE_BAR = 10;
+
+/**
+ * The panel hung from the resource bar's foot, in the room of a point on the foot: `width` across
+ * from `left`, reaching `height` under the foot.
+ */
+export function hangChromePanel(
+  panel: Phaser.GameObjects.NineSlice,
+  left: number,
+  width: number,
+  height: number,
+): Phaser.GameObjects.NineSlice {
+  return standChromePanel(panel, {
+    x: left,
+    y: -BEHIND_THE_BAR,
+    width,
+    height: height + BEHIND_THE_BAR,
+  });
+}
+
+/** The frame round the screen a standing is drawn as, drawn nowhere until `standChromeFrame` lays it. */
+export function createChromeFrame(
+  scene: Phaser.Scene,
+  stood: ModeFrame,
+): Phaser.GameObjects.NineSlice {
+  return sliceOf(scene, MODE_FRAMES[stood]);
+}
+
+/** The frame laid round a screen that large, its rim's outer edge on the screen's edge. */
+export function standChromeFrame(
+  frame: Phaser.GameObjects.NineSlice,
+  stood: ModeFrame,
+  screen: { readonly width: number; readonly height: number },
+): void {
+  lay(frame, MODE_FRAMES[stood], { x: 0, y: 0, ...screen }, FRAME_SCALE, FRAME_MARGIN);
 }
 
 /** How far under a window's top the middle of its gold band stands, between the rim's inner edge and the band's foot. */
@@ -323,12 +367,13 @@ export type ChromeButton = {
 };
 
 /**
- * Whether a button is live, and where else on its surface its face takes the pointer than on its own
- * box.
+ * Whether a button is live, whether it wears the kit's steel in its piece's place and in no look, and
+ * where else on its surface its face takes the pointer than on its own box.
  */
 export type ButtonReach = {
   // Read while the button is built, so whatever it reads is declared before the button is made.
   readonly live?: () => boolean;
+  readonly steel?: () => boolean;
   readonly reaches?: (x: number, y: number) => boolean;
 };
 
@@ -342,7 +387,7 @@ export function createChromeButton(
   piece: ButtonPiece,
   laidOn: Box,
   name: string,
-  { live = () => true, reaches }: ButtonReach = {},
+  { live = () => true, steel = () => false, reaches }: ButtonReach = {},
 ): ChromeButton {
   let box = laidOn;
   const face = takesThePointer(sliceOf(scene, buttonIn(piece, 'normal')).setName(name), reaches);
@@ -352,10 +397,14 @@ export function createChromeButton(
 
   const worn = (): ButtonLook =>
     !live() || !hover.hovered ? 'normal' : held ? 'pressed' : 'hover';
+  /** The piece the button stands as: its well while latched, else the steel or its piece in the look worn. */
+  const wornPiece = (): Fitted => {
+    if (latched) return INACTIVE_TAB;
+    return steel() ? STEEL : buttonIn(piece, worn());
+  };
   const dress = (): void => {
-    if (latched) return;
-    const { frame } = buttonIn(piece, worn());
-    if (face.frame.name !== frame) face.setFrame(frame);
+    const fitted = wornPiece();
+    if (face.frame.name !== fitted.frame) fit(face, fitted, box);
   };
   const hover = onHover(face, dress, dress);
 
@@ -382,7 +431,7 @@ export function createChromeButton(
   });
 
   const stand = (): void => {
-    fit(face, latched ? INACTIVE_TAB : buttonIn(piece, worn()), box);
+    fit(face, wornPiece(), box);
   };
   stand();
 
@@ -406,33 +455,43 @@ export type SignButton = ChromeButton & {
   readonly sign: Phaser.GameObjects.Container;
   /** The sign drawn in that colour, its symbol's own where none is handed, `step` down and right of the middle. */
   ink(colour?: number, step?: number): void;
+  /** The sign drawn as that symbol's glyph. */
+  wear(symbol: ButtonSign): void;
 };
 
 /**
  * A button of the kit on the box, its face named `name`, wearing the symbol's sign on its middle, in
- * the symbol's colour and with no outline, as wide a share of the box as a pile's sign is of its round.
+ * the symbol's colour, or the steel's greyed ink while it wears the steel, with no outline, as wide a
+ * share of the box as a pile's sign is of its round.
  */
 export function createSignButton(
   scene: Phaser.Scene,
   piece: ButtonPiece,
-  symbol: ButtonSign,
+  wornFirst: ButtonSign,
   laidOn: Box,
   name: string,
-  reach?: ButtonReach,
+  reach: ButtonReach = {},
 ): SignButton {
   const button = createChromeButton(scene, piece, laidOn, name, reach);
+  const { steel = () => false } = reach;
   const sign = glyphMark(scene).setName(`${name}-sign`);
+  let symbol = wornFirst;
   let box = laidOn;
   let colour: number | undefined;
   let step = 0;
   const draw = (): void => {
-    asGlyph(sign, symbol, SIGN_SHARE * box.height, colour === undefined ? {} : { colour });
+    const inked = steel() ? LOOK.steelSignInk : colour;
+    asGlyph(sign, symbol, SIGN_SHARE * box.height, inked === undefined ? {} : { colour: inked });
     sign.setPosition(box.x + box.width / 2 + step, box.y + box.height / 2 + step);
   };
   draw();
   return {
     ...button,
     sign,
+    dress(): void {
+      button.dress();
+      draw();
+    },
     place(next: Box): void {
       box = next;
       button.place(next);
@@ -441,6 +500,10 @@ export function createSignButton(
     ink(next?: number, by = 0): void {
       colour = next;
       step = by;
+      draw();
+    },
+    wear(next: ButtonSign): void {
+      symbol = next;
       draw();
     },
   };

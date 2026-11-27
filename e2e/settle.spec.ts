@@ -1,10 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { CATALOGUE } from '../src/content/catalogue';
 import { aimOf } from '../src/rules/cards';
 import { cardOf } from '../src/rules/catalogue';
 import { admitted, apply, outcome } from '../src/rules/chronicle';
 import { CENTRE, tileAt, tileKey } from '../src/rules/map';
 import { inSight } from '../src/rules/sight';
+import { glyphFileOf } from '../src/ui/cast';
+import { LOOK } from '../src/ui/look';
+import { text } from '../src/ui/text';
 import {
   aimed,
   borderColours,
@@ -18,23 +21,70 @@ import {
   endTurnChip,
   endTurnHovered,
   faceCounts,
+  hungFromTheBar,
   idsOf,
   launchedAs,
   marksIn,
   onScreen,
   openSaved,
-  pieceOnScreenOf,
-  pieceWorn,
+  type PieceWorn,
+  pieceWornOf,
   playedOn,
   playedOut,
   readings,
   rested,
-  ringedTile,
   shows,
   standing,
   stoppedTurn,
   watch,
 } from './chronicle-screen';
+
+/**
+ * What the chronicle screen shows of the settle phase: whether its frame stands, its panel's two
+ * lines while it stands, whether a chip stands, and End turn's piece and the sign on it with its ink.
+ */
+type PhaseShown = {
+  frame: boolean;
+  panel: (string | undefined)[] | undefined;
+  chip: boolean;
+  endTurn: { piece: PieceWorn['piece']; signs: readonly string[]; inks: readonly number[] };
+};
+
+/** What the chronicle screen shows of the settle phase, in one question to the page. */
+async function phaseShown(page: Page): Promise<PhaseShown> {
+  const read = await readings(page, [
+    'settle-phase-frame',
+    'settle-phase',
+    'settle-phase-name',
+    'settle-phase-sentence',
+    'settle-phase-chip',
+    'end-turn',
+    'end-turn-sign',
+  ]);
+  const sign = read('end-turn-sign');
+  return {
+    frame: read('settle-phase-frame').shows,
+    panel: read('settle-phase').shows
+      ? [read('settle-phase-name').text, read('settle-phase-sentence').text]
+      : undefined,
+    chip: read('settle-phase-chip').standing,
+    endTurn: {
+      piece: pieceWornOf(read('end-turn')).piece,
+      signs: sign.glyphsDrawn,
+      inks: sign.glyphColours,
+    },
+  };
+}
+
+/** What the settle phase shows out of city mode, End turn wearing that piece and its village in that ink. */
+function onTheSettlePhase(piece: PieceWorn['piece'], ink: number): PhaseShown {
+  return {
+    frame: true,
+    panel: [text('settle-panel.name'), text('settle-panel.banished')],
+    chip: false,
+    endTurn: { piece, signs: [glyphFileOf('end-settle-phase-button')], inks: [ink] },
+  };
+}
 
 test('a chronicle opens on the settle phase with the city standing nowhere, and the settle card puts it on the tile it is aimed at', async ({
   page,
@@ -60,9 +110,11 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await marksIn(page, 'border')).toBe(0);
 
   expect(await endTurnChip(page)).toBeUndefined();
-  expect((await pieceWorn(page, 'end-turn')).piece).toBe('gold');
-  expect(await shows(page, 'settle-phase-frame')).toBe(true);
-  expect(await shows(page, 'settle-phase-chip')).toBe(true);
+  expect(await phaseShown(page)).toEqual(onTheSettlePhase('steel', LOOK.steelSignInk));
+  const hung = await hungFromTheBar(page, 'settle-phase-panel');
+  expect(hung.over).toBeGreaterThan(0);
+  expect(hung.under).toBeGreaterThan(0);
+  expect(hung.aside).toBeCloseTo(0, 1);
   await click(page, 'end-turn');
   await rested(page);
   await rested(page);
@@ -87,6 +139,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
 
   const standingCity = await chronicleOf(page);
   expect(standingCity.city).toEqual(at);
+  expect(await phaseShown(page)).toEqual(onTheSettlePhase('gold', LOOK.metalInk));
   expect(tileAt(standingCity.tiles, at)?.building).toBe(civilization.city.building);
   expect(tileAt(standingCity.tiles, at)?.terrain).toBe(tileAt(opened.tiles, at)?.terrain);
   const sees = inSight(CATALOGUE, standingCity);
@@ -106,9 +159,12 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(ticked).toEqual(outcome(apply(CATALOGUE, settled, { type: 'end-turn' })));
   expect(ticked.turn).toBe(1);
   expect(await standing(page, 'capstone')).toBe(false);
-  expect((await pieceWorn(page, 'end-turn')).piece).toBe('gold');
-  expect(await shows(page, 'settle-phase-frame')).toBe(false);
-  expect(await shows(page, 'settle-phase-chip')).toBe(false);
+  expect(await phaseShown(page)).toEqual({
+    frame: false,
+    panel: undefined,
+    chip: false,
+    endTurn: { piece: 'gold', signs: [glyphFileOf('end-turn-button')], inks: [LOOK.metalInk] },
+  });
   expect(ticked.hand).toHaveLength(5);
   for (const pile of [ticked.hand, ticked.drawPile, ticked.discardPile, ticked.exhaustPile]) {
     for (const { id } of opened.hand) expect(idsOf(pile)).not.toContain(id);
@@ -117,7 +173,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(problems).toEqual([]);
 });
 
-test('city mode entered once the city stands hides the settle phase’s frame and chip, and leaving it brings them back', async ({
+test('city mode entered once the city stands takes the settle phase’s frame and panel down, and leaving it brings them back', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -133,32 +189,16 @@ test('city mode entered once the city stands hides the settle phase’s frame an
   await page.keyboard.press('c');
   await expect.poll(() => shows(page, 'city-mode')).toBe(true);
   expect(await shows(page, 'city-frame')).toBe(true);
-  expect(await shows(page, 'settle-phase-chip')).toBe(false);
-  expect(await shows(page, 'settle-phase-frame')).toBe(false);
+  expect(await phaseShown(page)).toEqual({
+    ...onTheSettlePhase('gold', LOOK.metalInk),
+    frame: false,
+    panel: undefined,
+  });
 
   await page.keyboard.press('Escape');
   await expect.poll(() => shows(page, 'city-mode')).toBe(false);
-  expect(await shows(page, 'settle-phase-chip')).toBe(true);
-  expect(await shows(page, 'settle-phase-frame')).toBe(true);
-
-  expect(problems).toEqual([]);
-});
-
-test('the settle phase’s chip stands under the summary, its right edge on the summary’s', async ({
-  page,
-}) => {
-  const problems = watch(page);
-
-  await openSaved(page, launchedAs(1));
-  await click(page, `tile-${tileKey(CENTRE)}`);
-  await expect.poll(() => ringedTile(page)).toBe(tileKey(CENTRE));
-
-  const read = await readings(page, ['summary-panel', 'settle-phase-chip']);
-  expect(read('summary-panel').standing).toBe(true);
-  const summary = pieceOnScreenOf(read('summary-panel'));
-  const chip = read('settle-phase-chip').boundsOnScreen;
-  expect(chip.y).toBeGreaterThan(summary.y + summary.height);
-  expect(chip.x + chip.width).toBeCloseTo(summary.x + summary.width, 1);
+  expect(await shows(page, 'city-frame')).toBe(false);
+  expect(await phaseShown(page)).toEqual(onTheSettlePhase('gold', LOOK.metalInk));
 
   expect(problems).toEqual([]);
 });

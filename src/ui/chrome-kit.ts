@@ -1,4 +1,5 @@
-import type { Retouched, Sheet } from './sheet';
+import { LOOK } from './look';
+import { blankCanvas, type Made, type Retouched, type Sheet } from './sheet';
 
 /** The folder DRStudios' metal kit stands in, under the assets folder, at the scale the game loads. */
 const KIT = 'store/uiforge-metal-ui-kit/png/2x';
@@ -166,6 +167,96 @@ export const BUTTONS: Readonly<Record<ButtonPiece, Button>> = {
   },
 };
 
+/** The kit's disabled gold button, its steel: cut as the gold, its strip on the gold's rows. */
+export const STEEL: Fitted = {
+  frame: `${KIT}/btn_cta_disabled.png`,
+  cuts: BUTTONS.gold.cuts,
+  height: BUTTONS.gold.height,
+};
+
+/** What a frame round the screen is drawn for: city mode, or the settle phase. */
+export type ModeFrame = 'city-mode' | 'settle-phase';
+
+/**
+ * How far in from its file's edge the outer edge of the rim of the kit's panel and of its banner
+ * stands, in its pixels, the shadow outside it: a piece's box, `SHADOW_MARGIN` in, cuts into the rim.
+ */
+export const FRAME_MARGIN = 8.5;
+
+/** How many units a pixel of a frame's file is drawn across: its rim 12 units wide. */
+export const FRAME_SCALE = 12 / RIM.breadth;
+
+/** The glow inside a frame: its strength against the rim, how many units in it is gone, and the power its fall is raised to. */
+const GLOW = { strength: 0.8, reach: 64, fall: 2.4 };
+
+/** How far in from each edge of a frame's file its corners are cut, in its pixels: past the glow's reach. */
+const FRAME_CUT = Math.ceil(FRAME_MARGIN + RIM.breadth + GLOW.reach / FRAME_SCALE) + 1;
+const FRAME_CUTS: Cuts = { left: FRAME_CUT, top: FRAME_CUT, right: FRAME_CUT, bottom: FRAME_CUT };
+
+/**
+ * A file of the kit made a frame of that colour, in place: everything inside the rim's inner edge
+ * taken out, and from that edge a glow of the colour falling inward, round the rim's inner corners as
+ * along its sides, the pixels across the edge shared between the two.
+ */
+function framed(colour: number): (pixels: ImageData) => void {
+  const channels = [(colour >> 16) & 0xff, (colour >> 8) & 0xff, colour & 0xff];
+  return ({ data, width, height }) => {
+    const inset = FRAME_MARGIN + RIM.breadth;
+    const straight = { x: width / 2 - inset - RIM.corner, y: height / 2 - inset - RIM.corner };
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const across = Math.abs(x + 0.5 - width / 2) - straight.x;
+        const down = Math.abs(y + 0.5 - height / 2) - straight.y;
+        const outside =
+          Math.hypot(Math.max(across, 0), Math.max(down, 0)) +
+          Math.min(Math.max(across, down), 0) -
+          RIM.corner;
+        const inside = Math.min(1, Math.max(0, 0.5 - outside));
+        if (inside === 0) continue;
+        const depth = (Math.max(0, -outside) * FRAME_SCALE) / GLOW.reach;
+        const glow = depth >= 1 ? 0 : inside * GLOW.strength * (1 - depth) ** GLOW.fall;
+        const at = 4 * (y * width + x);
+        const rim = (1 - inside) * (data[at + 3] / 0xff);
+        const alpha = rim + glow;
+        for (const [channel, value] of channels.entries()) {
+          data[at + channel] = alpha === 0 ? 0 : (data[at + channel] * rim + value * glow) / alpha;
+        }
+        data[at + 3] = 0xff * alpha;
+      }
+    }
+  };
+}
+
+/** The kit's banner, its gold rim a frame's in city mode. */
+const BANNER = `${KIT}/banner_normal.png`;
+
+/** The kit's panel's file, as large as it is painted. */
+const PANEL_FILE = { width: 760, height: 520 };
+
+/** The kit's panel's silver rim, the settle phase's frame, made off a copy of the panel. */
+const PANEL_FRAME: Made = {
+  frame: 'panel-rim',
+  ...PANEL_FILE,
+  paint: (context, paintingIn) => {
+    const { canvas, x, y, width, height } = paintingIn(CHROME_SHEET_KEY, PANEL.frame);
+    if (width !== PANEL_FILE.width || height !== PANEL_FILE.height) {
+      throw new Error(`the kit's panel is painted ${width} by ${height}`);
+    }
+    const on = blankCanvas(width, height);
+    on.drawImage(canvas, x, y, width, height, 0, 0, width, height);
+    const pixels = on.getImageData(0, 0, width, height);
+    framed(LOOK.settlePhase)(pixels);
+    on.putImageData(pixels, 0, 0);
+    context.drawImage(on.canvas, 0, 0);
+  },
+};
+
+/** The frame round the screen each standing is drawn as. */
+export const MODE_FRAMES: Readonly<Record<ModeFrame, Piece>> = {
+  'city-mode': { frame: BANNER, cuts: FRAME_CUTS },
+  'settle-phase': { frame: PANEL_FRAME.frame, cuts: FRAME_CUTS },
+};
+
 /** The kit's window, whose gold band a window of the menu wears. */
 const MODAL = `${KIT}/modal_normal.png`;
 
@@ -199,9 +290,12 @@ export const WINDOW_BAND: Piece & { readonly width: number; readonly height: num
   height: BAND_PIXELS + LINE_PIXELS,
 };
 
-const BUTTON_FILES: readonly Retouched[] = Object.values(BUTTONS).flatMap(({ looks, strip }) =>
-  Object.values(looks).map((file) => ({ file, retouch: liftStrip(strip) })),
-);
+const BUTTON_FILES: readonly Retouched[] = [
+  ...Object.values(BUTTONS).flatMap(({ looks, strip }) =>
+    Object.values(looks).map((file) => ({ file, retouch: liftStrip(strip) })),
+  ),
+  { file: STEEL.frame, retouch: liftStrip(BUTTONS.gold.strip) },
+];
 
 export const CHROME_SHEET: Sheet = {
   key: CHROME_SHEET_KEY,
@@ -213,9 +307,15 @@ export const CHROME_SHEET: Sheet = {
     COUNTER.frame,
     RIBBON.frame,
     FIELD.frame,
+    BANNER,
   ],
-  retouched: [...BUTTON_FILES, { file: FIELD.frame, retouch: paintOutBar }],
+  retouched: [
+    ...BUTTON_FILES,
+    { file: FIELD.frame, retouch: paintOutBar },
+    { file: BANNER, retouch: framed(LOOK.cityMode) },
+  ],
   made: [
+    PANEL_FRAME,
     {
       frame: WINDOW_BAND.frame,
       width: WINDOW_BAND.width,

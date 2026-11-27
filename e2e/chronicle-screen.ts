@@ -113,6 +113,7 @@ import {
   FIELD,
   INACTIVE_TAB,
   SHADOW_MARGIN,
+  STEEL,
 } from '../src/ui/chrome-kit';
 import type { ChronicleScene } from '../src/ui/chronicle-scene';
 import { type PileStack, pileStacksOf } from '../src/ui/collection-layout';
@@ -148,6 +149,7 @@ type PageReading = {
   tints: (number | undefined)[];
   strengths: number[];
   glyphColours: Answer<number[]>;
+  glyphsDrawn: Answer<string[]>;
   place: Answer<{ x: number; y: number }>;
   placeOnScreen: Answer<OnScreen>;
   axes: Answer<Axes>;
@@ -799,6 +801,15 @@ export async function readNames(page: Page): Promise<void> {
         if (inside === undefined) throw new Error(complaint);
         return inside;
       };
+      /** The glyph of every `glyphMark` of the name that stands shown; any other object throws. */
+      const glyphsShown = (): Phaser.GameObjects.Image[] => {
+        const glyphIn = window.glyphIn;
+        if (glyphIn === undefined) throw new Error('the page reads no glyph');
+        return shownOf(all).map(({ object }) => {
+          if (!isGlyphMark(object)) throw new Error(`${name} is no glyph`);
+          return glyphIn(object);
+        });
+      };
       /** Where a Text sits on the page, its middle, and how wide and tall it stands there. */
       const textOnScreen = (label: Phaser.GameObjects.Text): Spot => {
         const middle = label
@@ -855,14 +866,8 @@ export async function readNames(page: Page): Promise<void> {
         strengths: shownOf(all).map(
           ({ object }) => (object as Partial<Phaser.GameObjects.Components.Alpha>).alpha ?? 1,
         ),
-        glyphColours: answer(() => {
-          const glyphIn = window.glyphIn;
-          if (glyphIn === undefined) throw new Error('the page reads no glyph');
-          return shownOf(all).map(({ object }) => {
-            if (!isGlyphMark(object)) throw new Error(`${name} is no glyph`);
-            return glyphIn(object).tint;
-          });
-        }),
+        glyphColours: answer(() => glyphsShown().map(({ tint }) => tint)),
+        glyphsDrawn: answer(() => glyphsShown().map(({ frame }) => frame.name)),
         place: answer(() => {
           const at = matrix();
           return { x: at.tx, y: at.ty };
@@ -1854,16 +1859,17 @@ export async function shows(page: Page, name: string): Promise<boolean> {
 
 /**
  * What a piece of the chrome wears: a button of the kit in one of its looks, the kit's inactive tab,
- * or its field.
+ * its field, or its steel.
  */
 export type PieceWorn =
   | { readonly piece: ButtonPiece; readonly look: ButtonLook }
-  | { readonly piece: 'inactive-tab' | 'field' };
+  | { readonly piece: 'inactive-tab' | 'field' | 'steel' };
 
 /** What a piece of the chrome wears, read off the frame of the kit its reading draws. */
 export function pieceWornOf({ frame }: Reading): PieceWorn {
   if (frame === INACTIVE_TAB.frame) return { piece: 'inactive-tab' };
   if (frame === FIELD.frame) return { piece: 'field' };
+  if (frame === STEEL.frame) return { piece: 'steel' };
   for (const [piece, { looks }] of Object.entries(BUTTONS)) {
     for (const look of Object.keys(looks) as ButtonLook[]) {
       if (looks[look] === frame) {
@@ -1891,6 +1897,26 @@ export async function wellWorn(page: Page, name: string): Promise<PieceWorn | un
 /** Where the named piece of the chrome's own box stands on the page, in one question to the page. */
 export async function pieceOnScreen(page: Page, name: string): Promise<Frame & { unit: number }> {
   return pieceOnScreenOf(await reading(page, name));
+}
+
+/**
+ * Where the named panel stands against the resource bar, in one question to the page: how far over
+ * the bar's foot its top stands, how far under it its own foot, and how far right of the bar's middle
+ * its middle, in pixels of the page.
+ */
+export async function hungFromTheBar(
+  page: Page,
+  name: string,
+): Promise<{ over: number; under: number; aside: number }> {
+  const read = await readings(page, ['resource-bar-panel', name]);
+  const bar = pieceOnScreenOf(read('resource-bar-panel'));
+  const panel = pieceOnScreenOf(read(name));
+  const foot = bar.y + bar.height;
+  return {
+    over: foot - panel.y,
+    under: panel.y + panel.height - foot,
+    aside: panel.x + panel.width / 2 - (bar.x + bar.width / 2),
+  };
 }
 
 /** Where a piece of the chrome's own box stands on the page, the shadow round it left out. */
@@ -1933,6 +1959,8 @@ export type Reading = {
   readonly strengths: readonly number[];
   /** The colour the glyph of every `glyphMark` of the name that stands shown is drawn in; any other object throws. */
   readonly glyphColours: readonly number[];
+  /** The frame the glyph of every `glyphMark` of the name that stands shown draws, by name; any other object throws. */
+  readonly glyphsDrawn: readonly string[];
   /** Where the object stands in the design space: the point it is drawn about, a face's bottom centre. */
   readonly place: { x: number; y: number };
   /** Where the point the object is drawn about sits on the page. */
@@ -2029,6 +2057,9 @@ function readingOf(name: string, answered: PageReading | undefined): Reading {
     },
     get glyphColours() {
       return owed(name, answered?.glyphColours);
+    },
+    get glyphsDrawn() {
+      return owed(name, answered?.glyphsDrawn);
     },
     get place() {
       return owed(name, answered?.place);

@@ -51,7 +51,6 @@ import { createHand } from './hand';
 import { type Card, cardsOf, createInfoPanel } from './infopanel';
 import { onKeyDown, onWheel, onWheelNotches } from './keys';
 import { createLog } from './log';
-import { LOOK } from './look';
 import { type AimShown, type ClaimShown, createMapView, type Drawn, type PressedTile } from './map';
 import { mapOf } from './map-scene';
 import { createMenuButton, raiseMenu } from './menu';
@@ -65,7 +64,7 @@ import { createRefusalNote } from './refusal-note';
 import { createResourceBar } from './resource-bar';
 import { campaignHeld, keepChronicle, type Opening } from './save-entry';
 import { createSmallCards } from './small-card';
-import { createStanding } from './standing';
+import { createModeFrame, createSettlePanel } from './standing';
 import { createSummary } from './summary';
 import { text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
@@ -202,15 +201,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const ui = {
       modeFrame: stratum(),
       band: stratum(),
-      modeChip: stratum(),
       summary: stratum(),
       pinned: stratum(),
       /** The Menu button and the map's display buttons. */
       corner: stratum(),
       /** The piles and the resting cards of the hand. */
       resting: stratum(),
-      /** Under the resource bar's, which hides its top. */
-      cityPanel: stratum(),
+      /** City mode's panel and the settle phase's, under the resource bar's, which hides their tops. */
+      hung: stratum(),
       bar: stratum(),
       endTurn: stratum(),
       /** The deal window's ribbon and its button, while the window stands minimized. */
@@ -702,21 +700,19 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       inspectNamed: (name) => overlay.inspectNamed(name),
     });
 
-    const standingOn = { frame: ui.modeFrame, chip: ui.modeChip };
-    const settleStanding = createStanding(this, standingOn, {
-      name: 'settle-phase',
-      colour: LOOK.settlePhase,
-      label: text('button.settle-phase'),
-    });
-    const cityStanding = createStanding(this, standingOn, { name: 'city', colour: LOOK.cityMode });
+    const settleFrame = createModeFrame(this, ui.modeFrame, 'settle-phase', 'settle-phase-frame');
+    const settlePanel = createSettlePanel(this, ui.hung);
+    const cityFrame = createModeFrame(this, ui.modeFrame, 'city-mode', 'city-frame');
 
     /**
-     * The one place the settle phase's standing is shown or hidden, and a render calls it: the phase
-     * ends under the player on the turn's tick, where city mode is only ever left through the two
+     * The one place the settle phase's frame and panel are shown or hidden, and a render calls it: the
+     * phase ends under the player on the turn's tick, where city mode is only ever left through the two
      * doors below.
      */
     const showSettleStanding = (chronicle: Chronicle): void => {
-      settleStanding.show(onSettlePhase(chronicle) && !cityMode);
+      const on = onSettlePhase(chronicle) && !cityMode;
+      settleFrame.show(on);
+      settlePanel.show(on);
     };
 
     /** Whether city mode would be raised now, and left now: neither under the deal window minimized. */
@@ -732,7 +728,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (!entersCityMode()) return;
       dismiss();
       cityMode = true;
-      cityStanding.show(true);
+      cityFrame.show(true);
       cityPanel.show(true);
       showSettleStanding(this.current);
       view.showCityMarks(true);
@@ -744,14 +740,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (!leavesCityMode()) return false;
       cityMode = false;
       dismiss();
-      cityStanding.show(false);
+      cityFrame.show(false);
       cityPanel.show(false);
       showSettleStanding(this.current);
       view.showCityMarks(false);
       return true;
     };
 
-    const cityPanel = createCityPanel(this, ui.cityPanel, CATALOGUE, tooltip.ui, {
+    const cityPanel = createCityPanel(this, ui.hung, CATALOGUE, tooltip.ui, {
       civilization: this.choices.civilization,
       leave: () => {
         leaveCityMode();
@@ -1072,6 +1068,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     // Interactive dead or live, so no press reaches the map under it.
     const button = createSignButton(this, 'gold', 'end-turn-button', box, 'end-turn', {
       live,
+      steel: () => !standing,
       reaches: (x, y) => counted !== undefined && onCount(counted, x, y),
     });
     const count = createCount(this, 'end-turn-count');
@@ -1113,6 +1110,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       turn = chronicle.turn;
       settlePhase = onSettlePhase(chronicle);
       lay();
+      button.wear(settlePhase ? 'end-settle-phase-button' : 'end-turn-button');
       button.dress();
       if (!hover.hovered || settlePhase === phaseWas) return;
       tooltip.hide();

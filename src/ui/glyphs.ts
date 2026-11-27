@@ -58,6 +58,7 @@ function colourOf(symbol: CastSymbol): number {
     case 'exhaust-pile':
       return LOOK.charcoalInk;
     case 'end-turn-button':
+    case 'end-settle-phase-button':
     case 'menu-button':
     case 'icons-button':
     case 'faction-signs-button':
@@ -84,6 +85,7 @@ function outlinedOf(symbol: CastSymbol): boolean {
     case 'discard-pile':
     case 'exhaust-pile':
     case 'end-turn-button':
+    case 'end-settle-phase-button':
     case 'menu-button':
     case 'icons-button':
     case 'faction-signs-button':

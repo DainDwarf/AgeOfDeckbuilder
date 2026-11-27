@@ -7,8 +7,8 @@ import {
   createChromeButton,
   createChromePanel,
   createChromeWell,
+  hangChromePanel,
   PANEL_RIMS,
-  standChromePanel,
   takesThePointer,
 } from './chrome';
 import {
@@ -70,10 +70,8 @@ import { SIGN_ON_DISC } from './summary';
 import { buildingName, civilizationName, text } from './text';
 import { STANDOFF, type Tooltip } from './tooltip';
 
-/** How far the panel runs up behind the resource bar's foot, its top corners with it. */
-const BEHIND_THE_BAR = 10;
-
-const NAME_STYLE = {
+/** The type and the ink a name reads in on a panel hung from the resource bar's foot. */
+export const HUNG_NAME_STYLE = {
   fontFamily: UI_FONT,
   fontSize: '18px',
   fontStyle: 'bold',
@@ -195,7 +193,7 @@ export function createCityPanel(
   );
   const disc = unitDiscMarker(scene, DISC);
   asFactionDisc(disc, 'player', 'player', SIGN_ON_DISC * DISC, UNDARKENED);
-  const name = addText(scene, 0, 0, '', NAME_STYLE).setOrigin(0.5).setName('city-mode-name');
+  const name = addText(scene, 0, 0, '', HUNG_NAME_STYLE).setOrigin(0.5).setName('city-mode-name');
   const close = createChromeButton(
     scene,
     'gold',
@@ -382,12 +380,7 @@ export function createCityPanel(
   /** Everything the panel reads where the layout stands it, the panel and Close laid again where its width moved. */
   const lay = (layout: CityPanelLayout): void => {
     if (laid?.width !== layout.width) {
-      standChromePanel(panel, {
-        x: 0,
-        y: -BEHIND_THE_BAR,
-        width: layout.width,
-        height: layout.height + BEHIND_THE_BAR,
-      });
+      hangChromePanel(panel, 0, layout.width, layout.height);
       close.place(layout.close);
     }
     laid = layout;

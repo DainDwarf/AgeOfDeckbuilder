@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { layOutCorner, SUMMARY_HEIGHT } from './corner-layout';
+import { layOutCorner } from './corner-layout';
 
 /** The smallest screen's width and a wider one's, and a margin and a strip of the test's own. */
 const SMALLEST = 1280;
@@ -56,12 +56,5 @@ describe('the buttons at the screen’s top right corner', () => {
       expect(summary.top).toBeGreaterThan(menu.y + menu.height);
     }
     expect(wider.summary.top).toBe(smallest.summary.top);
-  });
-
-  it('stands the settle phase’s chip under the summary’s two rows, its right edge on the summary’s', () => {
-    for (const { summary, chip } of [smallest, wider]) {
-      expect(chip.right).toBe(summary.right);
-      expect(chip.top).toBeGreaterThan(summary.top + SUMMARY_HEIGHT);
-    }
   });
 });

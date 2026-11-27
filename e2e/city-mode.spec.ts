@@ -57,6 +57,7 @@ import {
   glyphs,
   glyphsByColour,
   glyphsOf,
+  hungFromTheBar,
   latched,
   launchedAs,
   marksIn,
@@ -66,7 +67,6 @@ import {
   onScreen,
   openSaved,
   type PieceWorn,
-  pieceOnScreenOf,
   playedOut,
   playerCityTile,
   type Reading,
@@ -622,13 +622,10 @@ test('in city mode a panel hangs from behind the resource bar’s foot, centred 
   expect(shown.read).toEqual(owed.read);
   expect(shown.bars).toEqual(barsOf(owed.bars));
 
-  const read = await readings(page, ['resource-bar-panel', 'city-mode-panel']);
-  const bar = pieceOnScreenOf(read('resource-bar-panel'));
-  const panel = pieceOnScreenOf(read('city-mode-panel'));
-  const foot = bar.y + bar.height;
-  expect(panel.y).toBeLessThan(foot);
-  expect(panel.y + panel.height).toBeGreaterThan(foot);
-  expect(panel.x + panel.width / 2).toBeCloseTo(bar.x + bar.width / 2, 1);
+  const hung = await hungFromTheBar(page, 'city-mode-panel');
+  expect(hung.over).toBeGreaterThan(0);
+  expect(hung.under).toBeGreaterThan(0);
+  expect(hung.aside).toBeCloseTo(0, 1);
 
   expect(problems).toEqual([]);
 });
