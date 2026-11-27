@@ -17,7 +17,6 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The frame and the settle phase** — the line round the screen that tells city mode and the settle phase, how the settle phase is named once city mode's chip is gone, and the end-turn button's look on the settle phase.
-- **The settle cards left in hand** — something standing on the screen for the whole settle phase that says the settle cards still in hand are banished when it ends.
+- **The frame and the settle phase** — city mode and the settle phase each wear the kit's rim round the screen with a glow from it, gold and silver; the settle phase's chip is gone and a panel under the resource bar names the phase and says the cards left in hand are banished; End turn on the settle phase wears a village, and the kit's steel while the player's city stands nowhere; `e2e/settle.spec.ts` proves the panel, the chip gone, the steel and the sign. Doc-impact: `docs/MAP-SCREEN.md`, `docs/CHRONICLE-SCREEN.md`, `docs/INTERFACE.md`, `docs/LOOK.md`, `public/assets/LICENSES.md`. [board/the-frame-and-the-settle-phase.md](board/the-frame-and-the-settle-phase.md)
 - **The minimized deal window's presses** — under a minimized deal window every reaction that changes no game state is allowed, entering and leaving city mode among them, where today nothing enters city mode, nothing leaves it and a left click selects nothing, culture's reading of city mode's panel, which selects the claim, among what is dead there.
 - **The help sign's arrow** — instead of the help sign's lone question mark, the normal arrow composed with the `?`, or one the cursor pack already holds if it has it.
