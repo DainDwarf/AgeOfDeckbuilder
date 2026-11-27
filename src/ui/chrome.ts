@@ -480,7 +480,7 @@ export function createSignButton(
   let colour: number | undefined;
   let step = 0;
   const draw = (): void => {
-    const inked = steel() ? LOOK.steelSignInk : colour;
+    const inked = steel() ? LOOK.greyedInk : colour;
     asGlyph(sign, symbol, SIGN_SHARE * box.height, inked === undefined ? {} : { colour: inked });
     sign.setPosition(box.x + box.width / 2 + step, box.y + box.height / 2 + step);
   };

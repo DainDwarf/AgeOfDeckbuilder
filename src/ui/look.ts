@@ -104,8 +104,6 @@ export type Look = {
    */
   readonly givenAlready: number;
   readonly settlePhase: number;
-  /** The greyed ink End turn's sign reads in on the kit's steel. */
-  readonly steelSignInk: number;
   readonly panelFill: number;
   readonly panelEdge: number;
   readonly ink: number;
@@ -288,7 +286,6 @@ export const LOOK: Look = {
   addedByTurn: 0.45,
   givenAlready: 0.45,
   settlePhase: 0xc3c7cd,
-  steelSignInk: 0x2a2e34,
   panelFill: 0xd4d7db,
   panelEdge: 0x6f757d,
   ink: 0x0d1014,

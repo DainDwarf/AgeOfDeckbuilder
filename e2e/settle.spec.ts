@@ -110,7 +110,7 @@ test('a chronicle opens on the settle phase with the city standing nowhere, and 
   expect(await marksIn(page, 'border')).toBe(0);
 
   expect(await endTurnChip(page)).toBeUndefined();
-  expect(await phaseShown(page)).toEqual(onTheSettlePhase('steel', LOOK.steelSignInk));
+  expect(await phaseShown(page)).toEqual(onTheSettlePhase('steel', LOOK.greyedInk));
   const hung = await hungFromTheBar(page, 'settle-phase-panel');
   expect(hung.over).toBeGreaterThan(0);
   expect(hung.under).toBeGreaterThan(0);
