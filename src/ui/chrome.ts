@@ -292,6 +292,15 @@ export function veilOver(
   return veil.setRounded(corner).setSize(box.width, box.height).setPosition(box.x, box.y);
 }
 
+/** The veil laid over the box a piece is fitted to, its corners the piece's there. */
+export function veilOverFitted(
+  veil: Phaser.GameObjects.Rectangle,
+  piece: Fitted & { readonly corner: number },
+  box: Box,
+): Phaser.GameObjects.Rectangle {
+  return veilOver(veil, box, piece.corner * fittedScale(piece, box));
+}
+
 /**
  * The veil laid over a row of a strip against the screen's left edge, from past the edge to the row's
  * right end, `width` from the edge and `height` tall, its corners the strip's.
@@ -323,11 +332,7 @@ export type PressableWell = {
 export function createPressableWell(scene: Phaser.Scene, box: Box, name: string): PressableWell {
   const face = reactsTo(takesThePointer(createChromeWell(scene, name)), () => CLICKS);
   placeChromeWell(face, 'inactive-tab', box);
-  const veil = veilOver(
-    createVeil(scene, `${name}-veil`),
-    box,
-    INACTIVE_TAB.corner * fittedScale(INACTIVE_TAB, box),
-  );
+  const veil = veilOverFitted(createVeil(scene, `${name}-veil`), INACTIVE_TAB, box);
   let fielded = false;
   const dress = (): void => {
     veil.setVisible(hover.hovered && !fielded);

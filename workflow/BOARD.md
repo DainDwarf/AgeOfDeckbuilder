@@ -17,5 +17,4 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 
 ## Lines
 
-- **The minimized deal window's presses** — under a minimized deal window a left click selects a tile or a unit and aims nothing, city mode is entered and left by every door with culture's reading of its panel dead, the back key brings the window back last, and End turn, for as long as a deal stands, wears the kit's steel, a speech balloon holding a question mark and no chip, a left click on it under the minimized window bringing the window back; `e2e/minimize.spec.ts` proves it. Doc-impact: `docs/CHRONICLE-SCREEN.md`, `docs/LOOK.md`, `public/assets/LICENSES.md`. [board/the-minimized-deal-windows-presses.md](board/the-minimized-deal-windows-presses.md)
 - **The help sign's arrow** — instead of the help sign's lone question mark, the normal arrow composed with the `?`, or one the cursor pack already holds if it has it.

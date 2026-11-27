@@ -130,6 +130,7 @@ import {
   cardKeyed,
   cityRows,
   dealingCard,
+  dealWaiting,
   FIRST_KEY,
   keysDealt,
   type MadeCard,
@@ -730,7 +731,7 @@ function resolved(catalogue: Catalogue, chronicle: Chronicle, command: Command):
  * command, and one waiting on a deal every command but the take.
  */
 function refusedAhead(chronicle: Chronicle, command: Command): boolean {
-  return chronicle.ending !== undefined || (chronicle.deals.length > 0 && command.type !== 'take');
+  return chronicle.ending !== undefined || (dealWaiting(chronicle) && command.type !== 'take');
 }
 
 /** A command the rules turned down: one `refused` group holding nothing, on the chronicle as it stood. */
@@ -1013,7 +1014,7 @@ function opened(catalogue: Catalogue, chronicle: Chronicle): Sequence {
 }
 
 function openedUnlessDealt(catalogue: Catalogue, chronicle: Chronicle): Sequence {
-  return chronicle.deals.length > 0 ? unchanged(chronicle) : opened(catalogue, chronicle);
+  return dealWaiting(chronicle) ? unchanged(chronicle) : opened(catalogue, chronicle);
 }
 
 function ticked(chronicle: Chronicle): Sequence<Group> {

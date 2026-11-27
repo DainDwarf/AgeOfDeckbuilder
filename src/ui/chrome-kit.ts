@@ -167,11 +167,15 @@ export const BUTTONS: Readonly<Record<ButtonPiece, Button>> = {
   },
 };
 
-/** The kit's disabled gold button, its steel: cut as the gold, its strip on the gold's rows. */
-export const STEEL: Fitted = {
+/**
+ * The kit's disabled gold button, its steel: cut as the gold, its strip on the gold's rows, and the
+ * radius of its corners at its own box's edge in its file's pixels.
+ */
+export const STEEL: Fitted & { readonly corner: number } = {
   frame: `${KIT}/btn_cta_disabled.png`,
   cuts: BUTTONS.gold.cuts,
   height: BUTTONS.gold.height,
+  corner: 20,
 };
 
 /** What a frame round the screen is drawn for: city mode, or the settle phase. */

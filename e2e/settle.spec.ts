@@ -18,8 +18,10 @@ import {
   click,
   dragOut,
   drawnFaces,
+  type EndTurnWorn,
   endTurnChip,
   endTurnHovered,
+  endTurnWornOf,
   faceCounts,
   hungFromTheBar,
   idsOf,
@@ -28,7 +30,6 @@ import {
   onScreen,
   openSaved,
   type PieceWorn,
-  pieceWornOf,
   playedOn,
   playedOut,
   readings,
@@ -47,7 +48,7 @@ type PhaseShown = {
   frame: boolean;
   panel: (string | undefined)[] | undefined;
   chip: boolean;
-  endTurn: { piece: PieceWorn['piece']; signs: readonly string[]; inks: readonly number[] };
+  endTurn: EndTurnWorn;
 };
 
 /** What the chronicle screen shows of the settle phase, in one question to the page. */
@@ -61,18 +62,13 @@ async function phaseShown(page: Page): Promise<PhaseShown> {
     'end-turn',
     'end-turn-sign',
   ]);
-  const sign = read('end-turn-sign');
   return {
     frame: read('settle-phase-frame').shows,
     panel: read('settle-phase').shows
       ? [read('settle-phase-name').text, read('settle-phase-sentence').text]
       : undefined,
     chip: read('settle-phase-chip').standing,
-    endTurn: {
-      piece: pieceWornOf(read('end-turn')).piece,
-      signs: sign.glyphsDrawn,
-      inks: sign.glyphColours,
-    },
+    endTurn: endTurnWornOf(read),
   };
 }
 

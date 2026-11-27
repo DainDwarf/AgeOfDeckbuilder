@@ -4,19 +4,26 @@ import { apply, outcome } from '../src/rules/chronicle';
 import { sameTile, tileKey } from '../src/rules/map';
 import { freshCampaign } from '../src/rules/save';
 import type { Chronicle } from '../src/rules/state';
+import { glyphFileOf } from '../src/ui/cast';
 import { eventName } from '../src/ui/event-text';
-import { cardName, text } from '../src/ui/text';
+import { LOOK } from '../src/ui/look';
+import { cardName, text, unitName } from '../src/ui/text';
 import {
   browse,
   campaignWith,
   cardOnFace,
   chronicleOf,
+  claimMarked,
   click,
+  cursorAt,
   dealMinimized,
   dealtAloneOn,
   dragBetween,
+  type EndTurnWorn,
+  endTurnWornOf,
   firstAdmitted,
   firstSeed,
+  inCityMode,
   inspected,
   onScreen,
   openSaved,
@@ -27,16 +34,18 @@ import {
   playedAtNothing,
   playerCityTile,
   playersOf,
-  playing,
+  reacted,
   readings,
   rested,
   restedOnDeal,
   ringedTile,
   SCOUT,
   selected,
+  selectionShown,
   shownCard,
   standing,
   stillAt,
+  summaryRead,
   take,
   tooltipText,
   tooltipUp,
@@ -73,13 +82,32 @@ function scoutUnderTheDeal(): Chronicle {
   });
 }
 
+/** What End turn wears, what its chip reads, nothing where it wears none, and whether it stands lighter. */
+type EndTurnShown = EndTurnWorn & { chip: string | undefined; lighter: boolean };
+
+/** What End turn shows, in one question to the page. */
+async function endTurnShown(page: Page): Promise<EndTurnShown> {
+  const read = await readings(page, [
+    'end-turn',
+    'end-turn-sign',
+    'end-turn-count',
+    'end-turn-veil',
+  ]);
+  const count = read('end-turn-count');
+  return {
+    ...endTurnWornOf(read),
+    chip: count.standing ? count.text : undefined,
+    lighter: read('end-turn-veil').standing,
+  };
+}
+
 /** Whether the minimized window stands, and the deal window does not. */
 async function standsMinimized(page: Page): Promise<boolean[]> {
   const seen = await readings(page, [RIBBON, 'deal']);
   return [seen(RIBBON).standing, seen('deal').standing];
 }
 
-test('the deal window minimized leaves its ribbon and its sunk button where they stood, the chronicle screen read under them and nothing commanded, and the button, the ribbon and the back key each bring it back whole', async ({
+test('the deal window minimized leaves its ribbon and its sunk button where they stood, the chronicle screen read under them and no card held or played, and the button, the ribbon and the back key each bring it back whole', async ({
   page,
 }) => {
   const problems = watch(page);
@@ -136,14 +164,8 @@ test('the deal window minimized leaves its ribbon and its sunk button where they
   await expect.poll(() => standing(page, 'inspection')).toBe(false);
   expect(await standsMinimized(page)).toEqual([true, false]);
 
-  await click(page, cityFace);
-  await rested(page);
-  expect(await ringedTile(page)).toBeUndefined();
   await click(page, 'hand-0');
   expect(await selected(page, 0, home)).toBe(false);
-  await click(page, 'end-turn');
-  await rested(page);
-  expect(await playing(page)).toBe(false);
   expect(await chronicleOf(page)).toEqual(dealt);
 
   await browse(page, 'draw-pile');
@@ -170,6 +192,125 @@ test('the deal window minimized leaves its ribbon and its sunk button where they
   await take(page, firstAdmitted(dealt));
   expect(await standing(page, 'deal')).toBe(false);
   expect(await chronicleOf(page)).toEqual(after);
+
+  expect(problems).toEqual([]);
+});
+
+test('under the deal window minimized a left click selects a unit or a tile and lights nothing, city mode is entered and left with nothing aimed or acted on, and the back key walks back to the window last', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const dealt = scoutUnderTheDeal();
+  const city = tileKey(playerCityTile(dealt));
+  const cityFace = `tile-${city}`;
+  const nothingAimed = { lit: [], marked: [], card: undefined };
+
+  await openSaved(page, dealt);
+  await dealMinimized(page);
+
+  await click(page, cityFace);
+  await reacted(page);
+  expect(await selectionShown(page)).toEqual({
+    selected: city,
+    rings: [city],
+    rims: [],
+    ...nothingAimed,
+  });
+  expect((await summaryRead(page))?.name).toBe(unitName(SCOUT));
+  await click(page, cityFace);
+  await reacted(page);
+  expect(await selectionShown(page)).toEqual({
+    selected: city,
+    rings: [],
+    rims: [city],
+    ...nothingAimed,
+  });
+
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  await page.keyboard.press('c');
+  await expect.poll(() => inCityMode(page)).toBe(false);
+
+  await click(page, 'reading-culture');
+  await expect.poll(() => inCityMode(page)).toBe(true);
+  expect(await claimMarked(page)).toEqual([]);
+  expect((await selectionShown(page)).selected).toBeUndefined();
+
+  // The inspection standing on the held tile goes with any play-out, a refused one included.
+  const held = await onScreen(page, cityFace);
+  await page.mouse.click(held.x, held.y);
+  await reacted(page);
+  await page.mouse.click(held.x, held.y, { button: 'right' });
+  await expect.poll(() => shownCard(page)).toBeDefined();
+  const before = await selectionShown(page);
+  expect(before.selected).toBe(city);
+  await page.mouse.click(held.x, held.y);
+  await reacted(page);
+  expect(await chronicleOf(page)).toEqual(dealt);
+  expect(await selectionShown(page)).toEqual(before);
+  expect(await standing(page, 'refusal')).toBe(false);
+
+  await page.keyboard.press('Escape');
+  await reacted(page);
+  expect(await selectionShown(page)).toEqual({ ...before, card: undefined });
+  await page.keyboard.press('Escape');
+  await reacted(page);
+  expect((await selectionShown(page)).selected).toBeUndefined();
+  expect(await inCityMode(page)).toBe(true);
+  await page.keyboard.press('Escape');
+  await reacted(page);
+  expect(await inCityMode(page)).toBe(false);
+  expect(await standsMinimized(page)).toEqual([true, false]);
+  await page.keyboard.press('Escape');
+  await restedOnDeal(page);
+  expect(await standsMinimized(page)).toEqual([false, true]);
+
+  expect(problems).toEqual([]);
+});
+
+test('while a deal stands End turn wears the steel, a speech balloon and no chip, and under the deal window minimized a left click on it brings the window back', async ({
+  page,
+}) => {
+  const problems = watch(page);
+  const dealt = scoutUnderTheDeal();
+  const after = outcome(apply(CATALOGUE, dealt, { type: 'take', at: firstAdmitted(dealt) }));
+  const waiting: EndTurnShown = {
+    piece: 'steel',
+    signs: [glyphFileOf('deal-waiting-button')],
+    inks: [LOOK.greyedInk],
+    chip: undefined,
+    lighter: false,
+  };
+
+  await openSaved(page, dealt);
+  await restedOnDeal(page);
+  expect(await endTurnShown(page)).toEqual(waiting);
+
+  await dealMinimized(page);
+  expect(await endTurnShown(page)).toEqual(waiting);
+  const button = await onScreen(page, 'end-turn');
+  expect(await cursorAt(page, button)).toBe('pointing hand');
+  expect(await endTurnShown(page)).toEqual({ ...waiting, lighter: true });
+  await expect.poll(() => tooltipUp(page, 'tooltip-ui')).toBe(true);
+  expect(await tooltipText(page, 'tooltip-ui')).toBe(text('button.deal-waiting'));
+
+  await page.mouse.down();
+  await rested(page);
+  expect(await endTurnShown(page)).toEqual({ ...waiting, lighter: true });
+  await page.mouse.up();
+  await restedOnDeal(page);
+  expect(await standsMinimized(page)).toEqual([false, true]);
+  expect(await chronicleOf(page)).toEqual(dealt);
+
+  await take(page, firstAdmitted(dealt));
+  expect(await chronicleOf(page)).toEqual(after);
+  expect(await endTurnShown(page)).toEqual({
+    piece: 'gold',
+    signs: [glyphFileOf('end-turn-button')],
+    inks: [LOOK.metalInk],
+    chip: String(after.turn),
+    lighter: false,
+  });
 
   expect(problems).toEqual([]);
 });

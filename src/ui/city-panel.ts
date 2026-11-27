@@ -142,8 +142,6 @@ export type CityPanel = {
   live(on: boolean): void;
   /** The panel standing, or down. */
   show(on: boolean): void;
-  /** Close's look read again, for a liveness that has moved. */
-  dress(): void;
   /** Culture's reading sunk in its well while the claim is being aimed, or stood on what it reads. */
   aimed(on: boolean): void;
 };
@@ -172,7 +170,7 @@ function turnsInk(on: StandsOn): number {
 /**
  * City mode's panel on the stratum, named `city-mode`, hidden: the city's name, food, culture and
  * population read off each chronicle rendered, a rest on a reading raising its tooltip; Close is
- * `leave` while `leaves` holds, and a left click on culture's reading `claim` while `claims` does.
+ * `leave`, and a left click on culture's reading `claim` while `claims` holds.
  */
 export function createCityPanel(
   scene: Phaser.Scene,
@@ -182,7 +180,6 @@ export function createCityPanel(
   city: {
     readonly civilization: string;
     readonly leave: () => void;
-    readonly leaves: () => boolean;
     readonly claim: () => void;
     readonly claims: () => boolean;
   },
@@ -199,7 +196,6 @@ export function createCityPanel(
     'gold',
     { x: 0, y: 0, width: 1, height: 1 },
     'city-mode-close',
-    { live: city.leaves },
   );
   onClick(close.face, city.leave);
   const closeLabel = addText(scene, 0, 0, text('button.close'), CLOSE_STYLE)
@@ -431,9 +427,6 @@ export function createCityPanel(
     },
     show(on: boolean): void {
       root.setVisible(on);
-    },
-    dress(): void {
-      close.dress();
     },
     aimed(on: boolean): void {
       aimed = on;

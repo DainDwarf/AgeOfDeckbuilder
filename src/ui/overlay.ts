@@ -10,6 +10,7 @@ import {
   type Deal,
   dealingCard,
   dealtCards,
+  dealWaiting,
   type Ending,
   NO_REFUSAL,
   playable,
@@ -772,12 +773,12 @@ export function createOverlay({
           if (stage.stages.length > 0) return grouped(stage);
           break;
       }
-      const { ending, deals } = stage.chronicle;
+      const { ending } = stage.chronicle;
       if (ending !== undefined && !endingScreen.raised) return raiseEnding(stage.chronicle, ending);
       // A deal stands before its play-out ends — a capture's before the captures after it resolve, a
       // card's before what its play reads — so the window waits for the render the play-out ends
       // on, which a render of this stage would pre-empt.
-      return deals.length > 0 ? Promise.resolve() : undefined;
+      return dealWaiting(stage.chronicle) ? Promise.resolve() : undefined;
     },
   };
 }

@@ -91,6 +91,7 @@ const TEXT = {
   'settle-panel.name': 'Settle phase',
   'settle-panel.banished': 'A card left in hand is banished when it ends',
   'button.end-settle-phase': 'End settle phase',
+  'button.deal-waiting': 'A choice is waiting',
   'button.close': 'Close',
   'city-panel.name': '{civilization} {building}',
   'button.icons': 'Icons',

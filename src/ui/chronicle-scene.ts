@@ -18,7 +18,14 @@ import { cityCommand, type ReassignCommand, tileCost, tileRefusal } from '../rul
 import { sameTile, type TileCoords, type TilesBeside, tileAt, tileKey } from '../rules/map';
 import { RESOURCES, type Resource } from '../rules/resources';
 import { leaf, runtimeErrors, type Stage, walked } from '../rules/stages';
-import { type Chronicle, cityOn, holds, onSettlePhase, playable } from '../rules/state';
+import {
+  type Chronicle,
+  cityOn,
+  dealWaiting,
+  holds,
+  onSettlePhase,
+  playable,
+} from '../rules/state';
 import { unitOf } from '../rules/units';
 import { tileYield } from '../rules/yields';
 import { chronicleScreenAtSpeed } from './animation-speed';
@@ -26,7 +33,9 @@ import { createBand, trayNow } from './band';
 import { boundTo, type Press, pressOf } from './bindings';
 import { createFootBubble } from './card-face';
 import { dropWaitedMotion, EASE, ended, stopAllMotion, stopMotion } from './card-motion';
-import { createSignButton } from './chrome';
+import type { ButtonSign } from './cast';
+import { createSignButton, createVeil, veilOverFitted } from './chrome';
+import { STEEL } from './chrome-kit';
 import { createChronicleFaces } from './chronicle-faces';
 import { createCityPanel } from './city-panel';
 import { offerEntries, resetConsole } from './debug-console';
@@ -66,7 +75,7 @@ import { campaignHeld, keepChronicle, type Opening } from './save-entry';
 import { createSmallCards } from './small-card';
 import { createModeFrame, createSettlePanel } from './standing';
 import { createSummary } from './summary';
-import { text } from './text';
+import { type TextKey, text } from './text';
 import { createTooltip, type Tooltip } from './tooltip';
 
 type Part = {
@@ -116,6 +125,49 @@ function reckonsThrough(command: Command): boolean {
     case 'reassign':
     case 'claim':
       return true;
+  }
+}
+
+/** What End turn stands as: a turn's, the settle phase's, or a deal's waiting. */
+type EndTurnAs = 'turn' | 'settle-phase' | 'deal';
+
+/** What End turn stands as on the chronicle: a deal waiting wins over the phase. */
+function endTurnAs(chronicle: Chronicle): EndTurnAs {
+  if (dealWaiting(chronicle)) return 'deal';
+  return onSettlePhase(chronicle) ? 'settle-phase' : 'turn';
+}
+
+function signOf(standsAs: EndTurnAs): ButtonSign {
+  switch (standsAs) {
+    case 'turn':
+      return 'end-turn-button';
+    case 'settle-phase':
+      return 'end-settle-phase-button';
+    case 'deal':
+      return 'deal-waiting-button';
+  }
+}
+
+/** The key of the name End turn's tooltip reads. */
+function nameKeyOf(standsAs: EndTurnAs): TextKey {
+  switch (standsAs) {
+    case 'turn':
+      return 'button.end-turn';
+    case 'settle-phase':
+      return 'button.end-settle-phase';
+    case 'deal':
+      return 'button.deal-waiting';
+  }
+}
+
+/** Whether End turn reads the turn on its chip: a turn's alone does. */
+function turnChipped(standsAs: EndTurnAs): boolean {
+  switch (standsAs) {
+    case 'turn':
+      return true;
+    case 'settle-phase':
+    case 'deal':
+      return false;
   }
 }
 
@@ -342,13 +394,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
 
     /**
      * The hand, the button and the map's hold live, or, under the deal window minimized, the hand
-     * read and the button and the hold dead; Close dressed for whichever it is.
+     * read, the hold dead and the button bringing the window back.
      */
     const liven = (): void => {
       const minimized = overlay.minimized();
       hand.live(minimized ? 'read' : 'live');
-      endTurn.live(!minimized);
-      cityPanel.dress();
+      endTurn.live(true);
       view.takesHold(!minimized);
     };
 
@@ -580,6 +631,9 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       select(view.pressedOn(command.to));
     };
 
+    /** Whether anything may be aimed or commanded: nothing is while a deal waits. */
+    const aims = (): boolean => !dealWaiting(this.current);
+
     /**
      * Whether a left click on the tile acts on the selection, the tile selected: the city's act there
      * in city mode where the city holds it, and city mode entered on the player's city's own tile out
@@ -589,7 +643,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       if (selection === undefined || view.unitSelected() || !sameTile(tile, selection.tile)) {
         return false;
       }
-      if (cityMode) return holds(this.current, tile);
+      if (cityMode) return aims() && holds(this.current, tile);
       return cityOn(this.current, tile) === 'player' && entersCityMode();
     };
 
@@ -641,8 +695,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       minimizing: { on: ui.minimized, tooltip: tooltip.ui, switched: liven },
     });
 
-    const endTurn = this.addEndTurn(ui.endTurn, tooltip.ui, () => {
-      void playOut({ type: 'end-turn' });
+    const endTurn = this.addEndTurn(ui.endTurn, tooltip.ui, {
+      endTurn: () => {
+        void playOut({ type: 'end-turn' });
+      },
+      minimized: () => overlay.minimized(),
+      bringBack: () => {
+        overlay.bringBack();
+      },
     });
 
     const hand = createHand(this, ui, faces, CATALOGUE, {
@@ -715,14 +775,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       settlePanel.show(on);
     };
 
-    /** Whether city mode would be raised now, and left now: neither under the deal window minimized. */
-    const entersCityMode = (): boolean =>
-      !cityMode && !overlay.minimized() && this.current.city !== undefined;
-    const leavesCityMode = (): boolean => cityMode && !overlay.minimized();
+    /** Whether city mode would be raised now. */
+    const entersCityMode = (): boolean => !cityMode && this.current.city !== undefined;
 
     /**
      * City mode raised: what was pending on the chronicle screen is let go of and it passes, the claim
-     * selected where `claim` asks for it.
+     * selected where `claim` asks for it and it may be aimed.
      */
     const enterCityMode = (claim = false): void => {
       if (!entersCityMode()) return;
@@ -732,12 +790,12 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       cityPanel.show(true);
       showSettleStanding(this.current);
       view.showCityMarks(true);
-      if (claim) select('claim');
+      if (claim && aims()) select('claim');
     };
 
     /** City mode left, and whether it was left: the one way out, for the key, Close and the back. */
     const leaveCityMode = (): boolean => {
-      if (!leavesCityMode()) return false;
+      if (!cityMode) return false;
       cityMode = false;
       dismiss();
       cityFrame.show(false);
@@ -752,12 +810,11 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       leave: () => {
         leaveCityMode();
       },
-      leaves: leavesCityMode,
       claim: () => {
         if (claimAimed) aimClaim(false);
         else select('claim');
       },
-      claims: () => !overlay.minimized(),
+      claims: aims,
     });
 
     const bar = createResourceBar(this, ui.bar, CATALOGUE, tooltip.ui, {
@@ -852,25 +909,16 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       throw new Error(`no place is ${JSON.stringify(unlisted)}`);
     };
 
-    /**
-     * Where each press held landed, whether on the map, whether under the deal window minimized, where
-     * a left click selects and acts on nothing however the window stands at its release, and whether
-     * the claim was being aimed then.
-     */
+    /** Where each press held landed, whether on the map, and whether the claim was being aimed then. */
     const landings = new Map<
       Press,
-      {
-        readonly place: Place;
-        readonly onMap: boolean;
-        readonly minimized: boolean;
-        readonly claimAimed: boolean;
-      }
+      { readonly place: Place; readonly onMap: boolean; readonly claimAimed: boolean }
     >();
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       const press = pressOf(pointer);
       if (press === undefined) return;
       queueMicrotask(() => {
-        landings.set(press, { ...placeUnder(), minimized: overlay.minimized(), claimAimed });
+        landings.set(press, { ...placeUnder(), claimAimed });
       });
     });
     this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
@@ -886,7 +934,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         if (!samePlace(from.place, to.place)) return;
         switch (press) {
           case 'left':
-            if (!from.minimized) leftClicked(to.place, from.claimAimed);
+            leftClicked(to.place, from.claimAimed);
             return;
           case 'right':
             rightClicked(to.place);
@@ -939,16 +987,14 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
         uninspect();
         return;
       }
-      if (overlay.minimized()) {
-        overlay.bringBack();
-        return;
-      }
       if (hand.unselect()) return;
       if (selection !== undefined || claimAimed) {
         select(undefined);
         return;
       }
-      if (!leaveCityMode()) raiseMenu(this);
+      if (leaveCityMode()) return;
+      if (overlay.minimized()) overlay.bringBack();
+      else raiseMenu(this);
     });
 
     resetConsole(this);
@@ -1055,64 +1101,103 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
   private addEndTurn(
     on: Stratum,
     tooltip: Tooltip,
-    endTurn: () => void,
+    presses: {
+      readonly endTurn: () => void;
+      /** Whether the deal window stands minimized, and the window brought back from there. */
+      readonly minimized: () => boolean;
+      readonly bringBack: () => void;
+    },
   ): Part & { live(on: boolean): void } {
     let box = trayNow().endTurn;
-    /** The turn's chip, and nothing on the settle phase, which wears none. */
+    /** The turn's chip, and nothing where the button wears none. */
     let counted: Box | undefined;
 
-    /** Whether the screen wants the button live, and whether the city it would end the turn of stands. */
+    let turn = 1;
+    let standsAs: EndTurnAs = 'turn';
+
+    /**
+     * Whether the screen wants the button live, and whether the city it would end the turn of stands:
+     * a deal's button is live under the minimized window alone, whether the city stands or not.
+     */
     let wanted = true;
     let standing = false;
-    const live = (): boolean => wanted && standing;
+    const live = (): boolean => {
+      if (!wanted) return false;
+      switch (standsAs) {
+        case 'turn':
+        case 'settle-phase':
+          return standing;
+        case 'deal':
+          return presses.minimized();
+      }
+    };
     // Interactive dead or live, so no press reaches the map under it.
-    const button = createSignButton(this, 'gold', 'end-turn-button', box, 'end-turn', {
+    const button = createSignButton(this, 'gold', signOf(standsAs), box, 'end-turn', {
       live,
-      steel: () => !standing,
+      steel: () => standsAs === 'deal' || !standing,
       reaches: (x, y) => counted !== undefined && onCount(counted, x, y),
     });
+    const veil = createVeil(this, 'end-turn-veil');
     const count = createCount(this, 'end-turn-count');
     const leaving = countText(this).setName('end-turn-leaving').setVisible(false);
-    on.layer.add([button.face, button.sign, count.chip, count.number, leaving]);
-
-    let turn = 1;
-    let settlePhase = false;
+    on.layer.add([button.face, veil, button.sign, count.chip, count.number, leaving]);
 
     /** The button and its chip laid where the screen puts them, the chip sized for the number it reads. */
     const lay = (): void => {
       box = trayNow().endTurn;
       button.place(box);
+      veilOverFitted(veil, STEEL, box);
       count.number.setText(String(turn));
-      counted = settlePhase ? undefined : count.lay(box, 'right');
-      count.chip.setVisible(!settlePhase);
-      count.number.setVisible(!settlePhase);
+      const chipped = turnChipped(standsAs);
+      counted = chipped ? count.lay(box, 'right') : undefined;
+      count.chip.setVisible(chipped);
+      count.number.setVisible(chipped);
     };
     onResize(this, lay);
 
     const name = (): void => {
-      nameOver(
-        tooltip,
-        text(settlePhase ? 'button.end-settle-phase' : 'button.end-turn'),
-        box,
-        counted,
-      );
+      nameOver(tooltip, text(nameKeyOf(standsAs)), box, counted);
     };
-    const hover = onHover(button.face, name, () => {
-      tooltip.hide();
-    });
+    /** The button's look read again, a deal's steel lighter under the pointer while it is live. */
+    const dress = (): void => {
+      button.dress();
+      veil.setVisible(standsAs === 'deal' && hover.hovered && live());
+    };
+    const hover = onHover(
+      button.face,
+      () => {
+        name();
+        dress();
+      },
+      () => {
+        tooltip.hide();
+        dress();
+      },
+    );
     onClick(button.face, () => {
-      if (live()) endTurn();
+      if (!live()) return;
+      switch (standsAs) {
+        case 'turn':
+        case 'settle-phase':
+          presses.endTurn();
+          return;
+        case 'deal':
+          presses.bringBack();
+          return;
+      }
+      const unlisted: never = standsAs;
+      throw new Error(`End turn stands as no ${JSON.stringify(unlisted)}`);
     });
 
-    /** The button standing on the chronicle's phase and turn, a name standing under the pointer read again. */
+    /** The button standing on the chronicle's turn and on what it stands as, a name standing under the pointer read again. */
     const stand = (chronicle: Chronicle): void => {
-      const phaseWas = settlePhase;
+      const was = standsAs;
       turn = chronicle.turn;
-      settlePhase = onSettlePhase(chronicle);
+      standsAs = endTurnAs(chronicle);
       lay();
-      button.wear(settlePhase ? 'end-settle-phase-button' : 'end-turn-button');
-      button.dress();
-      if (!hover.hovered || settlePhase === phaseWas) return;
+      button.wear(signOf(standsAs));
+      dress();
+      if (!hover.hovered || standsAs === was) return;
       tooltip.hide();
       name();
     };
@@ -1133,7 +1218,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
     const roll = async (chronicle: Chronicle): Promise<void> => {
       const flight = {};
       rolling = flight;
-      const stood = settlePhase ? undefined : count.number.text;
+      const stood = turnChipped(standsAs) ? count.number.text : undefined;
       stand(chronicle);
       const { x, y } = count.number;
       leaving
@@ -1159,7 +1244,7 @@ export class ChronicleScene extends Phaser.Scene implements LeavesChronicles {
       },
       live(on: boolean): void {
         wanted = on;
-        button.dress();
+        dress();
       },
     };
     return part;

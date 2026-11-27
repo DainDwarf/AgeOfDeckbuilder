@@ -9,6 +9,7 @@ export type PileKind = 'draw-pile' | 'discard-pile' | 'exhaust-pile';
 export type ButtonSign =
   | 'end-turn-button'
   | 'end-settle-phase-button'
+  | 'deal-waiting-button'
   | 'menu-button'
   | 'icons-button'
   | 'faction-signs-button'
@@ -76,6 +77,7 @@ const GLYPH_FILES: Readonly<Record<CastSymbol, string>> = {
   'exhaust-pile': 'material-design-icons/archive.svg',
   'end-turn-button': 'game-icons/hourglass.svg',
   'end-settle-phase-button': 'game-icons/village.svg',
+  'deal-waiting-button': 'material-design-icons/message-question.svg',
   'menu-button': 'game-icons/hamburger-menu.svg',
   'icons-button': 'material-design-icons/map-marker.svg',
   'faction-signs-button': 'material-design-icons/shield-crown.svg',

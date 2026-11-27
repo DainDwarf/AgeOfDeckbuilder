@@ -274,6 +274,11 @@ export function onSettlePhase(chronicle: Chronicle): boolean {
   return chronicle.turn === 0;
 }
 
+/** Whether a deal stands: the chronicle waits on its choice. */
+export function dealWaiting(chronicle: Pick<Chronicle, 'deals'>): boolean {
+  return chronicle.deals.length > 0;
+}
+
 /** Whether the capstone has landed: the turn is its own or past it. */
 export function capstoneLanded(chronicle: Pick<Chronicle, 'turn' | 'timeline'>): boolean {
   return chronicle.turn >= chronicle.timeline.capstone.turn;

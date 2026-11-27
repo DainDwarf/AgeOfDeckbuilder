@@ -46,6 +46,7 @@ import {
   cityOn,
   cityRows,
   cityTileOf,
+  dealWaiting,
   holderOf,
   holds,
   onSettlePhase,
@@ -288,7 +289,7 @@ export type MapView = {
   ): void;
   /**
    * Rings the unit the map draws on the selected tile, in sight or kept in fog, and lights what it
-   * can do where `unit` asks for it and city mode is off, else rims the tile.
+   * can do where `unit` asks for it, city mode is off and no deal waits, else rims the tile.
    */
   markSelected(tile: TileCoords | undefined, unit: boolean): void;
   /** Whether `markSelected` on the tile, asking for its unit or not, would select what is selected. */
@@ -1318,12 +1319,12 @@ export function createMapView(
   /**
    * What the unit of the player's on a tile can do: its landings and its steps drawn as one region
    * with its own tile, each unit it can attack ringed in the attack's colour. Nothing is lit while
-   * the city marks stand, and a press commands only a unit lit here.
+   * the city marks stand or a deal waits, and a press commands only a unit lit here.
    */
   const lightUnit = (tile: TileCoords | undefined): void => {
     const current = shown;
     const standing =
-      tile === undefined || current === undefined || marking
+      tile === undefined || current === undefined || marking || dealWaiting(current)
         ? undefined
         : unitAt(current.units, tile);
     const was = lit?.standing;

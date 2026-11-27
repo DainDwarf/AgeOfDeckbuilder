@@ -58,6 +58,7 @@ import {
   glyphsByColour,
   glyphsOf,
   hungFromTheBar,
+  inCityMode,
   latched,
   launchedAs,
   marksIn,
@@ -246,14 +247,6 @@ async function heldWorn(
 function heldOf(chronicle: Chronicle): { assigned: number; dark: string[]; empty: string[] } {
   const nobody = unassignedHeld(chronicle);
   return { assigned: chronicle.assigned.length, dark: nobody, empty: nobody };
-}
-
-/** Whether the chronicle screen shows city mode is on: its frame and its panel stand, or neither does. */
-async function inCityMode(page: Page): Promise<boolean> {
-  const read = await readings(page, ['city-mode', 'city-frame']);
-  const panel = read('city-mode').shows;
-  expect(read('city-frame').shows).toBe(panel);
-  return panel;
 }
 
 /** The counts the panel reads the population as, in its order. */

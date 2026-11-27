@@ -3835,7 +3835,32 @@ export async function endTurnHovered(page: Page): Promise<boolean> {
   return 'look' in worn && worn.look === 'hover';
 }
 
-/** What the end-turn button's chip reads, and nothing while it wears none, on the settle phase. */
+/** Whether the chronicle screen shows city mode is on: its frame and its panel stand, or neither does. */
+export async function inCityMode(page: Page): Promise<boolean> {
+  const read = await readings(page, ['city-mode', 'city-frame']);
+  const panel = read('city-mode').shows;
+  expect(read('city-frame').shows).toBe(panel);
+  return panel;
+}
+
+/** What the end-turn button wears: its piece, and the sign on it with the sign's ink. */
+export type EndTurnWorn = {
+  readonly piece: PieceWorn['piece'];
+  readonly signs: readonly string[];
+  readonly inks: readonly number[];
+};
+
+/** What the end-turn button wears, out of readings that hold `end-turn` and `end-turn-sign`. */
+export function endTurnWornOf(read: (name: string) => Reading): EndTurnWorn {
+  const sign = read('end-turn-sign');
+  return {
+    piece: pieceWornOf(read('end-turn')).piece,
+    signs: sign.glyphsDrawn,
+    inks: sign.glyphColours,
+  };
+}
+
+/** What the end-turn button's chip reads, and nothing while it wears none. */
 export async function endTurnChip(page: Page): Promise<string | undefined> {
   const count = (await readings(page, ['end-turn-count']))('end-turn-count');
   return count.standing ? count.text : undefined;
