@@ -211,18 +211,32 @@ export function createHexGrid(
   };
 }
 
+/** Every point a stretch of these loops is traced through, a curved one's control among them. */
+function pointsOf(loops: readonly Stretch[][]): Point[] {
+  return loops.flat().flatMap((stretch): Point[] => {
+    switch (stretch.kind) {
+      case 'straight':
+        return [stretch.from, stretch.to];
+      case 'curved':
+        return [stretch.from, stretch.control, stretch.to];
+    }
+    const unlisted: never = stretch;
+    throw new Error(`no stretch runs ${JSON.stringify(unlisted)}`);
+  });
+}
+
 /**
  * A canvas over the disc these tiles make, painted at a pixel to the unit, its image standing over
- * the disc; `wipe` clears it and answers its context set to paint on the map's own surface.
+ * the disc; `paint` clears it, hands `draw` its context set to paint on the map's own surface, and
+ * cuts the image to the box round the loops handed, inside which `draw` paints all it paints.
  */
 function discCanvas(
   scene: Phaser.Scene,
   key: string,
   tiles: readonly TileCoords[],
 ): {
-  texture: Phaser.Textures.CanvasTexture;
-  image: Phaser.GameObjects.Image;
-  wipe: () => CanvasRenderingContext2D;
+  readonly image: Phaser.GameObjects.Image;
+  paint(loops: readonly Stretch[][], draw: (context: CanvasRenderingContext2D) => void): void;
 } {
   const corners = tiles.flatMap(cornersOf).map(cornerAt);
   const xs = corners.map(({ x }) => x);
@@ -236,14 +250,27 @@ function discCanvas(
   const side = texture.width;
   const origin = { x: middle.x - side / 2, y: middle.y - side / 2 };
   const context = texture.getContext();
+  const image = scene.add.image(middle.x, middle.y, key);
   return {
-    texture,
-    image: scene.add.image(middle.x, middle.y, key),
-    wipe: () => {
+    image,
+    paint(loops, draw) {
       context.setTransform(1, 0, 0, 1, 0, 0);
       context.clearRect(0, 0, side, side);
       context.setTransform(1, 0, 0, 1, -origin.x, -origin.y);
-      return context;
+      draw(context);
+      texture.refresh();
+      const points = pointsOf(loops);
+      const across = points.map(({ x }) => x - origin.x);
+      const down = points.map(({ y }) => y - origin.y);
+      // Drawn small, the image is read through its mipmaps, whose level-n texel spans 2^n pixels from
+      // a multiple of 2^n: snapped out to 16 and 16 more, no texel up to level 4 straddles the box,
+      // which the map's least zoom reaches on a window down to about 110 by 60.
+      const texel = 16;
+      const left = Math.max(0, texel * Math.floor(Math.min(...across) / texel) - texel);
+      const top = Math.max(0, texel * Math.floor(Math.min(...down) / texel) - texel);
+      const right = Math.min(side, texel * Math.ceil(Math.max(...across) / texel) + texel);
+      const bottom = Math.min(side, texel * Math.ceil(Math.max(...down) / texel) + texel);
+      image.setCrop(left, top, Math.max(0, right - left), Math.max(0, bottom - top));
     },
   };
 }
@@ -292,31 +319,39 @@ export function createBorder(
       if (from === drawnFrom) return;
       drawnFrom = from;
 
-      const context = canvas.wipe();
-      let standing = false;
+      const loops = Object.fromEntries(
+        WEARERS.map((whose) => [
+          whose,
+          loopsOf(
+            whose,
+            worn[whose].map(({ tile }) => tile),
+          ),
+        ]),
+      ) as Record<Faction, Stretch[][]>;
+      canvas.paint(
+        WEARERS.flatMap((whose) => loops[whose]),
+        (context) => {
+          for (const whose of WEARERS) {
+            paintBand(
+              context,
+              loops[whose],
+              [false, true].map((inFog) => ({
+                tiles: worn[whose].filter((drawn) => drawn.inFog === inFog).map(({ tile }) => tile),
+                colour: darkened(FACTION_COLOURS[whose], fogDark(inFog)),
+              })),
+            );
+          }
+        },
+      );
       for (const whose of WEARERS) {
         const fogged = new Set(
           worn[whose].filter(({ inFog }) => inFog).map(({ tile }) => tileKey(tile)),
         );
         const colourOf = (stretch: Stretch): number =>
           darkened(FACTION_COLOURS[whose], fogDark(fogged.has(tileKey(stretch.tile))));
-        const loops = loopsOf(
-          whose,
-          worn[whose].map(({ tile }) => tile),
-        );
-        paintBand(
-          context,
-          loops,
-          [false, true].map((inFog) => ({
-            tiles: worn[whose].filter((drawn) => drawn.inFog === inFog).map(({ tile }) => tile),
-            colour: darkened(FACTION_COLOURS[whose], fogDark(inFog)),
-          })),
-        );
-        paintLine(lines[whose], loops.flat(), LINE, colourOf, 1);
-        standing ||= loops.length > 0;
+        paintLine(lines[whose], loops[whose].flat(), LINE, colourOf, 1);
       }
-      band.setVisible(standing);
-      canvas.texture.refresh();
+      band.setVisible(WEARERS.some((whose) => loops[whose].length > 0));
     },
   };
 }
@@ -351,14 +386,15 @@ export function createReach(
       drawnFrom = from;
 
       const loops = edgeLoops(region, cornerAt);
-      paintFaded(
-        canvas.wipe(),
-        (context) => tracedLoops(context, loops),
-        LOOK.selected,
-        LOOK.reachBand,
-        REACH_DEPTH,
-      );
-      canvas.texture.refresh();
+      canvas.paint(loops, (context) => {
+        paintFaded(
+          context,
+          (on) => tracedLoops(on, loops),
+          LOOK.selected,
+          LOOK.reachBand,
+          REACH_DEPTH,
+        );
+      });
       paintLine(line, loops.flat(), REACH_LINE, () => LOOK.selected, LOOK.reachLine);
     },
   };
@@ -397,12 +433,10 @@ export function createClaimMarks(
       const keys = new Set(claimable.map(tileKey));
       const roundings = borderLoops([...claiming.held, ...claimable], cornerAt);
       const colour = LOOK.reading.culture;
-      paintBand(
-        canvas.wipe(),
-        roundings.map((loop) => loop.flat()),
-        [{ tiles: claimable, colour }],
-      );
-      canvas.texture.refresh();
+      const loops = roundings.map((loop) => loop.flat());
+      canvas.paint(loops, (context) => {
+        paintBand(context, loops, [{ tiles: claimable, colour }]);
+      });
       const along = lineAlong(roundings, (tile) => keys.has(tileKey(tile)));
       paintLine(line, along, LINE, () => colour, 1);
     },

@@ -16,5 +16,3 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished; the boot is measured again there, and the boot's quick wins (each sheet uploaded once, the loose files never made textures, the fronts' recolouring once per file) are kept or replaced.
 
 ## Lines
-
-- **Quick wins on the frame** — the shots of the border, the reach, the claim marks and every scrolling panel come out pixel for pixel as before; the border's band and its two likes are drawn only where they paint, a panel's mask stands only while it clips something; the turn-1 settled save's frame under software drawing is at least 12 ms below the before. Doc-impact: `docs/PHASER.md`. [board/quick-wins-on-the-frame.md](board/quick-wins-on-the-frame.md)
