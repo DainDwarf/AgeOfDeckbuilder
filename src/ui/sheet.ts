@@ -73,11 +73,15 @@ export function mipmappedSide(span: number): number {
 }
 
 /** A canvas of the page that wide and tall, holding nothing, and the context it draws in. */
-export function blankCanvas(width: number, height: number): CanvasRenderingContext2D {
+export function blankCanvas(
+  width: number,
+  height: number,
+  settings?: CanvasRenderingContext2DSettings,
+): CanvasRenderingContext2D {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const context = canvas.getContext('2d');
+  const context = canvas.getContext('2d', settings);
   if (context === null) throw new Error('no canvas of the page draws in two dimensions');
   return context;
 }
@@ -194,49 +198,117 @@ export function assetAt(file: string): string {
   return `${import.meta.env.BASE_URL}assets/${file}`;
 }
 
-/** Every file of a sheet queued on a scene's loader under its own name, for `drawSheet` to read. */
-export function queueSheet(load: Phaser.Loader.LoaderPlugin, { files, rasterised }: Sheet): void {
-  for (const file of files) load.image(file, assetAt(file));
-  if (rasterised === undefined) return;
-  // Phaser rasterises an SVG once, at the size handed here (`src/loader/filetypes/SVGFile.js:97-139`).
-  const { side } = rasterised;
-  for (const file of rasterised.files) load.svg(file, assetAt(file), { width: side, height: side });
+/** The files of sheets decoded as images of the page, by file; one that did not load is missing. */
+export type Decoded = Map<string, HTMLImageElement>;
+
+/** The file at an address decoded as an image of the page, or nothing where it cannot be fetched or decoded. */
+async function imageAt(address: string): Promise<HTMLImageElement | undefined> {
+  const image = new Image();
+  image.src = address;
+  try {
+    await image.decode();
+    return image;
+  } catch {
+    return undefined;
+  }
 }
 
 /**
- * A frame that wide and tall added to a sheet where its frames leave room, row by row after the last
+ * The SVG file at an address decoded as a square image of that side, or nothing where it cannot be
+ * fetched or decoded: its root is sized to the side, so the browser rasterises it once, at that side.
+ */
+async function svgImageAt(address: string, side: number): Promise<HTMLImageElement | undefined> {
+  try {
+    const response = await fetch(address);
+    if (!response.ok) return undefined;
+    const svg = new DOMParser()
+      .parseFromString(await response.text(), 'text/xml')
+      .getElementsByTagName('svg')[0];
+    svg.setAttribute('width', `${side}px`);
+    svg.setAttribute('height', `${side}px`);
+    const blob = new Blob([new XMLSerializer().serializeToString(svg)], {
+      type: 'image/svg+xml;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const image = await imageAt(url);
+    URL.revokeObjectURL(url);
+    return image;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Every file of the sheets decoded as an image of the page, never made a texture, for `drawSheets` to
+ * draw: a file two sheets name is decoded once, and a rasterised file made a square of its side.
+ */
+export async function decodedFiles(sheets: readonly Sheet[]): Promise<Decoded> {
+  const decoding = new Map<string, Promise<HTMLImageElement | undefined>>();
+  for (const { files, rasterised } of sheets) {
+    for (const file of files) {
+      if (!decoding.has(file)) decoding.set(file, imageAt(assetAt(file)));
+    }
+    if (rasterised === undefined) continue;
+    for (const file of rasterised.files) {
+      if (!decoding.has(file)) decoding.set(file, svgImageAt(assetAt(file), rasterised.side));
+    }
+  }
+  const decoded: Decoded = new Map();
+  for (const [file, image] of decoding) {
+    const done = await image;
+    if (done !== undefined) decoded.set(file, done);
+  }
+  return decoded;
+}
+
+/** A frame of a sheet: its name and its box on the sheet's canvas. */
+type FrameCut = {
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+/** A sheet as it is painted: the context of its canvas, and its frames in the order they were cut. */
+type SheetCanvas = {
+  readonly sheet: Sheet;
+  readonly context: CanvasRenderingContext2D;
+  readonly cuts: FrameCut[];
+};
+
+/**
+ * A frame that wide and tall cut from a sheet where its frames leave room, row by row after the last
  * of them and the sheet's column gap, its row gap under a full row; a sheet with no room left is
  * refused.
  */
 function roomIn(
-  sheet: Phaser.Textures.CanvasTexture,
+  { sheet, cuts }: SheetCanvas,
   name: string,
   width: number,
   height: number,
-  { rowGap = 0, columnGap = 0 }: Pick<Sheet, 'rowGap' | 'columnGap'>,
-): { x: number; y: number } {
-  const names = sheet.getFrameNames();
+): FrameCut {
+  const { key, side, rowGap = 0, columnGap = 0 } = sheet;
   let x = 0;
   let y = 0;
-  if (names.length > 0) {
-    const last = sheet.get(names[names.length - 1]);
+  if (cuts.length > 0) {
+    const last = cuts[cuts.length - 1];
     let row = 0;
-    for (let at = names.length - 1; at >= 0; at--) {
-      const frame = sheet.get(names[at]);
-      if (frame.cutY !== last.cutY) break;
-      row = Math.max(row, frame.cutHeight);
+    for (let at = cuts.length - 1; at >= 0; at--) {
+      if (cuts[at].y !== last.y) break;
+      row = Math.max(row, cuts[at].height);
     }
-    x = last.cutX + last.cutWidth + columnGap;
-    y = last.cutY;
-    if (x + width > sheet.width) {
+    x = last.x + last.width + columnGap;
+    y = last.y;
+    if (x + width > side) {
       x = 0;
       y += row + rowGap;
     }
   }
-  if (y + height > sheet.height)
-    throw new Error(`the sheet ${sheet.key} has no room left for ${name}`);
-  sheet.add(name, 0, x, y, width, height);
-  return { x, y };
+  if (y + height > side) throw new Error(`the sheet ${key} has no room left for ${name}`);
+  const cut = { name, x, y, width, height };
+  cuts.push(cut);
+  return cut;
 }
 
 /** Where a painting of a sheet drawn already lies, read off the textures; one no sheet holds is refused. */
@@ -253,73 +325,116 @@ export function paintingsIn(textures: Phaser.Textures.TextureManager): PaintingI
 }
 
 /**
- * A frame made by code painted into a sheet, on the canvas it is drawn on, after the frames it holds,
- * the sheet's gaps, uploaded only by the canvas's `refresh`.
+ * Where a painting lies, read off the sheet being painted for its own and off the textures for a
+ * sheet drawn before it; one no sheet holds is refused.
+ */
+function paintingsWith(
+  textures: Phaser.Textures.TextureManager,
+  { sheet, context, cuts }: SheetCanvas,
+): PaintingIn {
+  const drawn = paintingsIn(textures);
+  return (from, painting) => {
+    if (from !== sheet.key) return drawn(from, painting);
+    const cut = cuts.find(({ name }) => name === painting);
+    if (cut === undefined) throw new Error(`the sheet ${from} holds no painting ${painting}`);
+    const { x, y, width, height } = cut;
+    return { canvas: context.canvas, x, y, width, height };
+  };
+}
+
+/** A frame made by code painted onto a sheet's canvas after the frames cut from it, the sheet's gaps. */
+function paintOn(
+  canvas: SheetCanvas,
+  { frame, width, height, paint }: Made,
+  paintingIn: PaintingIn,
+): FrameCut {
+  const cut = roomIn(canvas, frame, width, height);
+  const { context } = canvas;
+  context.save();
+  context.translate(cut.x, cut.y);
+  paint(context, paintingIn);
+  context.restore();
+  return cut;
+}
+
+/**
+ * A frame made by code painted into a sheet's canvas texture after the frames it holds, the sheet's
+ * gaps, uploaded only by the canvas's `refresh`.
  */
 export function paintMade(
   textures: Phaser.Textures.TextureManager,
   sheet: Sheet,
-  canvas: Phaser.Textures.CanvasTexture,
-  { frame, width, height, paint }: Made,
+  texture: Phaser.Textures.CanvasTexture,
+  made: Made,
 ): void {
-  const at = roomIn(canvas, frame, width, height, sheet);
-  canvas.context.save();
-  canvas.context.translate(at.x, at.y);
-  paint(canvas.context, paintingsIn(textures));
-  canvas.context.restore();
+  const cuts = texture.getFrameNames().map((name): FrameCut => {
+    const { cutX, cutY, cutWidth, cutHeight } = texture.get(name);
+    return { name, x: cutX, y: cutY, width: cutWidth, height: cutHeight };
+  });
+  const { name, x, y, width, height } = paintOn(
+    { sheet, context: texture.context, cuts },
+    made,
+    paintingsIn(textures),
+  );
+  texture.add(name, 0, x, y, width, height);
 }
 
 /**
- * The files `queueSheet` loaded drawn into one canvas texture under the sheet's key, row by row, each
- * retouched file retouched, then each tinted painting, then each frame made by code; a file that did
- * not load, and a painting its sheet does not hold, are refused.
+ * The images of a sheet's files drawn into one canvas, row by row, each retouched file retouched,
+ * then each tinted painting, then each frame made by code, and the canvas then made a texture under
+ * the sheet's key; a file that did not load, and a painting its sheet does not hold, are refused.
  */
-function drawSheet(textures: Phaser.Textures.TextureManager, drawn: Sheet): void {
+function drawSheet(textures: Phaser.Textures.TextureManager, decoded: Decoded, drawn: Sheet): void {
   const { key, files, rasterised, retouched = [], tinted = [], made = [], side } = drawn;
-  const sheet = textures.createCanvas(key, side, side);
-  if (sheet === null) throw new Error(`a texture stands under ${key} already`);
+  // A canvas keeps the settings of its first context. Without `willReadFrequently`, which the canvas
+  // texture's own context asks for (`src/textures/CanvasTexture.js:86`), the sheet paints and reads
+  // back different pixels.
+  const context = blankCanvas(side, side, { willReadFrequently: true });
+  const sheetCanvas: SheetCanvas = { sheet: drawn, context, cuts: [] };
 
   for (const file of [...files, ...(rasterised?.files ?? [])]) {
-    // A texture the manager does not hold draws as Phaser's missing one and throws nothing (docs/PHASER.md).
-    if (!textures.exists(file)) throw new Error(`the texture ${file} could not be loaded`);
-    const { width, height } = textures.getFrame(file);
-    const at = roomIn(sheet, file, width, height, drawn);
-    sheet.drawFrame(file, undefined, at.x, at.y, false);
+    const image = decoded.get(file);
+    if (image === undefined) throw new Error(`the file ${file} could not be loaded`);
+    const { naturalWidth: width, naturalHeight: height } = image;
+    const cut = roomIn(sheetCanvas, file, width, height);
+    context.drawImage(image, 0, 0, width, height, cut.x, cut.y, width, height);
   }
 
   for (const { file, retouch } of retouched) {
     if (!files.includes(file)) throw new Error(`the sheet ${key} draws no file ${file} to retouch`);
-    const { cutX, cutY, cutWidth, cutHeight } = sheet.get(file);
-    const pixels = sheet.context.getImageData(cutX, cutY, cutWidth, cutHeight);
+    const { x, y, width, height } = sheetCanvas.cuts.find(({ name }) => name === file) as FrameCut;
+    const pixels = context.getImageData(x, y, width, height);
     retouch(pixels);
-    sheet.context.putImageData(pixels, cutX, cutY);
+    context.putImageData(pixels, x, y);
   }
 
-  const paintingIn = paintingsIn(textures);
-  const context = blankCanvas(0, 0);
+  const paintingIn = paintingsWith(textures, sheetCanvas);
+  const tinting = blankCanvas(0, 0);
   for (const { sheet: from, painting, frame, wash, composite } of tinted) {
     const under = paintingIn(from, painting);
-    paintUnder(context, under, wash, composite);
-    const at = roomIn(sheet, frame, under.width, under.height, drawn);
-    sheet.context.drawImage(context.canvas, at.x, at.y);
+    paintUnder(tinting, under, wash, composite);
+    const cut = roomIn(sheetCanvas, frame, under.width, under.height);
+    context.drawImage(tinting.canvas, cut.x, cut.y);
   }
 
-  for (const one of made) paintMade(textures, drawn, sheet, one);
-  sheet.refresh();
+  for (const one of made) paintOn(sheetCanvas, one, paintingIn);
+
+  // Only once painted: making a texture uploads its canvas, mipmaps and all (docs/PHASER.md).
+  const texture = textures.addCanvas(key, context.canvas);
+  if (texture === null) throw new Error(`a texture stands under ${key} already`);
+  for (const { name, x, y, width, height } of sheetCanvas.cuts)
+    texture.add(name, 0, x, y, width, height);
 }
 
 /**
- * Each sheet drawn in turn, as `drawSheet` draws one, then the textures of the files they loaded let
- * go: a file two sheets name is loaded once and drawn into both.
+ * Each sheet drawn in turn off the decoded files, none for sheets that draw no file, as `drawSheet`
+ * draws one, then the decoded files let go: a file two sheets name is drawn into both.
  */
 export function drawSheets(
   textures: Phaser.Textures.TextureManager,
   sheets: readonly Sheet[],
+  decoded: Decoded = new Map(),
 ): void {
-  for (const sheet of sheets) drawSheet(textures, sheet);
-  const loaded = sheets.flatMap(({ files, rasterised }) => [
-    ...files,
-    ...(rasterised?.files ?? []),
-  ]);
-  for (const file of new Set(loaded)) textures.remove(file);
+  for (const sheet of sheets) drawSheet(textures, decoded, sheet);
+  decoded.clear();
 }

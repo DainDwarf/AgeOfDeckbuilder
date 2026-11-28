@@ -259,47 +259,65 @@ function shadowsMade(): Made[] {
   });
 }
 
-/** A colour of hue, saturation and lightness, each of the last two out of one. */
-function fromHsl(hue: number, saturation: number, lightness: number): [number, number, number] {
+/** A colour of hue, saturation and lightness, each of the last two out of one, written into `rgb`. */
+function fromHsl(hue: number, saturation: number, lightness: number, rgb: Float64Array): void {
   const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
   const sector = hue / 60;
   const second = chroma * (1 - Math.abs((sector % 2) - 1));
-  const [red, green, blue] =
-    sector < 1
-      ? [chroma, second, 0]
-      : sector < 2
-        ? [second, chroma, 0]
-        : sector < 3
-          ? [0, chroma, second]
-          : sector < 4
-            ? [0, second, chroma]
-            : sector < 5
-              ? [second, 0, chroma]
-              : [chroma, 0, second];
   const floor = lightness - chroma / 2;
-  return [red + floor, green + floor, blue + floor];
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+  if (sector < 1) {
+    red = chroma;
+    green = second;
+  } else if (sector < 2) {
+    red = second;
+    green = chroma;
+  } else if (sector < 3) {
+    green = chroma;
+    blue = second;
+  } else if (sector < 4) {
+    green = second;
+    blue = chroma;
+  } else if (sector < 5) {
+    red = second;
+    blue = chroma;
+  } else {
+    red = chroma;
+    blue = second;
+  }
+  rgb[0] = red + floor;
+  rgb[1] = green + floor;
+  rgb[2] = blue + floor;
 }
 
-/** A colour's hue in degrees, its saturation and its lightness, its channels each out of one. */
-function toHsl(red: number, green: number, blue: number): [number, number, number] {
+/**
+ * The hue in degrees, the saturation and the lightness of the pixel at that index, written into
+ * `hsl`, its channels each read out of one.
+ */
+function hslAt(pixels: Uint8ClampedArray, at: number, hsl: Float64Array): void {
+  const red = pixels[4 * at] / 0xff;
+  const green = pixels[4 * at + 1] / 0xff;
+  const blue = pixels[4 * at + 2] / 0xff;
   const most = Math.max(red, green, blue);
   const least = Math.min(red, green, blue);
   const lightness = (most + least) / 2;
   const spread = most - least;
-  if (spread === 0) return [0, 0, lightness];
-  const saturation = spread / (1 - Math.abs(2 * lightness - 1));
+  hsl[2] = lightness;
+  if (spread === 0) {
+    hsl[0] = 0;
+    hsl[1] = 0;
+    return;
+  }
+  hsl[1] = spread / (1 - Math.abs(2 * lightness - 1));
   const sector =
     most === red
       ? ((green - blue) / spread + 6) % 6
       : most === green
         ? (blue - red) / spread + 2
         : (red - green) / spread + 4;
-  return [sector * 60, saturation, lightness];
-}
-
-/** The hue, saturation and lightness of the pixel at that index, as `toHsl` reads them. */
-function hslAt(pixels: Uint8ClampedArray, at: number): [number, number, number] {
-  return toHsl(pixels[4 * at] / 0xff, pixels[4 * at + 1] / 0xff, pixels[4 * at + 2] / 0xff);
+  hsl[0] = sector * 60;
 }
 
 /** The colour a front is turned to. */
@@ -310,18 +328,22 @@ function colourOf(front: CardFront): KindColour {
 /** The colour a window holding no painting shows: its front's hue, pale. */
 export function paleOf(front: CardFront): number {
   const { hue, saturation } = colourOf(front);
-  const [red, green, blue] = fromHsl(hue, Math.min(0.45, saturation * 0.55), 0.82);
-  const channel = (value: number): number => Math.round(value * 0xff);
-  return (channel(red) << 16) | (channel(green) << 8) | channel(blue);
+  const rgb = new Float64Array(3);
+  fromHsl(hue, Math.min(0.45, saturation * 0.55), 0.82, rgb);
+  const [red, green, blue] = rgb.map((value) => Math.round(value * 0xff));
+  return (red << 16) | (green << 8) | blue;
 }
 
 /**
  * Whether a pixel is part of a rim the body's paper stops at: see-through, near black, the rims'
- * blue-grey, or a pale highlight.
+ * blue-grey, or a pale highlight; `hsl` is written over.
  */
-function rimAt(pixels: Uint8ClampedArray, at: number): boolean {
+function rimAt(pixels: Uint8ClampedArray, at: number, hsl: Float64Array): boolean {
   if (pixels[4 * at + 3] < 0xff) return true;
-  const [hue, saturation, lightness] = hslAt(pixels, at);
+  hslAt(pixels, at, hsl);
+  const hue = hsl[0];
+  const saturation = hsl[1];
+  const lightness = hsl[2];
   return (
     lightness < 0.1 ||
     (hue >= 165 && hue <= 265 && saturation > 0.06) ||
@@ -346,7 +368,8 @@ function paperOf(
   for (let y = body.y; y < body.y + BODY.height; y++) {
     edges.push({ x: body.x, y }, { x: body.x + BODY.width - 1, y });
   }
-  return walkedFrom(width, height, edges, (at) => !rimAt(pixels, at));
+  const hsl = new Float64Array(3);
+  return walkedFrom(width, height, edges, (at) => !rimAt(pixels, at, hsl));
 }
 
 /**
@@ -424,52 +447,76 @@ export function artShapeOf(window: FrontWindow, paintingIn: PaintingIn): CanvasR
  * paper lie far off in hue.
  */
 function bodyOf(pixels: Uint8ClampedArray): Uint8Array {
-  return Uint8Array.from({ length: pixels.length / 4 }, (_, at) => {
-    const [hue, saturation] = hslAt(pixels, at);
-    return saturation >= 0.15 && hue >= 170 && hue <= 260 ? 1 : 0;
-  });
+  const body = new Uint8Array(pixels.length / 4);
+  const hsl = new Float64Array(3);
+  for (let at = 0; at < body.length; at++) {
+    hslAt(pixels, at, hsl);
+    if (hsl[1] >= 0.15 && hsl[0] >= 170 && hsl[0] <= 260) body[at] = 1;
+  }
+  return body;
 }
 
-/** The mean saturation and lightness of the pixels the mask holds. */
-function meanOf(
-  pixels: Uint8ClampedArray,
-  mask: Uint8Array,
-): { readonly saturation: number; readonly lightness: number } {
-  let count = 0;
+/** Pixels of a file by their index, rising, each with the saturation and lightness it is turned with. */
+type Turning = {
+  readonly at: Uint32Array;
+  readonly saturation: Float64Array;
+  readonly lightness: Float64Array;
+};
+
+/** The pixels the mask holds, each with its own saturation and lightness. */
+function turningOf(pixels: Uint8ClampedArray, mask: Uint8Array): Turning {
+  const count = mask.reduce((sum, held) => sum + held, 0);
+  const turning = {
+    at: new Uint32Array(count),
+    saturation: new Float64Array(count),
+    lightness: new Float64Array(count),
+  };
+  const hsl = new Float64Array(3);
+  let next = 0;
+  for (let at = 0; at < mask.length; at++) {
+    if (mask[at] === 0) continue;
+    hslAt(pixels, at, hsl);
+    turning.at[next] = at;
+    turning.saturation[next] = hsl[1];
+    turning.lightness[next] = hsl[2];
+    next += 1;
+  }
+  return turning;
+}
+
+/** The mean saturation and lightness of a turning's pixels. */
+function meanOf({ saturation, lightness }: Turning): {
+  readonly saturation: number;
+  readonly lightness: number;
+} {
   let saturations = 0;
   let lightnesses = 0;
-  mask.forEach((held, at) => {
-    if (held === 0) return;
-    const [, saturation, lightness] = hslAt(pixels, at);
-    count += 1;
-    saturations += saturation;
-    lightnesses += lightness;
-  });
-  return { saturation: saturations / count, lightness: lightnesses / count };
+  for (let at = 0; at < saturation.length; at++) {
+    saturations += saturation[at];
+    lightnesses += lightness[at];
+  }
+  return { saturation: saturations / saturation.length, lightness: lightnesses / lightness.length };
 }
 
-/**
- * Every pixel the mask holds turned to the colour, its grain kept, its own saturation and lightness
- * read as `seen` reads them.
- */
+/** Every pixel of the turning turned to the colour, its grain kept. */
 function turned(
   pixels: Uint8ClampedArray,
-  mask: Uint8Array,
+  { at, saturation, lightness }: Turning,
   colour: KindColour,
-  seen: (saturation: number, lightness: number) => readonly [number, number] = (...own) => own,
 ): void {
-  mask.forEach((held, at) => {
-    if (held === 0) return;
-    const [, ownSaturation, ownLightness] = hslAt(pixels, at);
-    const [saturation, lightness] = seen(ownSaturation, ownLightness);
-    const rgb = fromHsl(
+  const rgb = new Float64Array(3);
+  for (let one = 0; one < at.length; one++) {
+    fromHsl(
       colour.hue,
-      Math.min(1, colour.saturation * (0.75 + saturation)),
-      Math.min(1, lightness * colour.darkness),
+      Math.min(1, colour.saturation * (0.75 + saturation[one])),
+      Math.min(1, lightness[one] * colour.darkness),
+      rgb,
     );
-    for (const [channel, value] of rgb.entries())
-      pixels[4 * at + channel] = Math.round(value * 0xff);
-  });
+    const offset = 4 * at[one];
+    pixels[offset] = Math.round(rgb[0] * 0xff);
+    pixels[offset + 1] = Math.round(rgb[1] * 0xff);
+    pixels[offset + 2] = Math.round(rgb[2] * 0xff);
+  }
 }
 
 /** The key of the sheet every front, the back, the plate, the disc and the badges are drawn into. */
@@ -488,17 +535,29 @@ export function pixelsOf(paintingIn: PaintingIn, file: string): ImageData {
   return drawnAlone(from).getImageData(0, 0, from.width, from.height);
 }
 
-/** A painting of a sheet drawn from the context's top-left corner, its pixels changed by `change` first. */
+/** Pixels drawn from the context's top-left corner, a copy of them changed by `change` first. */
 function paintChanged(
   context: CanvasRenderingContext2D,
-  from: InSheet,
+  { data, width, height }: ImageData,
   change: (pixels: Uint8ClampedArray) => void,
 ): void {
-  const on = drawnAlone(from);
-  const image = on.getImageData(0, 0, from.width, from.height);
+  const on = blankCanvas(width, height);
+  const image = new ImageData(new Uint8ClampedArray(data), width, height);
   change(image.data);
   on.putImageData(image, 0, 0);
   context.drawImage(on.canvas, 0, 0);
+}
+
+/** What `make` makes for a file, made the first time it is asked for and kept. */
+function keptByFile<T>(): (file: string, make: () => T) => T {
+  const kept = new Map<string, T>();
+  return (file, make) => {
+    const known = kept.get(file);
+    if (known !== undefined) return known;
+    const made = make();
+    kept.set(file, made);
+    return made;
+  };
 }
 
 /**
@@ -507,18 +566,31 @@ function paintChanged(
  * its lightness brought to where that paper's stands; each with its glass thinned.
  */
 function frontsMade(): Made[] {
-  const papers = new Map<string, Uint8Array>();
-  const paperIn = (pixels: Uint8ClampedArray, { file, width, height, body }: Front): Uint8Array => {
-    const paper = papers.get(file) ?? paperOf(pixels, width, height, body);
-    papers.set(file, paper);
-    return paper;
-  };
-  const glasses = new Map<string, Uint8Array>();
-  const glassIn = (pixels: Uint8ClampedArray, front: Front): Uint8Array => {
-    const glass = glasses.get(front.file) ?? glassOf(pixels, front);
-    glasses.set(front.file, glass);
-    return glass;
-  };
+  const images = keptByFile<ImageData>();
+  const imageOf = (paintingIn: PaintingIn, { file }: Front): ImageData =>
+    images(file, () => pixelsOf(paintingIn, file));
+  const glasses = keptByFile<Uint8Array>();
+  const glassIn = (paintingIn: PaintingIn, front: Front): Uint8Array =>
+    glasses(front.file, () => glassOf(imageOf(paintingIn, front).data, front));
+  const papers = keptByFile<Turning>();
+  const paperIn = (paintingIn: PaintingIn, front: Front): Turning =>
+    papers(front.file, () => {
+      const { data } = imageOf(paintingIn, front);
+      return turningOf(data, paperOf(data, front.width, front.height, front.body));
+    });
+  const bodies = keptByFile<Turning>();
+  const bodyIn = (paintingIn: PaintingIn, front: Front): Turning =>
+    bodies(front.file, () => {
+      const { data } = imageOf(paintingIn, front);
+      const own = turningOf(data, bodyOf(data));
+      const paper = meanOf(paperIn(paintingIn, FRONTS.oval));
+      const { lightness } = meanOf(own);
+      return {
+        at: own.at,
+        saturation: own.saturation.map(() => paper.saturation),
+        lightness: own.lightness.map((one) => (one * paper.lightness) / lightness),
+      };
+    });
   const plain = FRONT_COLOURS.flatMap((colour) =>
     windowsOf(colour).map((window): Made => {
       const front: CardFront = { front: 'plain', colour, window };
@@ -528,14 +600,13 @@ function frontsMade(): Made[] {
         width: shape.width,
         height: shape.height,
         paint: (context, paintingIn) =>
-          paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) => {
-            turned(pixels, paperIn(pixels, shape), colourOf(front));
-            thinned(pixels, glassIn(pixels, shape));
+          paintChanged(context, imageOf(paintingIn, shape), (pixels) => {
+            turned(pixels, paperIn(paintingIn, shape), colourOf(front));
+            thinned(pixels, glassIn(paintingIn, shape));
           }),
       };
     }),
   );
-  const oval = FRONTS.oval;
   const decorated = DECORATED_COLOURS.map((colour): Made => {
     const front: CardFront = { front: 'decorated', colour };
     const shape = frontOf(front);
@@ -543,19 +614,11 @@ function frontsMade(): Made[] {
       frame: shape.frame,
       width: shape.width,
       height: shape.height,
-      paint: (context, paintingIn) => {
-        const { data } = pixelsOf(paintingIn, oval.file);
-        const paper = meanOf(data, paperIn(data, oval));
-        paintChanged(context, paintingIn(CARDS_SHEET_KEY, shape.file), (pixels) => {
-          const body = bodyOf(pixels);
-          const { lightness } = meanOf(pixels, body);
-          turned(pixels, body, colourOf(front), (_saturation, own) => [
-            paper.saturation,
-            (own * paper.lightness) / lightness,
-          ]);
-          thinned(pixels, glassIn(pixels, shape));
-        });
-      },
+      paint: (context, paintingIn) =>
+        paintChanged(context, imageOf(paintingIn, shape), (pixels) => {
+          turned(pixels, bodyIn(paintingIn, shape), colourOf(front));
+          thinned(pixels, glassIn(paintingIn, shape));
+        }),
     };
   });
   return [...plain, ...decorated];
@@ -603,7 +666,7 @@ function badgesMade(): Made[] {
       width,
       height,
       paint: (context, paintingIn) => {
-        paintChanged(context, paintingIn(CARDS_SHEET_KEY, file), (pixels) =>
+        paintChanged(context, pixelsOf(paintingIn, file), (pixels) =>
           hueTurned(pixels, LOOK.cardStatBadge[stat]),
         );
       },

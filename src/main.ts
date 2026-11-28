@@ -34,7 +34,7 @@ import {
 import { MenuScene } from './ui/menu-scene';
 import { OverlayScene, overlayAhead } from './ui/overlay-scene';
 import { type Opening, savedOpening } from './ui/save-entry';
-import { assetAt, drawSheets, queueSheet, type Sheet } from './ui/sheet';
+import { assetAt, decodedFiles, drawSheets, type Sheet } from './ui/sheet';
 
 // The e2e suite and browser-console debugging observe the running game through this handle;
 // it is optional because the window exists before the game does.
@@ -106,48 +106,24 @@ function filterAnisotropically(
   }
 }
 
-/** What the boot starts first: the textures loaded and drawn into their sheets, then the first screen. */
-class LoadScene extends Phaser.Scene {
-  /** The sheets the boot draws its paintings into, in the order it draws them. */
-  private sheets: readonly Sheet[] = [];
-
-  preload(): void {
-    // The features and art sheets last, the art sheet after the features: the features' tinted
-    // paintings, the river's cut and the deer in his net are drawn off the others', and the cards'
-    // pictures off every other.
-    this.sheets = [
-      CHROME_SHEET,
-      CARDS_SHEET,
-      FACE_SHEET,
-      RIVER_SHEET,
-      BUILDING_SHEET,
-      UNIT_SHEET,
-      GLYPH_SHEET,
-      featureSheet(CATALOGUE),
-      artSheet(CATALOGUE),
-    ];
-    for (const sheet of this.sheets) queueSheet(this.load, sheet);
-  }
-
-  create(): void {
-    drawSheets(this.textures, this.sheets);
-    const renderer = this.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
-    const filter = (): void => filterAnisotropically(renderer, this.textures, this.sheets);
-    filter();
-    // A restored context makes every texture anew, without the filter (docs/PHASER.md).
-    renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, filter);
-    // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
-    // after it has no handle yet to be reached by, and the boot throws.
-    game.scene.start('console');
-    game.scene.start('menu');
-    startFirst(first);
-    booted();
-    this.scene.stop();
-  }
-}
+// The features and art sheets last, the art sheet after the features: the features' tinted
+// paintings, the river's cut and the deer in his net are drawn off the others', and the cards'
+// pictures off every other.
+const SHEETS: readonly Sheet[] = [
+  CHROME_SHEET,
+  CARDS_SHEET,
+  FACE_SHEET,
+  RIVER_SHEET,
+  BUILDING_SHEET,
+  UNIT_SHEET,
+  GLYPH_SHEET,
+  featureSheet(CATALOGUE),
+  artSheet(CATALOGUE),
+];
 
 // Before the game: a Text keeps the fallback's measures for a face loaded after it (docs/PHASER.md).
-await Promise.all([
+const [decoded] = await Promise.all([
+  decodedFiles(SHEETS),
   loadFace('SourceSans3-Regular.ttf.woff2', '400'),
   loadFace('SourceSans3-Bold.ttf.woff2', '700'),
   fetchCursors(),
@@ -183,14 +159,22 @@ game.scene.add('ui', ChronicleScene);
 game.scene.add('overlay', OverlayScene);
 game.scene.add('menu', MenuScene);
 game.scene.add('console', DebugConsole);
-// Not the map scene: a scene with files to load creates only once they have, and the chronicle screen's
-// create reaches into the map's (docs/PHASER.md).
-game.scene.add('load', LoadScene);
 game.events.once(Phaser.Core.Events.READY, () => {
+  const renderer = game.renderer as Phaser.Renderer.WebGL.WebGLRenderer;
   // A batch shader built for several textures tears a rotated Text (docs/PHASER.md). Not the config's
   // `maxTextures`: that caps the units every draw binds, and at one the browse's mask binds nothing.
-  (game.renderer as Phaser.Renderer.WebGL.WebGLRenderer).renderNodes.setMaxParallelTextureUnits(1);
-  game.scene.start('load');
+  renderer.renderNodes.setMaxParallelTextureUnits(1);
+  drawSheets(game.textures, SHEETS, decoded);
+  const filter = (): void => filterAnisotropically(renderer, game.textures, SHEETS);
+  filter();
+  // A restored context makes every texture anew, without the filter (docs/PHASER.md).
+  renderer.on(Phaser.Renderer.Events.RESTORE_WEBGL, filter);
+  // The screen the boot opens reaches into the scenes started ahead of it as it is created: one started
+  // after it has no handle yet to be reached by, and the boot throws.
+  game.scene.start('console');
+  game.scene.start('menu');
+  startFirst(first);
+  booted();
 });
 followWindow(game);
 followPixelRatio(game);
