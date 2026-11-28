@@ -13,8 +13,8 @@ The look's pool — the ideas each rung takes, the fits and colour readings acce
 - **Motion** — easing, flourish, idle, income flying in from the tiles, a unit walking its path, a transition into a chronicle and out of it, and the unit legibility readings.
 - **The Nomadic tutorial** — a tutorial teaching the Nomadic Age, city mode among what it explains, its first chronicle's goal being to capture a site.
 - **Sound and music** — last, so a version closed early still looks whole.
-- **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished.
+- **The deliverable** — optimising the deliverable and its workflow: how the build is packaged, how it is sent to itch, and the rest of that road, thought through once the graphics and the sound are finished; the boot is measured again there, and the boot's quick wins (each sheet uploaded once, the loose files never made textures, the fronts' recolouring once per file) are kept or replaced.
 
 ## Lines
 
-- **Quick wins on the boot and the frame** — the same e2e tests run about 3.5× slower on CI than on 2026-10-30, the boot-only test from 1.0 s to 3.6–5 s, as the look's paintings landed: measure where the boot and the frame go under software drawing and take the cheap wins now, the deeper work left to the Deliverable rung.
+- **Quick wins on the boot** — every sheet the boot draws holds the same frames and pixels as at c76b0a07, each uploaded once after it is painted, the loose files never made textures, the fronts' recolouring read once per pack file, and `drawSheets` at 2.5 s or less under software drawing against 3.5 s. Doc-impact: none (`docs/PHASER.md` only for a Phaser trap the fix leans on). [board/quick-wins-on-the-boot.md](board/quick-wins-on-the-boot.md)
